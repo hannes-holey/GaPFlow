@@ -55,14 +55,20 @@ def write_template(args, template_dir='.', output_dir="moltemplate_files"):
     mpi_grid = args.get("mpi_grid", None)
 
     # solid, create ASE Atoms object
-    nx = args.get("size", 21)
+    nx = args.get("nx", 21)
+    ny = args.get("ny", None)
+    nz = args.get("nz", None)
     solid = args.get("solid", "Au")
 
     # top wall possibly rotated
     slab_top, nx = _create_fcc_wall_ase_rotate(nx=nx,
+                                               ny=ny,
+                                               nz=nz,
                                                rotation=target_rotation)
 
     slab_bot, _ = _create_fcc_wall_ase_rotate(nx=nx,
+                                              ny=ny,
+                                              nz=nz,
                                               rotation=0.)
 
     lx, ly, lz = slab_bot.get_cell_lengths_and_angles()[:3]
