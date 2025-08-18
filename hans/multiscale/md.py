@@ -1,5 +1,5 @@
 #
-# Copyright 2023-2024 Hannes Holey
+# Copyright 2023, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -60,26 +60,6 @@ def mpirun(system, nworker):
 
 
 def run(system):
-    """Wrapper function around implemented MD systems called by lmpworker.py
-
-    Parameters
-    ----------
-    system : str
-        Name of the system.
-
-    """
-
-    assert system == 'slab'
-    run_slab()
-
-    # Select type of simulation, currently only 'slab' implemented
-    # if system == "lj":
-    #     run_lj()
-    # elif system == "slab":
-    #     run_slab()
-
-
-def run_slab():
 
     nargs = ["-log", "log.lammps"]
 
@@ -87,12 +67,14 @@ def run_slab():
 
     assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
 
-    # Invoke parameters and wall definition
-    # lmp.command("include in.param")
-    # lmp.command("variable slabfile index in.wall")
+    if system == "lj":
+        # Invoke parameters and wall definition
+        lmp.command("include in.param")
+        lmp.command("variable slabfile index in.wall")
+        lmp.file("in.run")
 
-    # run LAMMPS
-    lmp.file("run.in.all")
+    else:  # moltemplate
+        lmp.file("run.in.all")
 
 
 if __name__ == "__main__":

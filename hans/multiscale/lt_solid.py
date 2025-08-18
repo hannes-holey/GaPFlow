@@ -106,30 +106,28 @@ def _create_fcc_wall_ase_rotate(symbol='Au',
                                 ay=[-1, 1, 2],
                                 az=[1, -1, 1],
                                 rotation=0.,
-                                nx=40,
+                                nx=30,
                                 ny=None,
-                                nz=None
+                                nz=None,
+                                min_angle=4.6,
+                                max_angle=6.
                                 ):
 
-    if abs(rotation) < 2.:
+    if abs(rotation) < min_angle:
         rotation = None
-    elif abs(rotation) > 6.:
+    elif abs(rotation) > max_angle:
         raise RuntimeError("Only small rotations possible")
 
     # for 111 surfaces (110 sliding)
-    lz0 = np.sqrt(3) * a
     lx0 = np.sqrt(2) / 2. * a
+    ly0 = np.sqrt(6) / 2 * a
+    lz0 = np.sqrt(3) * a
 
     if rotation is not None:
-        nx_r = abs(int(np.ceil(lz0 / lx0 / np.tan(rotation / 180. * np.pi))))
-    else:
-        nx_r = 0
-
-    # fix length, but not angle
-    nx = max(nx, nx_r)
+        nx = abs(int(np.floor(lz0 / lx0 / np.tan(rotation / 180. * np.pi))))
 
     if ny is None:
-        ny = nx // 2
+        ny = int((lx0 * nx) / ly0)
     if nz is None:
         nz = 7
 

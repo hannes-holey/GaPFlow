@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2024 Hannes Holey
+# Copyright 2020, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -26,8 +26,9 @@ import numpy as np
 
 from hans.field import VectorField, TensorField, DoubleTensorField
 from hans.material import Material
-from hans.special.powerlaw_fluid import solve_zmax, approximate_zmax
-from hans.tools import power
+
+from hans.models.viscous_stress_newton import stress_bottom, stress_top, stress_avg
+from hans.models.viscous_stress_powerlaw import stress_powerlaw_bottom, stress_powerlaw_top
 from hans.multiscale.gp import GP_stress, GP_stress2D_xz, GP_stress2D_yz
 
 
@@ -76,7 +77,7 @@ class SymStressField2D(VectorField):
             Field of slip lengths.
 
         """
-
+        
         if self.gp is None:
             # Only use averaged stress tensor components in the fully deterministic setting.
             # If we use a surrogate model, we neglect the averaged xx, yy, and xy components.
@@ -84,41 +85,14 @@ class SymStressField2D(VectorField):
 
             U = self.geometry['U']
             V = self.geometry['V']
+            
             eta = Material(self.material).viscosity(U, V, q[0], h[0])
-            zeta = self.material['bulk']
-
-            v1 = zeta + 4 / 3 * eta
-            v2 = zeta - 2 / 3 * eta
+            zeta = self.material["bulk"]
 
             if self.surface is None or self.surface["type"] == "full":
-                self.field[0] = (-3*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v1*h[1]
-                                 - 3*((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                      + 6*Ls**2*(V*q[0] - 2*q[2])) * h[2]*v2)/(3*h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
-                self.field[1] = (-3*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v2*h[1]
-                                 - 3*((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                      + 6*Ls**2*(V*q[0] - 2*q[2])) * h[2]*v1)/(3*h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
-                self.field[2] = -eta*(((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls ** 2*(V*q[0] - 2*q[2]))*h[1]
-                                      + ((U*q[0] - 3*q[1])*h[0] ** 2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))
-                                      * h[2])/(h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
+                self.field = stress_avg(q, h, U, V, eta, zeta, Ls, slip="both")
             else:
-                # all other types than 'full' consider slip only at the top surface
-                self.field[0] = (-3*v1*((U*q[0] - 3*q[1])*h[0]**2
-                                        + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                                 - 3*v2*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                                + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-                self.field[1] = (-3*v2*((U*q[0] - 3*q[1])*h[0]**2
-                                        + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                                 - 3*v1*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                                + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-                self.field[2] = -eta*(((V*q[0] - 3*q[2])*h[0]**2
-                                       + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2]))*h[1]
-                                      + ((U*q[0] - 3*q[1]) * h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0]
-                                         + 6*Ls**2*(U*q[0] - q[1]))*h[2])/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
+                self.field = stress_avg(q, h, U, V, eta, zeta, Ls, slip="top")
 
     def get(self, q, h, Ls):
         """Set method for Newtonian stress tensor components.
@@ -131,52 +105,17 @@ class SymStressField2D(VectorField):
             Field of height and height gradients.
         Ls : numpy.ndarray
             Field of slip lengths.
-                gp : dict
-            Gaussaian process parameters (the default is None).
-
         """
 
-        U = self.geometry['U']
-        V = self.geometry['V']
+        U = self.geometry["U"]
+        V = self.geometry["V"]
         eta = Material(self.material).viscosity(U, V, q[0], h[0])
-        zeta = self.material['bulk']
-
-        v1 = zeta + 4 / 3 * eta
-        v2 = zeta - 2 / 3 * eta
-
-        field = np.zeros_like(q)
+        zeta = self.material["bulk"]
 
         if self.surface is None or self.surface["type"] == "full":
-            field[0] = (-3*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v1*h[1]
-                        - 3*((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                             + 6*Ls**2*(V*q[0] - 2*q[2])) * h[2]*v2)/(3*h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
-            field[1] = (-3*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v2*h[1]
-                        - 3*((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                             + 6*Ls**2*(V*q[0] - 2*q[2])) * h[2]*v1)/(3*h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
-            field[2] = -eta*(((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls ** 2*(V*q[0] - 2*q[2]))*h[1]
-                             + ((U*q[0] - 3*q[1])*h[0] ** 2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))
-                             * h[2])/(h[0]*q[0]*(h[0] + 6*Ls)*(h[0] + 2*Ls))
-
+            return stress_avg(q, h, U, V, eta, zeta, Ls, slip="both")
         else:
-            # all other types than 'full' consider slip only at the top surface
-            field[0] = (-3*v1*((U*q[0] - 3*q[1])*h[0]**2
-                               + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                        - 3*v2*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-            field[1] = (-3*v2*((U*q[0] - 3*q[1])*h[0]**2
-                               + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                        - 3*v1*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-            field[2] = -eta*(((V*q[0] - 3*q[2])*h[0]**2
-                              + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2]))*h[1]
-                             + ((U*q[0] - 3*q[1]) * h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0]
-                                + 6*Ls**2*(U*q[0] - q[1]))*h[2])/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-        return field
+            return stress_avg(q, h, U, V, eta, zeta, Ls, slip="top")
 
 
 class SymStressField3D(TensorField):
@@ -186,7 +125,7 @@ class SymStressField3D(TensorField):
         evaluated at the top and bottom respectively. Derived from TensorField.
 
         This is legacy code. Used to store the wall stress in separate instances
-        for top and bottom wall. Now replaced by single instance of WallStressField3D. 
+        for top and bottom wall. Now replaced by single instance of WallStressField3D.
         Currently analytic expressions for the stress of a power law fluid  at the
         solid-liquid interface is not implemented elsewhere.
 
@@ -255,93 +194,53 @@ class SymStressField3D(TensorField):
 
         """
 
-        U = self.geometry['U']
-        V = self.geometry['V']
+        if self.gp is not None:
+
+            if self.ncalls % 2 == 0:
+                self.GP.active_learning_step(q[:, :, 1])
+            mean, cov = self.GP.predict()
+
+            self.field[4] = mean[:, 0, None]
+            self.ncalls += 1
+
+        else:
+            U = self.geometry["U"]
+            V = self.geometry["V"]
+            eta = Material(self.material).viscosity(U, V, q[0], h[0])
+            zeta = self.material["bulk"]
+
+            if bound == "top":
+                if self.surface is None or self.surface["type"] == "full":
+                    # all other types than 'full' consider slip only at the top surface
+                    self.field = stress_top(q, h, U, V, eta, zeta, Ls, slip="both")
+                else:
+                    self.field = stress_top(q, h, U, V, eta, zeta, Ls, slip="top")
+
+            elif bound == "bottom":
+                if self.surface is None or self.surface["type"] == "full":
+                    # surface type "full" means that both surface are slippery with equal slip length
+                    self.field = stress_bottom(q, h, U, V, eta, zeta, Ls, slip="both")
+                else:
+                    self.field = stress_bottom(q, h, U, V, eta, zeta, Ls, slip="top")
+
+    def get_top(self, q, h, Ls):
+        U = self.geometry["U"]
+        V = self.geometry["V"]
         eta = Material(self.material).viscosity(U, V, q[0], h[0])
-        zeta = self.material['bulk']
+        zeta = self.material["bulk"]
 
-        v1 = zeta + 4 / 3 * eta
-        v2 = zeta - 2 / 3 * eta
+        # only no slip
+        return stress_top(q, h, U, V, eta, zeta, Ls, slip="both")
 
-        if bound == "top":
-            if self.surface is None or self.surface["type"] == "full":
-                # all other types than 'full' consider slip only at the top surface
-                self.field[0] = -2*(((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v1*h[1]
-                                    + ((V*q[0] - 3*q[2]) * h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v2) * (h[0] + Ls)/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
+    def get_bot(self, q, h, Ls):
 
-                self.field[1] = -2*(h[0] + Ls)*(((U*q[0] - 3*q[1])*h[0]**2
-                                                 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v2*h[1]
-                                                + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                                    + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v1) / (h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
+        U = self.geometry["U"]
+        V = self.geometry["V"]
+        eta = Material(self.material).viscosity(U, V, q[0], h[0])
+        zeta = self.material["bulk"]
 
-                self.field[2] = -2*(h[0] + Ls)*v2*(((U*q[0] - 3*q[1])*h[0]**2
-                                                    + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*h[1]
-                                                   + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                                      + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2])/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-
-                self.field[3] = 2*(q[0]*V*h[0] - 3*h[0]*q[2] - 6*q[2]*Ls)*eta/(q[0]*(h[0]**2 + 8*Ls*h[0] + 12*Ls**2))
-
-                self.field[4] = 2*(q[0]*U*h[0] - 3*h[0]*q[1] - 6*q[1]*Ls)*eta/(q[0]*(h[0]**2 + 8*Ls*h[0] + 12*Ls**2))
-
-                self.field[5] = -2*eta*(h[0] + Ls)*(((V*q[0] - 3*q[2])*h[0]**2
-                                                     + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls**2*(V*q[0] - 2*q[2]))*h[1]
-                                                    + ((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0]
-                                                       + 6*Ls**2*(U*q[0] - 2*q[1]))*h[2])/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-            else:
-                # all other types than 'full' consider slip only at the top surface
-                self.field[0] = (-6*v1*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                                 - 6*v2*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                                + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-                self.field[1] = (-6*v2*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                                 - 6*v1*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                                + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-                self.field[2] = -2*v2*(((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1] +
-                                       h[2]*((V*q[0] - 3*q[2])*h[0]**2
-                                             + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2])))/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-                self.field[3] = 2*(V*q[0] - 3*q[2])*eta/(q[0]*(4*Ls + h[0]))
-
-                self.field[4] = 2*(U*q[0] - 3*q[1])*eta/(q[0]*(4*Ls + h[0]))
-
-                self.field[5] = -2*eta*(((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2]))*h[1]
-                                        + ((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0]
-                                           + 6*Ls**2*(U*q[0] - q[1]))*h[2])/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-        elif bound == "bottom":
-            if self.surface is None or self.surface["type"] == "full":
-                # surface type "full" means that both surface are slippery with equal slip length
-                self.field[0] = -2*(((U*q[0] - 3*q[1])*h[0]**2
-                                     + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*v1*h[1]
-                                    + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v2)*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-                self.field[1] = -2*(((U*q[0] - 3*q[1])*h[0]**2
-                                     + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*v2*h[1]
-                                    + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*(zeta + (4*eta)/3))*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-                self.field[2] = -2*v2*Ls*(((U*q[0] - 3*q[1])*h[0]**2
-                                           + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*h[1]
-                                          + ((V*q[0] - 3*q[2])*h[0] ** 2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                             + 6*Ls ** 2*(V*q[0] - 2*q[2]))*h[2])/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-                self.field[3] = -2*(2*q[0]*V*h[0] + 6*q[0]*V*Ls - 3*h[0]*q[2] - 6*q[2]*Ls) * \
-                    eta/(q[0]*(h[0] ** 2 + 8*Ls*h[0] + 12*Ls ** 2))
-
-                self.field[4] = -2*(2*q[0]*U*h[0] + 6*q[0]*U*Ls - 3*h[0]*q[1] - 6*q[1]*Ls) * \
-                    eta/(q[0]*(h[0] ** 2 + 8*Ls*h[0] + 12*Ls ** 2))
-
-                self.field[5] = -2*eta*(((V*q[0] - 3*q[2])*h[0]**2
-                                         + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls**2*(V*q[0] - 2*q[2]))*h[1]
-                                        + ((U*q[0] - 3*q[1])*h[0] ** 2 + 3*Ls*(U*q[0] - 4*q[1])*h[0]
-                                           + 6*Ls ** 2*(U*q[0] - 2*q[1]))*h[2])*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-            else:
-                # all other types than 'full' consider slip only at the top surface
-                self.field[3] = -2*(6*q[0]*Ls*V + 2*q[0]*V*h[0] - 6*q[2]*Ls - 3*h[0]*q[2])*eta/(h[0]*q[0]*(4*Ls + h[0]))
-                self.field[4] = -2*(6*q[0]*Ls*U + 2*q[0]*U*h[0] - 6*q[1]*Ls - 3*h[0]*q[1])*eta/(h[0]*q[0]*(4*Ls + h[0]))
+        # only no slip
+        return stress_bottom(q, h, U, V, eta, zeta, Ls, slip="both")
 
     def set_PowerLaw(self, q, h, bound):
         """Set method for power law stress tensor components.
@@ -357,114 +256,16 @@ class SymStressField3D(TensorField):
 
         """
 
-        U = self.geometry['U']
-        V = self.geometry['V']
+        U = self.geometry["U"]
+        V = self.geometry["V"]
         eta = self.material["shear"]
-
         n = self.n
 
-        u_mean = q[1] / q[0]
-        v_mean = q[2] / q[0]
-
-        if self.material["PLmethod"] == "approx":
-            zmaxu, zmaxv = approximate_zmax(U, V, u_mean, v_mean, n)
-        else:
-            zmaxu, zmaxv = solve_zmax(U, V, u_mean, v_mean, n)
-
-        zmaxu *= h[0]
-        zmaxv *= h[0]
-
-        U_crit = u_mean * (1 + 2 * n) / (1 + n)
-        V_crit = v_mean * (1 + 2 * n) / (1 + n)
-
-        # case 1: U <= U_crit; V <= V_crit
-        maskU1 = U <= U_crit
-        maskV1 = V <= V_crit
-
-        # case 2: U > U_crit; V > V_crit
-        maskU2 = U > U_crit
-        maskV2 = V > V_crit
-
         if bound == "top":
-            # case 1
-            s0_1 = -2 * ((1+2*n)*power(-zmaxu+h[0], 1/n)*(q[0]*U*zmaxu-q[1]*h[0])*h[1]) / (n*q[0]*(power(zmaxu, 2+1/n)
-                                                                                                   + power(-zmaxu+h[0], 2+1/n)))
-
-            s1_1 = -2 * ((1+2*n)*power(-zmaxv+h[0], 1/n)*(q[0]*V*zmaxv-q[2]*h[0])*h[2]) / (n*q[0]*(power(zmaxv, 2+1/n)
-                                                                                                   + power(-zmaxv+h[0], 2+1/n)))
-
-            s3_1 = ((1+2*n)*power(-zmaxv+h[0], 1/n)*(q[0]*V*zmaxv-q[2]*h[0]))/(n*q[0]*(power(zmaxv, 2+1/n)+power(-zmaxv+h[0], 2+1/n)))
-
-            s4_1 = ((1+2*n)*power(-zmaxu+h[0], 1/n)*(q[0]*U*zmaxu-q[1]*h[0]))/(n*q[0]*(power(zmaxu, 2+1/n)+power(-zmaxu+h[0], 2+1/n)))
-
-            s5_u1 = -s4_1 * h[2]
-            s5_v1 = -s3_1 * h[1]
-
-            # case 2
-            s0_2 = -2*((1+2*n)*(q[1]-U*q[0])*(power(zmaxu, 1+1/n)-power(zmaxu-h[0], 1+1/n)) *
-                       (power(zmaxu, 2+1/n)*n-power(zmaxu - h[0], 1+1/n)
-                        * (zmaxu*n+(1+n)*h[0]))*h[1])/(q[0]*(n*power(zmaxu-h[0], 2+1/n)
-                                                             + power(zmaxu, 1+1/n)*(-zmaxu*n+(1+2*n)*h[0]))**2)
-
-            s1_2 = -2*((1+2*n)*(q[2]-V*q[0])*(power(zmaxv, 1+1/n)-power(zmaxv-h[0], 1+1/n)) *
-                       (power(zmaxv, 2+1/n)*n-power(zmaxv - h[0], 1+1/n)
-                        * (zmaxv*n+(1+n)*h[0]))*h[2])/(q[0]*(n*power(zmaxv-h[0], 2+1/n)
-                                                             + power(zmaxv, 1+1/n)*(-zmaxv*n+(1+2*n)*h[0]))**2)
-
-            s3_2 = ((1+1/n)*(1+2*n)*(q[2]-V*q[0])*power(zmaxv-h[0], 1/n)*h[0]) / \
-                (q[0]*(n*power(zmaxv-h[0], 2+1/n)+power(zmaxv, 1+1/n)*(-zmaxv*n+(1+2*n)*h[0])))
-
-            s4_2 = ((1+1/n)*(1+2*n)*(q[1]-U*q[0])*power(zmaxu-h[0], 1/n)*h[0]) / \
-                (q[0]*(n*power(zmaxu-h[0], 2+1/n)+power(zmaxu, 1+1/n)*(-zmaxu*n+(1+2*n)*h[0])))
-
-            s5_u2 = (1+2*n)/q[0]*(-(((1+2*n)*(q[1]-U*q[0])*(power(zmaxu, 1+1/n)
-                                                            - power(zmaxu-h[0], 1+1/n))**2 * h[0]*h[2]) /
-                                    (n*power(zmaxu-h[0], 2+1/n) + power(zmaxu, 1+1/n)*(-zmaxu * n+(1+2*n)*h[0]))**2)
-                                  + ((q[1]-U*q[0])*(power(zmaxu, 1+1/n)-power(zmaxu-h[0], 1+1/n))*h[2]) /
-                                  (n*power(zmaxu-h[0], 2+1/n)+power(zmaxu, 1+1/n)*(-zmaxu*n+(1+2*n)*h[0])))
-
-            s5_v2 = (1+2*n)/q[0]*(-(((1+2*n)*(q[2]-V*q[0])*(power(zmaxv, 1+1/n)
-                                                            - power(zmaxv-h[0], 1+1/n))**2 * h[0]*h[1]) /
-                                    (n*power(zmaxv-h[0], 2+1/n) + power(zmaxv, 1+1/n)*(-zmaxv * n+(1+2*n)*h[0]))**2)
-                                  + ((q[2]-V*q[0])*(power(zmaxv, 1+1/n)-power(zmaxv-h[0], 1+1/n))*h[1]) /
-                                  (n*power(zmaxv-h[0], 2+1/n)+power(zmaxv, 1+1/n)*(-zmaxv*n+(1+2*n)*h[0])))
-
-            self.field[0, maskU1] = eta * power(s0_1[maskU1], n)
-            self.field[0, maskU2] = eta * power(s0_2[maskU2], n)
-
-            self.field[1, maskV1] = eta * power(s1_1[maskV1], n)
-            self.field[1, maskV2] = eta * power(s1_2[maskV2], n)
-
-            self.field[3, maskV1] = eta * power(s3_1[maskV1], n)
-            self.field[3, maskV2] = eta * power(s3_2[maskV2], n)
-
-            self.field[4, maskU1] = eta * power(s4_1[maskU1], n)
-            self.field[4, maskU2] = eta * power(s4_2[maskU2], n)
-
-            self.field[5, maskU1] = eta * power(s5_u1[maskU1], n)
-            self.field[5, maskU2] = eta * power(s5_u2[maskU2], n)
-
-            self.field[5, maskV1] += eta * power(s5_v1[maskV1], n)
-            self.field[5, maskV2] += eta * power(s5_v2[maskV2], n)
+            self.field = stress_powerlaw_top(q, h, U, V, eta, n, method=self.material['PLmethod'])
 
         elif bound == "bottom":
-            # case 1:
-            s3_1 = -(((1+2*n)*power(zmaxv, 1/n)*(q[0]*V*zmaxv-q[2]*h[0]))/(n*q[0]*(power(zmaxv, 2+1/n)+power(-zmaxv+h[0], 2+1/n))))
-
-            s4_1 = -(((1+2*n)*power(zmaxu, 1/n)*(q[0]*U*zmaxu-q[1]*h[0]))/(n*q[0]*(power(zmaxu, 2+1/n)+power(-zmaxu+h[0], 2+1/n))))
-
-            # case 2:
-            s3_2 = (power(zmaxv, 1/n)*(1+1/n)*(1+2*n)*(q[2]-V*q[0])*h[0]) / (q[0]*(n*power(zmaxv-h[0], 2+1/n) +
-                                                                                   power(zmaxv, 1+1/n)*(-zmaxv*n+(1+2*n)*h[0])))
-
-            s4_2 = (power(zmaxu, 1/n)*(1+1/n)*(1+2*n)*(q[1]-U*q[0])*h[0]) / (q[0]*(n*power(zmaxu-h[0], 2+1/n) +
-                                                                                   power(zmaxu, 1+1/n)*(-zmaxu*n+(1+2*n)*h[0])))
-
-            self.field[3, maskV1] = eta * power(s3_1[maskV1], n)
-            self.field[3, maskV2] = eta * power(s3_2[maskV2], n)
-
-            self.field[4, maskU1] = eta * power(s4_1[maskU1], n)
-            self.field[4, maskU2] = eta * power(s4_2[maskU2], n)
+            self.field = stress_powerlaw_bottom(q, h, U, V, eta, n, method=self.material['PLmethod'])
 
 
 class WallStressField3D(DoubleTensorField):
@@ -559,7 +360,7 @@ class WallStressField3D(DoubleTensorField):
         Ls : numpy.ndarray
             Field of slip lengths.
         """
-
+        
         if self.gp is not None:
 
             if len(self.GP_list) == 1:
@@ -587,105 +388,24 @@ class WallStressField3D(DoubleTensorField):
 
     def get_top(self, q, h, Ls):
 
-        U = self.geometry['U']
-        V = self.geometry['V']
+        U = self.geometry["U"]
+        V = self.geometry["V"]
         eta = Material(self.material).viscosity(U, V, q[0], h[0])
-        zeta = self.material['bulk']
-
-        v1 = zeta + 4 / 3 * eta
-        v2 = zeta - 2 / 3 * eta
-
-        field = np.zeros((6,)+q.shape[1:])
+        zeta = self.material["bulk"]
 
         if self.surface is None or self.surface["type"] == "full":
-
-            # all other types than 'full' consider slip only at the top surface
-            field[0] = -2*(((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v1*h[1]
-                           + ((V*q[0] - 3*q[2]) * h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                              + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v2) * (h[0] + Ls)/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-
-            field[1] = -2*(h[0] + Ls)*(((U*q[0] - 3*q[1])*h[0]**2
-                                        + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*v2*h[1]
-                                       + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                          + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v1) / (h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-
-            field[2] = -2*(h[0] + Ls)*v2*(((U*q[0] - 3*q[1])*h[0]**2
-                                           + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls**2*(U*q[0] - 2*q[1]))*h[1]
-                                          + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                             + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2])/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-
-            field[3] = 2*(q[0]*V*h[0] - 3*h[0]*q[2] - 6*q[2]*Ls)*eta/(q[0]*(h[0]**2 + 8*Ls*h[0] + 12*Ls**2))
-
-            field[4] = 2*(q[0]*U*h[0] - 3*h[0]*q[1] - 6*q[1]*Ls)*eta/(q[0]*(h[0]**2 + 8*Ls*h[0] + 12*Ls**2))
-
-            field[5] = -2*eta*(h[0] + Ls)*(((V*q[0] - 3*q[2])*h[0]**2
-                                            + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls**2*(V*q[0] - 2*q[2]))*h[1]
-                                           + ((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 4*q[1])*h[0]
-                                              + 6*Ls**2*(U*q[0] - 2*q[1]))*h[2])/(h[0]*(h[0] + 2*Ls)**2*q[0]*(h[0] + 6*Ls))
-
+            return stress_top(q, h, U, V, eta, zeta, Ls, slip="both")
         else:
-            field[0] = (-6*v1*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                        - 6*v2*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-            field[1] = (-6*v2*((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1]
-                        - 6*v1*h[2] * ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0]
-                                       + 6*Ls**2*(V*q[0] - q[2])))/(3*h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-            field[2] = -2*v2*(((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0] + 6*Ls**2*(U*q[0] - q[1]))*h[1] +
-                              h[2]*((V*q[0] - 3*q[2])*h[0]**2
-                                    + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2])))/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-            field[3] = 2*(V*q[0] - 3*q[2])*eta/(q[0]*(4*Ls + h[0]))
-
-            field[4] = 2*(U*q[0] - 3*q[1])*eta/(q[0]*(4*Ls + h[0]))
-
-            field[5] = -2*eta*(((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 2*q[2])*h[0] + 6*Ls**2*(V*q[0] - q[2]))*h[1]
-                               + ((U*q[0] - 3*q[1])*h[0]**2 + 3*Ls*(U*q[0] - 2*q[1])*h[0]
-                                  + 6*Ls**2*(U*q[0] - q[1]))*h[2])/(h[0]*(4*Ls + h[0])*q[0]*(Ls + h[0]))
-
-        return field
+            return stress_top(q, h, U, V, eta, zeta, Ls, slip="top")
 
     def get_bot(self, q, h, Ls):
 
-        U = self.geometry['U']
-        V = self.geometry['V']
+        U = self.geometry["U"]
+        V = self.geometry["V"]
         eta = Material(self.material).viscosity(U, V, q[0], h[0])
-        zeta = self.material['bulk']
-
-        v1 = zeta + 4 / 3 * eta
-        v2 = zeta - 2 / 3 * eta
-
-        field = np.zeros((6,)+q.shape[1:])
+        zeta = self.material["bulk"]
 
         if self.surface is None or self.surface["type"] == "full":
-
-            field[0] = -2*(((U*q[0] - 3*q[1])*h[0]**2
-                            + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*v1*h[1]
-                           + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                              + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*v2)*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-            field[1] = -2*(((U*q[0] - 3*q[1])*h[0]**2
-                            + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*v2*h[1]
-                           + ((V*q[0] - 3*q[2])*h[0]**2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                              + 6*Ls**2*(V*q[0] - 2*q[2]))*h[2]*(zeta + (4*eta)/3))*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-            field[2] = -2*v2*Ls*(((U*q[0] - 3*q[1])*h[0]**2
-                                  + 3*Ls*(U*q[0] - 4*q[1])*h[0] + 6*Ls ** 2*(U*q[0] - 2*q[1]))*h[1]
-                                 + ((V*q[0] - 3*q[2])*h[0] ** 2 + 3*Ls*(V*q[0] - 4*q[2])*h[0]
-                                    + 6*Ls ** 2*(V*q[0] - 2*q[2]))*h[2])/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
-            field[3] = -2*(2*q[0]*V*h[0] + 6*q[0]*V*Ls - 3*h[0]*q[2] - 6*q[2]*Ls)*eta/(q[0]*(h[0] ** 2 + 8*Ls*h[0] + 12*Ls ** 2))
-
-            field[4] = -2*(2*q[0]*U*h[0] + 6*q[0]*U*Ls - 3*h[0]*q[1] - 6*q[1]*Ls)*eta/(q[0]*(h[0] ** 2 + 8*Ls*h[0] + 12*Ls ** 2))
-
-            field[5] = -2*eta*(((V*q[0] - 3*q[2])*h[0]**2
-                                + 3*Ls*(V*q[0] - 4*q[2])*h[0] + 6*Ls**2*(V*q[0] - 2*q[2]))*h[1]
-                               + ((U*q[0] - 3*q[1])*h[0] ** 2 + 3*Ls*(U*q[0] - 4*q[1])*h[0]
-                                  + 6*Ls ** 2*(U*q[0] - 2*q[1]))*h[2])*Ls/(h[0]*(h[0] + 2*Ls) ** 2*q[0]*(h[0] + 6*Ls))
-
+            return stress_bottom(q, h, U, V, eta, zeta, Ls, slip="both")
         else:
-            field[3] = -2*(6*q[0]*Ls*V + 2*q[0]*V*h[0] - 6*q[2]*Ls - 3*h[0]*q[2])*eta/(h[0]*q[0]*(4*Ls + h[0]))
-            field[4] = -2*(6*q[0]*Ls*U + 2*q[0]*U*h[0] - 6*q[1]*Ls - 3*h[0]*q[1])*eta/(h[0]*q[0]*(4*Ls + h[0]))
-
-        return field
+            return stress_bottom(q, h, U, V, eta, zeta, Ls, slip="top")

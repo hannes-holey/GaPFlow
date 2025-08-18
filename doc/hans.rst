@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 4
 
    hans.cli
+   hans.models
    hans.multiscale
    hans.special
 

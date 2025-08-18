@@ -21,32 +21,31 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
+
+
+import numpy as np
 import pytest
-from lammps import lammps
 
 
-@pytest.fixture(scope='session')
-def setup(tmpdir_factory):
-
-    tmpdir = tmpdir_factory.mktemp("tmp")
-    logfile = os.path.join(tmpdir, "log.lammps")
-
-    yield logfile
+from hans.models.velocity_profile import get_velocity_profiles
 
 
-@pytest.mark.skip(reason="Skip tests that require LAMMPS for now")
-def test_lmp_serial(setup):
+def trapezoid(u, z):
+    return np.sum((u[1:] + u[:-1]) / 2. * (z[1:] - z[:-1]))
 
-    logfile = setup
 
-    nargs = ["-screen", logfile, "-log", logfile]
+@pytest.mark.parametrize('slip', ['both', 'top', 'bottom', 'none'])
+def test_flow_rate(slip):
 
-    lmp = lammps(cmdargs=nargs)
-    lmp.file(os.path.join('tests', 'in.lj'))
-    lmp.close()
+    Nz = 10000
+    hmax = 2.
 
-    with open(logfile, 'r') as f:
-        last = f.readlines()[-1]
+    z = np.linspace(0., hmax, Nz)
+    q = np.array([1., 2., 1.])
 
-    assert last.startswith("Total wall time:")
+    Ls = 0.5
+
+    u, v = get_velocity_profiles(z, q, Ls=Ls, U=1., V=1., slip=slip)
+
+    assert np.isclose(trapezoid(u, z) / hmax, q[1])
+    assert np.isclose(trapezoid(v, z) / hmax, q[2])

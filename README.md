@@ -1,6 +1,6 @@
 # HANS
 
-[![PyPI version](https://badge.fury.io/py/hans.svg)](https://badge.fury.io/py/hans) [![CI](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=master)](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml) [![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
+[![PyPI version](https://badge.fury.io/py/hans.svg)](https://badge.fury.io/py/hans) [![CI](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml) [![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
 
 This code implements the Height-Averaged Navier-Stokes (HANS) scheme for two-dimensional lubrication problems as described in the following paper:
 

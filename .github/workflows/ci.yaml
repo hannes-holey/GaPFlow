@@ -1,18 +1,19 @@
-name: CI
+name: Tests
 
 on:
   push:
     branches:
       - '**'
+    tags:
+      - '**'
   pull_request:
     branches: [ main ]
 jobs:
   test:
-    # runs-on: ubuntu-20.04
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.9', '3.10', '3.11', '3.12']
     steps:
     - name: Checkout source
       uses: actions/checkout@v4
@@ -58,20 +59,10 @@ jobs:
     - name: Test with pytest
       run: |
         coverage run --source=hans --omit=hans/cli/* -m pytest
-        TOTAL=$(coverage report | awk 'END{print $4}' | sed 's/%//')
-
-        if (( $(echo "$TOTAL <= 50" | bc -l) )) ; then
-            COLOR=red
-        elif (( $(echo "$TOTAL > 80" | bc -l) )); then
-            COLOR=green
-        else
-            COLOR=orange
-        fi
-
-        curl "https://img.shields.io/badge/coverage-$TOTAL%25-$COLOR" > badge.svg
+        ./maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
-      if: matrix.python-version == '3.11'
+      if: matrix.python-version == '3.12' && github.ref == 'refs/heads/main'
       uses: exuanbo/actions-deploy-gist@v1
       with:
         token: ${{ secrets.GIST_SECRET }}
@@ -80,12 +71,14 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')  # only publish to PyPI on tag pushes
     needs: test
-    # Specifying a GitHub environment is optional, but strongly encouraged
-    environment: release
+    environment:
+      name: release
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -105,5 +98,4 @@ jobs:
           python3 -m build
 
       - name: Publish package on PyPI
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
         uses: pypa/gh-action-pypi-publish@release/v1

@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2022 Hannes Holey
+# Copyright 2020-2022, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -40,7 +40,7 @@ def p_channel_nondimensional(x, b):
     return (abs(x - 1) * slope - slope / 2) / kappa
 
 
-@pytest.fixture(scope="session", params=[1e-5, 1e-6, 1e-7])
+@pytest.fixture(scope="session", params=[1e-4, 1e-5, 1e-6])
 def setup(tmpdir_factory, request):
     config_file = os.path.join("tests", "channel-slip1D_y_incompressible.yaml")
     tmp_dir = tmpdir_factory.mktemp("tmp")
@@ -77,7 +77,7 @@ def test_pressure(setup):
     p_ref = p_channel_nondimensional(yref, b)
 
     kappa = 5 * b / (2 + 5 * b)
-    scalef = h**2 / (eta * V * Ly/2)
+    scalef = h**2 / (eta * V * Ly / 2)
     p *= scalef / kappa
 
     np.testing.assert_almost_equal(p, p_ref, decimal=2)

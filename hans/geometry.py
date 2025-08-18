@@ -1,5 +1,6 @@
 #
-# Copyright 2020-2022, 2024 Hannes Holey
+# Copyright 2020-2022, 2024-2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -25,6 +26,7 @@
 
 import numpy as np
 from mpi4py import MPI
+from scipy import signal
 
 from hans.field import ScalarField, VectorField
 from hans.tools import abort
@@ -436,9 +438,9 @@ def fourier_synthesis(shape, size, Hurst, rms_height=None, rms_slope=None,
     karr = np.empty(kshape, dtype=np.complex128)
 
     # Creating Fourier representation
-    qy = 2*np.pi*np.arange(kny)/sy
+    qy = 2 * np.pi * np.arange(kny) / sy
     for x in range(nx):
-        if x > nx//2:
+        if x > nx // 2:
             qx = 2 * np.pi * (nx - x) / sx
         else:
             qx = 2 * np.pi * x / sx
@@ -622,6 +624,12 @@ class SlipLength(ScalarField):
         dx = self.disc["dx"]
         dy = self.disc["dy"]
 
+        smooth = int(self.surface.get('smooth', 0))
+        if smooth:
+            window1d = np.abs(signal.windows.hann(smooth))  # was 20 hardcoded in prev version
+            window1d /= window1d.sum()
+            window2d = np.outer(window1d, window1d)
+
         idxx, idyy = self.id_grid
 
         ng = self.disc["nghost"]
@@ -654,7 +662,7 @@ class SlipLength(ScalarField):
             mask = np.less((xx - center[0])**2 + (yy - center[1])**2, radius**2)
 
         elif self.surface["type"] == "circle2":
-            center_1 = (3 * Lx / 4, Ly/2)
+            center_1 = (3 * Lx / 4, Ly / 2)
             center_2 = (Lx / 4, Ly)
             center_3 = (Lx / 4, 0)
             radius = Lx / 4
@@ -672,5 +680,13 @@ class SlipLength(ScalarField):
         elif self.surface["type"] == "full":
             mask = None
 
-        ls = self.surface["lslip"]
-        self.field[0, mask] = ls
+        if smooth:
+            mask = signal.convolve2d(mask, window2d,
+                                     mode='same',
+                                     boundary='wrap' if self.disc['pX'] and self.disc['pY'] else 'symm'
+                                     )
+
+        ls0 = self.surface.get("lslip0", 0.)
+        ls1 = self.surface["lslip"]
+
+        self.field[0] = ls0 + mask * (ls1 - ls0)

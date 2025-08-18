@@ -12,14 +12,6 @@ hans.special.flux\_limiter module
    :show-inheritance:
    :undoc-members:
 
-hans.special.powerlaw\_fluid module
------------------------------------
-
-.. automodule:: hans.special.powerlaw_fluid
-   :members:
-   :show-inheritance:
-   :undoc-members:
-
 Module contents
 ---------------
 

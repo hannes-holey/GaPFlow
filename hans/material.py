@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2024 Hannes Holey
+# Copyright 2020, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -25,11 +25,12 @@
 
 import numpy as np
 
-from hans.tools import abort
 from hans.multiscale.gp import GP_pressure, GP_pressure2D
 
-# global constants
-R = 8.314462618
+import hans.models.pressure as pressure_model
+import hans.models.density as density_model
+import hans.models.sound_speed as sound_model
+import hans.models.viscosity as viscosity_model
 
 
 class Material:
@@ -39,6 +40,9 @@ class Material:
 
         self.gp = gp
         self.ncalls = 0
+
+        self._eos_config()
+        self._viscosity_config()
 
     def init_gp(self, q, db):
 
@@ -78,364 +82,168 @@ class Material:
         return c
 
     def eos_pressure(self, rho):
-        # Dowson-Higginson (with cavitation)
-        if self.material['EOS'] == "DH":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            C1 = self.material['C1']
-            C2 = self.material['C2']
+        pressure = self._eos_pressure_func(rho, *self._eos_args)
 
-            try:
-                assert np.all(rho < C2 * rho0)
-            except AssertionError:
-                print("Density too high for Dowson-Higginson EOS")
-                abort()
-
-            p = P0 + (C1 * (rho / rho0 - 1.)) / (C2 - rho / rho0)
-            if 'Pcav' in self.material.keys():
-                Pcav = self.material['Pcav']
-                return np.maximum(p, Pcav)
-            else:
-                return p
-
-        # Power law, (alpha = 0: ideal gas)
-        elif self.material['EOS'] == "PL":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            alpha = self.material['alpha']
-
-            p = P0 * (rho / rho0)**(1. / (1. - 0.5 * alpha))
-
-            if 'Pcav' in self.material.keys():
-                Pcav = self.material['Pcav']
-                return np.maximum(p, Pcav)
-            else:
-                return p
-
-        # Van der Waals equation
-        elif self.material['EOS'] == "vdW":
-            M = self.material['M']
-            T = self.material['T0']
-            a = self.material['a']
-            b = self.material['b']
-
-            p = R * T * rho / (M - b * rho) - a * rho**2 / M**2
-            if 'Pcav' in self.material.keys():
-                Pcav = self.material['Pcav']
-                return np.maximum(p, Pcav)
-            else:
-                return p
-
-        # Murnaghan-Tait equation (modified Tait eq.)
-        elif self.material['EOS'] == "Tait":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            K = self.material['K']
-            n = self.material['n']
-
-            p = K / n * ((rho / rho0)**n - 1) + P0
-            if 'Pcav' in self.material.keys():
-                Pcav = self.material['Pcav']
-                return np.maximum(p, Pcav)
-            else:
-                return p
-
-        # Cubic polynomial
-        elif self.material['EOS'] == "cubic":
-            a = self.material['a']
-            b = self.material['b']
-            c = self.material['c']
-            d = self.material['d']
-
-            return a * rho**3 + b * rho**2 + c * rho + d
-
-        elif self.material['EOS'] == "BWR":
-
-            T = self.material['T']
-            x = self.material['params']
-
-            gamma = 3.
-
-            p = rho * T +\
-                rho**2 * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
-                rho**3 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
-                rho**4 * (x[9] * T + x[10] + x[11] / T) +\
-                rho**5 * x[12] +\
-                rho**6 * (x[13] / T + x[14] / T**2) +\
-                rho**7 * (x[15] / T) +\
-                rho**8 * (x[16] / T + x[17] / T**2) +\
-                rho**9 * (x[18] / T**2) +\
-                np.exp(-gamma * rho**2) * (rho**3 * (x[19] / T**2 + x[20] / T**3) +
-                                           rho**5 * (x[21] / T**2 + x[22] / T**4) +
-                                           rho**7 * (x[23] / T**2 + x[24] / T**3) +
-                                           rho**9 * (x[25] / T**2 + x[26] / T**4) +
-                                           rho**11 * (x[27] / T**2 + x[28] / T**3) +
-                                           rho**13 * (x[29] / T**2 + x[30] / T**3 + x[31] / T**4))
-
-            return p
-
-        # Cavitation model Bayada and Chupin, J. Trib. 135, 2013
-        elif self.material['EOS'].startswith("Bayada"):
-            c_l = self.material["cl"]
-            c_v = self.material["cv"]
-            rho_l = self.material["rhol"]
-            rho_v = self.material["rhov"]
-            N = rho_v * c_v**2 * rho_l * c_l**2 * (rho_v - rho_l) / (rho_v**2 * c_v**2 - rho_l**2 * c_l**2)
-            Pcav = rho_v * c_v**2 - N * np.log(rho_v**2 * c_v**2 / (rho_l**2 * c_l**2))
-
-            alpha = (rho - rho_l) / (rho_v - rho_l)
-
-            if np.isscalar(rho):
-                if alpha < 0:
-                    p = Pcav + (rho - rho_l) * c_l**2
-                elif alpha >= 0 and alpha <= 1:
-                    p = Pcav + N * np.log(rho_v * c_v**2 * rho / (rho_l * (rho_v * c_v**2 * (1 - alpha) + rho_l * c_l**2 * alpha)))
-                else:
-                    p = c_v**2 * rho
-
-            else:
-                rho_mix = rho[np.logical_and(alpha <= 1, alpha >= 0)]
-                alpha_mix = alpha[np.logical_and(alpha <= 1, alpha >= 0)]
-
-                p = c_v**2 * rho
-                p[alpha < 0] = Pcav + (rho[alpha < 0] - rho_l) * c_l**2
-                p[np.logical_and(alpha <= 1, alpha >= 0)] = Pcav + \
-                    N * np.log(rho_v * c_v**2 * rho_mix / (rho_l * (rho_v * c_v**2 * (1 - alpha_mix) + rho_l * c_l**2 * alpha_mix)))
-
-            return p
+        if 'Pcav' in self.material.keys():
+            return np.maximum(pressure, self.material['Pcav'])
+        else:
+            return pressure
 
     def eos_density(self, p):
 
-        # Dowson-Higginson
-        if self.material['EOS'] == "DH":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            C1 = self.material['C1']
-            C2 = self.material['C2']
+        density = self._eos_density_func(p, *self._eos_args)
 
-            return rho0 * (C1 + C2 * (p - P0)) / (C1 + p - P0)
-
-        # Power law, (alpha = 0: ideal gas)
-        elif self.material['EOS'] == "PL":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            alpha = self.material['alpha']
-
-            return rho0 * (p / P0)**(1. - alpha / 2.)
-
-        # Cavitation model Bayada and Chupin, J. Trib. 135, 2013
-        elif self.material['EOS'].startswith("Bayada"):
-            c_l = self.material["cl"]
-            c_v = self.material["cv"]
-            rho_l = self.material["rhol"]
-            rho_v = self.material["rhov"]
-            N = rho_v * c_v**2 * rho_l * c_l**2 * (rho_v - rho_l) / (rho_v**2 * c_v**2 - rho_l**2 * c_l**2)
-            Pcav = rho_v * c_v**2 - N * np.log(rho_v**2 * c_v**2 / (rho_l**2 * c_l**2))
-
-            if np.isscalar(p):
-                if p > Pcav:
-                    rho = (p - Pcav) / c_l**2 + rho_l
-                elif p < c_v**2 * rho_v:
-                    rho = p / c_v**2
-                else:
-                    rho = (c_l**2 * rho_l**3 - c_v**2 * rho_l * rho_v**2) * np.exp((p - Pcav) / N) \
-                        / ((c_l**2 * rho_l**2 - c_v**2 * rho_l * rho_v) * np.exp((p - Pcav) / N) + c_v**2 * rho_v * (-rho_v + rho_l))
-            else:
-                p_mix = np.logical_and(p <= Pcav, p >= c_v**2 * rho_v)
-                rho = p / c_v**2
-                rho[p > Pcav] = (p[p > Pcav] - Pcav) / c_l**2 + rho_l
-                rho[p_mix] = (c_l**2 * rho_l**3 - c_v**2 * rho_l * rho_v**2) * np.exp((p[p_mix] - Pcav) / N) \
-                    / ((c_l**2 * rho_l**2 - c_v**2 * rho_l * rho_v) * np.exp((p[p_mix] - Pcav) / N) + c_v**2 * rho_v * (-rho_v + rho_l))
-
-            return rho
-
-        elif self.material["EOS"] == "Tait":
-            rho0 = self.material['rho0']
-            P0 = self.material['P0']
-            K = self.material['K']
-            n = self.material['n']
-
-            return rho0 * (1 + n / K * (p - P0))**(1 / n)
-
-    # def alphaOfRho(self, rho):
-    #     rho_l = float(self.material["rhol"])
-    #     rho_v = float(self.material["rhov"])
-    #
-    #     return (rho - rho_l) / (rho_v - rho_l)
+        return density
 
     def eos_sound_speed(self, rho):
 
-        # Dowson-Higginson
-        if self.material['EOS'] == "DH":
-            rho0 = self.material['rho0']
-            C1 = self.material['C1']
-            C2 = self.material['C2']
-            c_squared = C1 * rho0 * (C2 - 1.) * (1 / rho)**2 / ((C2 * rho0 / rho - 1.)**2)
+        speed = self._eos_sound_func(rho, *self._eos_args)
 
-        # Power law, (alpha = 0: ideal gas)
-        elif self.material['EOS'] == "PL":
-            rho0 = self.material['rho0']
-            p0 = self.material['P0']
-            alpha = self.material['alpha']
-            c_squared = -2. * p0 * (rho / rho0)**(-2. / (alpha - 2.)) / ((alpha - 2) * rho)
-
-        # Van der Waals equation
-        elif self.material['EOS'] == "vdW":
-            M = self.material['M']
-            T = self.material['T0']
-            a = self.material['a']
-            b = self.material['b']
-            c_squared = R * T * M / (M - b * rho)**2 - 2 * a * rho / M**2
-
-        # Tait equation (Murnaghan)
-        elif self.material['EOS'] == "Tait":
-            rho0 = self.material['rho0']
-            p0 = self.material['P0']
-            K = self.material['K']
-            n = self.material['n']
-
-            c_squared = K / rho0**n * rho**(n - 1)
-
-        # Cubic polynomial
-        elif self.material['EOS'] == "cubic":
-            a = self.material['a']
-            b = self.material['b']
-            c = self.material['c']
-
-            c_squared = 3 * a * rho**2 + 2 * b * rho + c
-
-        elif self.material['EOS'] == "BWR":
-
-            T = self.material['T']
-            x = self.material['params']
-
-            gamma = 3.
-
-            exp_prefac = (rho**3 * (x[19] / T**2 + x[20] / T**3) +
-                          rho**5 * (x[21] / T**2 + x[22] / T**4) +
-                          rho**7 * (x[23] / T**2 + x[24] / T**3) +
-                          rho**9 * (x[25] / T**2 + x[26] / T**4) +
-                          rho**11 * (x[27] / T**2 + x[28] / T**3) +
-                          rho**13 * (x[29] / T**2 + x[30] / T**3 + x[31] / T**4))
-
-            D_exp_prefac = (3. * rho**2 * (x[19] / T**2 + x[20] / T**3) +
-                            5. * rho**4 * (x[21] / T**2 + x[22] / T**4) +
-                            7. * rho**6 * (x[23] / T**2 + x[24] / T**3) +
-                            9. * rho**8 * (x[25] / T**2 + x[26] / T**4) +
-                            11. * rho**10 * (x[27] / T**2 + x[28] / T**3) +
-                            13. * rho**12 * (x[29] / T**2 + x[30] / T**3 + x[31] / T**4))
-
-            c_squared = T + 2. * rho * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
-                3. * rho**2 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
-                4. * rho**3 * (x[9] * T + x[10] + x[11] / T) +\
-                5. * rho**4 * x[12] +\
-                6. * rho**5 * (x[13] / T + x[14] / T**2) +\
-                7. * rho**6 * (x[15] / T) +\
-                8. * rho**7 * (x[16] / T + x[17] / T**2) +\
-                9. * rho**8 * (x[18] / T**2) +\
-                np.exp(-gamma * rho**2) * D_exp_prefac -\
-                2. * rho * gamma * np.exp(-gamma * rho**2) * exp_prefac
-
-        # Cavitation model Bayada and Chupin, J. Trib. 135, 2013
-        elif self.material['EOS'].startswith("Bayada"):
-            rho_v = self.material["rhov"]
-            rho_l = self.material["rhol"]
-            c_l = self.material['cl']
-            c_v = self.material['cv']
-            alpha = (rho - rho_l) / (rho_v - rho_l)
-
-            if np.isscalar(rho):
-                if alpha < 0:
-                    c_squared = c_l**2
-                elif alpha >= 0 and alpha <= 1:
-                    c_squared = rho_v * rho_l * (c_v * c_l)**2 / (alpha * rho_l * c_l**2 + (1 - alpha) * rho_v * c_v**2) / rho
-                else:
-                    c_squared = c_v**2
-
-            else:
-                mix = np.logical_and(alpha <= 1, alpha >= 0)
-                c_squared = np.ones_like(rho) * c_v**2
-                c_squared[alpha < 0] = c_l**2
-                c_squared[mix] = rho_v * rho_l * (c_v * c_l)**2 / (alpha[mix] * rho_l * c_l**2 +
-                                                                   (1 - alpha[mix]) * rho_v * c_v**2) / rho[mix]
-
-        return np.sqrt(np.amax(abs(c_squared)))
+        return np.amax(speed)
 
     def viscosity(self, U, V, rho, height):
 
+        # density-dependence
+        mu0 = self._viscosity_dens_func(self._viscosity_dens_transform(rho),
+                                        *self._viscosity_dens_args)
+
+        # shearrate-dependence
+        # TODO: not only Couette shear rate
+        shear_rate = np.sqrt(U**2 + V**2) / height
+
+        mu = self._viscosity_shear_func(shear_rate,
+                                        mu0,
+                                        *self._viscosity_shear_args)
+
+        return mu
+
+    def _eos_config(self):
+        # Dowson-Higginson (with cavitation)
+        if self.material['EOS'] == "DH":
+            self._eos_args = [self.material['rho0'],
+                              self.material['P0'],
+                              self.material['C1'],
+                              self.material['C2']]
+            self._eos_pressure_func = pressure_model.dowson_higginson
+            self._eos_density_func = density_model.dowson_higginson
+            self._eos_sound_func = sound_model.dowson_higginson
+
+        # Power law, (alpha = 0: ideal gas)
+        elif self.material['EOS'] == "PL":
+            self._eos_args = [self.material['rho0'],
+                              self.material['P0'],
+                              self.material['alpha']]
+
+            self._eos_pressure_func = pressure_model.power_law
+            self._eos_density_func = density_model.power_law
+            self._eos_sound_func = sound_model.power_law
+
+        # Van der Waals equation
+        elif self.material['EOS'] == "vdW":
+            self._eos_args = [self.material['M'],
+                              self.material['T0'],
+                              self.material['a'],
+                              self.material['b']]
+
+            self._eos_pressure_func = pressure_model.van_der_waals
+            # self._eos_density_func = density_model.van_der_waals
+            self._eos_sound_func = sound_model.van_der_waals
+
+        # Murnaghan-Tait equation (modified Tait eq.)
+        elif self.material['EOS'] == "Tait":
+            self._eos_args = [self.material['rho0'],
+                              self.material['P0'],
+                              self.material['K'],
+                              self.material['n']]
+
+            self._eos_pressure_func = pressure_model.murnaghan_tait
+            self._eos_density_func = density_model.murnaghan_tait
+            self._eos_sound_func = sound_model.murnaghan_tait
+
+        # Cubic polynomial
+        elif self.material['EOS'] == "cubic":
+            self._eos_args = [self.material['a'],
+                              self.material['b'],
+                              self.material['c'],
+                              self.material['d']]
+
+            self._eos_pressure_func = pressure_model.cubic
+            # self._eos_density_func = density_model.cubic
+            self._eos_sound_func = sound_model.cubic
+
+        elif self.material['EOS'] == "BWR":
+            self._eos_args = [self.material['T']]
+            self._eos_pressure_func = pressure_model.bwr
+            # self._eos_density_func = density_model.bwr
+            self._eos_sound_func = sound_model.bwr
+
+        elif self.material['EOS'].startswith("Bayada"):
+            self._eos_args = [self.material["rhol"],
+                              self.material["rhov"],
+                              self.material["cl"],
+                              self.material["cv"]]
+
+            self._eos_pressure_func = pressure_model.bayada_chupin
+            self._eos_density_func = density_model.bayada_chupin
+            self._eos_sound_func = sound_model.bayada_chupin
+
+    def _viscosity_config(self):
+
+        self._viscosity_dens_transform = lambda x: x
+
         # Dukler viscosity in mixture (default)
         if self.material["EOS"] == "Bayada" or self.material["EOS"] == "Bayada_D":
-            eta_l = self.material["shear"]
-            eta_v = self.material["shearv"]
-            rho_v = self.material["rhov"]
-            rho_l = self.material["rhol"]
-            alpha = (rho - rho_l) / (rho_v - rho_l)
 
-            return alpha * eta_v + (1 - alpha) * eta_l
+            self._viscosity_dens_args = [self.material["rhol"],
+                                         self.material["rhov"],
+                                         self.material["shear"],
+                                         self.material["shearv"]]
+            self._viscosity_dens_func = viscosity_model.dukler_mixture
 
         # McAdams viscosity in mixture
         elif self.material["EOS"] == "Bayada_MA":
-            eta_l = self.material["shear"]
-            eta_v = self.material["shearv"]
-            rho_v = self.material["rhov"]
-            rho_l = self.material["rhol"]
-            alpha = (rho - rho_l) / (rho_v - rho_l)
-            M = alpha * rho_v / rho
-
-            return eta_v * eta_l / (eta_l * M + eta_v * (1 - M))
+            self._viscosity_dens_args = [self.material["rhol"],
+                                         self.material["rhov"],
+                                         self.material["shear"],
+                                         self.material["shearv"]]
+            self._viscosity_dens_func = viscosity_model.mc_adams_mixture
 
         else:
-            if "piezo" in self.material.keys():
+            if 'piezo' in self.material.keys():
+                if self.material["piezo"] == "Vogel":
+                    self._viscosity_dens_args = [self.material['rho0'],
+                                                 self.material["g"],
+                                                 self.material["mu_inf"],
+                                                 self.material["phi_inf"],
+                                                 self.material["BF"]]
+                    self._viscosity_dens_func = viscosity_model.vogel_piezo
 
-                if self.material["piezo"] == "Barus":
-                    mu0 = self.material["shear"]
-                    aB = self.material["aB"]
-                    p = self.eos_pressure(rho)
-                    mu0 *= np.exp(aB * p)
-
-                elif self.material["piezo"] == "Vogel":
-                    rho0 = self.material['rho0']
-                    g = self.material["g"]
-                    mu_inf = self.material["mu_inf"]
-                    phi_inf = self.material["phi_inf"]
-                    BF = self.material["BF"]
-
-                    phi = (rho0 / rho)**g
-                    mu0 = mu_inf * np.exp(BF * phi_inf / (phi - phi_inf))
-                else:
-                    mu0 = self.material["shear"]
+                elif self.material["piezo"] == "Barus":
+                    self._viscosity_dens_args = [self.material["shear"],
+                                                 self.material["aB"]]
+                    self._viscosity_dens_func = viscosity_model.barus_piezo
+                    self._viscosity_dens_transform = self.eos_pressure
             else:
-                mu0 = self.material["shear"]
+                self._viscosity_dens_args = []
+                self._viscosity_dens_func = lambda x: self.material['shear']
 
-            if "thinning" in self.material.keys():
-                if self.material["thinning"] == "Eyring":
-                    tau0 = self.material["tau0"]
-                    shear_rate = np.sqrt(U**2 + V**2) / height
+        if "thinning" in self.material.keys():
 
-                    return tau0 / shear_rate * np.arcsinh(mu0 * shear_rate / tau0)
+            if self.material["thinning"] == "Eyring":
+                self._viscosity_shear_args = [self.material["tau0"]]
+                self._viscosity_shear_func = viscosity_model.eyring_shear
 
-                elif self.material["thinning"] == "Carreau":
+            elif self.material["thinning"] == "Carreau":
+                self._viscosity_shear_args = [self.material["shearinf"] if "shearinf" in self.material.keys() else 0.,
+                                              self.material["relax"],
+                                              self.material["a"],
+                                              self.material["N"]]
+                self._viscosity_shear_func = viscosity_model.carreau_shear
 
-                    shear_rate = np.sqrt(U**2 + V**2) / height
-                    lam = self.material["relax"]
-                    a = self.material["a"]
-                    N = self.material["N"]
+            elif self.material["thinning"] == "PL":
+                self._viscosity_shear_args = [self.material["n"]]
+                self._viscosity_shear_func = viscosity_model.power_law_shear
 
-                    if "shearinf" in self.material.keys():
-                        mu_inf = self.material["shearinf"]
-                    else:
-                        mu_inf = 0.
-
-                    return mu_inf + (mu0 - mu_inf) * (1 + (lam * shear_rate)**a)**((N - 1) / a)
-
-                elif self.material["thinning"] == "PL":
-                    shear_rate = np.sqrt(U**2 + V**2) / height
-                    flow_consistency_index = self.material["shear"]
-                    flow_behavior_index = self.material["n"]
-
-                    return flow_consistency_index * shear_rate**(flow_behavior_index - 1)
-
-                else:
-                    return mu0
-            else:
-                return mu0
+        else:
+            self._viscosity_shear_args = []
+            self._viscosity_shear_func = lambda x, mu0: mu0

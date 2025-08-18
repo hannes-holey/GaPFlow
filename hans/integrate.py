@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2024 Hannes Holey
+# Copyright 2020, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -27,6 +27,7 @@ import numpy as np
 from mpi4py import MPI
 from copy import deepcopy
 from unittest.mock import Mock
+from collections import deque
 
 from hans.field import VectorField
 from hans.stress import SymStressField2D, WallStressField3D
@@ -108,7 +109,8 @@ class ConservedField(VectorField):
             self.time = 0.
             self.dt = self.numerics["dt"]
 
-        self.eps = np.nan
+        self.eps = np.inf
+        self.eps_buffer = deque([self.eps, ], 5)
         self.Ekin_old = deepcopy(self.ekin)
 
         if not restart:
@@ -137,7 +139,10 @@ class ConservedField(VectorField):
 
             if self.gp is not None:
                 # Initalize global training database
-                db = Database(self.gp, self.md, self.height.field,
+                db = Database(self.gp,
+                              self.md,
+                              {'kappa': self.slip_length.field,
+                               'gap_height': self.height.field},
                               self.eos.eos_pressure,  # only w/o lammps
                               self.wall_stress.gp_wall_stress)  # only w/o lammps
 
@@ -209,8 +214,12 @@ class ConservedField(VectorField):
         return recvbuf[0]
 
     @property
+    def dt_crit(self):
+        return min(self.disc["dx"], self.disc["dy"]) / (self.vmax + self.vSound)
+
+    @property
     def cfl(self):
-        return self.dt * (self.vmax + self.vSound) / min(self.disc["dx"], self.disc["dy"])
+        return self.dt / self.dt_crit
 
     @property
     def tv(self):
@@ -442,22 +451,17 @@ class ConservedField(VectorField):
         self.wall_stress.increment()
         self.eos.GP.increment()
 
-        dx = np.array([self.disc["dx"], self.disc["dy"]])
-        vmax = np.array([self.vx_max, self.vy_max]) + self.vSound
-        dt_crit = dx / vmax
-
-        last_CFL = self.dt / np.amax(dt_crit)
-        # print(last_CFL)
+        last_cfl = np.copy(self.cfl)
 
         if bool(self.numerics["adaptive"]):
-            CFL = self.numerics["C"]
-            self.dt = CFL * np.amin(dt_crit)
+            self.dt = self.numerics["C"] * self.dt_crit
 
-        self.eps = abs(self.ekin - self.Ekin_old) / self.Ekin_old / last_CFL
+        self.eps = abs(self.ekin - self.Ekin_old) / self.Ekin_old / last_cfl
+        self.eps_buffer.append(self.eps)
         self.Ekin_old = deepcopy(self.ekin)
 
         # convergence
-        if self.eps < self.numerics['tol']:
+        if np.all(np.array(self.eps_buffer) < self.numerics['tol']):
             return 1
         # maximum time reached
         elif round(self.time, 15) >= self.numerics['maxT']:
@@ -493,7 +497,8 @@ class ConservedField(VectorField):
             self.field[:, -ng:, :] = recvbuf
         else:
             if np.any(x1 == "D"):
-                self.field[x1 == "D", -ng:, :] = self.dirichlet_bc_down(self.bc["rhox1"], self.field[x1 == "D", -ngt:-ng, :], ax=1)
+                self.field[x1 == "D", -ng:,
+                           :] = self.dirichlet_bc_down(self.bc["rhox1"], self.field[x1 == "D", -ngt:-ng, :], ax=1)
             if np.any(x1 == "N"):
 
                 self.field[x1 == "N", -ng:, :] = self.neumann_bc_down(self.field[x1 == "N", -ngt:-ng, :], ax=1)
@@ -506,7 +511,8 @@ class ConservedField(VectorField):
             self.field[:, :ng, :] = recvbuf
         else:
             if np.any(x0 == "D"):
-                self.field[x0 == "D", :ng, :] = self.dirichlet_bc_up(self.bc["rhox0"], self.field[x0 == "D", ng:ngt, :], ax=1)
+                self.field[x0 == "D", :ng, :] = self.dirichlet_bc_up(
+                    self.bc["rhox0"], self.field[x0 == "D", ng:ngt, :], ax=1)
             if np.any(x0 == "N"):
                 self.field[x0 == "N", :ng, :] = self.neumann_bc_up(self.field[x0 == "N", ng:ngt, :], ax=1)
 
@@ -518,7 +524,8 @@ class ConservedField(VectorField):
             self.field[:, :, -ng:] = recvbuf
         else:
             if np.any(y1 == "D"):
-                self.field[y1 == "D", :, -ng:] = self.dirichlet_bc_down(self.bc["rhoy1"], self.field[y1 == "D", :, -ngt:-ng], ax=2)
+                self.field[y1 == "D", :, -
+                           ng:] = self.dirichlet_bc_down(self.bc["rhoy1"], self.field[y1 == "D", :, -ngt:-ng], ax=2)
             if np.any(y1 == "N"):
                 self.field[y1 == "N", :, -ng:] = self.neumann_bc_up(self.field[y1 == "N", :, -ngt:-ng], ax=2)
 
@@ -530,7 +537,8 @@ class ConservedField(VectorField):
             self.field[:, :, :ng] = recvbuf
         else:
             if np.any(y0 == "D"):
-                self.field[y0 == "D", :, :ng] = self.dirichlet_bc_up(self.bc["rhoy0"], self.field[y0 == "D", :, ng:ngt], ax=2)
+                self.field[y0 == "D", :, :ng] = self.dirichlet_bc_up(
+                    self.bc["rhoy0"], self.field[y0 == "D", :, ng:ngt], ax=2)
             if np.any(y0 == "N"):
                 # self.field[y0 == "N", :, ng:ngt]
                 self.field[y0 == "N", :, :ng] = self.neumann_bc_up(self.field[y0 == "N", :, ng:ngt], ax=2)

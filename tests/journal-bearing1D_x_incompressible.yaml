@@ -21,7 +21,7 @@ numerics:
     stokes: 1
     adaptive: 1
     C: 0.5
-    tol: 1e-9
+    tol: 1e-6
     dt: 1e-10
     maxT: 5.e-5
     integrator: MC

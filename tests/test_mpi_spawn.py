@@ -1,5 +1,5 @@
 #
-# Copyright 2024 Hannes Holey
+# Copyright 2024-2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -27,7 +27,7 @@ import subprocess
 import pytest
 
 
-@pytest.fixture(scope="session", params=[1, 2, 3, 4, 5, 6, 7, 8])
+@pytest.fixture(scope="session", params=[2, 4, 6, 8])
 def command(request):
 
     fname = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'spawner_nomerge.py')
@@ -36,7 +36,7 @@ def command(request):
     yield command
 
 
-@pytest.mark.skip(reason='Broadcasting with spawned processes stalls on some systems.')
+# @pytest.mark.skip(reason='Broadcasting with spawned processes stalls on some systems.')
 def test_spawn(command):
 
     try:

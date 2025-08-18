@@ -1,5 +1,5 @@
 #
-# Copyright 2024 Hannes Holey
+# Copyright 2024-2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -25,7 +25,6 @@
 import pytest
 import importlib
 import lammps
-
 
 
 @pytest.mark.skip(reason="Skip tests that require LAMMPS for now")

@@ -12,7 +12,7 @@ from hans.multiscale.lt_settings import write_settings
 from hans.multiscale.lt_run import write_run, write_restart
 
 
-def write_template(args, template_dir='.', output_dir="moltemplate_files"):
+def write_template(args, template_dir='moltemplate_files', output_dir="moltemplate_files"):
     """Generate a moltemplate template file (./moltemplate_files/system.lt).
 
     Moltemplate builds LAMMPS input scripts from the definitions in the template.
@@ -52,7 +52,7 @@ def write_template(args, template_dir='.', output_dir="moltemplate_files"):
     target_gap = args.get("gap_height")  # Angstrom
     target_rotation = args.get("rotation", 0.)
 
-    mpi_grid = args.get("mpi_grid", None)
+    mpi_grid = args.get("mpiGrid", None)
 
     # solid, create ASE Atoms object
     nx = args.get("nx", 21)

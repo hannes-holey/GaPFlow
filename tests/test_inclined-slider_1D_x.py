@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2022 Hannes Holey
+# Copyright 2020-2022, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -45,6 +45,7 @@ def setup(tmpdir_factory):
     yield data
 
 
+@pytest.mark.long
 def test_pressure(setup):
 
     p_ref = np.loadtxt(os.path.join("tests", "inclined-slider1D_ideal-gas_U50_s5.6e-4.dat"), unpack=True, usecols=(2,))
@@ -54,6 +55,7 @@ def test_pressure(setup):
         np.testing.assert_almost_equal(p / 1e6, p_ref / 1e6, decimal=1)
 
 
+@pytest.mark.long
 def test_density(setup):
 
     rho_ref = np.loadtxt(os.path.join("tests", "inclined-slider1D_ideal-gas_U50_s5.6e-4.dat"), unpack=True, usecols=(1,))

@@ -79,7 +79,7 @@ This work is funded by the German Research Foundation (DFG) through GRK
 
 .. |PyPI version| image:: https://badge.fury.io/py/hans.svg
    :target: https://badge.fury.io/py/hans
-.. |CI| image:: https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=master
+.. |CI| image:: https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=main
    :target: https://github.com/hannes-holey/hans/actions/workflows/ci.yaml
 .. |Coverage| image:: https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg
    :target: https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg

@@ -1,5 +1,6 @@
 #
-# Copyright 2020, 2024 Hannes Holey
+# Copyright 2020, 2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -302,7 +303,7 @@ class DatasetSelector:
         ----------
         time, x, ydata = files.get_centerlines("p")[0] → np.array(s)
         """
-        
+
         out = []
         keys = ["rho", "p", "jx", "jy"]
 

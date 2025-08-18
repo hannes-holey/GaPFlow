@@ -1,5 +1,5 @@
 #
-# Copyright 2020, 2022 Hannes Holey
+# Copyright 2020-2022, 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -77,7 +77,7 @@ def test_pressure(setup):
     p_ref = p_channel_nondimensional(xref, b)
 
     kappa = 5 * b / (2 + 5 * b)
-    scalef = h**2 / (eta * U * Lx/2)
+    scalef = h**2 / (eta * U * Lx / 2)
     p *= scalef / kappa
 
     np.testing.assert_almost_equal(p, p_ref, decimal=2)
