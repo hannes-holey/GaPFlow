@@ -33,7 +33,7 @@ def write_settings(args):
     Nsample = args.get("Nsample", 300_000)
     temperature = args.get("temperature", 300.)
 
-    nz = args.get("nz", 200)
+    nbinz = args.get("nbinz", 200)
     Nevery = args.get("Nevery", 10)
     Nrepeat = args.get("Nrepeat", 100)
     Nfreq = args.get("Nfreq", 1000)
@@ -61,7 +61,7 @@ def write_settings(args):
 
 
     # sampling // spatial
-    variable        nbinz index {nz}
+    variable        nbinz index {nbinz}
 
     # sampling // temporal
     variable        Nevery equal {Nevery}
