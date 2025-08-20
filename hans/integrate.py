@@ -37,7 +37,7 @@ from hans.material import Material
 from hans.special.flux_limiter import TVD_MC_correction
 from hans.multiscale.db import Database
 from hans.elasticity import ElasticDeformation
-
+from scipy.ndimage import gaussian_filter1d
 
 class ConservedField(VectorField):
 
@@ -204,10 +204,11 @@ class ConservedField(VectorField):
         """initialize variables for elastic deformation
         """
         self.elasticDeform = ElasticDeformation(size=(self.disc['Nx'], self.disc['Ny']),
+                                                HANS_slice=self.global_slice,
                                                 dx=self.disc['dx'], dy=self.disc['dy'],
                                                 E=self.material['E'], v=self.material['v'],
                                                 perX=self.disc['pX'], perY=self.disc['pY'],
-                                                bc=self.bc)
+                                                bc=self.bc, comm=self.comm, p_ext=float(self.material['p_ext']))
 
         self.u = np.zeros_like(self.inner[0])
         self.g_u = np.zeros_like(self.inner[0])
@@ -218,7 +219,8 @@ class ConservedField(VectorField):
     def initialize_wallforce(self):
         """initialize variables for wallforce
         """
-        self.delta_p_wallforce = float(self.material['p_ext']) - self.material['P0']
+        # TODO: self.material['P0'] not specified for all EoS
+        self.delta_p_wallforce = float(self.material['p_ext']) - float(self.material['P0'])
         self.d2h_dt2_wallforce = 0.
         self.dh_dt_wallforce = 0.
 
@@ -316,6 +318,10 @@ class ConservedField(VectorField):
         return arr_ext
 
     def update_wall(self, i):
+        
+        #self.geometry["U"] = min(0.1, 0.1 * i/100000)
+        #if i%10000==0:
+        #    print("current U: {}".format(self.geometry["U"]))
 
         if bool(self.material["elastic"]):
 
@@ -325,17 +331,17 @@ class ConservedField(VectorField):
             self.g_u = u_p
 
             h_min = np.min(self.height.field[0])
-            dh_wallforce = self.elasticDeform.update_wallforce_pi(self.p, h_min)
+            dh_wallforce, dp = self.elasticDeform.update_wallforce_pi(self.p, h_min, i)
             self.dh_dt_wallforce = dh_wallforce / self.dt
             self.int_dh_wallforce += dh_wallforce
-
-            dh_wallforce = 0.
-            du.fill(0.)
+            self.delta_p_wallforce = dp
+            #dh_wallforce = 0.
+            #du.fill(0.)
 
             dh = self.extend_inner(du) + dh_wallforce
 
             self.height.field[0] = self.height.field[0] + dh
-            self.height.field[3] = dh / self.dt
+            #self.height.field[3] = dh / self.dt
             self.height.field[1:3] = np.gradient(self.height.field[0], self.disc["dx"],
                                                  self.disc["dy"], edge_order=2)  # m/m
 
@@ -810,6 +816,7 @@ class ConservedField(VectorField):
         """
 
         p = self.eos.get_pressure(q)
+        p = gaussian_filter1d(p, sigma=2)
 
         if bool(self.options['pressure']):
             self.p = p[1:-1, 1:-1]
@@ -862,7 +869,7 @@ class ConservedField(VectorField):
         Dx = np.zeros_like(q)
         Dy = np.zeros_like(q)
 
-        if bool(self.options['ignoreStresses']):
+        if not bool(self.options['ignoreStresses']):
             Dx[1] += self.viscous_stress.field[0]
             Dx[2] += self.viscous_stress.field[2]
 

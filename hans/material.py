@@ -195,18 +195,18 @@ class Material:
         # Dukler viscosity in mixture (default)
         if self.material["EOS"] == "Bayada" or self.material["EOS"] == "Bayada_D":
 
-            self._viscosity_dens_args = [self.material["shear"],
-                                         self.material["shearv"],
+            self._viscosity_dens_args = [self.material["rhol"],
                                          self.material["rhov"],
-                                         self.material["rhol"]]
+                                         self.material["shear"],
+                                         self.material["shearv"]]
             self._viscosity_dens_func = viscosity_model.dukler_mixture
 
         # McAdams viscosity in mixture
         elif self.material["EOS"] == "Bayada_MA":
-            self._viscosity_dens_args = [self.material["shear"],
-                                         self.material["shearv"],
+            self._viscosity_dens_args = [self.material["rhol"],
                                          self.material["rhov"],
-                                         self.material["rhol"]]
+                                         self.material["shear"],
+                                         self.material["shearv"]]
             self._viscosity_dens_func = viscosity_model.mc_adams_mixture
 
         else:

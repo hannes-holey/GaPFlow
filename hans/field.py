@@ -101,6 +101,8 @@ class Field:
 
         self.field = np.zeros(shape=(ndim, nx + 2 * ng, ny + 2 * ng), dtype=np.float64)
 
+        self.global_slice = (slice(xleft, xright + 1), slice(ybottom, ytop + 1))
+
     def get_2d_cart_comm(self, comm, shape, periods=(True, True)):
         """
         Creates a two-dimensional cartesian MPI communicator.

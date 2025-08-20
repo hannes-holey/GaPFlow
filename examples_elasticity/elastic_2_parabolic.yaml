@@ -1,33 +1,33 @@
 options:
     name: slider_elastic
-    writeInterval: 100
+    writeInterval: 10000
     gradientAnalysis: 1
     performanceAnalysis: 1
     ignoreStresses: 0
 BC:
-  px0: 1e05
-  px1: 1e05
+  px0: 1e06
+  px1: 1e06
   x0: DNN
   x1: DNN
-  y0: PPP
-  y1: PPP
+  y0: DNN
+  y1: DNN
 disc:
   Nx: 400
-  Ny: 1
+  Ny: 4
   dx: 1.0e-04
   dy: 1.0e-04 # influences CFL number when too high
 geometry:
-  U: 0.1
+  U: 0.
   V: 0.
   hmax: 1.0e-04
-  hmin: 0.5e-07
+  hmin: 0.5e-06
   type: parabolic
 material:
   C1: 3.5e10
   C2: 1.23
   EOS: DH
   Pcav: 0.9e05
-  P0: 1e05
+  P0: 1e06
   T0: 323.15
   bulk: 0.0
   rho0: 877.7007
@@ -40,10 +40,11 @@ material:
   mass: 1e-07
 numerics:
   C: 0.001 # CFL number factor
-  adaptive: 1
-  dt: 2.0e-12
+  adaptive: 0
+  dt: 1.0e-12
   integrator: MC_alt
   maxT: 5.0e-02
-  maxIt: 20000
+  maxIt: 400000
   stokes: 0
   tol: 0.
+  fluxLim: 0.

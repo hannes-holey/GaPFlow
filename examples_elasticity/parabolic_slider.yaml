@@ -1,0 +1,53 @@
+options:
+    name: parabolic_slider
+    writeInterval: 2000
+    gradientAnalysis: 1
+disc:
+    Lx: 0.0762
+    Ly: 1.
+    Nx: 800
+    Ny: 1
+BC:
+    x0: DNN
+    x1: DNN
+    y0: PPP
+    y1: PPP
+    px0: 101325
+    px1: 101325
+geometry:
+    type: parabolic
+    hmin: 0.54e-5
+    hmax: 5.08e-5
+    U: 10
+    V: 0.
+numerics:
+    stokes: 1
+    adaptive: 1
+    C: 0.01
+    tol: 1e-15
+    dt: 1.e-10
+    maxT: 1.e-1
+    integrator: MC
+    maxIt: 30000
+material:
+    EOS: DH
+    rho0: 850.
+    P0: 1e05
+    C1: 3.5e10
+    C2: 1.23
+    Pcav: 0.8e05
+    shear: 0.039
+    shearv: 3.9e-5
+    piezo: Barus
+    aB: 1e-08 #08
+    bulk: 0.
+    cl: 1600.
+    cv: 352.
+    rhol: 850.
+    rhov: 0.019
+    elastic: 1
+    E: 210e09
+    v: 0.3
+    wallmode: force
+    p_ext: 5e08
+    mass: 1e-07

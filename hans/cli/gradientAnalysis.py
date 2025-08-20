@@ -431,3 +431,168 @@ def gradientAnalysis(filename, savename):
     ani = animation.FuncAnimation(fig, update, frames=len(time), init_func=init, repeat=True)
     ani.save(savename + '.mp4', writer='ffmpeg')
     return
+
+
+def h_rho_j_p_u(filename, savename):
+    """Extensive overview of state variables and gradient contributions of rho and rho u
+
+    Parameters
+    ----------
+    filename : string
+        filename for DataSelector
+    savename : string
+        filename for saving animation. Can contain folder: r"folder/filename"
+
+    When changing be aware that
+    - list and bTime Series are consistent
+    - 'list' is the main list for iterators
+    - all variables that additionally contain predictor and corrector are in 'pre_cor_list'
+    - indices for grouping (patches and background color) are hardcoded - rather 
+    append new items in a new column to not disturb the order
+    - items in list need to be valid keys (netCDF savefile)
+    - new keys have to be added to the 'allowed-keys' in the get_centerlines() function
+    """
+
+    # items / keys
+    list = ['height', 'rho', 'p', 'u']
+    
+    # specify items that additionally have a predictor and corrector value
+    pre_cor_list = []
+
+    # 0:plotting over x | 1:plotting over t
+    bTimeSeries = [0,0,0,0]
+
+    # y-labels
+    ylabels = [
+        r"$h$ in m",
+        r"$\rho$ in $\frac{\mathrm{kg}}{\mathrm{m}^3}$",
+        r"$p$ in Pa",
+        r"$u$ in m"
+    ]
+
+    # get file and data
+    files = DatasetSelector("data", mode="name", fname=[filename])
+    array_dict = {}
+    array_dict['ydata'] = {}
+    array_dict['min_max'] = {}
+
+    # Additional arrays required for variables with predictor and corrector
+    array_dict['ydata_pred'] = {}
+    array_dict['ydata_cor'] = {}
+
+    # Fetch data for all variables, distinguishing between time series and non-time series data
+    for idx, item in enumerate(list):
+        array_dict[item] = {}
+        if item in pre_cor_list:
+            time, xdata, ydata_pred, ydata_cor = files.get_pre_cor_centerlines(key=item)[0]
+            array_dict['ydata_pred'][item] = ydata_pred
+            array_dict['ydata_cor'][item] = ydata_cor
+            combined = (ydata_pred + ydata_cor) / 2
+            array_dict['ydata'][item] = combined
+            combined_data = np.concatenate([ydata_pred, ydata_cor, combined])
+            array_dict['min_max'][item] = get_AxisLimits(combined_data)
+        elif bTimeSeries[idx]:
+            full_arr = np.array(files.get_scalar(key=item)).reshape(-1)
+            array_dict['ydata'][item] = full_arr[len(full_arr)//2:]
+            array_dict['min_max'][item] = get_AxisLimits(array_dict['ydata'][item])
+        else:
+            time, xdata, ydata = files.get_centerlines(key=item)[0]
+            array_dict['ydata'][item] = ydata
+            array_dict['min_max'][item] = get_AxisLimits(ydata)
+    tmax = time[-1]
+    xmax = xdata[-1]
+
+    # create figure
+    fig, axes = plt.subplots(2, 2, figsize=(7,7))
+    fig.subplots_adjust(left=0.1, right=0.95, top=0.92, bottom=0.08, hspace=0.2, wspace=0.4)
+    axes = axes.flatten(order='F')
+    
+    # axis labels and limits
+    for ax, label in zip(axes, ylabels):
+        ax.set_ylabel(label, fontsize=14)
+    for i, item in enumerate(list):
+        if bTimeSeries[i]:
+            axes[i].set_xlim(0, tmax)
+            axes[i].set_ylim(array_dict['min_max'][item])
+        else:
+            axes[i].set_xlim(0, xmax)
+    axes[1].set_xlabel(r"$x$ in m", fontsize=14)
+    axes[3].set_xlabel(r"$x$ in m", fontsize=14)
+
+    # label format
+    for ax in axes:
+        y_formatter = mticker.ScalarFormatter(useMathText=True)
+        y_formatter.set_powerlimits((-2, 2))
+        y_formatter.set_scientific(True)
+        y_formatter.set_useOffset(True)
+        ax.yaxis.set_major_formatter(y_formatter)
+        x_formatter = mticker.ScalarFormatter(useMathText=True)
+        x_formatter.set_powerlimits((-3, 3))
+        x_formatter.set_scientific(True)
+        x_formatter.set_useOffset(True)
+        ax.xaxis.set_major_formatter(x_formatter)
+
+    lines = []
+    for i, item in enumerate(list):
+        axis_lines = []
+        if item in pre_cor_list:
+            line1, = axes[i].plot([], [], color='orange')
+            line2, = axes[i].plot([], [], color='green')
+            line3, = axes[i].plot([], [], color=colors[0])
+            axis_lines = [line1, line2, line3]
+        else:
+            line, = axes[i].plot([], [])
+            axis_lines = [line]
+        lines.append(axis_lines)
+
+    # frame update
+    def update(frame):
+        y = array_dict['ydata']
+        y_pred = array_dict['ydata_pred']
+        y_cor = array_dict['ydata_cor']
+        for idx, item in enumerate(list):
+            if bTimeSeries[idx]:
+                lines[idx][0].set_data(time[0:frame+1], (y[item])[0:frame+1])
+            elif item in pre_cor_list:
+                lines[idx][0].set_data(xdata, y_pred[item][frame])
+                lines[idx][1].set_data(xdata, y_cor[item][frame])
+                lines[idx][2].set_data(xdata, y[item][frame])
+                combined_data = np.concatenate([y_pred[item][frame], 
+                                                y_cor[item][frame], 
+                                                y[item][frame]])
+                min_max = get_AxisLimits(combined_data)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="Attempting to set identical low and high ylims.*")
+                    axes[idx].set_ylim(min_max)
+            else:
+                min_max = get_AxisLimits((y[item])[frame])
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", message="Attempting to set identical low and high ylims.*")
+                    axes[idx].set_ylim(min_max)
+                    lines[idx][0].set_data(xdata, (y[item])[frame])
+
+        fig.suptitle(
+            r"\textbf{Parabolic Slider}",
+            fontsize=16,
+            color='#003366' # dark blue
+        )
+
+        return lines
+
+    # init frame
+    def init():
+        for idx, line in enumerate(lines):
+            if bTimeSeries[idx]:
+                line[0].set_xdata(time)
+            else:
+                if item in pre_cor_list:
+                    line[0].set_xdata(xdata)
+                    line[1].set_xdata(xdata)
+                    line[2].set_xdata(xdata)
+                else:
+                    line[0].set_xdata(xdata)
+        return lines
+
+    ani = animation.FuncAnimation(fig, update, frames=len(time), init_func=init, repeat=True)
+    ani.save(savename + '.mp4', writer='ffmpeg', dpi=300)
+    return

@@ -344,6 +344,7 @@ class Problem:
 
             # create scalar variables
             nc.createVariable('time', 'f8', ('step'))
+            #nc.variables["time"].set_collective(True)
             nc.createVariable('mass', 'f8', ('step'))
             nc.createVariable('vmax', 'f8', ('step'))
             nc.createVariable('vSound', 'f8', ('step'))
@@ -542,6 +543,7 @@ maximum number of iterations reached.", flush=True)
         nc.variables['jy'][step, xrange, yrange] = self.q.inner[2]
 
         nc.variables["time"][step] = self.q.time
+        
         nc.variables["mass"][step] = self.q.mass
         nc.variables["vmax"][step] = self.q.vmax
         nc.variables["vSound"][step] = self.q.vSound
@@ -571,9 +573,7 @@ maximum number of iterations reached.", flush=True)
             nc.variables["ga_mass"][step] = self.q.ga_mass
             nc.variables['ga_ux'][step, xrange, yrange] = self.q.ga_ux
             nc.variables['ga_ux_at_hmin'][step, xrange, yrange] = self.q.ga_ux_at_hmin
-
             nc.variables['p_prev'][step, xrange, yrange] = self.q.p_prev
-            nc.variables['g_u'][step, xrange, yrange] = self.q.g_u
 
         # wall acceleration due to force
         if self.material['wallmode'] == 'force':
@@ -594,6 +594,7 @@ maximum number of iterations reached.", flush=True)
 
         if bool(self.material["elastic"]):
             nc.variables['u'][step, xrange, yrange] = self.q.u
+            nc.variables['g_u'][step, xrange, yrange] = self.q.g_u
 
         # TODO: scalar quantities from GP
 
