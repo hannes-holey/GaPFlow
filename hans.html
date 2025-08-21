@@ -877,16 +877,6 @@ and returns an instance of the Problem class.</p>
 </dl>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="hans.integrate.ConservedField.dirichlet_bc_down">
-<span class="sig-name descname"><span class="pre">dirichlet_bc_down</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qadj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.dirichlet_bc_down" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="hans.integrate.ConservedField.dirichlet_bc_up">
-<span class="sig-name descname"><span class="pre">dirichlet_bc_up</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qadj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.dirichlet_bc_up" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
 <dl class="py property">
 <dt class="sig sig-object py" id="hans.integrate.ConservedField.dt_crit">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dt_crit</span></span><a class="headerlink" href="#hans.integrate.ConservedField.dt_crit" title="Link to this definition"></a></dt>
@@ -902,6 +892,33 @@ and returns an instance of the Problem class.</p>
 <span class="sig-name descname"><span class="pre">fill_ghost_buffer</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.fill_ghost_buffer" title="Link to this definition"></a></dt>
 <dd><p>Communicate results from adjacent domains to ghost buffers.
 Fill ghost cells at the boundary according to the applied BCs.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="hans.integrate.ConservedField.get_ghost_cell_values">
+<span class="sig-name descname"><span class="pre">get_ghost_cell_values</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bc_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">axis</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_ghost</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.get_ghost_cell_values" title="Link to this definition"></a></dt>
+<dd><p>Computes the ghost cell values for boundary conditions.</p>
+<p>For Dirichlet BCs, the target value is reached at the interface between
+the outermost cell within the physical domain and the first ghost cell.</p>
+<p>Neumann BCs will always be with zero gradient.</p>
+<p>For both type of BCs, two different interpolation schemes are implemented
+depending on the number of ghost cells (num_ghost&lt;=2).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bc_type</strong> (<em>str</em>) – ‘D’ for Dirichlet or ‘N’ for Neumann</p></li>
+<li><p><strong>axis</strong> (<em>int</em>) – Axis, either 0 for x or 1 for y axis.</p></li>
+<li><p><strong>direction</strong> (<em>int</em>) – Upstream (&lt;0) or downstream (&gt;1) direction.</p></li>
+<li><p><strong>num_ghost</strong> (<em>int</em>) – Number of ghost cells.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Ghost cell values.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -987,16 +1004,6 @@ Field is updated in place.</p>
 <dl class="py property">
 <dt class="sig sig-object py" id="hans.integrate.ConservedField.mass">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mass</span></span><a class="headerlink" href="#hans.integrate.ConservedField.mass" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="hans.integrate.ConservedField.neumann_bc_down">
-<span class="sig-name descname"><span class="pre">neumann_bc_down</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qadj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.neumann_bc_down" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="hans.integrate.ConservedField.neumann_bc_up">
-<span class="sig-name descname"><span class="pre">neumann_bc_up</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">qadj</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.integrate.ConservedField.neumann_bc_up" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
