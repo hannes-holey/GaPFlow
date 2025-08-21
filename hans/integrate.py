@@ -497,11 +497,9 @@ class ConservedField(VectorField):
             self.field[:, -ng:, :] = recvbuf
         else:
             if np.any(x1 == "D"):
-                self.field[x1 == "D", -ng:,
-                           :] = self.dirichlet_bc_down(self.bc["rhox1"], self.field[x1 == "D", -ngt:-ng, :], ax=1)
+                self.field[x1 == "D", -ng:, :] = self.get_ghost_cell_values('D', axis=0, direction=1, num_ghost=ng)
             if np.any(x1 == "N"):
-
-                self.field[x1 == "N", -ng:, :] = self.neumann_bc_down(self.field[x1 == "N", -ngt:-ng, :], ax=1)
+                self.field[x1 == "N", -ng:, :] = self.get_ghost_cell_values('N', axis=0, direction=1, num_ghost=ng)
 
         # Send to right, receive from left
         recvbuf = np.ascontiguousarray(self.field[:, :ng, :])
@@ -511,10 +509,9 @@ class ConservedField(VectorField):
             self.field[:, :ng, :] = recvbuf
         else:
             if np.any(x0 == "D"):
-                self.field[x0 == "D", :ng, :] = self.dirichlet_bc_up(
-                    self.bc["rhox0"], self.field[x0 == "D", ng:ngt, :], ax=1)
+                self.field[x0 == "D", :ng, :] = self.get_ghost_cell_values('D', axis=0, direction=-1, num_ghost=ng)
             if np.any(x0 == "N"):
-                self.field[x0 == "N", :ng, :] = self.neumann_bc_up(self.field[x0 == "N", ng:ngt, :], ax=1)
+                self.field[x0 == "N", :ng, :] = self.get_ghost_cell_values('N', axis=0, direction=-1, num_ghost=ng)
 
         # Send to bottom, receive from top
         recvbuf = np.ascontiguousarray(self.field[:, :, -ng:])
@@ -524,10 +521,9 @@ class ConservedField(VectorField):
             self.field[:, :, -ng:] = recvbuf
         else:
             if np.any(y1 == "D"):
-                self.field[y1 == "D", :, -
-                           ng:] = self.dirichlet_bc_down(self.bc["rhoy1"], self.field[y1 == "D", :, -ngt:-ng], ax=2)
+                self.field[y1 == "D", :, ng:] = self.get_ghost_cell_values('D', axis=1, direction=1, num_ghost=ng)
             if np.any(y1 == "N"):
-                self.field[y1 == "N", :, -ng:] = self.neumann_bc_up(self.field[y1 == "N", :, -ngt:-ng], ax=2)
+                self.field[y1 == "N", :, -ng:] = self.get_ghost_cell_values('N', axis=1, direction=1, num_ghost=ng)
 
         # Send to top, receive from bottom
         recvbuf = np.ascontiguousarray(self.field[:, :, :ng])
@@ -537,11 +533,10 @@ class ConservedField(VectorField):
             self.field[:, :, :ng] = recvbuf
         else:
             if np.any(y0 == "D"):
-                self.field[y0 == "D", :, :ng] = self.dirichlet_bc_up(
-                    self.bc["rhoy0"], self.field[y0 == "D", :, ng:ngt], ax=2)
+                self.field[y0 == "D", :, :ng] = self.get_ghost_cell_values('D', axis=1, direction=-1, num_ghost=ng)
             if np.any(y0 == "N"):
                 # self.field[y0 == "N", :, ng:ngt]
-                self.field[y0 == "N", :, :ng] = self.neumann_bc_up(self.field[y0 == "N", :, ng:ngt], ax=2)
+                self.field[y0 == "N", :, :ng] = self.get_ghost_cell_values('N', axis=1, direction=-1, num_ghost=ng)
 
     def get_source(self, q, h, Ls):
         """
@@ -767,121 +762,80 @@ class ConservedField(VectorField):
 
         return Q
 
-    def dirichlet_bc_down(self, q0, qadj, ax):
+    def get_ghost_cell_values(self, bc_type, axis, direction, num_ghost):
+        """Computes the ghost cell values for boundary conditions.
 
-        if qadj.shape[ax] == 1:
+        For Dirichlet BCs, the target value is reached at the interface between 
+        the outermost cell within the physical domain and the first ghost cell. 
+
+        Neumann BCs will always be with zero gradient.
+
+        For both type of BCs, two different interpolation schemes are implemented 
+        depending on the number of ghost cells (num_ghost<=2).
+
+
+        Parameters
+        ----------
+        bc_type : str
+            'D' for Dirichlet or 'N' for Neumann
+        axis : int
+            Axis, either 0 for x or 1 for y axis.
+        direction : int
+            Upstream (<0) or downstream (>1) direction.
+        num_ghost : int
+            Number of ghost cells.
+
+        Returns
+        -------
+        np.ndarray
+            Ghost cell values.
+        """
+
+        assert bc_type in ["D", "N"]
+
+        if axis == 0:  # x
+            if direction > 0:  # downstream
+                q_target = self.bc["rhox1"]
+                q_adj = self.field[self.bc["x1"] == bc_type, -(num_ghost + num_ghost):-num_ghost, :]
+            else:  # upstream
+                q_target = self.bc["rhox0"]
+                q_adj = self.field[self.bc["x0"] == bc_type, num_ghost:num_ghost + num_ghost, :]
+
+        elif axis == 1:  # y
+            if direction > 0:  # downstream
+                q_target = self.bc["rhoy1"]
+                q_adj = self.field[self.bc["y1"] == bc_type, :, -(num_ghost + num_ghost):-num_ghost]
+            else:  # upstream
+                q_target = self.bc["rhoy0"]
+                q_adj = self.field[self.bc["y0"] == bc_type, :, num_ghost:num_ghost + num_ghost]
+        else:
+            raise RuntimeError("axis must be either 0 (x) or (y)")
+
+        if q_adj.shape[axis + 1] == 1:
             a1 = 1. / 2.
             a2 = 0.
-            q1 = qadj
+            q1 = q_adj
             q2 = 0.
-        elif qadj.shape[ax] == 2:
-            # weights proposed by Bell et al., PRE 76 (2007)
-            # a1 = (np.sqrt(7) + 1) / 4
-            # a2 = (np.sqrt(7) - 1) / 4
+
+        elif q_adj.shape[axis + 1] == 2:
 
             # weights from piecewise parabolic method (PPM)
             # Collela and Woodward, J. Comp. Phys. 54 (1984)
-            a1 = 7 / 12
-            a2 = 1 / 12
+            # alternative: Bell et al., PRE 76 (2007)
+            a1 = 7 / 12  # a1 = (np.sqrt(7) + 1) / 4
+            a2 = 1 / 12  # a2 = (np.sqrt(7) - 1) / 4
 
-            if ax == 1:
-                q1 = qadj[:, 1:, :]
-                q2 = qadj[:, :1, :]
-            if ax == 2:
-                q1 = qadj[:, :, 1:]
-                q2 = qadj[:, :, :1]
+            if axis == 0:  # x
+                q1 = q_adj[:, 1:, :]
+                q2 = q_adj[:, :1, :]
+            else:  # y
+                q1 = q_adj[:, :, 1:]
+                q2 = q_adj[:, :, :1]
 
-        Q = (q0 - a1 * q1 + a2 * q2) / (a1 - a2)
-
-        return Q
-
-    def dirichlet_bc_up(self, q0, qadj, ax):
-
-        if qadj.shape[ax] == 1:
-            # linear reconstruction (MC; LW)
-            a1 = 1. / 2.
-            a2 = 0.
-            q1 = qadj
-            q2 = 0.
-        elif qadj.shape[ax] == 2:
-            # PPM reconstruction (RK3)
-            # weights proposed by Bell et al., PRE 76 (2007)
-            # a1 = (np.sqrt(7) + 1) / 4
-            # a2 = (np.sqrt(7) - 1) / 4
-
-            # weights from piecewise parabolic method (PPM)
-            # Collela and Woodward, J. Comp. Phys. 54 (1984)
-            a1 = 7 / 12
-            a2 = 1 / 12
-
-            if ax == 1:
-                q1 = qadj[:, :1, :]
-                q2 = qadj[:, 1:, :]
-            if ax == 2:
-                q1 = qadj[:, :, :1]
-                q2 = qadj[:, :, 1:]
-
-        Q = (q0 - a1 * q1 + a2 * q2) / (a1 - a2)
-
-        return Q
-
-    def neumann_bc_down(self, qadj, ax):
-
-        if qadj.shape[ax] == 1:
-            # linear reconstruction (MC; LW)
-            a1 = 1. / 2.
-            a2 = 0.
-            q1 = qadj
-            q2 = 0.
-        elif qadj.shape[ax] == 2:
-            # PPM reconstruction (RK3)
-            # weights proposed by Bell et al., PRE 76 (2007)
-            # a1 = (np.sqrt(7) + 1) / 4
-            # a2 = (np.sqrt(7) - 1) / 4
-
-            # weights from piecewise parabolic method (PPM)
-            # Collela and Woodward, J. Comp. Phys. 54 (1984)
-            a1 = 7 / 12
-            a2 = 1 / 12
-
-            if ax == 1:
-                q1 = qadj[:, 1:, :]
-                q2 = qadj[:, :1, :]
-            if ax == 2:
-                q1 = qadj[:, :, 1:]
-                q2 = qadj[:, :, :1]
-
-        Q = ((1. - a1) * q1 + a2 * q2) / (a1 - a2)
-
-        return Q
-
-    def neumann_bc_up(self, qadj, ax):
-
-        if qadj.shape[ax] == 1:
-            # linear reconstruction (MC; LW)
-            a1 = 1. / 2.
-            a2 = 0.
-            q1 = qadj
-            q2 = 0.
-        elif qadj.shape[ax] == 2:
-            # PPM reconstruction (RK3)
-            # weights proposed by Bell et al., PRE 76 (2007)
-            # a1 = (np.sqrt(7) + 1) / 4
-            # a2 = (np.sqrt(7) - 1) / 4
-
-            # weights from piecewise parabolic method (PPM)
-            # Collela and Woodward, J. Comp. Phys. 54 (1984)
-            a1 = 7 / 12
-            a2 = 1 / 12
-
-            if ax == 1:
-                q1 = qadj[:, :1, :]
-                q2 = qadj[:, 1:, :]
-            if ax == 2:
-                q1 = qadj[:, :, :1]
-                q2 = qadj[:, :, 1:]
-
-        Q = ((1. - a1) * q1 + a2 * q2) / (a1 - a2)
+        if bc_type == "D":
+            Q = (q_target - a1 * q1 + a2 * q2) / (a1 - a2)
+        else:
+            Q = ((1. - a1) * q1 + a2 * q2) / (a1 - a2)
 
         return Q
 
