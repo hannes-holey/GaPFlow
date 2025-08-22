@@ -12,7 +12,7 @@ def write_settings(args):
     density_SI = density_real / (sci.N_A * 1e-24)
 
     U_SI = args.get("vWall")
-    U_real = wall_velocity * 1e-5  # m/s to A/fs
+    U_real = U_SI * 1e-5  # m/s to A/fs
 
     h = args.get("gap_height")
 
