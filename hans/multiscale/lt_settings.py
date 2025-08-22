@@ -8,9 +8,12 @@ def write_settings(args):
     # (You slightly miss the target gap height without it)
     offset = (3.75 + 2.63) / 2.
 
-    density = args.get("density")
-    wall_velocity = args.get("vWall")
-    U = wall_velocity * 1e-5  # m/s to A/fs
+    density_real = args.get("density")  # g / mol / A^3
+    density_SI = density_real / (sci.N_A * 1e-24)
+
+    U_SI = args.get("vWall")
+    U_real = wall_velocity * 1e-5  # m/s to A/fs
+
     h = args.get("gap_height")
 
     nlayers = 9  # 3 * unit cell size (default)
@@ -20,7 +23,7 @@ def write_settings(args):
     couette = args.get("couette", False)
     #
     if couette:
-        jx_SI = density * wall_velocity / 2. * 1e3  # kg / m^2 s
+        jx_SI = density_SI * U_SI / 2. * 1e3  # kg / m^2 s
         jx_real = jx_SI * sci.N_A * 1e-32  # g/mol/A^2/fs
         jy_real = 0.
     else:
@@ -58,7 +61,7 @@ def write_settings(args):
     variable        input_fluxX equal {jx_real}
     variable        input_fluxY equal {jy_real}
     variable        input_temp equal {temperature} # K
-    variable        vWall equal {U} # A/fs
+    variable        vWall equal {U_real} # A/fs
     variable        hmin equal {h}
 
     # Wall sections

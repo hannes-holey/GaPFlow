@@ -47,8 +47,8 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     wall_potential = args.get("wall", "eam/alloy")
 
     # input variables
-    target_density = args.get("density")  # g / cm^3
-    target_density *= sci.N_A * 1e-24    # g / cm^3 to g/mol/A^3
+    target_density = args.get("density")  # g/mol/ A^3
+    # target_density *= sci.N_A * 1e-24    # g / cm^3 to g/mol/A^3
     target_gap = args.get("gap_height")  # Angstrom
     target_rotation = args.get("rotation", 0.)
 
