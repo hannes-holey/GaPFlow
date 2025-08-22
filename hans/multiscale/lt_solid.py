@@ -109,7 +109,7 @@ def _create_fcc_wall_ase_rotate(symbol='Au',
                                 nx=30,
                                 ny=None,
                                 nz=None,
-                                min_angle=4.6,
+                                min_angle=4.4,
                                 max_angle=6.
                                 ):
 
