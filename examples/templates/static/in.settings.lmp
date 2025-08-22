@@ -21,7 +21,7 @@ variable        layer equal ${thickness}/(${nwall}*3-1)/2.  # half (111) distanc
 variable        thermal equal ${ntherm}*2*${layer}	  		# thickness thermalized layer
 
 # lower and upper frozen layers
-region          freezeU block INF INF INF INF $(v_zhiU-v_layer) INF units box
+region          freezeU block INF INF INF INF $(v_zhiU-v_layer*v_angle_sf) INF units box
 group           freezeU region freezeU
 
 region          freezeL block INF INF INF INF INF $(v_zloL+v_layer) units box
@@ -33,7 +33,7 @@ neigh_modify    exclude group frozen frozen
 
 # thermalized layers (4)
 region          thermL block INF INF INF INF $(v_zloL+v_layer) $(v_zloL+v_layer+v_thermal) units box
-region          thermU block INF INF INF INF $(v_zhiU-v_layer-v_thermal) $(v_zhiU-v_layer) units box
+region          thermU block INF INF INF INF $(v_zhiU-v_layer*v_angle_sf-v_thermal) $(v_zhiU-v_layer*v_angle_sf) units box
 group           thermL region thermL
 group           thermU region thermU
 group           therm union thermL thermU

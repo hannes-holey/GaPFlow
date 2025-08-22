@@ -63,15 +63,21 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25.):
         Box dimension y
     H : float
         Target gap height
-    num_molecules : int
-        Total number of molecules
+    density: float
+        Target fluid density
+    buffer: float
+        "Safety distance" between the outermost fluid layer and the wall 
 
     Returns
     -------
     tuple
         Molecule grid
+    int
+        Number of fluid molecules
+    int
+        Number of fluid atoms
     float
-        Initial gap height
+        Initial gap height 
 
     Raises
     ------

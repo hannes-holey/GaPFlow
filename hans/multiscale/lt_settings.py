@@ -39,6 +39,12 @@ def write_settings(args):
     Nfreq = args.get("Nfreq", 1000)
     dumpfreq = args.get("Nfreq", 10_000)
 
+    rotation = args.get("rotation", 0.)
+    if abs(rotation) > 4.:
+        angle_sf = 1.99
+    else:
+        angle_sf = 1.
+
     out = "\nwrite_once(\"In Settings\"){"
     out += f"""
 
@@ -58,7 +64,7 @@ def write_settings(args):
     # Wall sections
     variable        nwall equal 3
     variable        ntherm equal {nthermal}
-
+    variable        angle_sf equal {angle_sf}
 
     # sampling // spatial
     variable        nbinz index {nbinz}
