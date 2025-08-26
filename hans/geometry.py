@@ -42,6 +42,8 @@ class GapHeight(VectorField):
         self.disc = disc
         self.roughness = roughness
 
+        self._analytic_gradient = False
+
         self.set_profile()
 
         if self.roughness is not None:
@@ -186,6 +188,9 @@ class GapHeight(VectorField):
             h[div] = h0 + slope * (xx[div] - (Lx / 2 + b))
 
             self.field[0] = h
+            self.field[1][conv] = -slope
+            self.field[1][div] = slope
+            self._analytic_gradient = True
 
         elif self.geometry["type"] == "asperity":
             h0 = self.geometry['hmin']
@@ -347,10 +352,11 @@ class GapHeight(VectorField):
     def set_gradients(self):
         "gradients for a scalar field (1st entry), stored in 2nd (dx) and 3rd (dy) entry of vectorField"
 
-        dx = self.disc["dx"]
-        dy = self.disc["dy"]
-
-        self.field[1:] = np.gradient(self.field[0], dx, dy, edge_order=2)
+        if not self._analytic_gradient:
+            self.field[1:] = np.gradient(self.field[0],
+                                         self.disc["dx"],
+                                         self.disc["dy"],
+                                         edge_order=2)
 
 
 def fourier_synthesis(shape, size, Hurst, rms_height=None, rms_slope=None,

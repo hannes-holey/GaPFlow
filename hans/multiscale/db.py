@@ -252,16 +252,8 @@ class Database:
         # Bounds for quasi random sampling of initial database
         jabs = np.hypot(np.mean(Q[1, :]), np.mean(Q[2, :]))
         rho = np.mean(Q[0, :])
-
-        l_bounds = np.amin(self.c, axis=(1, 2))
-        u_bounds = np.amax(self.c, axis=(1, 2))
-
-        l_bounds[1] = -1e-10
-        u_bounds[1] = 1e-10
-
-        l_bounds = np.hstack([l_bounds, [0.99 * rho, 0.5 * jabs, 0.]])
-        u_bounds = np.hstack([u_bounds, [1.01 * rho, 1.5 * jabs, 0.5 * jabs]])
-
+        l_bounds = np.array([0.99 * rho, 0.5 * jabs, 0.])
+        u_bounds = np.array([1.01 * rho, 1.5 * jabs, 0.5 * jabs])
         dim = len(l_bounds)
 
         # Sampling
@@ -282,7 +274,10 @@ class Database:
             sample = sampler.random_base2(m=m)
             scaled_samples = qmc.scale(sample, l_bounds, u_bounds)
 
-        c_init = scaled_samples[:, :self.c.shape[0]]
+        # Constant properties are randomly sampled collectively (e.g. from the available profiles)
+        choice = np.random.choice(self.h.shape[1], size=Nsample, replace=False).tolist()
+        c_init = self.c[:, choice, 1]
+
         rho_init = scaled_samples[:, -3]
         jx_init = scaled_samples[:, -2]
         jy_init = scaled_samples[:, -1]
@@ -306,10 +301,7 @@ class Database:
                           h_grady_init
                           ])
 
-        # TODO: should work for all shapes of c_init
-        # Cnew = np.vstack([c_init,
-        #                   ])
-        Cnew = c_init.T
+        Cnew = c_init
         Qnew = np.vstack([rho_init, jx_init, jy_init])
         Xnew = np.vstack([Cnew, Qnew])
 
