@@ -414,7 +414,7 @@ class GaussianProcess:
         per_step.append(-self.model.log_likelihood())
         per_step.append('A' if self.use_atol else 'R')
 
-        fmt = ["{:8d}", "{:8d}"] + (len(per_step) - 2) * ["{:8e}"] + ["{:s}"]
+        fmt = ["{:8d}", "{:8d}"] + (len(per_step) - 3) * ["{:8e}"] + ["{:s}"]
         per_step = [f.format(item) for f, item in zip(fmt, per_step)]
         out_str = " ".join(per_step) + '\n'
 
