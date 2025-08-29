@@ -81,10 +81,6 @@ class GaussianProcess:
             Noise variance parameter
         """
 
-        self.tol = atol
-        self.atol = atol
-        self.rtol = gp['rtol']
-
         self.active_dim = active_dim
         self.db = db
         self.Xmask = Xmask
@@ -100,6 +96,12 @@ class GaussianProcess:
         self.heteroscedastic_noise = gp['heteroscedastic']
         self.noise_fixed = gp['noiseFixed']
         self.noise_variance = noise_variance
+
+        # Tolerance
+        self.atol = atol
+        self.rtol = gp['rtol']
+        self.tol = 0.
+        self.use_atol = True
 
         # Common parameters
         self.options = gp
@@ -188,8 +190,11 @@ class GaussianProcess:
         self.maxvar = np.amax(cov)
 
         # absolute tolerance is multiple of mean noise variance from data
-        abosolute_tol = self.atol * self.model.Gaussian_noise.variance[0] * self.Ynorm**2
-        self.tol = max(abosolute_tol, (self.rtol * (np.amax(mean) - np.amin(mean)))**2)
+        atol = self.atol * np.sqrt(self.model.Gaussian_noise.variance[0]) * self.Ynorm
+        rtol = self.rtol * (np.amax(mean) - np.amin(mean))
+
+        self.tol = max(atol, rtol)**2
+        self.use_atol = atol > rtol
 
         if self.ndim == 1:
             return mean.T[:, :, np.newaxis], cov
@@ -233,7 +238,7 @@ class GaussianProcess:
                 self.gp_print(f'>>>> {"Reason":<18}: {"DB changed"}')
                 self.gp_print(f'>>>> {"Max. var. (old)":<18}: {old_maxvar:.3e}')
                 self.gp_print(f'>>>> {"Max. var. (new)":<18}: {self.maxvar:.3e}')
-                self.gp_print(f'>>>> {"Tolerance":<18}: {self.tol:.3e}')
+                self.gp_print(f'>>>> {"Tolerance":<18}: {self.tol:.3e} ({'A' if self.use_atol else 'R'})')
                 suffix = ' (waiting)' if self._reset else ''
                 self.gp_print(f'>>>> {"Accepted":<18}: {self.trusted} {suffix}')
             else:
@@ -256,7 +261,7 @@ class GaussianProcess:
                     self.gp_print(f'>>>> {"Reason":<18}: AL {counter}/{self.options["maxSteps"]}')
                     self.gp_print(f'>>>> {"Max. var. (old)":<18}: {old_maxvar:.3e}')
                     self.gp_print(f'>>>> {"Max. var. (new)":<18}: {self.maxvar:.3e}')
-                    self.gp_print(f'>>>> {"Tolerance":<18}: {self.tol:.3e}')
+                    self.gp_print(f'>>>> {"Tolerance":<18}: {self.tol:.3e} ({'A' if self.use_atol else 'R'})')
                     self.gp_print(f'>>>> {"Accepted":<18}: {self.trusted}')
                 else:
                     self.gp_print(f'>>>> No data added ({counter}/{self.options["maxSteps"]})')
@@ -387,7 +392,9 @@ class GaussianProcess:
         if os.path.exists(fname):
             os.remove(fname)
         self.file = open(fname, 'w', buffering=1)
-        self.file.write(f"# Gaussian process: {self.name}\n# Step DB_size Kernel_params[*] maxvar tol nmll\n")
+
+        num_params = len(self.kern.param_array)
+        self.file.write(f"# Gaussian process: {self.name}\n# step db_size kernel_params[{num_params}] maxvar tol nmll\n")
 
     def _write_history(self):
         """
@@ -405,8 +412,9 @@ class GaussianProcess:
         per_step.append(self.maxvar)
         per_step.append(self.tol)
         per_step.append(-self.model.log_likelihood())
+        per_step.append('A' if self.use_atol else 'R')
 
-        fmt = ["{:8d}", "{:8d}"] + (len(per_step) - 2) * ["{:8e}"]
+        fmt = ["{:8d}", "{:8d}"] + (len(per_step) - 2) * ["{:8e}"] + ["{:s}"]
         per_step = [f.format(item) for f, item in zip(fmt, per_step)]
         out_str = " ".join(per_step) + '\n'
 
@@ -431,25 +439,13 @@ class GaussianProcess:
         self._set_noise()
 
     def _set_noise(self):
-        """
-        Set noise variance
-        """
-
-        if self.name == 'press':
-            index = 0
-        elif self.name == 'shearXZ':
-            index = 1
-        elif self.name == 'shear':
-            index = 1
-        elif self.name == 'shearYZ':
-            index = 2
 
         if self.heteroscedastic_noise:
-            self.model.het_Gauss.variance = (self.db.Yerr[index, :].T)[:, None]
+            self.model.het_Gauss.variance = (self.db.Yerr[self.index, :].T / self.Ynorm**2)[:, None]
             if self.noise_fixed:
                 self.model.het_Gauss.variance.fix()
         else:
-            self.model.Gaussian_noise.variance = np.mean(self.db.Yerr[index, :].T)
+            self.model.Gaussian_noise.variance = np.mean(self.db.Yerr[self.index, :].T / self.Ynorm**2)
             if self.noise_fixed:
                 self.model.Gaussian_noise.variance.fix()
 
@@ -578,17 +574,6 @@ class GaussianProcess:
         # m_load.initialize_parameter()
         # m_load[:] = np.load('model_save.npy')
         # m_load.update_model(True)
-
-    def _set_noise(self):
-
-        if self.heteroscedastic_noise:
-            self.model.het_Gauss.variance = (self.db.Yerr[self.index, :].T / self.Ynorm**2)[:, None]
-            if self.noise_fixed:
-                self.model.het_Gauss.variance.fix()
-        else:
-            self.model.Gaussian_noise.variance = np.mean(self.db.Yerr[self.index, :].T / self.Ynorm**2)
-            if self.noise_fixed:
-                self.model.Gaussian_noise.variance.fix()
 
     def _similarity_check(self, ix, iy=1):
         """Check similarity between a new input point, and the existing training database
