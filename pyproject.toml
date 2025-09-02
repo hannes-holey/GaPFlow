@@ -1,0 +1,27 @@
+[build-system]
+requires = ["flit_core>=3.2"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "hans_mugrid"
+description = ""
+readme = "README.md"
+authors = [
+    { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    # "License :: OSI Approved :: MIT License"
+]
+
+requires-python = ">=3.9, <3.13"
+dynamic = ["version"]
+dependencies = [
+	"muGrid==0.95.0",
+	"matplotlib==3.10.6",
+	"mpi4py==4.1.0"
+]
+
+[project.urls]
+Source = "https://github.com/hannes-holey/hans_mugrid"
+
