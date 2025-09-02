@@ -4,7 +4,7 @@ Playground for testing migration to µGrid.
 
 ## Installation
 
-Install (muGrid)[https://muspectre.github.io/muGrid/GettingStarted.html]'s Python bindings
+Install [muGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
 ```
 pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 
