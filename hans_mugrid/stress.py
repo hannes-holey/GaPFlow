@@ -11,6 +11,10 @@ class WallStress:
         self.prop = prop
 
     @property
+    def full(self):
+        return self.__field.p
+
+    @property
     def upper(self):
         return self.__field.p[6:]
 

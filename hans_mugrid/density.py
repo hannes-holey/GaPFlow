@@ -51,6 +51,7 @@ class Solution:
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
     def post_update(self):
+        self._communicate_ghost_buffers()
         self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
@@ -81,12 +82,25 @@ class Solution:
 
             src = source(self.__field.p,
                          self.__gap_height.p,
-                         self.pressure.pressure,
+                         self.bulk_stress.stress,
                          self.wall_stress.lower,
                          self.wall_stress.upper)
 
             self.__field.p = self.__field.p - dt * (fX / dx + fY / dy - src)
 
+            self._communicate_ghost_buffers()
+
         self.__field.p = (self.__field.p + q0) / 2.
 
         self.post_update()
+
+    def _communicate_ghost_buffers(self):
+
+        # periodic BCs
+        # x
+        self.__field.p[:, 0, :] = self.__field.p[:, -2, :].copy()
+        self.__field.p[:, -1, :] = self.__field.p[:, 1, :].copy()
+
+        # y
+        self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
+        self.__field.p[:, :, -1] = self.__field.p[:, :, 1].copy()

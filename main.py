@@ -28,7 +28,10 @@ if __name__ == "__main__":
     disc['dt'] = 3e-10
 
     # Two dimensional grid
-    nb_grid_pts = (disc['Nx'], disc['Ny'])
+    nb_ghost = 1  # ghost buffer
+    nb_grid_pts = (disc['Nx'] + 2 * nb_ghost,
+                   disc['Ny'] + 2 * nb_ghost)
+
     fc = GlobalFieldCollection(nb_grid_pts)
 
     # intialize all fields
@@ -45,7 +48,7 @@ if __name__ == "__main__":
     fig, ax = plt.subplots(2, 3, figsize=(12, 6))
 
     for i in range(Nt):
-        solution.update(0)
+        solution.update(i % 2 == 0)
 
         if i % 100 == 0:
 

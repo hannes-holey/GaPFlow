@@ -10,14 +10,17 @@ class GapHeight:
         Nx = disc['Nx']
         Ny = disc['Ny']
 
-        _x = np.linspace(0., Lx, Nx + 1)
-        x = (_x[:-1] + _x[1:]) / 2.
+        periodic_x, periodic_y = True, True
 
-        _y = np.linspace(0., Ly, Ny + 1)
-        y = (_y[:-1] + _y[1:]) / 2.
+        dx = Lx / Nx
+        ix = np.arange(-1, Nx + 1)
+        x = ix / Nx * Lx + dx / 2.
+
+        dy = Ly / Ny
+        iy = np.arange(-1, Ny + 1)
+        y = iy / Ny * Ly + dy / 2.
 
         xx, yy = np.meshgrid(x, y, indexing='ij')
-
         self.field = fc.real_field('gap_height', (3,))
 
         CR = disc['CR']
