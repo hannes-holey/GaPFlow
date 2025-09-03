@@ -4,7 +4,7 @@ from hans_mugrid.models import dowson_higginson_pressure, stress_bottom, stress_
 class WallStress:
 
     def __init__(self, fc, prop):
-        self.__field = fc.real_field('wall_viscous_stress', (12,))
+        self.__field = fc.real_field('wall_stress', (12,))
         self.__gap_height = fc.get_real_field('gap_height')
         self.__solution = fc.get_real_field('solution')
 

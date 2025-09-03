@@ -1,8 +1,37 @@
 import matplotlib.pyplot as plt
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+import netCDF4
+import numpy as np
 
 from hans_mugrid.gap import GapHeight
 from hans_mugrid.density import Solution
+
+
+def plot(filename='example.nc'):
+
+    data = netCDF4.Dataset(filename)
+
+    q_nc = np.asarray(data.variables['solution'])
+    p_nc = np.asarray(data.variables['pressure'])
+    tau_nc = np.asarray(data.variables['wall_stress'])
+
+    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+
+    Nt, _, _ = p_nc.shape
+    for i in range(Nt):
+        color_q = plt.cm.Blues(i / Nt)
+        ax[0, 0].plot(q_nc[i, 0, 0, 1:-1, disc['Ny'] // 2], color=color_q)
+        ax[0, 1].plot(q_nc[i, 1, 0, 1:-1, disc['Ny'] // 2], color=color_q)
+        ax[0, 2].plot(q_nc[i, 2, 0, 1:-1, disc['Ny'] // 2], color=color_q)
+
+        color_p = plt.cm.Greens(i / Nt)
+        color_t = plt.cm.Oranges(i / Nt)
+
+        ax[1, 0].plot(p_nc[i, 1:-1, disc['Ny'] // 2], color=color_p)
+        ax[1, 1].plot(tau_nc[i, 4, 0, 1:-1, disc['Ny'] // 2], color=color_t)
+        ax[1, 2].plot(tau_nc[i, 10, 0, 1:-1, disc['Ny'] // 2], color=color_t)
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -50,33 +79,14 @@ if __name__ == "__main__":
     solution.initialize(prop['rho0'], 0.1, 0.)
 
     file = FileIONetCDF('example.nc', OpenMode.Overwrite)
-    file.register_field_collection(fc, field_names=['solution', 'pressure'])
+    file.register_field_collection(fc, field_names=['solution', 'pressure', 'wall_stress'])
 
-    Nt = 1000
-
-    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
-
-    i = 0
-    print(f"{i:>5d} {solution.residual:.3e}")
+    print(f"{solution.step:>5d} {solution.residual:.3e}")
     file.append_frame().write()
 
-    for i in range(1, Nt + 1):
-        solution.update(i % 2 == 0)
+    while not solution.converged and solution.step < 5000:
+        solution.update()
 
-        if i % 100 == 0:
-
-            color_q = plt.cm.Blues(i / Nt)
-            ax[0, 0].plot(solution.density, color=color_q)
-            ax[0, 1].plot(solution.flux_x, color=color_q)
-            ax[0, 2].plot(solution.flux_y, color=color_q)
-
-            color_p = plt.cm.Greens(i / Nt)
-            color_t = plt.cm.Oranges(i / Nt)
-            ax[1, 0].plot(solution.pressure.pressure[1:-1, disc['Ny'] // 2], color=color_p)
-            ax[1, 1].plot(solution.wall_stress.lower[4, 1:-1, disc['Ny'] // 2], color=color_t)
-            ax[1, 2].plot(solution.wall_stress.upper[4, 1:-1, disc['Ny'] // 2], color=color_t)
-
-            print(f"{i:>5d} {solution.residual:.3e}")
+        if solution.step % 100 == 0:
+            print(f"{solution.step:>5d} {solution.residual:.3e}")
             file.append_frame().write()
-
-    plt.show()

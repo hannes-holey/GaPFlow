@@ -24,6 +24,8 @@ class Solution:
         self.bulk_stress = BulkStress(fc, prop)
         self.pressure = Pressure(fc, prop)
 
+        self.step = 0
+        self.tol = 1e-5
         self.residual = np.inf
 
     @property
@@ -49,6 +51,10 @@ class Solution:
     def kinetic_energy(self):
         return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
 
+    @property
+    def converged(self):
+        return self.residual < self.tol
+
     def initialize(self, rho0, U, V):
         self.__field.p[0] = rho0
         self.__field.p[1] = rho0 * U / 2.
@@ -61,16 +67,21 @@ class Solution:
         self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
-    def update(self, switch):
+        self.step += 1
 
-        dx = self.disc["dx"]
-        dy = self.disc["dy"]
-        dt = self.disc["dt"]
+    def update(self, switch=None):
+
+        if switch is None:
+            switch = self.step % 2 == 0
 
         if switch == 0:
             directions = [-1, 1]
         elif switch == 1:
             directions = [1, -1]
+
+        dx = self.disc["dx"]
+        dy = self.disc["dy"]
+        dt = self.disc["dt"]
 
         q0 = self.__field.p.copy()
 
