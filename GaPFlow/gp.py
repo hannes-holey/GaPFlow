@@ -1,17 +1,14 @@
-from datetime import datetime
-from GaPFlow.utils import get_new_training_input
-from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
 import abc
 import numpy as np
+from copy import deepcopy
+from datetime import datetime
+
+from GaPFlow.utils import get_new_training_input
+from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
+
 import jax.numpy as jnp
 import jax.random as jr
-
-from copy import deepcopy
-
-from jax import config
 from jaxtyping import install_import_hook
-config.update("jax_enable_x64", True)
-
 with install_import_hook("gpjax", "beartype.beartype"):
     import gpjax as gpx
 

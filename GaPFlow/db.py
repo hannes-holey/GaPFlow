@@ -1,8 +1,5 @@
 import jax.numpy as jnp
-from jax import config
 from jaxtyping import install_import_hook
-config.update("jax_enable_x64", True)
-
 with install_import_hook("gpjax", "beartype.beartype"):
     import gpjax as gpx
 

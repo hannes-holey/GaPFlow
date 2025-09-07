@@ -1,4 +1,4 @@
-from hans_mugrid.problem import Problem
+from GaPFlow.problem import Problem
 
 if __name__ == "__main__":
 

@@ -3,10 +3,7 @@ import jax.numpy as jnp
 from GaPFlow.gp import GaussianProcessSurrogate, MultiOutputKernel
 from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
 
-from jax import config
 from jaxtyping import install_import_hook
-config.update("jax_enable_x64", True)
-
 with install_import_hook("gpjax", "beartype.beartype"):
     import gpjax as gpx
 
