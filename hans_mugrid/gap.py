@@ -1,37 +1,52 @@
 import numpy as np
 
 
-class GapHeight:
+def create_midpoint_grid(disc):
+    Lx = disc['Lx']
+    Ly = disc['Ly']
+    Nx = disc['Nx']
+    Ny = disc['Ny']
+
+    dx = Lx / Nx
+    ix = np.arange(-1, Nx + 1)
+    x = ix / Nx * Lx + dx / 2.
+
+    dy = Ly / Ny
+    iy = np.arange(-1, Ny + 1)
+    y = iy / Ny * Ly + dy / 2.
+
+    xx, yy = np.meshgrid(x, y, indexing='ij')
+
+    return xx, yy
+
+
+def journal_bearing(xx, disc):
+
+    CR = disc['CR']
+    eps = disc['eps']
+    Lx = disc['Lx']
+
+    Rb = Lx / (2 * np.pi)
+    c = CR * Rb
+    e = eps * c
+
+    h = c + e * np.cos(xx / Rb)
+    dh_dx = -e / Rb * np.sin(xx / Rb)
+
+    return h, dh_dx
+
+
+class Gap:
 
     def __init__(self, fc, disc):
 
-        Lx = disc['Lx']
-        Ly = disc['Ly']
-        Nx = disc['Nx']
-        Ny = disc['Ny']
+        self.field = fc.real_field('gap', (3,))
 
-        periodic_x, periodic_y = True, True
+        xx, yy = create_midpoint_grid(disc)
+        h, dh_dx = journal_bearing(xx, disc)
 
-        dx = Lx / Nx
-        ix = np.arange(-1, Nx + 1)
-        x = ix / Nx * Lx + dx / 2.
-
-        dy = Ly / Ny
-        iy = np.arange(-1, Ny + 1)
-        y = iy / Ny * Ly + dy / 2.
-
-        xx, yy = np.meshgrid(x, y, indexing='ij')
-        self.field = fc.real_field('gap_height', (3,))
-
-        CR = disc['CR']
-        eps = disc['eps']
-
-        Rb = Lx / (2 * np.pi)
-        c = CR * Rb
-        e = eps * c
-
-        self.field.p[0] = c + e * np.cos(xx / Rb)
-        self.field.p[1] = -e / Rb * np.sin(xx / Rb)
+        self.field.p[0] = h
+        self.field.p[1] = dh_dx
 
     @property
     def h(self):

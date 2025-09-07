@@ -1,40 +1,26 @@
-import matplotlib.pyplot as plt
+from datetime import datetime
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
-import netCDF4
-import numpy as np
-
-from hans_mugrid.gap import GapHeight
+from hans_mugrid.gap import Gap
 from hans_mugrid.density import Solution
-
-
-def plot(filename='example.nc'):
-
-    data = netCDF4.Dataset(filename)
-
-    q_nc = np.asarray(data.variables['solution'])
-    p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress'])
-
-    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
-
-    Nt, _, _ = p_nc.shape
-    for i in range(Nt):
-        color_q = plt.cm.Blues(i / Nt)
-        ax[0, 0].plot(q_nc[i, 0, 0, 1:-1, disc['Ny'] // 2], color=color_q)
-        ax[0, 1].plot(q_nc[i, 1, 0, 1:-1, disc['Ny'] // 2], color=color_q)
-        ax[0, 2].plot(q_nc[i, 2, 0, 1:-1, disc['Ny'] // 2], color=color_q)
-
-        color_p = plt.cm.Greens(i / Nt)
-        color_t = plt.cm.Oranges(i / Nt)
-
-        ax[1, 0].plot(p_nc[i, 1:-1, disc['Ny'] // 2], color=color_p)
-        ax[1, 1].plot(tau_nc[i, 4, 0, 1:-1, disc['Ny'] // 2], color=color_t)
-        ax[1, 2].plot(tau_nc[i, 10, 0, 1:-1, disc['Ny'] // 2], color=color_t)
-
-    plt.show()
+from hans_mugrid.db import Database
+from hans_mugrid.plotting import plot_single_frame, plot_evolution, plot_history, animate
 
 
 if __name__ == "__main__":
+
+    # Input:
+    # - options: name, output, outfreq
+    # - grid: Lx, Nx, dx, ...
+    # - boundary_conditions: h, Dh, (E,W,N,S), values, periodic
+    # - properties:
+    #   - fluid: ...
+    #   - solid: (later)
+    # - numerics: dt, CFL, adaptive
+    # - gp:
+    #   - press: tol, noise, freq, wait, max_steps
+    #   - shear: ...
+    # - db: dtool, location, template, remote, Ninit, QMC sampling
+    # - md: ncpu, setup (lammps/moltemplate), temperature, velocity, sampling_time, dump_freq
 
     prop = {'shear': 0.0794,
             'bulk': 0.,
@@ -46,16 +32,16 @@ if __name__ == "__main__":
 
     disc = {'Lx': 1.e-3,
             'Ly': 1.,
-            'Nx': 50,
-            'Ny': 20,
+            'Nx': 100,
+            'Ny': 1,
             'CR': 1.e-2,
             'eps': 0.7
             }
 
     bc = {'x0': ['D', 'N', 'N'],
           'x1': ['D', 'N', 'N'],
-          'y0': ['D', 'N', 'N'],
-          'y1': ['D', 'N', 'N'],
+          'y0': ['P', 'P', 'P'],
+          'y1': ['P', 'P', 'P'],
           'rhox0': prop['rho0'],
           'rhox1': prop['rho0'],
           'rhoy0': prop['rho0'],
@@ -65,28 +51,41 @@ if __name__ == "__main__":
     disc['dy'] = disc['Ly'] / disc['Ny']
     disc['dt'] = 3e-10
 
+    # Init
     # Two dimensional grid
     nb_ghost = 1  # ghost buffer
     nb_grid_pts = (disc['Nx'] + 2 * nb_ghost,
                    disc['Ny'] + 2 * nb_ghost)
 
+    tic = datetime.now()
     fc = GlobalFieldCollection(nb_grid_pts)
 
     # intialize all fields
-    geometry = GapHeight(fc, disc)
-    solution = Solution(fc, disc, prop, bc)
+    geometry = Gap(fc, disc)
+    database = Database(minimum_size=5)
+    solution = Solution(fc, disc, prop, bc, data=database)
 
-    solution.initialize(prop['rho0'], 0.1, 0.)
+    solution.write()
 
-    file = FileIONetCDF('example.nc', OpenMode.Overwrite)
-    file.register_field_collection(fc, field_names=['solution', 'pressure', 'wall_stress'])
-
-    print(f"{solution.step:>5d} {solution.residual:.3e}")
-    file.append_frame().write()
-
-    while not solution.converged and solution.step < 5000:
+    # Run
+    while not solution.converged and solution.step < 200:
         solution.update()
 
-        if solution.step % 100 == 0:
-            print(f"{solution.step:>5d} {solution.residual:.3e}")
-            file.append_frame().write()
+        if solution.step % 1 == 0:
+            solution.write()
+
+    toc = datetime.now()
+
+    solution.history_to_csv('example.csv')
+
+    walltime = toc - tic
+    speed = solution.step / walltime.total_seconds()
+
+    print(33 * '=')
+    print(f"Total walltime     : ", str(walltime).split('.')[0])
+    print(f"({speed:.2f} steps/s)")
+    print(f" - GP train (press): ", str(solution.pressure.cumtime_train).split('.')[0])
+    print(f" - GP infer (press): ", str(solution.pressure.cumtime_infer).split('.')[0])
+    print(f" - GP train (shear): ", str(solution.wall_stress.cumtime_train).split('.')[0])
+    print(f" - GP infer (shear): ", str(solution.wall_stress.cumtime_infer).split('.')[0])
+    print(33 * '=')

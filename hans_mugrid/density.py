@@ -1,12 +1,17 @@
 import numpy as np
 from copy import deepcopy
+from muGrid import FileIONetCDF, OpenMode
 from hans_mugrid.stress import WallStress, BulkStress, Pressure
 from hans_mugrid.integrate import predictor_corrector, source
+import pandas as pd
+
+import numpy.typing as npt
+from typing import Union
 
 
 class Solution:
 
-    def __init__(self, fc, disc, prop, bc):
+    def __init__(self, fc, disc, prop, bc, data=None):
         self.disc = disc
 
         for k, v in bc.items():
@@ -17,59 +22,97 @@ class Solution:
         self.__field = fc.real_field('solution', (3,))
 
         # Constant fields
-        self.__gap_height = fc.get_real_field('gap_height')
+        self.__gap_height = fc.get_real_field('gap')
+
+        self._initialize(prop['rho0'], 0.1, 0.)
 
         # Models
-        self.wall_stress = WallStress(fc, prop)
-        self.bulk_stress = BulkStress(fc, prop)
-        self.pressure = Pressure(fc, prop)
+        self.wall_stress = WallStress(fc, prop, data=data)
+        self.bulk_stress = BulkStress(fc, prop, data=data)
+        self.pressure = Pressure(fc, prop, data=data)
+
+        # I/O
+        self.file = FileIONetCDF('example.nc', OpenMode.Overwrite)
+        self.file.register_field_collection(fc, field_names=['solution',
+                                                             'pressure',
+                                                             'pressure_var',
+                                                             'wall_stress',
+                                                             'wall_stress_var'])
 
         self.step = 0
-        self.tol = 1e-5
+        self.tol = 1e-7
         self.residual = np.inf
 
+        self.history = {
+            "step": [],
+            "time": [],
+            "ekin": [],
+            "residual": []
+        }
+
+    # @classmethod
+    # def from_yaml(cls):
+
+    #     # read yaml file here
+    #     return cls.__init__(...)
+
     @property
-    def q(self):
+    def q(self) -> npt.NDArray[np.float64]:
         return self.__field.p
 
     @property
-    def density(self):
+    def density(self) -> npt.NDArray[np.float64]:
         # centerline
         return self.__field.p[0, 1:-1, self.disc['Ny'] // 2]
 
     @property
-    def flux_x(self):
+    def flux_x(self) -> npt.NDArray[np.float64]:
         # centerline
         return self.__field.p[1, 1:-1, self.disc['Ny'] // 2]
 
     @property
-    def flux_y(self):
+    def flux_y(self) -> npt.NDArray[np.float64]:
         # centerline
         return self.__field.p[2, 1:-1, self.disc['Ny'] // 2]
 
     @property
-    def kinetic_energy(self):
+    def kinetic_energy(self) -> float:
         return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
 
     @property
-    def converged(self):
+    def converged(self) -> bool:
         return self.residual < self.tol
 
-    def initialize(self, rho0, U, V):
+    def write(self):
+        print(f"{self.step:>5d} {self.residual:.3e}")
+
+        self.history["step"].append(self.step)
+        self.history["time"].append(self.step * self.disc["dt"])
+        self.history["ekin"].append(self.kinetic_energy)
+        self.history["residual"].append(self.residual)
+
+        self.file.append_frame().write()
+
+    def history_to_csv(self, fname):
+        df = pd.DataFrame(data=self.history)
+        df.to_csv(fname, index=False)
+
+    def _initialize(self, rho0, U, V):
         self.__field.p[0] = rho0
         self.__field.p[1] = rho0 * U / 2.
         self.__field.p[2] = rho0 * V / 2.
 
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
-    def post_update(self):
+    def post_update(self) -> None:
         self._communicate_ghost_buffers()
         self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
         self.step += 1
 
-    def update(self, switch=None):
+    def update(self,
+               switch: Union[None, bool] = None)-> None:
 
         if switch is None:
             switch = self.step % 2 == 0
@@ -85,10 +128,10 @@ class Solution:
 
         q0 = self.__field.p.copy()
 
-        for d in directions:
+        for i, d in enumerate(directions):
 
-            self.pressure.update()
-            self.wall_stress.update()
+            self.pressure.update(gp=True, predictor=i == 0)
+            self.wall_stress.update(gp=True, predictor=i == 0)
             self.bulk_stress.update()
 
             fX, fY = predictor_corrector(self.__field.p,
@@ -111,7 +154,7 @@ class Solution:
 
         self.post_update()
 
-    def _communicate_ghost_buffers(self):
+    def _communicate_ghost_buffers(self) -> None:
 
         # x0
         if np.all(self.bc['x0'] == 'P'):
