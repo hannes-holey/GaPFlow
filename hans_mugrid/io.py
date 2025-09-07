@@ -1,7 +1,13 @@
+import os
+from datetime import datetime
 import yaml
 
 
 def print_header(s, n=60, f0='*', f1=' '):
+
+    if len(s) > n:
+        n = len(s) + 4
+
     w = n + len(s) % 2
     b = (w - len(s)) // 2 - 1
     print(w * f0)
@@ -12,6 +18,30 @@ def print_header(s, n=60, f0='*', f1=' '):
 def print_dict(d):
     for k, v in d.items():
         print(f'  - {k:<25s}: {v}')
+
+
+def create_output_directory(name):
+
+    timestamp = datetime.now().replace(microsecond=0).strftime("%Y-%m-%d_%H%M%S")
+    outbase = os.path.dirname(name)
+    outname = timestamp + '_' + os.path.basename(name)
+    outdir = os.path.join(outbase, outname)
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+    else:
+        if len(os.listdir(outdir)) > 0:
+            raise RuntimeError('Output path exists and is not empty.')
+
+    print_header(f"Writing output into: {outdir}", f0=' ', f1=' ')
+
+    return outdir
+
+
+def write_yaml(output_dict, fname):
+
+    with open(fname, 'w') as FILE:
+        yaml.dump(output_dict, FILE)
 
 
 def read_yaml_input(file):
@@ -45,7 +75,7 @@ def read_yaml_input(file):
 
 def sanitize_options(d):
     out = {}
-    out['name'] = str(d.get('name', 'example'))
+    out['output'] = str(d.get('output', 'example'))
     out['write_freq'] = int(d.get('write_freq', 1000))
 
     print_dict(out)

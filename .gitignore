@@ -1,2 +1,6 @@
 __pycache__
 *.nc
+*.csv
+*.mp4
+*.pdf
+config.yml

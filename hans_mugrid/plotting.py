@@ -9,16 +9,20 @@ import pandas as pd
 from hans_mugrid.gap import create_midpoint_grid
 
 
-def get_pipeline(directory='.', silent=False, mode='select', suffix='.nc'):
+def get_pipeline(path='.', silent=False, mode='select', suffix='.nc'):
 
-    files = sorted([file for file in os.listdir(directory) if file.endswith(suffix)])
+    folders = []
 
-    for i, file in enumerate(files):
-        date = time.strftime('%d/%m/%Y %H:%M', time.localtime(os.path.getmtime(file)))
+    for root, dirs, files in os.walk(path, topdown=False):
+        if any([file.endswith('field.nc') for file in files]):
+            folders.append(root)
+
+    for i, folder in enumerate(folders):
+        date = time.strftime('%d/%m/%Y %H:%M', time.localtime(os.path.getmtime(folder)))
         if not silent:
-            print(f"{i:3d}: {file:<50} {date}")
+            print(f"{i:3d}: {folder:<50} {date}")
 
-    inp = input("Enter file keys (space separated or range [start]-[end] or combination of both): ")
+    inp = input("Enter keys (space separated or range [start]-[end] or combination of both): ")
 
     if inp.split('-') == 2:
         s, e = inp.split('-')
@@ -26,7 +30,7 @@ def get_pipeline(directory='.', silent=False, mode='select', suffix='.nc'):
     else:
         mask = [int(i) for i in inp.split()]
 
-    files = [files[i] for i in mask]
+    files = [os.path.join(folders[i], 'field.nc') for i in mask]
 
     return files
 
@@ -158,7 +162,7 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
     set_axes_labels(ax)
 
 
-def animate(filename='example.nc', seconds=10, save=False, show=True, disc=None, tol_f=0.1):
+def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
 
     def update_lines(i, q, p, vp, tau, vt):
 
@@ -236,7 +240,11 @@ def animate(filename='example.nc', seconds=10, save=False, show=True, disc=None,
         writer = Writer(fps=int(nt / seconds),
                         codec='libx264',
                         extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
-        ani.save(filename + ".mp4", writer=writer, dpi=600)
+
+        outfile = os.path.join(os.path.dirname(filename),
+                               os.path.dirname(filename).split(os.sep)[-1]) + ".mp4"
+
+        ani.save(outfile, writer=writer, dpi=600)
 
     plt.show()
 

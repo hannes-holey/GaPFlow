@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
@@ -6,7 +7,7 @@ from datetime import datetime
 from typing import Union
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
-from hans_mugrid.io import read_yaml_input
+from hans_mugrid.io import read_yaml_input, write_yaml, create_output_directory
 from hans_mugrid.stress import WallStress, BulkStress, Pressure
 from hans_mugrid.integrate import predictor_corrector, source
 from hans_mugrid.gap import Gap
@@ -15,7 +16,16 @@ from hans_mugrid.db import Database
 
 class Problem:
 
-    def __init__(self, options, grid, geo, prop, numerics):
+    def __init__(self, input_dict):
+
+        options = input_dict['options']
+        grid = input_dict['grid']
+        prop = input_dict['properties']
+        geo = input_dict['geometry']
+        numerics = input_dict['numerics']
+        self.grid = grid
+        self.numerics = numerics
+        self.options = options
 
         # Initialize field collection
         nb_grid_pts = (grid['Nx'] + 2,
@@ -39,26 +49,22 @@ class Problem:
         self.pressure = Pressure(fc, prop, data=database)
 
         # I/O
-        self.file = FileIONetCDF('example.nc', OpenMode.Overwrite)
+        self.outdir = create_output_directory(options['output'])
+        write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
+
+        self.file = FileIONetCDF(os.path.join(self.outdir, 'field.nc'),
+                                 OpenMode.Overwrite)
+
         self.file.register_field_collection(fc, field_names=['solution',
                                                              'pressure',
                                                              'pressure_var',
                                                              'wall_stress',
                                                              'wall_stress_var'])
-        self.grid = grid
-        self.numerics = numerics
-        self.options = options
 
     @classmethod
     def from_yaml(cls, fname):
 
         input_dict = read_yaml_input(fname)
-
-        options = input_dict['options']
-        grid = input_dict['grid']
-        prop = input_dict['properties']
-        geo = input_dict['geometry']
-        numerics = input_dict['numerics']
 
         # Optional
         # - gp:
@@ -67,7 +73,7 @@ class Problem:
         # - db: dtool, location, template, remote, Ninit, QMC sampling
         # - md: ncpu, setup (lammps/moltemplate), temperature, velocity, sampling_time, dump_freq
 
-        return cls(options, grid, geo, prop, numerics)
+        return cls(input_dict)
 
     @classmethod
     def from_problem(cls, config, outfile):
@@ -105,8 +111,6 @@ class Problem:
 
         toc = datetime.now()
 
-        self.history_to_csv('example.csv')
-
         walltime = toc - tic
         speed = self.step / walltime.total_seconds()
 
@@ -118,6 +122,8 @@ class Problem:
         print(f" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
         print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
         print(33 * '=')
+
+        self.history_to_csv(os.path.join(self.outdir, 'history.csv'))
 
     @property
     def q(self) -> npt.NDArray[np.float64]:
