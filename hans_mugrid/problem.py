@@ -1,35 +1,42 @@
 import numpy as np
+import numpy.typing as npt
+import pandas as pd
 from copy import deepcopy
-from muGrid import FileIONetCDF, OpenMode
+from datetime import datetime
+from typing import Union
+from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+
+from hans_mugrid.io import read_yaml_input
 from hans_mugrid.stress import WallStress, BulkStress, Pressure
 from hans_mugrid.integrate import predictor_corrector, source
-import pandas as pd
-
-import numpy.typing as npt
-from typing import Union
+from hans_mugrid.gap import Gap
+from hans_mugrid.db import Database
 
 
-class Solution:
+class Problem:
 
-    def __init__(self, fc, disc, prop, bc, data=None):
-        self.disc = disc
+    def __init__(self, options, grid, geo, prop, numerics):
 
-        for k, v in bc.items():
-            if k in ['x0', 'x1', 'y0', 'y1']:
-                bc[k] = np.array(v)
-        self.bc = bc
+        # Initialize field collection
+        nb_grid_pts = (grid['Nx'] + 2,
+                       grid['Ny'] + 2)
+        fc = GlobalFieldCollection(nb_grid_pts)
 
+        # Solution field
         self.__field = fc.real_field('solution', (3,))
+        self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
-        # Constant fields
+        # Intialize gap
+        geometry = Gap(fc, grid, geo)
         self.__gap_height = fc.get_real_field('gap')
 
-        self._initialize(prop['rho0'], 0.1, 0.)
+        # intialize database
+        database = Database(minimum_size=5)
 
-        # Models
-        self.wall_stress = WallStress(fc, prop, data=data)
-        self.bulk_stress = BulkStress(fc, prop, data=data)
-        self.pressure = Pressure(fc, prop, data=data)
+        # Dependent fields
+        self.wall_stress = WallStress(fc, prop, data=database)
+        self.bulk_stress = BulkStress(fc, prop, data=database)
+        self.pressure = Pressure(fc, prop, data=database)
 
         # I/O
         self.file = FileIONetCDF('example.nc', OpenMode.Overwrite)
@@ -38,10 +45,46 @@ class Solution:
                                                              'pressure_var',
                                                              'wall_stress',
                                                              'wall_stress_var'])
+        self.grid = grid
+        self.numerics = numerics
+        self.options = options
 
+    @classmethod
+    def from_yaml(cls, fname):
+
+        input_dict = read_yaml_input(fname)
+
+        options = input_dict['options']
+        grid = input_dict['grid']
+        prop = input_dict['properties']
+        geo = input_dict['geometry']
+        numerics = input_dict['numerics']
+
+        # Optional
+        # - gp:
+        #   - press: tol, noise, freq, wait, max_steps
+        #   - shear: ...
+        # - db: dtool, location, template, remote, Ninit, QMC sampling
+        # - md: ncpu, setup (lammps/moltemplate), temperature, velocity, sampling_time, dump_freq
+
+        return cls(options, grid, geo, prop, numerics)
+
+    @classmethod
+    def from_problem(cls, config, outfile):
+        # TODO: read a sanitized config file (yaml) and a NetCDF file
+        # to initialize a new problem from the last frame of an existing one
+        raise NotImplementedError
+
+    def run(self):
+
+        # TODO: numerics settings override (to continue a simulation)
+        # Numerics
         self.step = 0
-        self.tol = 1e-7
         self.residual = np.inf
+
+        self.tol = self.numerics['tol']
+        self.dt = self.numerics['dt']
+        self.max_it = self.numerics['max_it']
 
         self.history = {
             "step": [],
@@ -50,11 +93,31 @@ class Solution:
             "residual": []
         }
 
-    # @classmethod
-    # def from_yaml(cls):
+        tic = datetime.now()
+        self.write()
 
-    #     # read yaml file here
-    #     return cls.__init__(...)
+        # Run
+        while not self.converged and self.step < self.max_it:
+            self.update()
+
+            if self.step % self.options['write_freq'] == 0:
+                self.write()
+
+        toc = datetime.now()
+
+        self.history_to_csv('example.csv')
+
+        walltime = toc - tic
+        speed = self.step / walltime.total_seconds()
+
+        print(33 * '=')
+        print(f"Total walltime     : ", str(walltime).split('.')[0])
+        print(f"({speed:.2f} steps/s)")
+        print(f" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
+        print(f" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
+        print(f" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
+        print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
+        print(33 * '=')
 
     @property
     def q(self) -> npt.NDArray[np.float64]:
@@ -63,17 +126,17 @@ class Solution:
     @property
     def density(self) -> npt.NDArray[np.float64]:
         # centerline
-        return self.__field.p[0, 1:-1, self.disc['Ny'] // 2]
+        return self.__field.p[0, 1:-1, self.grid['Ny'] // 2]
 
     @property
     def flux_x(self) -> npt.NDArray[np.float64]:
         # centerline
-        return self.__field.p[1, 1:-1, self.disc['Ny'] // 2]
+        return self.__field.p[1, 1:-1, self.grid['Ny'] // 2]
 
     @property
     def flux_y(self) -> npt.NDArray[np.float64]:
         # centerline
-        return self.__field.p[2, 1:-1, self.disc['Ny'] // 2]
+        return self.__field.p[2, 1:-1, self.grid['Ny'] // 2]
 
     @property
     def kinetic_energy(self) -> float:
@@ -87,7 +150,7 @@ class Solution:
         print(f"{self.step:>5d} {self.residual:.3e}")
 
         self.history["step"].append(self.step)
-        self.history["time"].append(self.step * self.disc["dt"])
+        self.history["time"].append(self.step * self.dt)
         self.history["ekin"].append(self.kinetic_energy)
         self.history["residual"].append(self.residual)
 
@@ -122,9 +185,9 @@ class Solution:
         elif switch == 1:
             directions = [1, -1]
 
-        dx = self.disc["dx"]
-        dy = self.disc["dy"]
-        dt = self.disc["dt"]
+        dx = self.grid["dx"]
+        dy = self.grid["dy"]
+        dt = self.dt
 
         q0 = self.__field.p.copy()
 
@@ -157,40 +220,32 @@ class Solution:
     def _communicate_ghost_buffers(self) -> None:
 
         # x0
-        if np.all(self.bc['x0'] == 'P'):
+        if all(self.grid['bc_xE_P']):
             self.__field.p[:, 0, :] = self.__field.p[:, -2, :].copy()
         else:
-            if np.any(self.bc['x0'] == 'D'):
-                self.__field.p[self.bc['x0'] == 'D', :1, :] = self._get_ghost_cell_values('D', axis=0, direction=-1)
-            if np.any(self.bc['x0'] == 'N'):
-                self.__field.p[self.bc['x0'] == 'N', :1, :] = self._get_ghost_cell_values('N', axis=0, direction=-1)
+            self.__field.p[self.grid['bc_xE_D'], :1, :] = self._get_ghost_cell_values('D', axis=0, direction=-1)
+            self.__field.p[self.grid['bc_xE_N'], :1, :] = self._get_ghost_cell_values('N', axis=0, direction=-1)
 
         # x1
-        if np.all(self.bc['x1'] == 'P'):
+        if np.all(self.grid['bc_xW_P']):
             self.__field.p[:, -1, :] = self.__field.p[:, 1, :].copy()
         else:
-            if np.any(self.bc['x1'] == 'D'):
-                self.__field.p[self.bc['x1'] == 'D', -1:, :] = self._get_ghost_cell_values('D', axis=0, direction=1)
-            if np.any(self.bc['x1'] == 'N'):
-                self.__field.p[self.bc['x1'] == 'N', -1:, :] = self._get_ghost_cell_values('N', axis=0, direction=1)
+            self.__field.p[self.grid['bc_xW_D'], -1:, :] = self._get_ghost_cell_values('D', axis=0, direction=1)
+            self.__field.p[self.grid['bc_xW_N'], -1:, :] = self._get_ghost_cell_values('N', axis=0, direction=1)
 
         # y0
-        if np.all(self.bc['y0'] == 'P'):
+        if np.all(self.grid['bc_yS_P']):
             self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
         else:
-            if np.any(self.bc['y0'] == 'D'):
-                self.__field.p[self.bc['y0'] == 'D', :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
-            if np.any(self.bc['y0'] == 'N'):
-                self.__field.p[self.bc['y0'] == 'N', :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
+            self.__field.p[self.bc['y0'] == 'D', :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
+            self.__field.p[self.bc['y0'] == 'N', :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
 
         # y1
-        if np.all(self.bc['y0'] == 'P'):
+        if np.all(self.grid['bc_yN_P']):
             self.__field.p[:, :, -1] = self.__field.p[:, :, 1].copy()
         else:
-            if np.any(self.bc['y1'] == 'D'):
-                self.__field.p[self.bc['y1'] == 'D', :, -1:] = self._get_ghost_cell_values('D', axis=1, direction=1)
-            if np.any(self.bc['y0'] == 'N'):
-                self.__field.p[self.bc['y1'] == 'N', :, -1:] = self._get_ghost_cell_values('N', axis=1, direction=1)
+            self.__field.p[self.grid['bc_yN_D'], :, -1:] = self._get_ghost_cell_values('D', axis=1, direction=1)
+            self.__field.p[self.grid['bc_yN_N'], :, -1:] = self._get_ghost_cell_values('N', axis=1, direction=1)
 
     def _get_ghost_cell_values(self, bc_type, axis, direction, num_ghost=1):
         """Computes the ghost cell values for boundary conditions.
@@ -225,19 +280,23 @@ class Solution:
 
         if axis == 0:  # x
             if direction > 0:  # downstream
-                q_target = self.bc["rhox1"]
-                q_adj = self.__field.p[self.bc["x1"] == bc_type, -(num_ghost + num_ghost):-num_ghost, :]
+                mask = self.grid[f"bc_xE_{bc_type}"]
+                q_target = self.grid["bc_xE_D_val"]
+                q_adj = self.__field.p[mask, -(num_ghost + num_ghost):-num_ghost, :]
             else:  # upstream
-                q_target = self.bc["rhox0"]
-                q_adj = self.__field.p[self.bc["x0"] == bc_type, num_ghost:num_ghost + num_ghost, :]
+                mask = self.grid[f"bc_xW_{bc_type}"]
+                q_target = self.grid["bc_xW_D_val"]
+                q_adj = self.__field.p[mask, num_ghost:num_ghost + num_ghost, :]
 
         elif axis == 1:  # y
             if direction > 0:  # downstream
-                q_target = self.bc["rhoy1"]
-                q_adj = self.__field.p[self.bc["y1"] == bc_type, :, -(num_ghost + num_ghost):-num_ghost]
+                mask = self.grid[f"bc_yS_{bc_type}"]
+                q_target = self.grid["bc_yS_D_val"]
+                q_adj = self.__field.p[mask, :, -(num_ghost + num_ghost):-num_ghost]
             else:  # upstream
-                q_target = self.bc["rhoy0"]
-                q_adj = self.__field.p[self.bc["y0"] == bc_type, :, num_ghost:num_ghost + num_ghost]
+                mask = self.grid[f"bc_yN_{bc_type}"]
+                q_target = self.grid["bc_yN_D_val"]
+                q_adj = self.__field.p[mask, :, num_ghost:num_ghost + num_ghost]
         else:
             raise RuntimeError("axis must be either 0 (x) or (y)")
 

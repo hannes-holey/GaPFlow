@@ -16,11 +16,25 @@ pip install -e .
 ```
 for an editable installation.
 
+## Minimal example
+Simulation inputs are commonly stored in YAML files.
+
+The input files canbe used to start a simulation from the command line
+```bash
+python -m hans_mugrid -i input.yaml
+```
+or from a Python script
+```python
+from hans_mugrid.problem import Problem
+
+myProblem = Problem.from_yaml('my_input_file.yaml')
+myProblem.run()
+```
 
 ## Roadmap
 - [X] Active learning in base class, test with pressure only
 - [X] Implement GP surrogates for shear stress
-- [ ] Problem class with YAML input (HydrodynamicProblem, ElastoHydrodynamicProblem, ThermoElastoHydrodynamicProblem)
+- [X] Problem class with YAML input
 - [ ] File I/O (fields, scalars, gp_params, train_data)
 - [X] Plotting scripts (file pipeline)
 - [ ] Adaptive time stepping

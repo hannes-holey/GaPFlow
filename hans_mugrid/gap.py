@@ -20,33 +20,40 @@ def create_midpoint_grid(disc):
     return xx, yy
 
 
-def journal_bearing(xx, disc):
+def journal_bearing(xx, grid, geo):
 
-    CR = disc['CR']
-    eps = disc['eps']
-    Lx = disc['Lx']
+    Lx = grid['Lx']
+    freq = 2. * np.pi / Lx
 
-    Rb = Lx / (2 * np.pi)
-    c = CR * Rb
-    e = eps * c
+    if 'CR' and 'eps' in geo.keys():
+        shift = geo['CR'] / freq
+        amp = geo['eps'] * shift
 
-    h = c + e * np.cos(xx / Rb)
-    dh_dx = -e / Rb * np.sin(xx / Rb)
+    elif 'hmin' and 'hmax' in geo.keys():
+        amp = (geo['hmax'] - geo['hmin']) / 2.
+        shift = (geo['hmax'] + geo['hmin']) / 2.
 
-    return h, dh_dx
+    h = shift + amp * np.cos(freq * xx)
+    dh_dx = -amp * freq * np.sin(freq * xx)
+    dh_dy = np.zeros_like(h)
+
+    return h, dh_dx, dh_dy
 
 
 class Gap:
 
-    def __init__(self, fc, disc):
+    def __init__(self, fc, grid, geo):
 
         self.field = fc.real_field('gap', (3,))
 
-        xx, yy = create_midpoint_grid(disc)
-        h, dh_dx = journal_bearing(xx, disc)
+        xx, yy = create_midpoint_grid(grid)
+
+        if geo['type'] == 'journal':
+            h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
 
         self.field.p[0] = h
         self.field.p[1] = dh_dx
+        self.field.p[2] = dh_dy
 
     @property
     def h(self):
