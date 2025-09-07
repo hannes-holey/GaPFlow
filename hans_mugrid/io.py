@@ -20,11 +20,15 @@ def print_dict(d):
         print(f'  - {k:<25s}: {v}')
 
 
-def create_output_directory(name):
+def create_output_directory(name, use_tstamp=True):
 
-    timestamp = datetime.now().replace(microsecond=0).strftime("%Y-%m-%d_%H%M%S")
+    if use_tstamp:
+        timestamp = datetime.now().replace(microsecond=0).strftime("%Y-%m-%d_%H%M%S") + '_'
+    else:
+        timestamp = ''
+
     outbase = os.path.dirname(name)
-    outname = timestamp + '_' + os.path.basename(name)
+    outname = timestamp + os.path.basename(name)
     outdir = os.path.join(outbase, outname)
 
     if not os.path.exists(outdir):
@@ -77,6 +81,7 @@ def sanitize_options(d):
     out = {}
     out['output'] = str(d.get('output', 'example'))
     out['write_freq'] = int(d.get('write_freq', 1000))
+    out['use_tstamp'] = bool(d.get('use_tstamp', True))
 
     print_dict(out)
 

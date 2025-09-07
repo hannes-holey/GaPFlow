@@ -1,6 +1,7 @@
 options:
     output: data/journal
     write_freq: 10
+    use_tstamp: True
 grid:
     dx: 1.e-5
     dy: 1.

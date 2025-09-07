@@ -36,9 +36,9 @@ for an editable installation.
 Simulation inputs are commonly stored in YAML files. A typical input file might look like this:
 
 ```yaml
-# my_input_file.yaml
+# examples/journal.yaml
 options:
-    output: journal_bearing_run-01
+    output: data/journal
     write_freq: 10
 grid:
     dx: 1.e-5
@@ -70,12 +70,11 @@ properties:
     T0: 323.15
     C1: 3.5e10
     C2: 1.23
-gp: ...
 ```
 
-The input files canbe used to start a simulation from the command line
+The input files can be used to start a simulation from the command line
 ```bash
-python -m hans_mugrid -i input.yaml
+python -m hans_mugrid -i my_input_file.yaml
 ```
 or from a Python script
 ```python
@@ -84,7 +83,6 @@ from hans_mugrid.problem import Problem
 myProblem = Problem.from_yaml('my_input_file.yaml')
 myProblem.run()
 ```
-
 Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
 - `config.yml`: A sanitized version of your simulation input.
 - `field.nc`: NetCDF file containing the solution and stress fields.

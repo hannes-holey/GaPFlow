@@ -49,7 +49,7 @@ class Problem:
         self.pressure = Pressure(fc, prop, data=database)
 
         # I/O
-        self.outdir = create_output_directory(options['output'])
+        self.outdir = create_output_directory(options['output'], options['use_tstamp'])
         write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
 
         self.file = FileIONetCDF(os.path.join(self.outdir, 'field.nc'),
