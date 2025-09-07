@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from hans_mugrid.problem import Problem
+from GaPFlow.problem import Problem
 
 
 def get_parser():

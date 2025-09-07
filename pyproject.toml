@@ -3,8 +3,8 @@ requires = ["flit_core>=3.2"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "hans_mugrid"
-description = ""
+name = "GaPFlow"
+description = "Gap-averaged flow simulations with Gaussian Process regression."
 readme = "README.md"
 authors = [
     { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
@@ -21,9 +21,16 @@ dependencies = [
 	"matplotlib==3.10.6",
 	"mpi4py==4.1.0",
 	"gpjax==0.11.2",
-	"netCDF4==1.7.2"
+	"netCDF4==1.7.2",
+	"pandas==2.3.2"
 ]
 
+[project.scripts]
+gpf_plot_height="GaPFlow.cli:plot_height.main"
+
 [project.urls]
-Source = "https://github.com/hannes-holey/hans_mugrid"
+Source = "https://github.com/hannes-holey/gapflow"
+
+[tool.flit.sdist]
+include = ["GaPFlow/resources/*"]
 

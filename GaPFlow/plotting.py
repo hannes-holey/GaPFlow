@@ -6,16 +6,18 @@ import netCDF4
 import numpy as np
 import pandas as pd
 
-from hans_mugrid.gap import create_midpoint_grid
+from GaPFlow.gap import create_midpoint_grid
 
 
-def get_pipeline(path='.', silent=False, mode='select', suffix='.nc'):
+def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
 
     folders = []
 
     for root, dirs, files in os.walk(path, topdown=False):
-        if any([file.endswith('field.nc') for file in files]):
+        if any([file.endswith(name) for file in files]):
             folders.append(root)
+
+    folders = sorted(folders)
 
     for i, folder in enumerate(folders):
         date = time.strftime('%d/%m/%Y %H:%M', time.localtime(os.path.getmtime(folder)))
@@ -30,7 +32,7 @@ def get_pipeline(path='.', silent=False, mode='select', suffix='.nc'):
     else:
         mask = [int(i) for i in inp.split()]
 
-    files = [os.path.join(folders[i], 'field.nc') for i in mask]
+    files = [os.path.join(folders[i], name) for i in mask]
 
     return files
 
@@ -123,6 +125,52 @@ def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
         ax.plot(x, mean - 1.96 * tol, '--', color=color)
 
 
+def _get_centerline_coords(nx, ny, disc=None):
+    if disc is not None:
+        xx, yy = create_midpoint_grid(disc)
+        x = xx[1:-1, ny // 2]
+        y = yy[nx // 2, 1:-1]
+    else:
+        x = np.arange(nx - 2) / (nx - 2)
+        x += x[0] / 2.
+        y = np.arange(ny - 2) / (ny - 2)
+        y += y[0] / 2.
+
+    return x, y
+
+
+def plot_height(filename, disc=None):
+
+    fig, ax = plt.subplots(1)
+
+    data = netCDF4.Dataset(filename)
+    h_nc = np.asarray(data.variables['gap'])
+    _, _, _, nx, ny = h_nc.shape
+
+    x, _ = _get_centerline_coords(nx, ny, disc)
+
+    gap_height_1d = h_nc[0, 0, 0, 1:-1, ny // 2]
+
+    ax.fill_between(x,
+                    gap_height_1d,
+                    np.ones_like(x) * 1.1 * gap_height_1d.max(),
+                    color='0.7', lw=0.)
+    ax.fill_between(x,
+                    np.zeros_like(x),
+                    -np.ones_like(x) * 0.1 * gap_height_1d.max(),
+                    color='0.7', lw=0.)
+
+    ax.plot(x, np.zeros_like(gap_height_1d), color='C0')
+
+    ax.plot(x, gap_height_1d, color='C0')
+    ax.plot(x, np.zeros_like(gap_height_1d), color='C0')
+
+    ax.set_ylabel('Gap height $h$')
+    ax.set_xlabel('$x/L_x$' if disc is None else '$x$')
+
+    plt.show()
+
+
 def _plot_single_frame(ax, filename, frame=-1, disc=None):
 
     data = netCDF4.Dataset(filename)
@@ -136,12 +184,7 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
     tauvar_nc = np.asarray(data.variables['wall_stress_var'])
 
     nt, nc, _, nx, ny = q_nc.shape
-    if disc is not None:
-        xx, yy = create_midpoint_grid(disc)
-        x = xx[1:-1, ny // 2]
-    else:
-        x = np.arange(nx - 2) / (nx - 2)
-        x += x[1] / 2.
+    x, _ = _get_centerline_coords(nx, ny, disc)
 
     color_q = 'C0'
     color_p = 'C1'

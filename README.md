@@ -1,6 +1,13 @@
-# Minimal version of HANS based on µGrid
+# GaPFlow
+*Gap-averaged flow simulations with Gaussian Process regression.*
 
-Playground for testing migration to µGrid.
+This code implements the solution of time-dependent lubrication problems as described in:
+- [Holey, H. et al., Tribology Letters 70 (2022)](https://doi.org/10.1007/s11249-022-01576-5)
+
+The extension to atomistic-continuum multiscale simulations with Gaussian process (GP) surrogate models has been described in:
+- [Holey, H. et al., Science Advances 11, xxxx (2005)](https://doi.org/)
+
+The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [GPJax](https://docs.jaxgaussianprocesses.com/) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
 
 ## Roadmap
 - [X] Active learning in base class, test with pressure only
@@ -20,7 +27,7 @@ Playground for testing migration to µGrid.
 
 ## Installation
 
-Install [muGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
+Install [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
 ```
 pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 ```
@@ -33,7 +40,7 @@ pip install -e .
 for an editable installation.
 
 ## Minimal example
-Simulation inputs are commonly stored in YAML files. A typical input file might look like this:
+Simulation inputs are commonly provided in YAML files. A typical input file might look like this:
 
 ```yaml
 # examples/journal.yaml
@@ -72,20 +79,23 @@ properties:
     C2: 1.23
 ```
 
+Note that this example uses fixed-form constitutive laws GP without surrogate models or MD data. More example input files can be found in the [examples](examples/) directory.
+
 The input files can be used to start a simulation from the command line
 ```bash
-python -m hans_mugrid -i my_input_file.yaml
+python -m GaPFlow -i my_input_file.yaml
 ```
 or from a Python script
 ```python
-from hans_mugrid.problem import Problem
+from GaPFlow.problem import Problem
 
 myProblem = Problem.from_yaml('my_input_file.yaml')
 myProblem.run()
 ```
 Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
 - `config.yml`: A sanitized version of your simulation input.
-- `field.nc`: NetCDF file containing the solution and stress fields.
+- `gap.nc`: NetCDF file containing the gap height and gradients.
+- `sol.nc`: NetCDF file containing the solution and stress fields.
 - `history.csv`: Contains the time series of scalar quantities (step, Ekin, residual, ...)
 - `gp_[shear,press].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
 - `Xtrain.npy` (Optional): Training data inputs
@@ -100,4 +110,4 @@ The code comes with a few handy command line tools for visualization...
 ...
 
 ## Funding
-...
+This work received funding from the German Research Foundation (DFG) through GRK 2450 and from the Alexander von Humboldt Foundation through a Feodor Lynen Fellowship.

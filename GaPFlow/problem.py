@@ -7,11 +7,11 @@ from datetime import datetime
 from typing import Union
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
-from hans_mugrid.io import read_yaml_input, write_yaml, create_output_directory
-from hans_mugrid.stress import WallStress, BulkStress, Pressure
-from hans_mugrid.integrate import predictor_corrector, source
-from hans_mugrid.gap import Gap
-from hans_mugrid.db import Database
+from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory
+from GaPFlow.stress import WallStress, BulkStress, Pressure
+from GaPFlow.integrate import predictor_corrector, source
+from GaPFlow.gap import Gap
+from GaPFlow.db import Database
 
 
 class Problem:
@@ -50,11 +50,19 @@ class Problem:
 
         # I/O
         self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+
+        # Sanitized config file
         write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
 
-        self.file = FileIONetCDF(os.path.join(self.outdir, 'field.nc'),
-                                 OpenMode.Overwrite)
+        # Write gap height and gradients once
+        gapfile = FileIONetCDF(os.path.join(self.outdir, 'gap.nc'), OpenMode.Write)
+        gapfile.register_field_collection(fc, field_names=['gap'])
+        gapfile.append_frame().write()
+        gapfile.close()
 
+        # Solution fields
+        self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
+                                 OpenMode.Overwrite)
         self.file.register_field_collection(fc, field_names=['solution',
                                                              'pressure',
                                                              'pressure_var',

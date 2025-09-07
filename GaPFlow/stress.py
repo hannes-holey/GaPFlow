@@ -1,7 +1,7 @@
 import numpy as np
 import jax.numpy as jnp
-from hans_mugrid.gp import GaussianProcessSurrogate, MultiOutputKernel
-from hans_mugrid.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
+from GaPFlow.gp import GaussianProcessSurrogate, MultiOutputKernel
+from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
 
 from jax import config
 from jaxtyping import install_import_hook

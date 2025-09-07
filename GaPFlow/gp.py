@@ -1,6 +1,6 @@
 from datetime import datetime
-from hans_mugrid.utils import get_new_training_input
-from hans_mugrid.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
+from GaPFlow.utils import get_new_training_input
+from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
 import abc
 import numpy as np
 import jax.numpy as jnp
