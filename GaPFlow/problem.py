@@ -23,6 +23,20 @@ class Problem:
         prop = input_dict['properties']
         geo = input_dict['geometry']
         numerics = input_dict['numerics']
+
+        # Optional inputs
+        if 'gp' in input_dict.keys():
+            gp = input_dict['gp']
+        else:
+            gp = {'shear_gp': False, 'press_gp': False}
+
+        # Intialize database
+        if gp['shear_gp'] or gp['press_gp']:
+            database = Database(minimum_size=gp['db_init_size'])
+        else:
+            database = None
+
+        # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics
         self.options = options
@@ -40,13 +54,14 @@ class Problem:
         geometry = Gap(fc, grid, geo)
         self.__gap_height = fc.get_real_field('gap')
 
-        # intialize database
-        database = Database(minimum_size=5)
-
         # Dependent fields
-        self.wall_stress = WallStress(fc, prop, data=database)
-        self.bulk_stress = BulkStress(fc, prop, data=database)
-        self.pressure = Pressure(fc, prop, data=database)
+        self.bulk_stress = BulkStress(fc, prop, geo, data=database)
+        self.wall_stress = WallStress(fc, prop, geo,
+                                      data=database,
+                                      gp=gp['shear'] if gp['shear_gp'] else None)
+        self.pressure = Pressure(fc, prop, geo,
+                                 data=database,
+                                 gp=gp['press'] if gp['press_gp'] else None)
 
         # I/O
         self.outdir = create_output_directory(options['output'], options['use_tstamp'])
@@ -63,11 +78,13 @@ class Problem:
         # Solution fields
         self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
                                  OpenMode.Overwrite)
-        self.file.register_field_collection(fc, field_names=['solution',
-                                                             'pressure',
-                                                             'pressure_var',
-                                                             'wall_stress',
-                                                             'wall_stress_var'])
+
+        field_names = ['solution', 'pressure', 'wall_stress']
+        if gp['shear_gp']:
+            field_names.append('wall_stress_var')
+        if gp['press_gp']:
+            field_names.append('pressure_var')
+        self.file.register_field_collection(fc, field_names=field_names)
 
     @classmethod
     def from_yaml(cls, fname):
@@ -125,10 +142,12 @@ class Problem:
         print(33 * '=')
         print(f"Total walltime     : ", str(walltime).split('.')[0])
         print(f"({speed:.2f} steps/s)")
-        print(f" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
-        print(f" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
-        print(f" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
-        print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
+        if self.pressure.is_gp_model:
+            print(f" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
+            print(f" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
+        if self.wall_stress.is_gp_model:
+            print(f" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
+            print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
         print(33 * '=')
 
         self.history_to_csv(os.path.join(self.outdir, 'history.csv'))
@@ -207,8 +226,8 @@ class Problem:
 
         for i, d in enumerate(directions):
 
-            self.pressure.update(gp=True, predictor=i == 0)
-            self.wall_stress.update(gp=True, predictor=i == 0)
+            self.pressure.update(predictor=i == 0)
+            self.wall_stress.update(predictor=i == 0)
             self.bulk_stress.update()
 
             fX, fY = predictor_corrector(self.__field.p,

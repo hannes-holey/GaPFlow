@@ -17,7 +17,12 @@ def print_header(s, n=60, f0='*', f1=' '):
 
 def print_dict(d):
     for k, v in d.items():
-        print(f'  - {k:<25s}: {v}')
+        if not isinstance(v, dict):
+            print(f'  - {k:<25s}: {v}')
+        else:
+            print(f'  - {k}:')
+            for kk, vv in v.items():
+                print(f'    - {kk:<23s}: {vv}')
 
 
 def create_output_directory(name, use_tstamp=True):
@@ -246,6 +251,23 @@ def sanitize_numerics(d):
 def sanitize_gp(d):
 
     out = {}
+    use_press_gp = 'press' in d.keys()
+    use_shear_gp = 'shear' in d.keys()
+
+    out['press_gp'] = bool(use_press_gp)
+    out['shear_gp'] = bool(use_shear_gp)
+
+    out['db_init_size'] = int(d.get('db_init_size', 5))
+    # out['db_init'] = str(d.get('db_init', 'lhc'))
+
+    for sk, active in zip(['press', 'shear'], [use_press_gp, use_shear_gp]):
+        if active:
+            out[sk] = {}
+            ds = d[sk]
+            out[sk]['rtol'] = float(ds.get('rtol', 0.5))
+            out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
+            out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
+            out[sk]['max_steps'] = int(ds.get('max_steps', 5))
 
     print_dict(out)
 

@@ -45,7 +45,7 @@ class GaussianProcessSurrogate:
 
     name: str
 
-    def __init__(self, fc, database, gp_config, prop):
+    def __init__(self, fc, prop, database):
 
         self.prop = prop
 
@@ -59,30 +59,31 @@ class GaussianProcessSurrogate:
 
         self.active_dims = active_dims
 
-        self.database = database
-        Xnew = get_new_training_input(self._Xtest,
-                                      self.database.minimum_size - self.database.size)
+        if self.is_gp_model:
+            self.database = database
+            Xnew = get_new_training_input(self._Xtest,
+                                          self.database.minimum_size - self.database.size)
 
-        # For mock data from known constitutive laws
-        noise = 0.
-        self.noise = noise
-        Ynew = get_new_training_output_mock(Xnew, prop, noise_stddev=noise)
-        # ...or from MD
-        # Ynew = get_new_training_output_MD(Xnew)
+            # For mock data from known constitutive laws
+            Ynew = get_new_training_output_mock(Xnew, prop, noise_stddev=self.noise)
+            # ...or from MD
+            # Ynew = get_new_training_output_MD(Xnew)
 
-        self.database.add_data(Xnew.T, Ynew.T)
-        self.update_training_data()
-        self.last_fit_train_size = 0
+            self.database.add_data(Xnew.T, Ynew.T)
+            self.update_training_data()
+            self.last_fit_train_size = 0
 
-        ref = datetime.now()
-        self.cumtime_train = datetime.now() - ref
-        self.cumtime_infer = datetime.now() - ref
+            ref = datetime.now()
+            self.cumtime_train = datetime.now() - ref
+            self.cumtime_infer = datetime.now() - ref
 
-        self.std_tol_norm = 0.1
-
-        self.model_setup()
+            self.model_setup()
 
         self.step = 0
+
+    # @abc.abstractmethod
+    # def is_gp_model():
+    #     raise NotImplementedError
 
     @abc.abstractmethod
     def model_setup(self):
@@ -222,7 +223,7 @@ class GaussianProcessSurrogate:
         if predictor:
             counter = 0
             before = deepcopy(self.maximum_variance / self.variance_tol)
-            while not self.trusted and counter < max_steps:
+            while not self.trusted and counter < self.max_steps:
                 counter += 1
 
                 # add new data

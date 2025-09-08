@@ -7,17 +7,27 @@ from jaxtyping import install_import_hook
 with install_import_hook("gpjax", "beartype.beartype"):
     import gpjax as gpx
 
+from gpjax.parameters import Static
+
 
 class WallStress(GaussianProcessSurrogate):
 
     name = "shear"
 
-    def __init__(self, fc, prop, data=None, gp_config=None):
+    def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('wall_stress', (12,))
-        self.__field_variance = fc.real_field('wall_stress_var')
-        self.prop = prop
+        self.geo = geo
 
-        super().__init__(fc, data, gp_config, prop)
+        if gp is not None:
+            self.__field_variance = fc.real_field('wall_stress_var')
+            self.noise = Static(gp['obs_stddev']) if gp['fix_noise'] else gp['obs_stddev']
+            self.std_tol_norm = gp['rtol']
+            self.max_steps = gp['max_steps']
+            self.is_gp_model = True
+        else:
+            self.is_gp_model = False
+
+        super().__init__(fc, prop, data)
 
     @property
     def full(self):
@@ -60,7 +70,7 @@ class WallStress(GaussianProcessSurrogate):
                                     )
 
         self._likelihood = gpx.likelihoods.Gaussian(num_datapoints=self.database.size,
-                                                    # obs_stddev=gpx.parameters.Static(noise)
+                                                    obs_stddev=self.noise / self.y_scale
                                                     )
 
         self._posterior = self._prior * self._likelihood
@@ -74,8 +84,8 @@ class WallStress(GaussianProcessSurrogate):
 
         # For MD data: call update method from database (or external)
 
-        U = 0.1
-        V = 0.
+        U = self.geo['U']
+        V = self.geo['V']
         eta = self.prop['shear']
         zeta = self.prop['bulk']
 
@@ -90,17 +100,16 @@ class WallStress(GaussianProcessSurrogate):
         return np.vstack([Ybot[4],
                           Ytop[4]])
 
-    def update(self, gp=False, predictor=False):
+    def update(self, predictor=False):
 
-        if gp:
+        if self.is_gp_model:
             mean, var = self.infer(predictor)
-
             self.__field.p[4] = mean[0, :, :]
             self.__field.p[10] = mean[1, :, :]
             self.__field_variance.p = var[0, :, :]
         else:
-            U = 0.1
-            V = 0.
+            U = self.geo['U']
+            V = self.geo['V']
             eta = self.prop['shear']
             zeta = self.prop['bulk']
 
@@ -117,11 +126,14 @@ class BulkStress(GaussianProcessSurrogate):
 
     name = "bulk"
 
-    def __init__(self, fc, prop, data=None, gp_config=None):
+    def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
-        self.prop = prop
+        self.geo = geo
 
-        super().__init__(fc, data, gp_config, prop)
+        self.is_gp_model = False
+        self.noise = 0.
+
+        super().__init__(fc, prop, data)
 
     @property
     def stress(self):
@@ -137,8 +149,8 @@ class BulkStress(GaussianProcessSurrogate):
 
         # For MD data: call update method from database (or external)
 
-        U = 0.1
-        V = 0.
+        U = self.geo['U']
+        V = self.geo['V']
         eta = self.prop['shear']
         zeta = self.prop['bulk']
 
@@ -149,9 +161,8 @@ class BulkStress(GaussianProcessSurrogate):
         return Y
 
     def update(self):
-
-        U = 0.1
-        V = 0.
+        U = self.geo['U']
+        V = self.geo['V']
         eta = self.prop['shear']
         zeta = self.prop['bulk']
 
@@ -164,12 +175,20 @@ class Pressure(GaussianProcessSurrogate):
 
     name = "press"
 
-    def __init__(self, fc, prop, data=None, gp_config=None):
-        self.prop = prop
+    def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('pressure')
-        self.__field_variance = fc.real_field('pressure_var')
+        self.geo = geo
 
-        super().__init__(fc, data, gp_config, prop)
+        if gp is not None:
+            self.__field_variance = fc.real_field('pressure_var')
+            self.noise = Static(gp['obs_stddev']) if gp['fix_noise'] else gp['obs_stddev']
+            self.std_tol_norm = gp['rtol']
+            self.max_steps = gp['max_steps']
+            self.is_gp_model = True
+        else:
+            self.is_gp_model = False
+
+        super().__init__(fc, prop, data)
 
     @property
     def pressure(self):
@@ -180,6 +199,7 @@ class Pressure(GaussianProcessSurrogate):
         return self._Xtest
 
     def model_setup(self):
+
         # intial lengthscales
         l0 = np.std(self.database.data_press.X, axis=0)[jnp.array(self.active_dims)]
         # l0 = jnp.ones(len(self.active_dims))
@@ -196,7 +216,7 @@ class Pressure(GaussianProcessSurrogate):
                                     )
 
         self._likelihood = gpx.likelihoods.Gaussian(num_datapoints=self.database.size,
-                                                    # obs_stddev=gpx.parameters.Static(noise)
+                                                    obs_stddev=self.noise / self.y_scale
                                                     )
 
         self._posterior = self._prior * self._likelihood
@@ -217,9 +237,9 @@ class Pressure(GaussianProcessSurrogate):
         return dowson_higginson_pressure(X[3],
                                          rho0, p0, C1, C2)[None, :]
 
-    def update(self, gp=False, predictor=False):
+    def update(self, predictor=False):
 
-        if gp:
+        if self.is_gp_model:
             mean, var = self.infer(predictor)
             self.__field.p = mean
             self.__field_variance.p = var
