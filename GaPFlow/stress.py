@@ -1,7 +1,9 @@
 import numpy as np
 import jax.numpy as jnp
 from GaPFlow.gp import GaussianProcessSurrogate, MultiOutputKernel
-from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
+from GaPFlow.models.pressure import eos_pressure
+from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
+
 
 from jaxtyping import install_import_hook
 with install_import_hook("gpjax", "beartype.beartype"):
@@ -229,13 +231,7 @@ class Pressure(GaussianProcessSurrogate):
     def get_output(self, X):
 
         # For MD data: call update method from database (or external)
-
-        rho0 = self.prop['rho0']
-        p0 = self.prop['P0']
-        C1 = self.prop['C1']
-        C2 = self.prop['C2']
-        return dowson_higginson_pressure(X[3],
-                                         rho0, p0, C1, C2)[None, :]
+        return eos_pressure(X[3], self.prop)[None, :]
 
     def update(self, predictor=False):
 
@@ -244,12 +240,7 @@ class Pressure(GaussianProcessSurrogate):
             self.__field.p = mean
             self.__field_variance.p = var
         else:
-            rho0 = self.prop['rho0']
-            p0 = self.prop['P0']
-            C1 = self.prop['C1']
-            C2 = self.prop['C2']
-            self.__field.p = dowson_higginson_pressure(self.density[0],
-                                                       rho0, p0, C1, C2)
+            self.__field.p = eos_pressure(self.density[0], self.prop)
 
 
 # Utility functions
@@ -273,13 +264,7 @@ def get_all_outputs(X, prop):
                          U, V, eta, zeta, 0.)
 
     # Pressure
-
-    rho0 = prop['rho0']
-    p0 = prop['P0']
-    C1 = prop['C1']
-    C2 = prop['C2']
-    press = dowson_higginson_pressure(X[3],
-                                      rho0, p0, C1, C2)[None, :]
+    press = eos_pressure(X[3], prop)[None, :]
 
     return np.vstack([press,
                       tau_bot,

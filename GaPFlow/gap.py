@@ -50,10 +50,19 @@ class Gap:
 
         if geo['type'] == 'journal':
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
+            ix = 1
+            iy = 2
+
+        if geo['flip']:
+            h = h.T
+            dh_dx = dh_dx.T
+            dh_dy = dh_dy.T
+            ix = 2
+            iy = 1
 
         self.field.p[0] = h
-        self.field.p[1] = dh_dx
-        self.field.p[2] = dh_dy
+        self.field.p[ix] = dh_dx
+        self.field.p[iy] = dh_dy
 
     @property
     def h(self):

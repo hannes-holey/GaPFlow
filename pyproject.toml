@@ -25,6 +25,10 @@ dependencies = [
 	"pandas==2.3.2"
 ]
 
+[project.optional-dependencies]
+test = ['pytest',
+		'coverage']
+
 [project.scripts]
 gpf_plot_height="GaPFlow.cli:plot_height.main"
 
@@ -33,4 +37,8 @@ Source = "https://github.com/hannes-holey/gapflow"
 
 [tool.flit.sdist]
 include = ["GaPFlow/resources/*"]
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["tests"]
 

@@ -57,8 +57,6 @@ def read_yaml_input(file):
 
     print_header("PROBLEM SETUP")
 
-    print(f'Reading input file: {file}')
-
     sanitizing_functions = {'options': sanitize_options,
                             'grid': sanitize_grid,
                             'geometry': sanitize_geometry,
@@ -68,14 +66,13 @@ def read_yaml_input(file):
 
     sanitized_dict = {}
 
-    with open(file, 'r') as ymlfile:
-        raw_dict = yaml.full_load(ymlfile)
+    raw_dict = yaml.full_load(file)
 
-        for key, value in raw_dict.items():
+    for key, value in raw_dict.items():
 
-            if key in sanitizing_functions.keys():
-                print(f'- {key}:')
-                sanitized_dict[key] = sanitizing_functions[key](raw_dict[key])
+        if key in sanitizing_functions.keys():
+            print(f'- {key}:')
+            sanitized_dict[key] = sanitizing_functions[key](raw_dict[key])
 
     print_header("PROBLEM SETUP COMPLETED")
 
@@ -87,6 +84,7 @@ def sanitize_options(d):
     out['output'] = str(d.get('output', 'example'))
     out['write_freq'] = int(d.get('write_freq', 1000))
     out['use_tstamp'] = bool(d.get('use_tstamp', True))
+    out['silent'] = bool(d.get('silent', False))
 
     print_dict(out)
 
@@ -184,6 +182,7 @@ def sanitize_geometry(d):
     out['U'] = float(d.get('U', 1.))
     out['V'] = float(d.get('V', 0.))
     out['type'] = str(d.get('type', 'none'))
+    out['flip'] = bool(d.get('flip', False))
 
     if out['type'] not in available:
         raise IOError("Specify a valid geometry type")
@@ -242,6 +241,7 @@ def sanitize_numerics(d):
     out['dt'] = float(d.get('dt', 3e-10))
     out['adaptive'] = bool(d.get('adaptive', False))
     out['CFL'] = float(d.get('CFL', 0.5))
+    out['MC_order'] = int(d.get('MC_order', 1))
 
     print_dict(out)
 

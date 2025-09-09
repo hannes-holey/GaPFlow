@@ -1,13 +1,16 @@
 import os
+import io
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from copy import deepcopy
 from datetime import datetime
 from typing import Union
+from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
 from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory
+from GaPFlow.models.sound import eos_sound_velocity
 from GaPFlow.stress import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.gap import Gap
@@ -40,6 +43,7 @@ class Problem:
         self.grid = grid
         self.numerics = numerics
         self.options = options
+        self.prop = prop
 
         # Initialize field collection
         nb_grid_pts = (grid['Nx'] + 2,
@@ -51,7 +55,7 @@ class Problem:
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
         # Intialize gap
-        geometry = Gap(fc, grid, geo)
+        self.gap = Gap(fc, grid, geo)
         self.__gap_height = fc.get_real_field('gap')
 
         # Dependent fields
@@ -63,59 +67,65 @@ class Problem:
                                  data=database,
                                  gp=gp['press'] if gp['press_gp'] else None)
 
+        # TODO: numerics settings override (to continue a simulation)
+        # Numerics
+        self.step = 0
+        self.simtime = 0.
+        self.residual = 1.
+        self.residual_buffer = deque([self.residual, ], 5)
+
+        if self.numerics["adaptive"]:
+            self.dt = self.numerics["CFL"] * self.dt_crit
+        else:
+            self.dt = self.numerics['dt']
+
+        self.tol = self.numerics['tol']
+        self.max_it = self.numerics['max_it']
+
         # I/O
-        self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+        if not self.options['silent']:
+            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
-        # Sanitized config file
-        write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
+            # Sanitized config file
+            write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
 
-        # Write gap height and gradients once
-        gapfile = FileIONetCDF(os.path.join(self.outdir, 'gap.nc'), OpenMode.Write)
-        gapfile.register_field_collection(fc, field_names=['gap'])
-        gapfile.append_frame().write()
-        gapfile.close()
+            # Write gap height and gradients once
+            gapfile = FileIONetCDF(os.path.join(self.outdir, 'gap.nc'), OpenMode.Write)
+            gapfile.register_field_collection(fc, field_names=['gap'])
+            gapfile.append_frame().write()
+            gapfile.close()
 
-        # Solution fields
-        self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
-                                 OpenMode.Overwrite)
+            # Solution fields
+            self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
+                                     OpenMode.Overwrite)
 
-        field_names = ['solution', 'pressure', 'wall_stress']
-        if gp['shear_gp']:
-            field_names.append('wall_stress_var')
-        if gp['press_gp']:
-            field_names.append('pressure_var')
-        self.file.register_field_collection(fc, field_names=field_names)
+            field_names = ['solution', 'pressure', 'wall_stress']
+            if gp['shear_gp']:
+                field_names.append('wall_stress_var')
+            if gp['press_gp']:
+                field_names.append('pressure_var')
+            self.file.register_field_collection(fc, field_names=field_names)
 
     @classmethod
     def from_yaml(cls, fname):
-
-        input_dict = read_yaml_input(fname)
-
-        # Optional
-        # - gp:
-        #   - press: tol, noise, freq, wait, max_steps
-        #   - shear: ...
-        # - db: dtool, location, template, remote, Ninit, QMC sampling
-        # - md: ncpu, setup (lammps/moltemplate), temperature, velocity, sampling_time, dump_freq
-
+        print(f'Reading input file: {fname}')
+        with open(fname, 'r') as ymlfile:
+            input_dict = read_yaml_input(ymlfile)
         return cls(input_dict)
 
     @classmethod
+    def from_string(cls, ymlstring):
+        with io.StringIO(ymlstring) as ymlfile:
+            input_dict = read_yaml_input(ymlfile)
+        return cls(input_dict)
+
+    @ classmethod
     def from_problem(cls, config, outfile):
         # TODO: read a sanitized config file (yaml) and a NetCDF file
         # to initialize a new problem from the last frame of an existing one
         raise NotImplementedError
 
     def run(self):
-
-        # TODO: numerics settings override (to continue a simulation)
-        # Numerics
-        self.step = 0
-        self.residual = np.inf
-
-        self.tol = self.numerics['tol']
-        self.dt = self.numerics['dt']
-        self.max_it = self.numerics['max_it']
 
         self.history = {
             "step": [],
@@ -124,18 +134,24 @@ class Problem:
             "residual": []
         }
 
-        tic = datetime.now()
-        self.write()
+        if not self.options['silent']:
+            print(61 * '-')
+            print(f"{"Step":6s} {"Timestep":10s} {'Time':10s} {'CFL':10s} {"Residual":10s}")
+            print(61 * '-')
+            self.write()
 
         # Run
+        tic = datetime.now()
         while not self.converged and self.step < self.max_it:
             self.update()
 
-            if self.step % self.options['write_freq'] == 0:
+            if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
 
-        toc = datetime.now()
+        if self.step % self.options['write_freq'] == 1 and not self.options['silent']:
+            self.write()
 
+        toc = datetime.now()
         walltime = toc - tic
         speed = self.step / walltime.total_seconds()
 
@@ -150,7 +166,10 @@ class Problem:
             print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
         print(33 * '=')
 
-        self.history_to_csv(os.path.join(self.outdir, 'history.csv'))
+        if not self.options['silent']:
+            self.history_to_csv(os.path.join(self.outdir, 'history.csv'))
+
+    # TODO: use these properties as accessors to fields without ghost cells
 
     @property
     def q(self) -> npt.NDArray[np.float64]:
@@ -172,18 +191,39 @@ class Problem:
         return self.__field.p[2, 1:-1, self.grid['Ny'] // 2]
 
     @property
+    def mass(self) -> float:
+        return np.sum(self.__field.p[0] * self.__gap_height.p[0] * self.grid['dx'] * self.grid['dy'])
+
+    @property
     def kinetic_energy(self) -> float:
         return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
 
     @property
+    def v_max(self) -> float:
+        return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
+
+    @property
+    def v_sound(self) -> float:
+        return eos_sound_velocity(self.density[0], self.prop).max()
+
+    @property
+    def dt_crit(self):
+        return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.v_sound)
+
+    @property
+    def cfl(self):
+        return self.dt / self.dt_crit
+
+    @property
     def converged(self) -> bool:
-        return self.residual < self.tol
+        return np.all(np.array(self.residual_buffer) < self.tol)
 
     def write(self):
-        print(f"{self.step:>5d} {self.residual:.3e}")
+
+        print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
 
         self.history["step"].append(self.step)
-        self.history["time"].append(self.step * self.dt)
+        self.history["time"].append(self.simtime)
         self.history["ekin"].append(self.kinetic_energy)
         self.history["residual"].append(self.residual)
 
@@ -202,21 +242,23 @@ class Problem:
 
     def post_update(self) -> None:
         self._communicate_ghost_buffers()
-        self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old
+
+        # last_cfl = np.copy(self.cfl)
+        self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old / self.cfl
+        self.residual_buffer.append(self.residual)
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
         self.step += 1
+        self.simtime += self.dt
 
-    def update(self,
-               switch: Union[None, bool] = None)-> None:
+        # New time step
+        if self.numerics["adaptive"]:
+            self.dt = self.numerics["CFL"] * self.dt_crit
 
-        if switch is None:
-            switch = self.step % 2 == 0
+    def update(self)-> None:
 
-        if switch == 0:
-            directions = [-1, 1]
-        elif switch == 1:
-            directions = [1, -1]
+        switch = (self.step % 2 == 0) * 2 - 1 if self.numerics['MC_order'] == 0 else self.numerics['MC_order']
+        directions = [[-1, 1], [1, -1]][(switch + 1) // 2]
 
         dx = self.grid["dx"]
         dy = self.grid["dy"]
@@ -283,12 +325,12 @@ class Problem:
     def _get_ghost_cell_values(self, bc_type, axis, direction, num_ghost=1):
         """Computes the ghost cell values for boundary conditions.
 
-        For Dirichlet BCs, the target value is reached at the interface between 
-        the outermost cell within the physical domain and the first ghost cell. 
+        For Dirichlet BCs, the target value is reached at the interface between
+        the outermost cell within the physical domain and the first ghost cell.
 
         Neumann BCs will always be with zero gradient.
 
-        For both type of BCs, two different interpolation schemes are implemented 
+        For both type of BCs, two different interpolation schemes are implemented
         depending on the number of ghost cells (num_ghost<=2).
 
 

@@ -4,7 +4,8 @@ from copy import deepcopy
 from datetime import datetime
 
 from GaPFlow.utils import get_new_training_input
-from GaPFlow.models import dowson_higginson_pressure, stress_bottom, stress_top, stress_avg
+from GaPFlow.models.pressure import eos_pressure
+from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -33,8 +34,8 @@ class MultiOutputKernel(gpx.kernels.AbstractKernel):
         zp = jnp.array(Xp[6], dtype=int)
 
         # achieve the correct value via 'switches' that are either 1 or 0
-        k0_switch = ((z + 1) % 2) * ((zp + 1) % 2)
-        k1_switch = z * zp
+        k0_switch = ((z + 1) % 2) * ((zp + 1) % 2)  # lower wall
+        k1_switch = z * zp  # upper wall
 
         return k0_switch * self.kernel(X, Xp) + k1_switch * self.kernel(X, Xp)
 
@@ -281,13 +282,7 @@ def get_new_training_output_mock(X, prop, noise_stddev=0.):
                          U, V, eta, zeta, 0.)
 
     # Pressure
-
-    rho0 = prop['rho0']
-    p0 = prop['P0']
-    C1 = prop['C1']
-    C2 = prop['C2']
-    press = dowson_higginson_pressure(X[3],
-                                      rho0, p0, C1, C2)[None, :] + noise
+    press = eos_pressure(X[3], prop)[None, :] + noise
 
     return np.vstack([press,
                       tau_bot,
