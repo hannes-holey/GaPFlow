@@ -176,7 +176,7 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal']
+    available = ['journal', 'inclined']
     out = {}
 
     out['U'] = float(d.get('U', 1.))
@@ -196,6 +196,9 @@ def sanitize_geometry(d):
             out["hmax"] = float(d.get("hmax"))
         else:
             raise IOError("Need to specify either clearance ratio and eccentrity or min/max gap height")
+    elif out['type'] == 'inclined':
+        out['h0'] = float(d.get('h0'))
+        out['h1'] = float(d.get('h1'))
 
     print_dict(out)
 
@@ -213,7 +216,7 @@ def sanitize_properties(d):
     out['bulk'] = float(d.get('bulk', -1.))
 
     # EOS
-    available_eos = ['DH']
+    available_eos = ['DH', 'PL']
     out['EOS'] = str(d.get('EOS', 'none'))
     if out['EOS'] not in available_eos:
         raise IOError("Specify a valid equation of state")
@@ -221,6 +224,12 @@ def sanitize_properties(d):
     if out['EOS'] == 'DH':
         keys = ['rho0', 'P0', 'C1', 'C2']
         defaults = [877.7007, 101325, 3.5e10, 1.23]
+        for k, de in zip(keys, defaults):
+            out[k] = float(d.get(k, de))
+
+    if out['EOS'] == 'PL':
+        keys = ['rho0', 'P0', 'alpha']
+        defaults = [1.1853, 101325, 0.]
         for k, de in zip(keys, defaults):
             out[k] = float(d.get(k, de))
 

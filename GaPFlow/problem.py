@@ -148,7 +148,7 @@ class Problem:
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
 
-        if self.step % self.options['write_freq'] == 1 and not self.options['silent']:
+        if self.step % self.options['write_freq'] != 0 and not self.options['silent']:
             self.write()
 
         toc = datetime.now()

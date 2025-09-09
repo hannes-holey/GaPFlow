@@ -53,4 +53,4 @@ def test_x_y():
     for _ in range(50):
         problem.update()
 
-    assert np.allclose(problem.mass, mass_before)
+    assert np.isclose(problem.mass, mass_before)

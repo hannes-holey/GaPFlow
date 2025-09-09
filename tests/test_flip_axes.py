@@ -45,9 +45,7 @@ properties:
 def test_x_y():
 
     with io.StringIO(sim) as file:
-        input_dict = read_yaml_input(file)
-
-    input_x = input_dict
+        input_x = read_yaml_input(file)
     input_y = deepcopy(input_x)
 
     # Swap axes

@@ -40,6 +40,20 @@ def journal_bearing(xx, grid, geo):
     return h, dh_dx, dh_dy
 
 
+def inclined_slider(xx, grid, geo):
+
+    Lx = grid['Lx']
+    h0 = geo['h0']
+    h1 = geo['h1']
+    slope = (h1 - h0) / Lx
+
+    h = h0 + slope * xx
+    dh_dx = np.ones_like(h) * slope
+    dh_dy = np.zeros_like(h)
+
+    return h, dh_dx, dh_dy
+
+
 class Gap:
 
     def __init__(self, fc, grid, geo):
@@ -50,9 +64,11 @@ class Gap:
 
         if geo['type'] == 'journal':
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
-            ix = 1
-            iy = 2
+        elif geo['type'] == 'inclined':
+            h, dh_dx, dh_dy = inclined_slider(xx, grid, geo)
 
+        ix = 1
+        iy = 2
         if geo['flip']:
             h = h.T
             dh_dx = dh_dx.T

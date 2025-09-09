@@ -13,16 +13,18 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Active learning in base class, test with pressure only
 - [X] Implement GP surrogates for shear stress
 - [X] Problem class with YAML input
-- [ ] File I/O (fields, scalars, gp_params, train_data)
-- [X] Plotting scripts (file pipeline)
-- [ ] Adaptive time stepping
-- [ ] dtool Datasets
+- [X] Output fields, history, gap
+- [X] Start plotting scripts
+- [ ] Output GP hyperparams, training data
+- [X] Adaptive time stepping
+- [ ] Adaptive time stepping GP
 - [ ] Constitutive laws from HANS
-- [ ] Docstrings
 - [ ] Unit tests and integration tests
-- [ ] Documentation with examples
+- [ ] Docstrings & typing
+- [ ] dtool Datasets
 - [ ] MD setup
 - [ ] MPI parallel
+- [ ] Documentation with examples
 - [ ] JOSS submission (w or w/o elasticity)
 
 ## Installation

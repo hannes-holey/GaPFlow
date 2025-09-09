@@ -24,7 +24,10 @@ def eos_sound_velocity(density, prop):
 
     if prop['EOS'] == 'DH':
         func = dowson_higginson
-        args = ['rho', 'P0', 'C1', 'C2']
+        args = ['rho0', 'P0', 'C1', 'C2']
+    elif prop['EOS'] == 'PL':
+        func = power_law
+        args = ['rho0', 'P0', 'alpha']
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -59,4 +62,32 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     """
     c_squared = C1 * rho0 * (C2 - 1.0) * (1 / dens) ** 2 / ((C2 * rho0 / dens - 1.0) ** 2)
 
+    return np.sqrt(c_squared)
+
+
+def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
+    """
+    Computes the isothermal speed of sound using a power-law equation of state.
+
+    .. math::
+        c = \\sqrt{\\frac{dp}{d\\rho}} = \\sqrt{\\frac{-2 P_0}{(\\alpha - 2) \\rho}
+        \\left(\\frac{\\rho}{\\rho_0}\\right)^{-2 / (\\alpha - 2)}}
+
+    Parameters
+    ----------
+    dens : float or np.ndarray
+        Density.
+    rho0 : float
+        Reference density.
+    P0 : float
+        Reference pressure.
+    alpha : float
+        Power-law exponent.
+
+    Returns
+    -------
+    float or np.ndarray
+        Speed of sound.
+    """
+    c_squared = -2.0 * P0 * (dens / rho0) ** (-2.0 / (alpha - 2.0)) / ((alpha - 2) * dens)
     return np.sqrt(c_squared)
