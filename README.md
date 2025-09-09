@@ -33,13 +33,17 @@ Install [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Pytho
 ```
 pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 ```
-and make sure MPI and PnetCDF get detected.
+and make sure MPI and PnetCDF get detected. For manual installations of PnetCDF (recommended), you may need to tell `pkg_config` where to find it, e.g.
+```
+export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
+```
+for instalations under `$HOME/.local/`.
 
 After that run
 ```
-pip install -e .
+pip install -e .[test]
 ```
-for an editable installation.
+for an editable installation with optional dependecies for testing (using `pytest`).
 
 ## Minimal example
 Simulation inputs are commonly provided in YAML files. A typical input file might look like this:
@@ -81,7 +85,7 @@ properties:
     C2: 1.23
 ```
 
-Note that this example uses fixed-form constitutive laws GP without surrogate models or MD data. More example input files can be found in the [examples](examples/) directory.
+Note that this example uses fixed-form constitutive laws without GP surrogate models or MD data. More example input files can be found in the [examples](examples/) directory.
 
 The input files can be used to start a simulation from the command line
 ```bash
@@ -104,9 +108,6 @@ Simulation output is stored under the location specified in the input file. Afte
 - `Ytrain.npy` (Optional): Training data observations
 
 The code comes with a few handy command line tools for visualization...
-
-## Tests
-...
 
 ## Documentation
 ...
