@@ -58,6 +58,9 @@ class Problem:
         self.gap = Gap(fc, grid, geo)
         self.__gap_height = fc.get_real_field('gap')
 
+        if not self.options['silent']:
+            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+
         # Dependent fields
         self.bulk_stress = BulkStress(fc, prop, geo, data=database)
         self.wall_stress = WallStress(fc, prop, geo,
@@ -84,8 +87,6 @@ class Problem:
 
         # I/O
         if not self.options['silent']:
-            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
-
             # Sanitized config file
             write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
 

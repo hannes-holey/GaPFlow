@@ -7,37 +7,23 @@ from GaPFlow.utils import get_new_training_input
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
 
+import jax
 import jax.numpy as jnp
 import jax.random as jr
-from jaxtyping import install_import_hook
-with install_import_hook("gpjax", "beartype.beartype"):
-    import gpjax as gpx
+import jaxopt
+
+from tinygp import GaussianProcess, kernels, transforms
 
 
-class MultiOutputKernel(gpx.kernels.AbstractKernel):
-    def __init__(
-        self,
-        kernel: gpx.kernels.AbstractKernel = gpx.kernels.Matern32(active_dims=[0, 1, 2],
-                                                                  lengthscale=jnp.ones(3),
-                                                                  variance=1.),
-    ):
-        self.kernel = kernel
-        self.lengthscale = self.kernel.lengthscale
-        self.variance = self.kernel.variance
+class MultiOutputKernel(kernels.Kernel):
+    kernels: list[kernels.Kernel, ...]
+    projection: jax.Array  # shape = (num_classes, num_latents)
 
-        super().__init__()
-
-    def __call__(self, X, Xp):
-        # standard RBF-SE kernel is x and x' are on the same output, otherwise returns 0
-
-        z = jnp.array(X[6], dtype=int)
-        zp = jnp.array(Xp[6], dtype=int)
-
-        # achieve the correct value via 'switches' that are either 1 or 0
-        k0_switch = ((z + 1) % 2) * ((zp + 1) % 2)  # lower wall
-        k1_switch = z * zp  # upper wall
-
-        return k0_switch * self.kernel(X, Xp) + k1_switch * self.kernel(X, Xp)
+    def evaluate(self, X1, X2):
+        t1, idx1 = X1
+        t2, idx2 = X2
+        latents = jnp.stack([k.evaluate(t1, t2) for k in self.kernels])
+        return (self.projection[idx1] * self.projection[idx2]) @ latents
 
 
 class GaussianProcessSurrogate:
@@ -49,20 +35,19 @@ class GaussianProcessSurrogate:
     def __init__(self, fc, prop, database):
 
         self.prop = prop
+        self.step = 0
 
         self.__solution = fc.get_real_field('solution')
         self.__gap = fc.get_real_field('gap')
 
         # should come from yaml
-        active_dims = [0, 3, 4, ]  # gap, density, flux_x
+        # active_dims = [0, 3, 4, ]  # gap, density, flux_x
         # active_dims = [0, 3, 4, 5] # gap, density, flux_x, flux_y
         # active_dims = [0, 1, 3, 4] # gap, gradient, density, flux_x
 
-        self.active_dims = active_dims
-
         if self.is_gp_model:
             self.database = database
-            Xnew = get_new_training_input(self._Xtest,
+            Xnew = get_new_training_input(self._Xtest.T,
                                           self.database.minimum_size - self.database.size)
 
             # For mock data from known constitutive laws
@@ -71,20 +56,12 @@ class GaussianProcessSurrogate:
             # Ynew = get_new_training_output_MD(Xnew)
 
             self.database.add_data(Xnew.T, Ynew.T)
-            self.update_training_data()
-            self.last_fit_train_size = 0
+
+            self.last_fit_train_size = self.database.size
 
             ref = datetime.now()
             self.cumtime_train = datetime.now() - ref
             self.cumtime_infer = datetime.now() - ref
-
-            self.model_setup()
-
-        self.step = 0
-
-    # @abc.abstractmethod
-    # def is_gp_model():
-    #     raise NotImplementedError
 
     @abc.abstractmethod
     def model_setup(self):
@@ -107,18 +84,6 @@ class GaussianProcessSurrogate:
         return self.__gap.p
 
     @property
-    def kernel_variance(self):
-        return self.opt_posterior.prior.kernel.variance
-
-    @property
-    def kernel_lengthscale(self):
-        return self.opt_posterior.prior.kernel.lengthscale
-
-    @property
-    def obs_stddev(self):
-        return self.opt_posterior.likelihood.obs_stddev
-
-    @property
     def trusted(self):
         return self.maximum_variance < self.variance_tol
 
@@ -129,10 +94,9 @@ class GaussianProcessSurrogate:
 
         print(f'# Objective    : {obj:.5g}')
         print("# Hyperparam   :", end=' ')
-        # print(f"{self.database.data.n: 3d}", end=' ')
 
-        print(f"{self.kernel_variance.value:.5e}", end=' ')
-        print(f"{self.obs_stddev.value:.5e}", end=' ')
+        print(f"{self.kernel_variance:.5e}", end=' ')
+        print(f"{self.obs_stddev:.5e}", end=' ')
 
         for l in self.kernel_lengthscale:
             print(f"{l:.5e}", end=' ')
@@ -141,51 +105,42 @@ class GaussianProcessSurrogate:
 
     def _train(self, opt='scipy', reason=0):
 
+        self.last_fit_train_size = deepcopy(self.database.size)
+
         reasons = ['DB', "AL"]
 
         print('#' + 15 * '-' + f"GP TRAINING ({self.name.upper()})" + 16 * '-')
         print('# Timestep     :', self.step)
         print('# Reason       :', reasons[reason])
-        print('# Database size:', self.database.data.n)
+        print('# Database size:', self.database.size)
 
-        self.update_training_data()
+        @jax.jit
+        def loss(params, X, yerr):
+            return -self.build_gp(params, X, yerr).log_probability(self.Ytrain)
 
-        fit_func = {'scipy': gpx.fit_scipy,
-                    'lbfgs': gpx.fit_lbfgs}[opt]
+        solver = jaxopt.ScipyMinimize(fun=loss)
+        soln = solver.run(self.params_init, X=self.Xtrain, yerr=self.Yerr)
 
-        opt_posterior, history = fit_func(
-            model=self._posterior,
-            objective=lambda p, d: -gpx.objectives.conjugate_mll(p, d),
-            train_data=self.train_data,
-            verbose=False
-        )
+        self.params = soln.params
+        self.gp = self.build_gp(self.params, self.Xtrain, self.Yerr)
 
-        self.last_fit_train_size = deepcopy(self.database.size)
+        obj = self.gp.log_probability(self.Ytrain)
 
-        # TODO: write history
-        self.opt_posterior = opt_posterior
-
-        self.print_opt_summary(history[-1] if opt == "scipy" else history)
+        self.print_opt_summary(obj)
 
         if reason == 0:
             print('#' + 50 * '-')
 
-    def _predict(self):
+    def _infer(self):
 
-        latent_dist = self.opt_posterior.predict(self.Xtest.T / self.X_scale,
-                                                 train_data=self.train_data)
+        m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
 
-        predictive_dist = self.opt_posterior.likelihood(latent_dist)
-
-        n, nt = self.train_data.y.shape
         _, nx, ny = self.density.shape
 
-        predictive_mean = np.asarray(predictive_dist.mean).reshape(-1, nx, ny).squeeze() * self.y_scale
-        predictive_var = np.asarray(predictive_dist.variance).reshape(-1, nx, ny).squeeze() * self.y_scale**2
-        noise_variance = (self.opt_posterior.likelihood.obs_stddev * self.y_scale)**2
-        predictive_var -= noise_variance
+        predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
+        predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
 
-        self.variance_tol = (self.std_tol_norm * self.y_scale)**2
+        self.variance_tol = (self.std_tol_norm * self.Yscale)**2
         self.maximum_variance = np.max(predictive_var)
 
         return predictive_mean, predictive_var
@@ -193,17 +148,14 @@ class GaussianProcessSurrogate:
     def _active_learning(self, var):
 
         imax = np.argmax(var)
-        # ix, iy = np.unravel_index(np.argmax(var), shape=var.shape)
 
-        Xnew = self._Xtest[:, imax][:, None]
+        Xnew = self._Xtest[imax, :][:, None]
         Ynew = get_new_training_output_mock(Xnew, self.prop,
                                             noise_stddev=self.noise)  # replace w/ MD call
 
         self.database.add_data(Xnew.T, Ynew.T)
 
-        # assert 0
-
-    def infer(self, predictor=True):
+    def predict(self, predictor=True):
 
         if predictor:
             self.step += 1
@@ -214,7 +166,7 @@ class GaussianProcessSurrogate:
                 self.cumtime_train += toc - tic
 
         tic = datetime.now()
-        m, v = self._predict()
+        m, v = self._infer()
         toc = datetime.now()
         self.cumtime_infer += toc - tic
 
@@ -237,7 +189,7 @@ class GaussianProcessSurrogate:
                 self.cumtime_train += toc - tic
 
                 # predict again
-                m, v = self._predict()
+                m, v = self._infer()
                 tic = datetime.now()
                 self.cumtime_infer += tic - toc
 
@@ -254,7 +206,7 @@ class GaussianProcessSurrogate:
                             self.density[0][None, :, :],
                             self.density[1][None, :, :],
                             self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
-                            ]).reshape(6, -1)
+                            ]).reshape(6, -1).T
 
         return Xtest
 
@@ -287,3 +239,35 @@ def get_new_training_output_mock(X, prop, noise_stddev=0.):
     return np.vstack([press,
                       tau_bot,
                       tau_top])
+
+
+def multi_in_single_out(params, X, yerr):
+    """
+    Anisotropic Matern kernel, single output
+    """
+
+    kernel = jnp.exp(params["log_amp"]) * transforms.Linear(
+        jnp.exp(-params["log_scale"]), kernels.stationary.Matern32(
+            distance=kernels.distance.L2Distance())
+    )
+
+    return GaussianProcess(kernel, X, diag=yerr**2)
+
+
+def multi_in_multi_out(params, X, yerr):
+    """
+    Anisotropic Matern kernel, multi output
+    """
+
+    k = [jnp.exp(params["log_amp"]) * transforms.Linear(
+        jnp.exp(-params["log_scale"]),
+        kernels.stationary.Matern32(
+            distance=kernels.distance.L2Distance())
+    ) for i in range(2)
+    ]
+
+    kernel = MultiOutputKernel(kernels=k,
+                               projection=jnp.eye(2)
+                               )
+
+    return GaussianProcess(kernel, X, diag=yerr**2)
