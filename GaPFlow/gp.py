@@ -63,6 +63,16 @@ class GaussianProcessSurrogate:
             self.cumtime_train = datetime.now() - ref
             self.cumtime_infer = datetime.now() - ref
 
+            self.history = {'step': [],
+                            'database_size': [],
+                            'variance': [],
+                            'obs_stddev': [],
+                            'maximum_variance': [],
+                            'variance_tol': []}
+
+            for l in self.active_dims:
+                self.history[f'lengthscale_{l}'] = []
+
     @abc.abstractmethod
     def model_setup(self):
         raise NotImplementedError
@@ -88,7 +98,16 @@ class GaussianProcessSurrogate:
         return self.maximum_variance < self.variance_tol
 
     def write(self):
-        pass
+        if self.is_gp_model:
+            self.history['step'].append(self.step)
+            self.history['database_size'].append(self.database.size)
+            self.history['variance'].append(self.kernel_variance)
+            self.history['obs_stddev'].append(self.obs_stddev)
+            self.history['maximum_variance'].append(self.maximum_variance)
+            self.history['variance_tol'].append(self.variance_tol)
+
+            for i, l in enumerate(self.active_dims):
+                self.history[f'lengthscale_{l}'].append(self.kernel_lengthscale[i])
 
     def print_opt_summary(self, obj):
 
@@ -103,7 +122,7 @@ class GaussianProcessSurrogate:
 
         print()
 
-    def _train(self, opt='scipy', reason=0):
+    def _train(self, reason=0):
 
         self.last_fit_train_size = deepcopy(self.database.size)
 
@@ -127,6 +146,9 @@ class GaussianProcessSurrogate:
         obj = self.gp.log_probability(self.Ytrain)
 
         self.print_opt_summary(obj)
+
+        if self.step > 0:
+            self.write()
 
         if reason == 0:
             print('#' + 50 * '-')

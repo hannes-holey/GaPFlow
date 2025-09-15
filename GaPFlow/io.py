@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import yaml
+import pandas as pd
 
 
 def print_header(s, n=60, f0='*', f1=' '):
@@ -51,6 +52,11 @@ def write_yaml(output_dict, fname):
 
     with open(fname, 'w') as FILE:
         yaml.dump(output_dict, FILE)
+
+
+def history_to_csv(fname, out):
+    df = pd.DataFrame(data=out)
+    df.to_csv(fname, index=False)
 
 
 def read_yaml_input(file):

@@ -32,6 +32,7 @@ test = ['pytest',
 
 [project.scripts]
 gpf_plot_height="GaPFlow.cli:plot_height.main"
+gpf_plot_history="GaPFlow.cli:plot_history.main"
 
 [project.urls]
 Source = "https://github.com/hannes-holey/gapflow"

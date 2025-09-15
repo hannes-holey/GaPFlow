@@ -3,6 +3,7 @@ __pycache__
 *.nc
 *.csv
 *.mp4
+*.npy
 *.pdf
 config.yml
 .coverage

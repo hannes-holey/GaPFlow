@@ -295,12 +295,32 @@ def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
     plt.show()
 
 
-def plot_history(file_list, show=True, savefig=False):
+def plot_history(file_list,
+                 gp_files_0=[],
+                 gp_files_1=[],
+                 show=True,
+                 savefig=False):
 
-    fig, ax = plt.subplots(2, figsize=(4, 6), sharex=True)
+    ncol = 1
+    if len(gp_files_0) > 0:
+        ncol += 1
+
+    if len(gp_files_1) > 0:
+        ncol += 1
+
+    fig, ax = plt.subplots(2, ncol, figsize=(ncol * 4, 6), sharex=True)
 
     for file in file_list:
-        _plot_history(ax, file)
+        _plot_history(ax[:, 0] if ncol > 1 else ax,
+                      file)
+
+    col = 1
+    for gp_file, k in gp_files_0:
+        _plot_gp_history(ax[:, col], gp_file, k)
+
+    col = 2 if len(gp_files_0) > 0 else 1
+    for gp_file, k in gp_files_1:
+        _plot_gp_history(ax[:, col], gp_file, k)
 
     if savefig:
         fig.savefig('out_csv.pdf')
@@ -309,7 +329,7 @@ def plot_history(file_list, show=True, savefig=False):
         plt.show()
 
 
-def _plot_history(ax, filename='example.csv'):
+def _plot_history(ax, filename='history.csv'):
 
     df = pd.read_csv(filename)
 
@@ -319,6 +339,20 @@ def _plot_history(ax, filename='example.csv'):
     ax[1].plot(df['step'], df['residual'])
     ax[1].set_yscale('log')
     ax[1].set_ylabel('Residual')
+
+    ax[1].set_xlabel('Step')
+
+
+def _plot_gp_history(ax, filename='history.csv', index=0):
+
+    df = pd.read_csv(filename)
+
+    ax[0].plot(df['step'], df['database_size'], color=f'C{index}')
+    ax[0].set_ylabel('DB size')
+
+    ax[1].plot(df['step'], df['maximum_variance'], color=f'C{index}')
+    ax[1].plot(df['step'], df['variance_tol'], '--', color=f'C{index}')
+    ax[1].set_ylabel('Variance')
 
     ax[1].set_xlabel('Step')
 

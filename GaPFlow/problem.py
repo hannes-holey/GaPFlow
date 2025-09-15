@@ -2,14 +2,13 @@ import os
 import io
 import numpy as np
 import numpy.typing as npt
-import pandas as pd
 from copy import deepcopy
 from datetime import datetime
 from typing import Union
 from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
-from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory
+from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from GaPFlow.models.sound import eos_sound_velocity
 from GaPFlow.stress import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
@@ -33,17 +32,23 @@ class Problem:
         else:
             gp = {'shear_gp': False, 'press_gp': False}
 
-        # Intialize database
-        if gp['shear_gp'] or gp['press_gp']:
-            database = Database(minimum_size=gp['db_init_size'])
-        else:
-            database = None
-
         # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics
         self.options = options
         self.prop = prop
+
+        if not self.options['silent']:
+            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+        else:
+            self.outdir = None
+
+        # Intialize database
+        if gp['shear_gp'] or gp['press_gp']:
+            database = Database(minimum_size=gp['db_init_size'],
+                                outdir=self.outdir)
+        else:
+            database = None
 
         # Initialize field collection
         nb_grid_pts = (grid['Nx'] + 2,
@@ -57,9 +62,6 @@ class Problem:
         # Intialize gap
         self.gap = Gap(fc, grid, geo)
         self.__gap_height = fc.get_real_field('gap')
-
-        if not self.options['silent']:
-            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
         # Dependent fields
         self.bulk_stress = BulkStress(fc, prop, geo, data=database)
@@ -120,7 +122,7 @@ class Problem:
             input_dict = read_yaml_input(ymlfile)
         return cls(input_dict)
 
-    @ classmethod
+    @classmethod
     def from_problem(cls, config, outfile):
         # TODO: read a sanitized config file (yaml) and a NetCDF file
         # to initialize a new problem from the last frame of an existing one
@@ -139,7 +141,7 @@ class Problem:
             print(61 * '-')
             print(f"{"Step":6s} {"Timestep":10s} {'Time':10s} {'CFL':10s} {"Residual":10s}")
             print(61 * '-')
-            self.write()
+            self.write(params=False)
 
         # Run
         tic = datetime.now()
@@ -168,7 +170,11 @@ class Problem:
         print(33 * '=')
 
         if not self.options['silent']:
-            self.history_to_csv(os.path.join(self.outdir, 'history.csv'))
+            history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
+            if self.pressure.is_gp_model:
+                history_to_csv(os.path.join(self.outdir, 'gp_press.csv'), self.pressure.history)
+            if self.wall_stress.is_gp_model:
+                history_to_csv(os.path.join(self.outdir, 'gp_shear.csv'), self.wall_stress.history)
 
     # TODO: use these properties as accessors to fields without ghost cells
 
@@ -219,20 +225,24 @@ class Problem:
     def converged(self) -> bool:
         return np.all(np.array(self.residual_buffer) < self.tol)
 
-    def write(self):
+    def write(self, scalars=True, fields=True, params=True):
 
-        print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
+        # write scalars
+        if scalars:
+            print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
+            self.history["step"].append(self.step)
+            self.history["time"].append(self.simtime)
+            self.history["ekin"].append(self.kinetic_energy)
+            self.history["residual"].append(self.residual)
 
-        self.history["step"].append(self.step)
-        self.history["time"].append(self.simtime)
-        self.history["ekin"].append(self.kinetic_energy)
-        self.history["residual"].append(self.residual)
+        # write fields
+        if fields:
+            self.file.append_frame().write()
 
-        self.file.append_frame().write()
-
-    def history_to_csv(self, fname):
-        df = pd.DataFrame(data=self.history)
-        df.to_csv(fname, index=False)
+        # write hyperparameters
+        if params:
+            self.pressure.write()
+            self.wall_stress.write()
 
     def _initialize(self, rho0, U, V):
         self.__field.p[0] = rho0

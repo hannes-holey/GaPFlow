@@ -15,9 +15,10 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Problem class with YAML input
 - [X] Output fields, history, gap
 - [X] Start plotting scripts
-- [ ] Output GP hyperparams, training data
+- [X] Output GP hyperparams, training data
 - [X] Adaptive time stepping
 - [ ] Adaptive time stepping GP
+- [ ] Plotting scripts
 - [ ] Constitutive laws from HANS
 - [ ] Unit tests and integration tests
 - [ ] Docstrings & typing
