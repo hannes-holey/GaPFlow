@@ -7,7 +7,7 @@ This code implements the solution of time-dependent lubrication problems as desc
 The extension to atomistic-continuum multiscale simulations with Gaussian process (GP) surrogate models has been described in:
 - [Holey, H. et al., Science Advances 11, xxxx (2005)](https://doi.org/)
 
-The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [GPJax](https://docs.jaxgaussianprocesses.com/) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
+The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
 
 ## Roadmap
 - [X] Active learning in base class, test with pressure only

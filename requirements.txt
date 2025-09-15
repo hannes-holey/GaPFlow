@@ -1,6 +1,7 @@
 muGrid==0.95.0
 matplotlib==3.10.6
 mpi4py==4.1.0
-gpjax==0.11.2
+tinygp==0.3.0
 netCDF4==1.7.2
 pandas==2.3.2
+jaxopt==0.8.5

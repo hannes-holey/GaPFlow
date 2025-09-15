@@ -1,15 +1,9 @@
 import numpy as np
 import jax.numpy as jnp
-from GaPFlow.gp import GaussianProcessSurrogate, MultiOutputKernel
+from GaPFlow.gp import GaussianProcessSurrogate
+from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
-
-
-from jaxtyping import install_import_hook
-with install_import_hook("gpjax", "beartype.beartype"):
-    import gpjax as gpx
-
-from gpjax.parameters import Static
 
 
 class WallStress(GaussianProcessSurrogate):
@@ -22,14 +16,24 @@ class WallStress(GaussianProcessSurrogate):
 
         if gp is not None:
             self.__field_variance = fc.real_field('wall_stress_var')
-            self.noise = Static(gp['obs_stddev']) if gp['fix_noise'] else gp['obs_stddev']
+            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
+            self.noise = gp['obs_stddev']
             self.std_tol_norm = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
+            self.build_gp = multi_in_multi_out
         else:
             self.is_gp_model = False
 
         super().__init__(fc, prop, data)
+
+        if self.is_gp_model:
+            self.params_init = {
+                "log_amp": jnp.log(1.),
+                "log_scale": np.log(jnp.std(self.Xtrain[0], axis=0))
+            }
+
+            self._train()
 
     @property
     def full(self):
@@ -46,41 +50,52 @@ class WallStress(GaussianProcessSurrogate):
     @property
     def Xtest(self):
 
-        # Overrides base class method, because we need extended input dimensions for multi output kernel
-        Xtest_extended = jnp.hstack([
-            jnp.vstack([self._Xtest, jnp.zeros_like(self._Xtest[0])]),
-            jnp.vstack([self._Xtest, jnp.ones_like(self._Xtest[0])])
-        ])
+        X = np.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
+                            (self._Xtest / self.database.X_scale)[:, self.active_dims]])
 
-        return Xtest_extended
+        flag = np.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
+                               jnp.ones(X.shape[0] // 2, dtype=int)])
 
-    def model_setup(self):
-        # intial lengthscales
-        l0 = np.std(self.database.data_press.X, axis=0)[jnp.array(self.active_dims)]
+        return X, flag
 
-        scalar_kernel = gpx.kernels.Matern32(active_dims=self.active_dims,
-                                             lengthscale=l0,
-                                             variance=1.)
+    @property
+    def Xtrain(self):
 
-        self._kernel = MultiOutputKernel(scalar_kernel)
+        X = np.concatenate([self.database.Xtrain[:, self.active_dims],
+                            self.database.Xtrain[:, self.active_dims]])
 
-        self._mean_func = gpx.mean_functions.Zero()
+        flag = np.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
+                               jnp.ones(X.shape[0] // 2, dtype=int)])
 
-        self._prior = gpx.gps.Prior(mean_function=self._mean_func,
-                                    kernel=self._kernel,
-                                    jitter=1e-6
-                                    )
+        return X, flag
 
-        self._likelihood = gpx.likelihoods.Gaussian(num_datapoints=self.database.size,
-                                                    obs_stddev=self.noise / self.y_scale
-                                                    )
+    @property
+    def Ytrain(self):
+        Y = jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, 5],
+                             self.database.Ytrain[:self.last_fit_train_size, 11]])
 
-        self._posterior = self._prior * self._likelihood
+        return Y
 
-    def update_training_data(self):
-        self.train_data = self.database.data_shear_xz
-        self.y_scale = self.database.y_scale[jnp.array([5, 11])].max()
-        self.X_scale = self.database.Xext_scale
+    @property
+    def Yscale(self):
+        return np.max(self.database.Y_scale[jnp.array([5, 11], dtype=int)])
+
+    @property
+    def Yerr(self):
+        return self.noise / self.Yscale
+
+    @property
+    def kernel_variance(self):
+
+        return self.gp.kernel.kernels[0].kernel1.value
+
+    @property
+    def kernel_lengthscale(self):
+        return self.gp.kernel.kernels[0].kernel2.scale
+
+    @property
+    def obs_stddev(self):
+        return self.Yerr
 
     def get_output(self, X):
 
@@ -105,7 +120,7 @@ class WallStress(GaussianProcessSurrogate):
     def update(self, predictor=False):
 
         if self.is_gp_model:
-            mean, var = self.infer(predictor)
+            mean, var = self.predict(predictor)
             self.__field.p[4] = mean[0, :, :]
             self.__field.p[10] = mean[1, :, :]
             self.__field_variance.p = var[0, :, :]
@@ -178,19 +193,31 @@ class Pressure(GaussianProcessSurrogate):
     name = "press"
 
     def __init__(self, fc, prop, geo, data=None, gp=None):
+
         self.__field = fc.real_field('pressure')
         self.geo = geo
 
         if gp is not None:
+            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
-            self.noise = Static(gp['obs_stddev']) if gp['fix_noise'] else gp['obs_stddev']
+            self.noise = gp['obs_stddev']
             self.std_tol_norm = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
+            self.build_gp = multi_in_single_out
+
         else:
             self.is_gp_model = False
 
         super().__init__(fc, prop, data)
+
+        if self.is_gp_model:
+            self.params_init = {
+                "log_amp": jnp.log(1.),
+                "log_scale": np.log(jnp.std(self.Xtrain, axis=0))
+            }
+
+            self._train()
 
     @property
     def pressure(self):
@@ -198,35 +225,38 @@ class Pressure(GaussianProcessSurrogate):
 
     @property
     def Xtest(self):
-        return self._Xtest
+        # not normalized
+        return (self._Xtest / self.database.X_scale)[:, self.active_dims]
 
-    def model_setup(self):
+    @property
+    def Xtrain(self):
+        # normalized
+        return self.database.Xtrain[:, self.active_dims]
 
-        # intial lengthscales
-        l0 = np.std(self.database.data_press.X, axis=0)[jnp.array(self.active_dims)]
-        # l0 = jnp.ones(len(self.active_dims))
+    @property
+    def Ytrain(self):
+        # normalized
+        return self.database.Ytrain[:self.last_fit_train_size, 0]
 
-        self._kernel = gpx.kernels.Matern32(active_dims=self.active_dims,
-                                            lengthscale=l0,
-                                            variance=1.)
+    @property
+    def Yscale(self):
+        return self.database.Y_scale[0]
 
-        self._mean_func = gpx.mean_functions.Zero()
+    @property
+    def Yerr(self):
+        return self.noise / self.Yscale
 
-        self._prior = gpx.gps.Prior(mean_function=self._mean_func,
-                                    kernel=self._kernel,
-                                    jitter=1e-6
-                                    )
+    @property
+    def kernel_variance(self):
+        return self.gp.kernel.kernel1.value
 
-        self._likelihood = gpx.likelihoods.Gaussian(num_datapoints=self.database.size,
-                                                    obs_stddev=self.noise / self.y_scale
-                                                    )
+    @property
+    def kernel_lengthscale(self):
+        return self.gp.kernel.kernel2.scale
 
-        self._posterior = self._prior * self._likelihood
-
-    def update_training_data(self):
-        self.train_data = self.database.data_press
-        self.y_scale = self.database.y_scale[0]
-        self.X_scale = self.database.X_scale
+    @property
+    def obs_stddev(self):
+        return self.Yerr
 
     def get_output(self, X):
 
@@ -236,7 +266,7 @@ class Pressure(GaussianProcessSurrogate):
     def update(self, predictor=False):
 
         if self.is_gp_model:
-            mean, var = self.infer(predictor)
+            mean, var = self.predict(predictor)
             self.__field.p = mean
             self.__field_variance.p = var
         else:
