@@ -5,7 +5,7 @@ from datetime import datetime
 
 from GaPFlow.utils import get_new_training_input
 from GaPFlow.models.pressure import eos_pressure
-from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
+from GaPFlow.models.viscous import stress_bottom, stress_top
 
 import jax
 import jax.numpy as jnp

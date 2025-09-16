@@ -4,7 +4,6 @@ import numpy as np
 import numpy.typing as npt
 from copy import deepcopy
 from datetime import datetime
-from typing import Union
 from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
