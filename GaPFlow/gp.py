@@ -16,7 +16,7 @@ from tinygp import GaussianProcess, kernels, transforms
 
 
 class MultiOutputKernel(kernels.Kernel):
-    kernels: list[kernels.Kernel, ...]
+    kernels: list[kernels.Kernel | transforms.Linear]
     projection: jax.Array  # shape = (num_classes, num_latents)
 
     def evaluate(self, X1, X2):
@@ -31,6 +31,13 @@ class GaussianProcessSurrogate:
     __metaclass__ = abc.ABCMeta
 
     name: str
+    is_gp_model: bool
+    active_dims: list[int]
+    build_gp: callable
+    rtol: float
+    max_steps: int
+    params_init: dict
+    noise: float
 
     def __init__(self, fc, prop, database):
 
@@ -73,12 +80,44 @@ class GaussianProcessSurrogate:
             for l in self.active_dims:
                 self.history[f'lengthscale_{l}'] = []
 
+    @property
     @abc.abstractmethod
-    def model_setup(self):
+    def kernel_lengthscale(self):
         raise NotImplementedError
 
+    @property
     @abc.abstractmethod
-    def update_training_data(self):
+    def kernel_variance(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def obs_stddev(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Xtrain(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Ytrain(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Xtest(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Yscale(self):
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Yerr(self):
         raise NotImplementedError
 
     @property
@@ -162,7 +201,7 @@ class GaussianProcessSurrogate:
         predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
 
-        self.variance_tol = (self.std_tol_norm * self.Yscale)**2
+        self.variance_tol = (self.rtol * self.Yscale)**2
         self.maximum_variance = np.max(predictive_var)
 
         return predictive_mean, predictive_var
@@ -192,8 +231,6 @@ class GaussianProcessSurrogate:
         toc = datetime.now()
         self.cumtime_infer += toc - tic
 
-        max_steps = 5  # TODO not hardcoded
-
         # Active learning
         if predictor:
             counter = 0
@@ -217,20 +254,18 @@ class GaussianProcessSurrogate:
 
                 after = self.maximum_variance / self.variance_tol
 
-                print(f"# AL {counter}/{max_steps}       : {before:.3f} --> {after:.3f}")
+                print(f"# AL {counter}/{self.max_steps}       : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
 
         return m, v
 
     @property
     def _Xtest(self):
-        Xtest = jnp.vstack([self.gap,
-                            self.density[0][None, :, :],
-                            self.density[1][None, :, :],
-                            self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
-                            ]).reshape(6, -1).T
-
-        return Xtest
+        return jnp.vstack([self.gap,
+                           self.density[0][None, :, :],
+                           self.density[1][None, :, :],
+                           self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
+                           ]).reshape(6, -1).T
 
 
 def get_new_training_output_mock(X, prop, noise_stddev=0.):

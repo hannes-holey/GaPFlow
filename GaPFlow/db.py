@@ -25,6 +25,11 @@ class Database:
     def from_numpy(cls, directory):
         raise NotImplementedError
 
+    # TODO
+    @classmethod
+    def from_dtool(cls, directory):
+        raise NotImplementedError
+
     def add_data(self, Xnew, Ynew):
 
         self._Xtrain = jnp.vstack([self._Xtrain, Xnew])
@@ -36,6 +41,7 @@ class Database:
         self.write()
 
     def normalizer(self, x):
+        # TODO: different normalizers
         return jnp.maximum(jnp.max(jnp.abs(x), axis=0), 1e-12)
 
     @property

@@ -1,3 +1,5 @@
+from typing import Any
+
 import jax.numpy as jnp
 from jax import vmap, grad
 
@@ -20,7 +22,7 @@ class WallStress(GaussianProcessSurrogate):
             self.__field_variance = fc.real_field('wall_stress_var')
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.noise = gp['obs_stddev']
-            self.std_tol_norm = gp['rtol']
+            self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
             self.build_gp = multi_in_multi_out
@@ -73,10 +75,8 @@ class WallStress(GaussianProcessSurrogate):
 
     @property
     def Ytrain(self):
-        Y = jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, 5],
-                             self.database.Ytrain[:self.last_fit_train_size, 11]])
-
-        return Y
+        return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, 5],
+                                self.database.Ytrain[:self.last_fit_train_size, 11]])
 
     @property
     def Yscale(self):
@@ -88,7 +88,6 @@ class WallStress(GaussianProcessSurrogate):
 
     @property
     def kernel_variance(self):
-
         return self.gp.kernel.kernels[0].kernel1.value
 
     @property
@@ -161,9 +160,6 @@ class BulkStress(GaussianProcessSurrogate):
     def model_setup(self):
         pass
 
-    def update_training_data(self):
-        pass
-
     def get_output(self, X):
 
         # For MD data: call update method from database (or external)
@@ -230,7 +226,6 @@ class Pressure(GaussianProcessSurrogate):
 
     @property
     def v_sound(self) -> float:
-
         if self.is_gp_model:
             eos_grad = vmap(grad(self.eos))
             vsound_squared = eos_grad(self.Xtest)[:, 1].max() * self.Yscale / self.database.X_scale[3]
@@ -275,7 +270,6 @@ class Pressure(GaussianProcessSurrogate):
         return self.Yerr
 
     def get_output(self, X):
-
         # For MD data: call update method from database (or external)
         return eos_pressure(X[3], self.prop)[None, :]
 
@@ -287,31 +281,3 @@ class Pressure(GaussianProcessSurrogate):
             self.__field_variance.p = var
         else:
             self.__field.p = eos_pressure(self.density[0], self.prop)
-
-
-# Utility functions
-
-def get_all_outputs(X, prop):
-
-    # For MD data: call update method from database (or external)
-
-    # Shear stress
-    U = 0.1
-    V = 0.
-    eta = prop['shear']
-    zeta = prop['bulk']
-
-    tau_bot = stress_bottom(X[3:],  # q
-                            X[:3],  # h, dhdx, dhdy
-                            U, V, eta, zeta, 0.)
-
-    tau_top = stress_top(X[3:],  # q
-                         X[:3],  # h, dhdx, dhdy
-                         U, V, eta, zeta, 0.)
-
-    # Pressure
-    press = eos_pressure(X[3], prop)[None, :]
-
-    return jnp.vstack([press,
-                       tau_bot,
-                       tau_top])
