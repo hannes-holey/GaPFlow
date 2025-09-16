@@ -17,7 +17,7 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Start plotting scripts
 - [X] Output GP hyperparams, training data
 - [X] Adaptive time stepping
-- [ ] Adaptive time stepping GP
+- [X] Adaptive time stepping GP
 - [ ] Plotting scripts
 - [ ] Constitutive laws from HANS
 - [ ] Unit tests and integration tests

@@ -198,8 +198,10 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None, gp=False):
         pvar_nc = np.asarray(data.variables['pressure_var'])
         tauvar_nc = np.asarray(data.variables['wall_stress_var'])
         _plot_gp(ax[1, 0], x, p_nc[frame, 1:-1, ny // 2], pvar_nc[frame, 1:-1, ny // 2], tol=tol_p, color=color_p)
-        _plot_gp(ax[1, 1], x, tau_nc[frame, 4, 0, 1:-1, ny // 2], tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
-        _plot_gp(ax[1, 2], x, tau_nc[frame, 10, 0, 1:-1, ny // 2], tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
+        _plot_gp(ax[1, 1], x, tau_nc[frame, 4, 0, 1:-1, ny // 2],
+                 tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
+        _plot_gp(ax[1, 2], x, tau_nc[frame, 10, 0, 1:-1, ny // 2],
+                 tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
     else:
         ax[1, 0].plot(x, p_nc[frame, 1:-1, ny // 2], color=color_p)
         ax[1, 1].plot(x, tau_nc[frame, 4, 0, 1:-1, ny // 2], color=color_t)
@@ -308,7 +310,7 @@ def plot_history(file_list,
     if len(gp_files_1) > 0:
         ncol += 1
 
-    fig, ax = plt.subplots(2, ncol, figsize=(ncol * 4, 6), sharex=True)
+    fig, ax = plt.subplots(3, ncol, figsize=(ncol * 4, 9), sharex='col')
 
     for file in file_list:
         _plot_history(ax[:, 0] if ncol > 1 else ax,
@@ -333,14 +335,18 @@ def _plot_history(ax, filename='history.csv'):
 
     df = pd.read_csv(filename)
 
-    ax[0].plot(df['step'], df['ekin'])
+    ax[0].plot(df['time'], df['ekin'])
     ax[0].set_ylabel('Kinetic energy')
 
-    ax[1].plot(df['step'], df['residual'])
+    ax[1].plot(df['time'], df['residual'])
     ax[1].set_yscale('log')
     ax[1].set_ylabel('Residual')
 
-    ax[1].set_xlabel('Step')
+    ax[2].plot(df['time'], df['vsound'])
+    ax[2].set_ylabel('Max. sound velocity')
+    ax[2].set_ylim(0.,)
+
+    ax[-1].set_xlabel('Time')
 
 
 def _plot_gp_history(ax, filename='history.csv', index=0):
@@ -354,12 +360,12 @@ def _plot_gp_history(ax, filename='history.csv', index=0):
     ax[1].plot(df['step'], df['variance_tol'], '--', color=f'C{index}')
     ax[1].set_ylabel('Variance')
 
-    ax[1].set_xlabel('Step')
+    ax[-1].set_xlabel('Step')
 
 
 def adaptive_ylim(ax):
 
-    def offset(x, y): return 0.05 * (x - y) if (x - y) != 0 else 1.
+    offset = lambda x, y: 0.05 * (x - y) if (x - y) != 0 else 1.
 
     try:
         axes = ax.flat

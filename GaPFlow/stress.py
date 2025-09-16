@@ -1,8 +1,11 @@
 import jax.numpy as jnp
+from jax import vmap, grad
+
 from GaPFlow.gp import GaussianProcessSurrogate
 from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
+from GaPFlow.models.sound import eos_sound_velocity
 
 
 class WallStress(GaussianProcessSurrogate):
@@ -205,6 +208,9 @@ class Pressure(GaussianProcessSurrogate):
             self.is_gp_model = True
             self.build_gp = multi_in_single_out
 
+            # for sound speed
+            self.eos = lambda x: self.gp.predict(self.Ytrain, x[None, :]).squeeze()
+
         else:
             self.is_gp_model = False
 
@@ -221,6 +227,17 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def pressure(self):
         return self.__field.p
+
+    @property
+    def v_sound(self) -> float:
+
+        if self.is_gp_model:
+            eos_grad = vmap(grad(self.eos))
+            vsound_squared = eos_grad(self.Xtest)[:, 1].max() * self.Yscale / self.database.X_scale[3]
+            vsound = jnp.sqrt(vsound_squared)
+            return vsound
+        else:
+            return eos_sound_velocity(self.mass_density, self.prop).max()
 
     @property
     def Xtest(self):

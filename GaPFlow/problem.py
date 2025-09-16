@@ -8,7 +8,6 @@ from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
 from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
-from GaPFlow.models.sound import eos_sound_velocity
 from GaPFlow.stress import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.gap import Gap
@@ -133,7 +132,8 @@ class Problem:
             "step": [],
             "time": [],
             "ekin": [],
-            "residual": []
+            "residual": [],
+            "vsound": []
         }
 
         if not self.options['silent']:
@@ -163,15 +163,15 @@ class Problem:
 
         # Print runtime
         print(33 * '=')
-        print(f"Total walltime     : ", str(walltime).split('.')[0])
+        print("Total walltime     : ", str(walltime).split('.')[0])
         print(f"({speed:.2f} steps/s)")
 
         if self.pressure.is_gp_model:
-            print(f" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
-            print(f" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
+            print(" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
+            print(" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
         if self.wall_stress.is_gp_model:
-            print(f" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
-            print(f" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
+            print(" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
+            print(" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
         print(33 * '=')
 
         if not self.options['silent']:
@@ -179,12 +179,12 @@ class Problem:
 
             if self.pressure.is_gp_model:
                 history_to_csv(os.path.join(self.outdir, 'gp_press.csv'), self.pressure.history)
-                with open(os.path.join(self.outdir, f'gp_press.txt'), 'w') as f:
+                with open(os.path.join(self.outdir, 'gp_press.txt'), 'w') as f:
                     print(self.pressure.gp, file=f)
 
             if self.wall_stress.is_gp_model:
                 history_to_csv(os.path.join(self.outdir, 'gp_shear.csv'), self.wall_stress.history)
-                with open(os.path.join(self.outdir, f'gp_shear.txt'), 'w') as f:
+                with open(os.path.join(self.outdir, 'gp_shear.txt'), 'w') as f:
                     print(self.wall_stress.gp, file=f)
 
     # TODO: use these properties as accessors to fields without ghost cells
@@ -220,15 +220,11 @@ class Problem:
         return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
 
     @property
-    def v_sound(self) -> float:
-        return eos_sound_velocity(self.density[0], self.prop).max()
+    def dt_crit(self) -> float:
+        return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.pressure.v_sound)
 
     @property
-    def dt_crit(self):
-        return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.v_sound)
-
-    @property
-    def cfl(self):
+    def cfl(self) -> float:
         return self.dt / self.dt_crit
 
     @property
@@ -244,6 +240,7 @@ class Problem:
             self.history["time"].append(self.simtime)
             self.history["ekin"].append(self.kinetic_energy)
             self.history["residual"].append(self.residual)
+            self.history["vsound"].append(self.pressure.v_sound)
 
         # write fields
         if fields:
@@ -276,7 +273,7 @@ class Problem:
         if self.numerics["adaptive"]:
             self.dt = self.numerics["CFL"] * self.dt_crit
 
-    def update(self)-> None:
+    def update(self) -> None:
 
         switch = (self.step % 2 == 0) * 2 - 1 if self.numerics['MC_order'] == 0 else self.numerics['MC_order']
         directions = [[-1, 1], [1, -1]][(switch + 1) // 2]
@@ -333,8 +330,8 @@ class Problem:
         if np.all(self.grid['bc_yS_P']):
             self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
         else:
-            self.__field.p[self.bc['y0'] == 'D', :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
-            self.__field.p[self.bc['y0'] == 'N', :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
+            self.__field.p[self.grid['bc_yS_D'] == 'D', :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
+            self.__field.p[self.grid['bc_yS_D'] == 'N', :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
 
         # y1
         if np.all(self.grid['bc_yN_P']):

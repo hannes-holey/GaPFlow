@@ -52,7 +52,7 @@ def setup():
     datafile = os.path.join("tests",
                             "regression_tests",
                             "testdata",
-                            "2025-09-09_journal.nc")
+                            "2025-09-16_journal.nc")
 
     nc = netCDF4.Dataset(datafile, 'r')
 
