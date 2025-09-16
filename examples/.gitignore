@@ -1,0 +1,7 @@
+*.nc
+*.csv
+*.mp4
+*.npy
+*.pdf
+*.txt
+config.yml

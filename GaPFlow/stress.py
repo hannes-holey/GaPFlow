@@ -1,4 +1,3 @@
-import numpy as np
 import jax.numpy as jnp
 from GaPFlow.gp import GaussianProcessSurrogate
 from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
@@ -30,7 +29,7 @@ class WallStress(GaussianProcessSurrogate):
         if self.is_gp_model:
             self.params_init = {
                 "log_amp": jnp.log(1.),
-                "log_scale": np.log(jnp.std(self.Xtrain[0], axis=0))
+                "log_scale": jnp.log(jnp.std(self.Xtrain[0], axis=0))
             }
 
             self._train()
@@ -50,22 +49,22 @@ class WallStress(GaussianProcessSurrogate):
     @property
     def Xtest(self):
 
-        X = np.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
-                            (self._Xtest / self.database.X_scale)[:, self.active_dims]])
+        X = jnp.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
+                             (self._Xtest / self.database.X_scale)[:, self.active_dims]])
 
-        flag = np.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
-                               jnp.ones(X.shape[0] // 2, dtype=int)])
+        flag = jnp.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
+                                jnp.ones(X.shape[0] // 2, dtype=int)])
 
         return X, flag
 
     @property
     def Xtrain(self):
 
-        X = np.concatenate([self.database.Xtrain[:, self.active_dims],
-                            self.database.Xtrain[:, self.active_dims]])
+        X = jnp.concatenate([self.database.Xtrain[:, self.active_dims],
+                             self.database.Xtrain[:, self.active_dims]])
 
-        flag = np.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
-                               jnp.ones(X.shape[0] // 2, dtype=int)])
+        flag = jnp.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
+                                jnp.ones(X.shape[0] // 2, dtype=int)])
 
         return X, flag
 
@@ -78,7 +77,7 @@ class WallStress(GaussianProcessSurrogate):
 
     @property
     def Yscale(self):
-        return np.max(self.database.Y_scale[jnp.array([5, 11], dtype=int)])
+        return jnp.max(self.database.Y_scale[jnp.array([5, 11], dtype=int)])
 
     @property
     def Yerr(self):
@@ -114,8 +113,8 @@ class WallStress(GaussianProcessSurrogate):
                           X[:3],  # h, dhdx, dhdy
                           U, V, eta, zeta, 0.)
 
-        return np.vstack([Ybot[4],
-                          Ytop[4]])
+        return jnp.vstack([Ybot[4],
+                           Ytop[4]])
 
     def update(self, predictor=False):
 
@@ -214,7 +213,7 @@ class Pressure(GaussianProcessSurrogate):
         if self.is_gp_model:
             self.params_init = {
                 "log_amp": jnp.log(1.),
-                "log_scale": np.log(jnp.std(self.Xtrain, axis=0))
+                "log_scale": jnp.log(jnp.std(self.Xtrain, axis=0))
             }
 
             self._train()
@@ -296,6 +295,6 @@ def get_all_outputs(X, prop):
     # Pressure
     press = eos_pressure(X[3], prop)[None, :]
 
-    return np.vstack([press,
-                      tau_bot,
-                      tau_top])
+    return jnp.vstack([press,
+                       tau_bot,
+                       tau_top])

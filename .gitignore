@@ -1,9 +1,3 @@
 __pycache__
 .pytest_cache
-*.nc
-*.csv
-*.mp4
-*.npy
-*.pdf
-config.yml
 .coverage

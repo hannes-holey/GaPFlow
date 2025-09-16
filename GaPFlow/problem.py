@@ -156,11 +156,17 @@ class Problem:
 
         toc = datetime.now()
         walltime = toc - tic
+
+        self.post_run(walltime)
+
+    def post_run(self, walltime):
         speed = self.step / walltime.total_seconds()
 
+        # Print runtime
         print(33 * '=')
         print(f"Total walltime     : ", str(walltime).split('.')[0])
         print(f"({speed:.2f} steps/s)")
+
         if self.pressure.is_gp_model:
             print(f" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
             print(f" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
@@ -171,13 +177,18 @@ class Problem:
 
         if not self.options['silent']:
             history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
+
             if self.pressure.is_gp_model:
                 history_to_csv(os.path.join(self.outdir, 'gp_press.csv'), self.pressure.history)
+                with open(os.path.join(self.outdir, f'gp_press.txt'), 'w') as f:
+                    print(self.pressure.gp, file=f)
+
             if self.wall_stress.is_gp_model:
                 history_to_csv(os.path.join(self.outdir, 'gp_shear.csv'), self.wall_stress.history)
+                with open(os.path.join(self.outdir, f'gp_shear.txt'), 'w') as f:
+                    print(self.wall_stress.gp, file=f)
 
     # TODO: use these properties as accessors to fields without ghost cells
-
     @property
     def q(self) -> npt.NDArray[np.float64]:
         return self.__field.p
