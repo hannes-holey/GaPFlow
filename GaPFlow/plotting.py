@@ -24,17 +24,39 @@ def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
         if not silent:
             print(f"{i:3d}: {folder:<50} {date}")
 
-    inp = input("Enter keys (space separated or range [start]-[end] or combination of both): ")
+    if mode == "select":
+        inp = input("Enter keys (space separated or range [start]-[end] or combination of both): ")
 
-    if inp.split('-') == 2:
-        s, e = inp.split('-')
-        mask = np.arange(int(s), int(e) + 1).tolist()
-    else:
-        mask = [int(i) for i in inp.split()]
+        if inp.split('-') == 2:
+            s, e = inp.split('-')
+            mask = np.arange(int(s), int(e) + 1).tolist()
+        else:
+            mask = [int(i) for i in inp.split()]
 
-    files = [os.path.join(folders[i], name) for i in mask]
+        files = [os.path.join(folders[i], name) for i in mask]
+
+    elif mode == "all":
+        files = [os.path.join(folder, name) for folder in folders]
+
+    elif mode == "single":
+        inp = input("Enter key: ")
+        files = os.path.join(folders[int(inp)], name)
 
     return files
+
+
+def _get_centerline_coords(nx, ny, disc=None):
+    if disc is not None:
+        xx, yy = create_midpoint_grid(disc)
+        x = xx[1:-1, ny // 2]
+        y = yy[nx // 2, 1:-1]
+    else:
+        x = np.arange(nx - 2) / (nx - 2)
+        x += x[0] / 2.
+        y = np.arange(ny - 2) / (ny - 2)
+        y += y[0] / 2.
+
+    return x, y
 
 
 def set_axes_labels(ax):
@@ -52,7 +74,7 @@ def set_axes_labels(ax):
     ax[1, 2].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{top}$")
 
 
-def plot_evolution(filename='example.nc', savefig=False, show=True, disc=None):
+def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     data = netCDF4.Dataset(filename)
 
@@ -71,7 +93,7 @@ def plot_evolution(filename='example.nc', savefig=False, show=True, disc=None):
 
     fig, ax = plt.subplots(2, 3, figsize=(12, 6), sharex=True)
 
-    for i in range(nt):
+    for i in range(nt)[::every]:
         color_q = plt.cm.Blues(i / nt)
         ax[0, 0].plot(x, q_nc[i, 0, 0, 1:-1, ny // 2], color=color_q)
         ax[0, 1].plot(x, q_nc[i, 1, 0, 1:-1, ny // 2], color=color_q)
@@ -93,50 +115,6 @@ def plot_evolution(filename='example.nc', savefig=False, show=True, disc=None):
         plt.show()
 
     return fig, ax
-
-
-def plot_single_frame(file_list, frame=-1, savefig=False, show=True, disc=None, gp=False):
-
-    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
-
-    for file in file_list:
-        _plot_single_frame(ax, file, frame, disc, gp)
-
-    if savefig:
-        fig.savefig('out_nc_last.pdf')
-
-    if show:
-        plt.show()
-
-
-def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
-
-    ax.fill_between(x,
-                    mean + 1.96 * np.sqrt(var),
-                    mean - 1.96 * np.sqrt(var),
-                    color=color,
-                    lw=0.,
-                    alpha=0.3)
-
-    ax.plot(x, mean, color=color)
-
-    if tol is not None:
-        ax.plot(x, mean + 1.96 * tol, '--', color=color)
-        ax.plot(x, mean - 1.96 * tol, '--', color=color)
-
-
-def _get_centerline_coords(nx, ny, disc=None):
-    if disc is not None:
-        xx, yy = create_midpoint_grid(disc)
-        x = xx[1:-1, ny // 2]
-        y = yy[nx // 2, 1:-1]
-    else:
-        x = np.arange(nx - 2) / (nx - 2)
-        x += x[0] / 2.
-        y = np.arange(ny - 2) / (ny - 2)
-        y += y[0] / 2.
-
-    return x, y
 
 
 def plot_height(filename, disc=None):
@@ -171,7 +149,37 @@ def plot_height(filename, disc=None):
     plt.show()
 
 
-def _plot_single_frame(ax, filename, frame=-1, disc=None, gp=False):
+def plot_single_frame(file_list, frame=-1, savefig=False, show=True, disc=None):
+
+    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+
+    for file in file_list:
+        _plot_single_frame(ax, file, frame, disc)
+
+    if savefig:
+        fig.savefig('out_nc_last.pdf')
+
+    if show:
+        plt.show()
+
+
+def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
+
+    ax.fill_between(x,
+                    mean + 1.96 * np.sqrt(var),
+                    mean - 1.96 * np.sqrt(var),
+                    color=color,
+                    lw=0.,
+                    alpha=0.3)
+
+    ax.plot(x, mean, color=color)
+
+    if tol is not None:
+        ax.plot(x, mean + 1.96 * tol, '--', color=color)
+        ax.plot(x, mean - 1.96 * tol, '--', color=color)
+
+
+def _plot_single_frame(ax, filename, frame=-1, disc=None):
 
     data = netCDF4.Dataset(filename)
 
@@ -190,20 +198,30 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None, gp=False):
     ax[0, 1].plot(x, q_nc[frame, 1, 0, 1:-1, ny // 2], color=color_q)
     ax[0, 2].plot(x, q_nc[frame, 2, 0, 1:-1, ny // 2], color=color_q)
 
-    if gp:
-        # these are the wrong tolerance (y_scale is calculated from training not from test data)
-        tol_p = 0.1 * np.max(np.abs(p_nc[frame]))
-        tol_t = 0.1 * np.max(np.abs(tau_nc[frame, [4, 10]]))
-
+    if 'pressure_var' in data.variables.keys():
         pvar_nc = np.asarray(data.variables['pressure_var'])
-        tauvar_nc = np.asarray(data.variables['wall_stress_var'])
-        _plot_gp(ax[1, 0], x, p_nc[frame, 1:-1, ny // 2], pvar_nc[frame, 1:-1, ny // 2], tol=tol_p, color=color_p)
-        _plot_gp(ax[1, 1], x, tau_nc[frame, 4, 0, 1:-1, ny // 2],
-                 tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
-        _plot_gp(ax[1, 2], x, tau_nc[frame, 10, 0, 1:-1, ny // 2],
-                 tauvar_nc[frame, 1:-1, ny // 2], tol=tol_t, color=color_t)
+
+        _plot_gp(ax[1, 0],
+                 x, p_nc[frame, 1:-1, ny // 2],
+                 pvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 color=color_p)
+
     else:
         ax[1, 0].plot(x, p_nc[frame, 1:-1, ny // 2], color=color_p)
+
+    if 'wall_stress_var' in data.variables.keys():
+        tauvar_nc = np.asarray(data.variables['wall_stress_var'])
+
+        _plot_gp(ax[1, 1],
+                 x, tau_nc[frame, 4, 0, 1:-1, ny // 2],
+                 tauvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 color=color_t)
+
+        _plot_gp(ax[1, 2],
+                 x, tau_nc[frame, 10, 0, 1:-1, ny // 2],
+                 tauvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 color=color_t)
+    else:
         ax[1, 1].plot(x, tau_nc[frame, 4, 0, 1:-1, ny // 2], color=color_t)
         ax[1, 2].plot(x, tau_nc[frame, 10, 0, 1:-1, ny // 2], color=color_t)
 

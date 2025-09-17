@@ -1,6 +1,6 @@
 options:
     output: data/journal_gp
-    write_freq: 10
+    write_freq: 100
     use_tstamp: True
 grid:
     dx: 1.e-5
@@ -24,7 +24,7 @@ numerics:
     adaptive: 0
     tol: 1e-9
     dt: 1e-10
-    max_it: 200
+    max_it: 1_000
 properties:
     shear: 0.0794
     bulk: 0.
@@ -38,11 +38,11 @@ gp:
     db_init_size: 5
     press:
         fix_noise: True
-        rtol: 0.05
+        rtol: 0.1
         obs_stddev: 10.
         max_steps: 5
     shear:
         fix_noise: True
-        rtol: 0.05
+        rtol: 0.1
         obs_stddev: 1.
         max_steps: 5
