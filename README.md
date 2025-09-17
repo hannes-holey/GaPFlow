@@ -18,12 +18,13 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Output GP hyperparams, training data
 - [X] Adaptive time stepping
 - [X] Adaptive time stepping GP
+- [X] Equation of state w/ plots
+- [ ] Viscosity models with plots
 - [ ] Plotting scripts
-- [ ] Constitutive laws from HANS
-- [ ] Unit tests and integration tests
-- [ ] Docstrings & typing
 - [ ] dtool Datasets
 - [ ] MD setup
+- [ ] Unit tests and integration tests
+- [ ] Docstrings & typing
 - [ ] MPI parallel
 - [ ] Documentation with examples
 - [ ] JOSS submission (w or w/o elasticity)

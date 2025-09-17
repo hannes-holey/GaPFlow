@@ -1,4 +1,6 @@
+from importlib import resources
 import numpy as np
+from scipy.constants import gas_constant
 
 
 def eos_pressure(density, prop):
@@ -23,6 +25,18 @@ def eos_pressure(density, prop):
     elif prop['EOS'] == 'PL':
         func = power_law
         args = ['rho0', 'P0', 'alpha']
+    elif prop['EOS'] == 'vdW':
+        func = van_der_waals
+        args = ['M', 'T', 'a', 'b']
+    elif prop['EOS'] == "MT":
+        func = murnaghan_tait
+        args = ['rho0', 'P0', 'K', 'n']
+    elif prop['EOS'] == "cubic":
+        func = cubic
+        args = ['a', 'b', 'c', 'd']
+    elif prop['EOS'] == "BWR":
+        func = bwr
+        args = ['T', 'gamma']
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -89,3 +103,138 @@ def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
         Computed pressure.
     """
     return P0 * (dens / rho0)**(1. / (1. - 0.5 * alpha))
+
+
+def van_der_waals(dens, M=39.948, T=100., a=1.355, b=0.03201):
+    """
+    Computes pressure using the Van der Waals equation of state.
+
+    .. math::
+        P = \\frac{RT \\rho}{M - b \\rho} - a \\frac{\\rho^2}{M^2}
+
+    Includes molecular interaction (a) and finite size (b) corrections to ideal gas law.
+
+    Parameters
+    ----------
+    dens : float or np.ndarray
+        Mass density (kg/m³).
+    M : float
+        Molar mass (g/mol).
+    T : float
+        Temperature (K).
+    a : float
+        Attraction parameter (L^2 bar/mol^2).
+    b : float
+        Repulsion parameter (L/mol).
+
+    Returns
+    -------
+    float or np.ndarray
+        Computed pressure.
+    """
+
+    R = gas_constant
+    mol_dens = dens / M * 1000.
+    a /= 10.  # to m^6 Pa / mol^2
+    b /= 1000.  # to m^3  / mol
+
+    return R * T * mol_dens / (1. - b * mol_dens) - a * mol_dens**2
+
+
+def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
+    """
+    Computes pressure using the Murnaghan-Tait equation of state.
+
+    .. math::
+        P(\\rho) = \\frac{K}{n} \\left(\\left(\\frac{\\rho}{\\rho_0}\\right)^n - 1\\right) + P_0
+
+    Commonly used in compressible fluid and shock wave studies.
+
+    Parameters
+    ----------
+    dens : float or np.ndarray
+        Current density.
+    rho0 : float
+        Reference density.
+    P0 : float
+        Reference pressure.
+    K : float
+        Bulk modulus.
+    n : float
+        Murnaghan exponent.
+
+    Returns
+    -------
+    float or np.ndarray
+        Computed pressure.
+
+    """
+    return K / n * ((dens / rho0)**n - 1) + P0
+
+
+def cubic(dens, a=15.2, b=-9.6, c=3.35, d=-0.07):
+    """
+    Computes pressure using a general cubic polynomial fit.
+
+    .. math::
+        P(\\rho) = a \\rho^3 + b \\rho^2 + c \\rho + d
+
+    Useful for empirical models where data fits a polynomial relationship.
+
+    Parameters
+    ----------
+    dens : float or np.ndarray
+        Density.
+    a, b, c, d : float
+        Polynomial coefficients.
+
+    Returns
+    -------
+    float or np.ndarray
+        Computed pressure.
+
+    """
+    return a * dens**3 + b * dens**2 + c * dens + d
+
+
+def bwr(dens, T, gamma=3.):
+    """
+    Computes pressure using the Benedict–Webb–Rubin (BWR) equation of state.
+
+    This complex EoS models real fluid behavior accurately over wide conditions.
+
+    Parameters
+    ----------
+    rho : float or np.ndarray
+        Density.
+    T : float
+        Temperature.
+    gamma : float, optional
+        Exponential decay parameter (default is 3.0).
+
+    Returns
+    -------
+    float or np.ndarray
+        Computed pressure.
+    """
+
+    config = resources.files("GaPFlow.resources").joinpath("bwr_coeffs.txt")
+    x = np.loadtxt(config)
+
+    p = dens * T +\
+        dens**2 * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
+        dens**3 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
+        dens**4 * (x[9] * T + x[10] + x[11] / T) +\
+        dens**5 * x[12] +\
+        dens**6 * (x[13] / T + x[14] / T**2) +\
+        dens**7 * (x[15] / T) +\
+        dens**8 * (x[16] / T + x[17] / T**2) + \
+        dens**9 * (x[18] / T**2) +\
+        np.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
+                                    dens**5 * (x[21] / T**2 + x[22] / T**4) +  # noqa: W504
+                                    dens**7 * (x[23] / T**2 + x[24] / T**3) +  # noqa: W504
+                                    dens**9 * (x[25] / T**2 + x[26] / T**4) +  # noqa: W504
+                                    dens**11 * (x[27] / T**2 + x[28] / T**3) +  # noqa: W504
+                                    dens**13 * (x[29] / T**2 + x[30] / T**3 + x[31] / T**4))
+
+    return p

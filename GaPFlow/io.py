@@ -222,7 +222,7 @@ def sanitize_properties(d):
     out['bulk'] = float(d.get('bulk', -1.))
 
     # EOS
-    available_eos = ['DH', 'PL']
+    available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR']
     out['EOS'] = str(d.get('EOS', 'none'))
     if out['EOS'] not in available_eos:
         raise IOError("Specify a valid equation of state")
@@ -230,16 +230,31 @@ def sanitize_properties(d):
     if out['EOS'] == 'DH':
         keys = ['rho0', 'P0', 'C1', 'C2']
         defaults = [877.7007, 101325, 3.5e10, 1.23]
-        for k, de in zip(keys, defaults):
-            out[k] = float(d.get(k, de))
 
-    if out['EOS'] == 'PL':
+    elif out['EOS'] == 'PL':
         keys = ['rho0', 'P0', 'alpha']
         defaults = [1.1853, 101325, 0.]
-        for k, de in zip(keys, defaults):
-            out[k] = float(d.get(k, de))
 
-    # Non-Newtonian behvior
+    elif out["EOS"] == "vdW":
+        keys = ['M', 'T', 'a', 'b']
+        defaults = [39.948, 100., 1.355, 0.03201]
+
+    elif out["EOS"] == "MT":
+        keys = ['rho0', 'P0', 'K', 'n']
+        defaults = [700., 0.101e6, .557e9, 7.33]
+
+    elif out["EOS"] == "cubic":
+        keys = ['a', 'b', 'c', 'd']
+        defaults = [15.2, -9.6, 3.35, -0.07]
+
+    elif out["EOS"] == "BWR":
+        keys = ['T', 'gamma']
+        defaults = [2., 3.0]
+
+    for k, de in zip(keys, defaults):
+        out[k] = float(d.get(k, de))
+
+    # Non-Newtonian behavior
     # ...
 
     print_dict(out)

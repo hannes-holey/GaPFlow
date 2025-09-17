@@ -1,5 +1,3 @@
-from typing import Any
-
 import jax.numpy as jnp
 from jax import vmap, grad
 
@@ -199,7 +197,7 @@ class Pressure(GaussianProcessSurrogate):
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
             self.noise = gp['obs_stddev']
-            self.std_tol_norm = gp['rtol']
+            self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
             self.build_gp = multi_in_single_out
