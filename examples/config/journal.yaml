@@ -1,7 +1,7 @@
 options:
     output: data/journal
-    write_freq: 100
-    use_tstamp: True
+    write_freq: 1000
+    silent: False
 grid:
     dx: 1.e-5
     dy: 1.
@@ -17,7 +17,6 @@ geometry:
     eps: 0.7
     U: 0.1
     V: 0.
-    flip: False
 numerics:
     CFL: 0.5
     adaptive: 1
