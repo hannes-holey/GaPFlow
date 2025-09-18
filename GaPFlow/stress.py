@@ -20,6 +20,7 @@ class WallStress(GaussianProcessSurrogate):
             self.__field_variance = fc.real_field('wall_stress_var')
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.noise = gp['obs_stddev']
+            self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
@@ -197,6 +198,7 @@ class Pressure(GaussianProcessSurrogate):
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
             self.noise = gp['obs_stddev']
+            self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.is_gp_model = True

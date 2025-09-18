@@ -35,6 +35,7 @@ gpf_plot_height="GaPFlow.cli:plot_height.main"
 gpf_plot_history="GaPFlow.cli:plot_history.main"
 gpf_plot_frame="GaPFlow.cli:plot_frame.main"
 gpf_plot_frames="GaPFlow.cli:plot_frames.main"
+gpf_animate="GaPFlow.cli:animate.main"
 
 [project.urls]
 Source = "https://github.com/hannes-holey/gapflow"

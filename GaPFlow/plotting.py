@@ -74,6 +74,26 @@ def set_axes_labels(ax):
     ax[1, 2].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{top}$")
 
 
+def set_axes_limits(ax, q, tol=None):
+
+    q_min = q.min()
+    q_max = q.max()
+
+    if np.isclose(q_min, q_max):
+        if np.isclose(q_min, 0.):
+            q_min = -1.
+            q_max = 1.
+        else:
+            q_min = 0.95 * q_min
+            q_max = 1.05 * q_max
+
+    if tol is not None:
+        q_min -= tol
+        q_max += tol
+
+    ax.set_ylim(q_min, q_max)
+
+
 def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     data = netCDF4.Dataset(filename)
@@ -228,7 +248,18 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
     set_axes_labels(ax)
 
 
-def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
+def animate(filename, seconds=10, save=False, show=True, disc=None, tol_p=None, tol_s=None):
+    if tol_p is not None:
+        tol_p = np.sqrt(tol_p[0])
+        tol_p_max = tol_p.max()
+    else:
+        tol_p_max = 0.
+
+    if tol_s is not None:
+        tol_t = np.sqrt(tol_s[0])
+        tol_t_max = tol_t.max()
+    else:
+        tol_t_max = 0.
 
     def update_lines(i, q, p, vp, tau, vt):
 
@@ -240,24 +271,17 @@ def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
         ax[1, 1].cla()
         ax[1, 2].cla()
 
-        # these are the wrong tolerance (y_scale is calculated from training not from test data)
-        tol_p = tol_f * np.max(np.abs(p[i]))
-        tol_t = tol_f * np.max(np.abs(tau[i, [4, 10]]))
-        tol_p_max = tol_f * np.max(np.abs(p))
-        tol_t_max = tol_f * np.max(np.abs(tau[:, [4, 10]]))
-
         # Pressure
         _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=tol_p, color=color_p)
-        ax[1, 0].set_ylim(p.min() - 1.96 * tol_p_max, p.max() + 1.96 * tol_p_max)
 
         # Shear stress
         _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t, color=color_t)
         _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t, color=color_t)
 
-        ax[1, 1].set_ylim(tau.min() - 1.96 * tol_t_max, tau.max() + 1.96 * tol_t_max)
-        ax[1, 2].set_ylim(tau.min() - 1.96 * tol_t_max, tau.max() + 1.96 * tol_t_max)
-
         set_axes_labels(ax)
+        set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2], tol=1.96 * tol_p_max)
+        set_axes_limits(ax[1, 1], tau[1:, 4, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
+        set_axes_limits(ax[1, 2], tau[1:, 10, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
 
     # adaptive_ylim(ax)
 
@@ -282,6 +306,7 @@ def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
     color_q = 'C0'
     color_p = 'C1'
     color_t = 'C2'
+
     ax[0, 0].plot(x, q_nc[0, 0, 0, 1:-1, ny // 2], color=color_q)
     ax[0, 1].plot(x, q_nc[0, 1, 0, 1:-1, ny // 2], color=color_q)
     ax[0, 2].plot(x, q_nc[0, 2, 0, 1:-1, ny // 2], color=color_q)
@@ -290,9 +315,9 @@ def animate(filename, seconds=10, save=False, show=True, disc=None, tol_f=0.1):
 
     set_axes_labels(ax)
 
-    ax[0, 0].set_ylim(q_nc[:, 0, 0, 1:-1, ny // 2].min(), q_nc[:, 0, 0, 1:-1, ny // 2].max())
-    ax[0, 1].set_ylim(q_nc[:, 1, 0, 1:-1, ny // 2].min(), q_nc[:, 1, 0, 1:-1, ny // 2].max())
-    ax[0, 2].set_ylim(q_nc[:, 2, 0, 1:-1, ny // 2].min(), q_nc[:, 2, 0, 1:-1, ny // 2].max())
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2])
 
     ani = animation.FuncAnimation(fig,
                                   update_lines,

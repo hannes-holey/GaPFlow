@@ -19,8 +19,9 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Adaptive time stepping
 - [X] Adaptive time stepping GP
 - [X] Equation of state w/ plots
+- [X] Plotting scripts
+- [ ] Catch sigterm
 - [ ] Viscosity models with plots
-- [ ] Plotting scripts
 - [ ] dtool Datasets
 - [ ] MD setup
 - [ ] Unit tests and integration tests

@@ -9,8 +9,8 @@ def get_new_training_input(Xtest, Nsample):
         jabs = jnp.hypot(jnp.mean(Xtest[4, :]), jnp.mean(Xtest[5, :]))
         rho = jnp.mean(Xtest[3, :])
 
-        l_bounds = jnp.array([(1. - 1e-6) * rho, 0.5 * jabs, 0.])
-        u_bounds = jnp.array([(1. + 1e-6) * rho, 1.5 * jabs, 0.5 * jabs])
+        l_bounds = jnp.array([0.99 * rho, 0.5 * jabs, 0.])
+        u_bounds = jnp.array([1.01 * rho, 1.5 * jabs, 0.5 * jabs])
 
         dim = len(l_bounds)
 

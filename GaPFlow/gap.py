@@ -54,6 +54,22 @@ def inclined_slider(xx, grid, geo):
     return h, dh_dx, dh_dy
 
 
+def parabolic_slider(xx, grid, geo):
+
+    Lx = grid['Lx']
+    h0 = geo['hmin']
+    h1 = geo['hmax']
+    # slope = (h1 - h0) / Lx
+
+    prefac = 4. / Lx**2 * (h1 - h0)
+
+    h = prefac * (xx - Lx / 2.)**2 + h0
+    dh_dx = 2 * prefac * (xx - Lx / 2.)
+    dh_dy = np.zeros_like(h)
+
+    return h, dh_dx, dh_dy
+
+
 class Gap:
 
     def __init__(self, fc, grid, geo):
@@ -66,6 +82,8 @@ class Gap:
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
         elif geo['type'] == 'inclined':
             h, dh_dx, dh_dy = inclined_slider(xx, grid, geo)
+        elif geo['type'] == 'parabolic':
+            h, dh_dx, dh_dy = parabolic_slider(xx, grid, geo)
 
         ix = 1
         iy = 2

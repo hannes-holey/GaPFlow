@@ -182,7 +182,7 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined']
+    available = ['journal', 'inclined', 'parabolic']
     out = {}
 
     out['U'] = float(d.get('U', 1.))
@@ -205,6 +205,9 @@ def sanitize_geometry(d):
     elif out['type'] == 'inclined':
         out['h0'] = float(d.get('h0'))
         out['h1'] = float(d.get('h1'))
+    elif out['type'] == 'parabolic':
+        out['hmin'] = float(d.get('hmin'))
+        out['hmax'] = float(d.get('hmax'))
 
     print_dict(out)
 
@@ -224,6 +227,7 @@ def sanitize_properties(d):
     # EOS
     available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR']
     out['EOS'] = str(d.get('EOS', 'none'))
+
     if out['EOS'] not in available_eos:
         raise IOError("Specify a valid equation of state")
 
@@ -253,6 +257,9 @@ def sanitize_properties(d):
 
     for k, de in zip(keys, defaults):
         out[k] = float(d.get(k, de))
+
+    if 'rho0' not in out.keys():
+        out['rho0'] = float(d.get('rho0', 1.))
 
     # Non-Newtonian behavior
     # ...
@@ -294,6 +301,7 @@ def sanitize_gp(d):
         if active:
             out[sk] = {}
             ds = d[sk]
+            out[sk]['atol'] = float(ds.get('atol', 1.))
             out[sk]['rtol'] = float(ds.get('rtol', 0.5))
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))

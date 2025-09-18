@@ -35,6 +35,7 @@ class GaussianProcessSurrogate:
     active_dims: list[int]
     build_gp: callable
     rtol: float
+    atol: float
     max_steps: int
     params_init: dict
     noise: float
@@ -201,7 +202,7 @@ class GaussianProcessSurrogate:
         predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
 
-        self.variance_tol = (self.rtol * self.Yscale)**2
+        self.variance_tol = jnp.maximum(self.atol * self.Yerr * self.Yscale, self.rtol * self.Yscale)**2
         self.maximum_variance = np.max(predictive_var)
 
         return predictive_mean, predictive_var
