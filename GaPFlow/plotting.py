@@ -248,7 +248,82 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
     set_axes_labels(ax)
 
 
-def animate(filename, seconds=10, save=False, show=True, disc=None, tol_p=None, tol_s=None):
+def animate(filename, seconds=10, save=False, show=True, disc=None):
+
+    def update_lines(i, q, p, tau):
+
+        ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, 1:-1, ny // 2])
+        ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, 1:-1, ny // 2])
+        ax[0, 2].get_lines()[0].set_ydata(q[i, 2, 0, 1:-1, ny // 2])
+
+        # Pressure & shear stress
+        ax[1, 0].get_lines()[0].set_ydata(p[i, 1:-1, ny // 2])
+        ax[1, 1].get_lines()[0].set_ydata(tau[i, 4, 0, 1:-1, ny // 2])
+        ax[1, 2].get_lines()[0].set_ydata(tau[i, 10, 0, 1:-1, ny // 2])
+
+        set_axes_labels(ax)
+        set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2])
+        set_axes_limits(ax[1, 1], tau[1:, 4, 0, 1:-1, ny // 2])
+        set_axes_limits(ax[1, 2], tau[1:, 10, 0, 1:-1, ny // 2])
+
+    # adaptive_ylim(ax)
+
+    data = netCDF4.Dataset(filename)
+    q_nc = np.asarray(data.variables['solution'])
+    p_nc = np.asarray(data.variables['pressure'])
+    tau_nc = np.asarray(data.variables['wall_stress'])
+
+    nt, nc, _, nx, ny = q_nc.shape
+
+    if disc is not None:
+        xx, yy = create_midpoint_grid(disc)
+        x = xx[1:-1, ny // 2]
+    else:
+        x = np.arange(nx - 2) / (nx - 2)
+        x += x[1] / 2.
+
+    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+
+    color_q = 'C0'
+    color_p = 'C1'
+    color_t = 'C2'
+
+    ax[0, 0].plot(x, q_nc[0, 0, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 1].plot(x, q_nc[0, 1, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 2].plot(x, q_nc[0, 2, 0, 1:-1, ny // 2], color=color_q)
+
+    ax[1, 0].plot(x, p_nc[0, 1:-1, ny // 2], color=color_p)
+    ax[1, 1].plot(x, tau_nc[0, 4, 0, 1:-1, ny // 2], color=color_t)
+    ax[1, 2].plot(x, tau_nc[0, 10, 0, 1:-1, ny // 2], color=color_t)
+
+    set_axes_labels(ax)
+
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2])
+
+    ani = animation.FuncAnimation(fig,
+                                  update_lines,
+                                  frames=nt,
+                                  fargs=(q_nc, p_nc, tau_nc),
+                                  interval=100,
+                                  repeat=True)
+
+    if save:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=int(nt / seconds),
+                        codec='libx264',
+                        extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
+
+        outfile = os.path.join(os.path.dirname(filename),
+                               os.path.dirname(filename).split(os.sep)[-1]) + ".mp4"
+
+        ani.save(outfile, writer=writer, dpi=600)
+
+    plt.show()
+
+
+def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=None, tol_s=None):
     if tol_p is not None:
         tol_p = np.sqrt(tol_p[0])
         tol_p_max = tol_p.max()
