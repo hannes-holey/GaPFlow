@@ -36,6 +36,8 @@ class Problem:
         else:
             db = None
 
+        assert 0
+
         # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics

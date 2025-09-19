@@ -263,7 +263,43 @@ def sanitize_properties(d):
         out['rho0'] = float(d.get('rho0', 1.))
 
     # Non-Newtonian behavior
-    # ...
+    # Piezoviscosity: Barus, Vogel, (Roelandts)
+    available_piezo = ['Barus', 'Vogel']
+    if 'piezo' in d.keys():
+        out['piezo'] = {}
+        out['piezo']['type'] = str(d['piezo'].get('type', 'none'))
+
+        if out['piezo']['type'] == "Vogel":
+            keys = ['rho0', 'mu_inf', 'phi_inf', 'BF', 'g']
+            defaults = []
+        elif out['piezo']['type'] == "Barus":
+            keys = ['aB']
+            defaults = []
+
+        if out['piezo']['type'] in available_piezo:
+            for k, de in zip(keys, defaults):
+                out[k] = float(d.get(k, de))
+
+    # Shear-thinning:
+    available_thinning = ['Carreau', 'Eyring', 'PL']
+
+    if 'thinning' in d.keys():
+        out["thinning"] = {}
+        out["thinning"]["type"] = str(d['thinning'].get('type', 'none'))
+
+        if out['thinning']['type'] == "Carreau":
+            keys = ['mu_inf', 'lam', 'a', 'N']
+            defaults = []
+        elif out['thinning']['type'] == "Eyring":
+            keys = ['tau0']
+            defaults = []
+        elif out['thinning']['type'] == "PL":
+            keys = ['N']
+            defaults = []
+
+        if out['thinning']['type'] in available_thinning:
+            for k, de in zip(keys, defaults):
+                out['thinning'][k] = float(d.get(k, de))
 
     print_dict(out)
 
