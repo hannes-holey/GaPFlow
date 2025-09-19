@@ -15,11 +15,17 @@ class WallStress(GaussianProcessSurrogate):
     def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('wall_stress', (12,))
         self.geo = geo
+        self.prop = prop
 
         if gp is not None:
+            self.noise = (gp['press']['obs_stddev'],
+                          gp['shear']['obs_stddev'])
+
+            gp = gp['shear']
+
             self.__field_variance = fc.real_field('wall_stress_var')
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
-            self.noise = gp['obs_stddev']
+            # self.noise = gp['obs_stddev']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
@@ -28,7 +34,7 @@ class WallStress(GaussianProcessSurrogate):
         else:
             self.is_gp_model = False
 
-        super().__init__(fc, prop, data)
+        super().__init__(fc, data)
 
         if self.is_gp_model:
             self.params_init = {
@@ -83,7 +89,7 @@ class WallStress(GaussianProcessSurrogate):
 
     @property
     def Yerr(self):
-        return self.noise / self.Yscale
+        return self.noise[1] / self.Yscale
 
     @property
     def kernel_variance(self):
@@ -146,11 +152,12 @@ class BulkStress(GaussianProcessSurrogate):
     def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
         self.geo = geo
+        self.prop = prop
 
         self.is_gp_model = False
         self.noise = 0.
 
-        super().__init__(fc, prop, data)
+        super().__init__(fc, data)
 
     @property
     def stress(self):
@@ -193,11 +200,17 @@ class Pressure(GaussianProcessSurrogate):
 
         self.__field = fc.real_field('pressure')
         self.geo = geo
+        self.prop = prop
 
         if gp is not None:
+            self.noise = (gp['press']['obs_stddev'],
+                          gp['shear']['obs_stddev'])
+
+            gp = gp['shear']
+
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
-            self.noise = gp['obs_stddev']
+            # self.noise = gp['obs_stddev']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
@@ -210,7 +223,7 @@ class Pressure(GaussianProcessSurrogate):
         else:
             self.is_gp_model = False
 
-        super().__init__(fc, prop, data)
+        super().__init__(fc, data)
 
         if self.is_gp_model:
             self.params_init = {
@@ -255,7 +268,7 @@ class Pressure(GaussianProcessSurrogate):
 
     @property
     def Yerr(self):
-        return self.noise / self.Yscale
+        return self.noise[0] / self.Yscale
 
     @property
     def kernel_variance(self):

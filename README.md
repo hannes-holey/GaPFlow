@@ -20,15 +20,16 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Adaptive time stepping GP
 - [X] Equation of state w/ plots
 - [X] Plotting scripts
-- [ ] Viscosity models with plots
-- [ ] dtool Datasets
+- [X] dtool Datasets
+- [ ] DB config via sep YAML block
 - [ ] MD setup
+- [ ] Viscosity models with plots
 - [ ] Catch sigterm
 - [ ] Unit tests and integration tests
 - [ ] Docstrings & typing
 - [ ] MPI parallel
 - [ ] Documentation with examples
-- [ ] JOSS submission (w or w/o elasticity)
+- [ ] JOSS submission (w or w/o elasticity?)
 
 ## Installation
 

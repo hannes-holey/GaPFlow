@@ -22,12 +22,12 @@ def source(q, h, stress, stress_lower, stress_upper):
     # origin bottom, U_top = 0, U_bottom = U
     out[0] = (-q[1] * h[1] - q[2] * h[2]) / h[0]
 
-    out[1] = ((stress[0] - stress_upper[0]) * h[1] +
-              (stress[2] - stress_upper[5]) * h[2] +
+    out[1] = ((stress[0] - stress_upper[0]) * h[1] +  # noqa: W504
+              (stress[2] - stress_upper[5]) * h[2] +  # noqa: W504
               stress_upper[4] - stress_lower[4]) / h[0]
 
-    out[2] = ((stress[2] - stress_upper[5]) * h[1] +
-              (stress[1] - stress_upper[1]) * h[2] +
+    out[2] = ((stress[2] - stress_upper[5]) * h[1] +  # noqa: W504
+              (stress[1] - stress_upper[1]) * h[2] +  # noqa: W504
               stress_upper[3] - stress_lower[3]) / h[0]
 
     return out

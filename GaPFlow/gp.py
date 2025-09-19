@@ -3,13 +3,8 @@ import numpy as np
 from copy import deepcopy
 from datetime import datetime
 
-from GaPFlow.utils import get_new_training_input
-from GaPFlow.models.pressure import eos_pressure
-from GaPFlow.models.viscous import stress_bottom, stress_top
-
 import jax
 import jax.numpy as jnp
-import jax.random as jr
 import jaxopt
 
 from tinygp import GaussianProcess, kernels, transforms
@@ -39,32 +34,19 @@ class GaussianProcessSurrogate:
     max_steps: int
     params_init: dict
     noise: float
+    prop: dict
+    geo: dict
 
-    def __init__(self, fc, prop, database):
+    def __init__(self, fc, database):
 
-        self.prop = prop
         self.step = 0
 
         self.__solution = fc.get_real_field('solution')
         self.__gap = fc.get_real_field('gap')
 
-        # should come from yaml
-        # active_dims = [0, 3, 4, ]  # gap, density, flux_x
-        # active_dims = [0, 3, 4, 5] # gap, density, flux_x, flux_y
-        # active_dims = [0, 1, 3, 4] # gap, gradient, density, flux_x
-
         if self.is_gp_model:
             self.database = database
-            Xnew = get_new_training_input(self._Xtest.T,
-                                          self.database.minimum_size - self.database.size)
-
-            # For mock data from known constitutive laws
-            Ynew = get_new_training_output_mock(Xnew, prop, noise_stddev=self.noise)
-            # ...or from MD
-            # Ynew = get_new_training_output_MD(Xnew)
-
-            self.database.add_data(Xnew.T, Ynew.T)
-
+            self.database.fill_missing(self._Xtest, self.prop, self.geo, self.noise)
             self.last_fit_train_size = self.database.size
 
             ref = datetime.now()
@@ -78,8 +60,8 @@ class GaussianProcessSurrogate:
                             'maximum_variance': [],
                             'variance_tol': []}
 
-            for l in self.active_dims:
-                self.history[f'lengthscale_{l}'] = []
+            for li in self.active_dims:
+                self.history[f'lengthscale_{li}'] = []
 
     @property
     @abc.abstractmethod
@@ -157,8 +139,8 @@ class GaussianProcessSurrogate:
         print(f"{self.kernel_variance:.5e}", end=' ')
         print(f"{self.obs_stddev:.5e}", end=' ')
 
-        for l in self.kernel_lengthscale:
-            print(f"{l:.5e}", end=' ')
+        for li in self.kernel_lengthscale:
+            print(f"{li:.5e}", end=' ')
 
         print()
 
@@ -212,10 +194,10 @@ class GaussianProcessSurrogate:
         imax = np.argmax(var)
 
         Xnew = self._Xtest[imax, :][:, None]
-        Ynew = get_new_training_output_mock(Xnew, self.prop,
-                                            noise_stddev=self.noise)  # replace w/ MD call
+        # Ynew = get_new_training_output_mock(Xnew, self.prop,
+        #                                     noise_stddev=self.noise)  # replace w/ MD call
 
-        self.database.add_data(Xnew.T, Ynew.T)
+        self.database.add_data(Xnew, prop=self.prop, geo=self.geo, noise=self.noise)
 
     def predict(self, predictor=True):
 
@@ -267,36 +249,6 @@ class GaussianProcessSurrogate:
                            self.density[1][None, :, :],
                            self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
                            ]).reshape(6, -1).T
-
-
-def get_new_training_output_mock(X, prop, noise_stddev=0.):
-
-    key = jr.key(123)
-    key, subkey = jr.split(key)
-    noise = jr.normal(key, shape=X.shape[1]) * noise_stddev
-
-    # For MD data: call update method from database (or external)
-
-    # Shear stress
-    U = 0.1
-    V = 0.
-    eta = prop['shear']
-    zeta = prop['bulk']
-
-    tau_bot = stress_bottom(X[3:],  # q
-                            X[:3],  # h, dhdx, dhdy
-                            U, V, eta, zeta, 0.)
-
-    tau_top = stress_top(X[3:],  # q
-                         X[:3],  # h, dhdx, dhdy
-                         U, V, eta, zeta, 0.)
-
-    # Pressure
-    press = eos_pressure(X[3], prop)[None, :] + noise
-
-    return np.vstack([press,
-                      tau_bot,
-                      tau_top])
 
 
 def multi_in_single_out(params, X, yerr):

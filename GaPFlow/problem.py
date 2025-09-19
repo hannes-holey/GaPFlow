@@ -43,8 +43,11 @@ class Problem:
 
         # Intialize database
         if gp['shear_gp'] or gp['press_gp']:
-            database = Database(minimum_size=gp['db_init_size'],
-                                outdir=self.outdir)
+            datapath = os.path.join(self.outdir, 'train') if gp['db_path'] is None else gp['db_path']
+
+            database = Database.from_dtool(datapath,
+                                           minimum_size=gp['db_init_size'],
+                                           outdir=self.outdir)
         else:
             database = None
 
@@ -65,10 +68,10 @@ class Problem:
         self.bulk_stress = BulkStress(fc, prop, geo, data=database)
         self.wall_stress = WallStress(fc, prop, geo,
                                       data=database,
-                                      gp=gp['shear'] if gp['shear_gp'] else None)
+                                      gp=gp if gp['shear_gp'] else None)
         self.pressure = Pressure(fc, prop, geo,
                                  data=database,
-                                 gp=gp['press'] if gp['press_gp'] else None)
+                                 gp=gp if gp['press_gp'] else None)
 
         # TODO: numerics settings override (to continue a simulation)
         # Numerics

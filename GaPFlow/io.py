@@ -295,7 +295,9 @@ def sanitize_gp(d):
     out['shear_gp'] = bool(use_shear_gp)
 
     out['db_init_size'] = int(d.get('db_init_size', 5))
-    # out['db_init'] = str(d.get('db_init', 'lhc'))
+    out['db_init_samp'] = str(d.get('db_init', 'rand'))
+    out['db_init_width'] = float(d.get('db_init_width', 1e-2))
+    out['db_path'] = d.get('db_path', None)
 
     for sk, active in zip(['press', 'shear'], [use_press_gp, use_shear_gp]):
         if active:

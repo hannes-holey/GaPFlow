@@ -33,6 +33,8 @@ properties:
     rho0: 0.8
 gp:
     db_init_size: 5
+    db_init_samp: rand
+    # db_path: data/train
     press:
         fix_noise: True
         atol: 1.
