@@ -21,7 +21,7 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Equation of state w/ plots
 - [X] Plotting scripts
 - [X] dtool Datasets
-- [ ] DB config via sep YAML block
+- [X] DB config via sep YAML block
 - [ ] MD setup
 - [ ] Viscosity models with plots
 - [ ] Catch sigterm

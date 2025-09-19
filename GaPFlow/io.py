@@ -68,7 +68,8 @@ def read_yaml_input(file):
                             'geometry': sanitize_geometry,
                             'numerics': sanitize_numerics,
                             'properties': sanitize_properties,
-                            'gp': sanitize_gp}
+                            'gp': sanitize_gp,
+                            'db': sanitize_db}
 
     sanitized_dict = {}
 
@@ -294,11 +295,6 @@ def sanitize_gp(d):
     out['press_gp'] = bool(use_press_gp)
     out['shear_gp'] = bool(use_shear_gp)
 
-    out['db_init_size'] = int(d.get('db_init_size', 5))
-    out['db_init_samp'] = str(d.get('db_init', 'rand'))
-    out['db_init_width'] = float(d.get('db_init_width', 1e-2))
-    out['db_path'] = d.get('db_path', None)
-
     for sk, active in zip(['press', 'shear'], [use_press_gp, use_shear_gp]):
         if active:
             out[sk] = {}
@@ -308,6 +304,21 @@ def sanitize_gp(d):
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
+
+    print_dict(out)
+
+    return out
+
+
+def sanitize_db(d):
+
+    out = {}
+
+    out['dtool'] = bool(d.get('dtool', True))
+    out['dtool_path'] = d.get('dtool_path', None)
+    out['init_size'] = int(d.get('init_size', 5))
+    out['init_samp'] = str(d.get('init', 'rand'))  # TODO: lhc, sobol
+    out['init_width'] = float(d.get('init_width', 1e-2))
 
     print_dict(out)
 

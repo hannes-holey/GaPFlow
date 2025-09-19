@@ -30,6 +30,11 @@ class Problem:
         else:
             gp = {'shear_gp': False, 'press_gp': False}
 
+        if gp['shear_gp'] or gp['press_gp']:
+            db = input_dict['db']
+        else:
+            db = None
+
         # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics
@@ -42,12 +47,8 @@ class Problem:
             self.outdir = None
 
         # Intialize database
-        if gp['shear_gp'] or gp['press_gp']:
-            datapath = os.path.join(self.outdir, 'train') if gp['db_path'] is None else gp['db_path']
-
-            database = Database.from_dtool(datapath,
-                                           minimum_size=gp['db_init_size'],
-                                           outdir=self.outdir)
+        if db is not None:
+            database = Database.from_dtool(db, outdir=self.outdir)
         else:
             database = None
 

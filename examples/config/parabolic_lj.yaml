@@ -32,18 +32,21 @@ properties:
     T: 1.0
     rho0: 0.8
 gp:
-    db_init_size: 5
-    db_init_samp: rand
-    # db_path: data/train
     press:
         fix_noise: True
-        atol: 1.
+        atol: 1.5
         rtol: 0.
         obs_stddev: 2.e-2
         max_steps: 10
     shear:
         fix_noise: True
-        atol: 1.
+        atol: 1.5
         rtol: 0.
         obs_stddev: 4.e-3
         max_steps: 10
+db:
+    dtool: True
+    # dtool_path: data/train  # defaults to options['output']/train   
+    init_size: 5
+    init_samp: rand
+    init_width: 0.01 # default (for density)

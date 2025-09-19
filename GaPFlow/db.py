@@ -9,14 +9,16 @@ from GaPFlow.dtool import get_readme_list_local, init_dataset, write_readme
 
 class Database:
 
-    def __init__(self, minimum_size,
+    def __init__(self, db,
                  Xtrain=jnp.empty((0, 6)),
                  Ytrain=jnp.empty((0, 13)),
                  Yerr=jnp.empty((0, 3)),
                  outdir=None):
 
+        self.use_dtool = db['dtool']
         self.outdir = outdir
-        self.minimum_size = minimum_size
+        self.minimum_size = db['init_size']
+        self.db_init_width = db['init_width']  # density only
 
         self._Xtrain = Xtrain
         self._Ytrain = Ytrain
@@ -33,11 +35,10 @@ class Database:
     def from_numpy(cls, directory):
         raise NotImplementedError
 
-    # TODO
     @classmethod
-    def from_dtool(cls, directory, minimum_size, outdir):
-        readme_list = get_readme_list_local(directory)
-        cls.dtool_basepath = directory
+    def from_dtool(cls, db, outdir):
+        cls.dtool_basepath = db['dtool_path'] if db['dtool_path'] is not None else os.path.join(outdir, 'train')
+        readme_list = get_readme_list_local(cls.dtool_basepath)
 
         if len(readme_list) > 0:
 
@@ -61,21 +62,24 @@ class Database:
             Yerr = jnp.array(Yerr)
 
         else:
-            print("No matching dtool datasets found. Start with empty database.")
+            print(f"Start with empty dtool database in {cls.dtool_basepath}")
             Xtrain = jnp.empty((0, 6))
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 3))
 
-        return cls(minimum_size, Xtrain, Ytrain, Yerr, outdir)
+        return cls(db, Xtrain, Ytrain, Yerr, outdir)
 
     def fill_missing(self, Xtest, prop=None, geo=None, noise=(0., 0.)):
 
+        num_missing = self.minimum_size - self.size
+
         Xnew = get_new_training_input(Xtest.T,
-                                      self.minimum_size - self.size)
+                                      Nsample=num_missing,
+                                      width=self.db_init_width)
 
         self.add_data(Xnew, prop=prop, geo=geo, noise=noise)
 
-    def add_data(self, Xnew, prop=None, geo=None, noise=(0., 0.), dtool=True):
+    def add_data(self, Xnew, prop=None, geo=None, noise=(0., 0.)):
         size_before = self.size
 
         if prop is not None:
@@ -96,7 +100,7 @@ class Database:
         # write dtool datasets
         # with MD, loop needs to enclose LAMMPS run
 
-        if dtool:
+        if self.use_dtool:
             for X, Y, Ye in zip(Xnew.T, Ynew.T, Yerr.T):
                 size_before += 1
                 proto_ds, proto_ds_path = init_dataset(self.dtool_basepath, size_before)

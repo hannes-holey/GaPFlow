@@ -6,6 +6,8 @@ from getpass import getuser
 from ruamel.yaml import YAML
 from dtool_lookup_api import query
 from socket import gethostname
+import yaml
+
 
 from GaPFlow.utils import progressbar
 
@@ -37,9 +39,7 @@ def get_readme_list_remote():
                  for ds in progressbar(remote_ds_list,
                                        prefix="Loading remote datasets based on dtool query: ")]
 
-    yaml = YAML()
-
-    readme_list = [yaml.load(ds.get_readme_content()) for ds in remote_ds]
+    readme_list = [yaml.full_load(ds.get_readme_content()) for ds in remote_ds]
 
     return readme_list
 
@@ -58,17 +58,12 @@ def get_readme_list_local(local_path):
         os.makedirs(local_path)
         return []
 
-    readme_paths = [os.path.join(ds.uri.removeprefix(f'file://{gethostname()}'), 'README.yml')
-                    for ds in dtoolcore.iter_datasets_in_base_uri(local_path)]
-
-    yaml = YAML()
-
-    readme_list = []
-    for readme in readme_paths:
-        with open(readme, 'r') as instream:
-            readme_list.append(yaml.load(instream))
+    readme_list = [yaml.full_load(ds.get_readme_content())
+                   for ds in dtoolcore.iter_datasets_in_base_uri(local_path)]
 
     print(f"Loading {len(readme_list)} local datasets in '{local_path}'.")
+    for ds in dtoolcore.iter_datasets_in_base_uri(local_path):
+        print(f'- {ds.uuid} ({ds.name})')
 
     return readme_list
 

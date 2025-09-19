@@ -35,10 +35,6 @@ properties:
     C1: 3.5e10
     C2: 1.23
 gp:
-    db_init_size: 5
-    db_init_samp: rand
-    db_init_width: 1.e-6
-    # db_path: data/train
     press:
         fix_noise: True
         atol: 1.
@@ -51,5 +47,9 @@ gp:
         rtol: 0.1
         obs_stddev: 1.
         max_steps: 5
-md:
-    system: lj
+db:
+    dtool: True
+    # dtool_path: ... # defaults to options['output']/train   
+    init_size: 5
+    init_samp: rand
+    init_width: 1.e-6
