@@ -1,5 +1,6 @@
 import os
 import io
+import signal
 import numpy as np
 import numpy.typing as npt
 from copy import deepcopy
@@ -132,6 +133,8 @@ class Problem:
 
     def run(self):
 
+        self._stop = False
+
         self.history = {
             "step": [],
             "time": [],
@@ -147,22 +150,29 @@ class Problem:
             self.write(params=False)
 
         # Run
-        tic = datetime.now()
-        while not self.converged and self.step < self.max_it:
+        self._tic = datetime.now()
+        while not self.converged and self.step < self.max_it and not self._stop:
             self.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
 
+            handle_signals(self.receive_signal)
+
+        self.post_run()
+
+    def receive_signal(self, signum, frame):
+        signals = [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGUSR1]
+        if signum in signals:
+            self._stop = True
+
+    def post_run(self):
+
+        walltime = datetime.now() - self._tic
+
         if self.step % self.options['write_freq'] != 0 and not self.options['silent']:
             self.write()
 
-        toc = datetime.now()
-        walltime = toc - tic
-
-        self.post_run(walltime)
-
-    def post_run(self, walltime):
         speed = self.step / walltime.total_seconds()
 
         # Print runtime
@@ -408,3 +418,13 @@ class Problem:
             Q = ((1. - a1) * q1 + a2 * q2) / (a1 - a2)
 
         return Q
+
+
+def handle_signals(func):
+    for s in [signal.SIGHUP,
+              signal.SIGINT,
+              signal.SIGHUP,
+              signal.SIGTERM,
+              signal.SIGUSR1,
+              signal.SIGUSR2]:
+        signal.signal(s, func)
