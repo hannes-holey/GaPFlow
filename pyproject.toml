@@ -24,7 +24,7 @@ dependencies = [
 	"netCDF4==1.7.2",
 	"pandas==2.3.2",
 	"jaxopt==0.8.5",
-	"dtool==3.27.0",
+	"dtoolcore==3.19.0",
 	"dtool-lookup-api==0.10.2"
 ]
 
