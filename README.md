@@ -22,9 +22,9 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Plotting scripts
 - [X] dtool Datasets
 - [X] DB config via sep YAML block
+- [X] Catch sigterm
 - [ ] MD setup
 - [ ] Viscosity models with plots
-- [ ] Catch sigterm
 - [ ] Unit tests and integration tests
 - [ ] Docstrings & typing
 - [ ] MPI parallel
