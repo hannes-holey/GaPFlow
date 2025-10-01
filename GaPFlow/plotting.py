@@ -325,13 +325,13 @@ def animate(filename, seconds=10, save=False, show=True, disc=None):
 
 def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=None, tol_s=None):
     if tol_p is not None:
-        tol_p = np.sqrt(tol_p[0])
+        tol_p = np.sqrt(tol_p)
         tol_p_max = tol_p.max()
     else:
         tol_p_max = 0.
 
     if tol_s is not None:
-        tol_t = np.sqrt(tol_s[0])
+        tol_t = np.sqrt(tol_s)
         tol_t_max = tol_t.max()
     else:
         tol_t_max = 0.
@@ -347,11 +347,11 @@ def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=Non
         ax[1, 2].cla()
 
         # Pressure
-        _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=tol_p, color=color_p)
+        _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=tol_p[i], color=color_p)
 
         # Shear stress
-        _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t, color=color_t)
-        _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t, color=color_t)
+        _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
+        _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
 
         set_axes_labels(ax)
         set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2], tol=1.96 * tol_p_max)
@@ -483,7 +483,7 @@ def _plot_gp_history(ax, filename='history.csv', index=0):
 
 def adaptive_ylim(ax):
 
-    offset = lambda x, y: 0.05 * (x - y) if (x - y) != 0 else 1.
+    def offset(x, y): return 0.05 * (x - y) if (x - y) != 0 else 1.
 
     try:
         axes = ax.flat
