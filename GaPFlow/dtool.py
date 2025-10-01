@@ -6,7 +6,6 @@ from getpass import getuser
 from ruamel.yaml import YAML
 from dtool_lookup_api import query
 from socket import gethostname
-import yaml
 
 
 from GaPFlow.utils import progressbar
@@ -16,6 +15,10 @@ try:
 except ImportError:
     from unittest.mock import Mock as lammps
     lammps.__version__ = "0.0.0"
+
+yaml = YAML()
+yaml.explicit_start = True
+yaml.indent(mapping=4, sequence=4, offset=2)
 
 
 def get_readme_list_remote():
@@ -122,9 +125,6 @@ def write_readme(path, Xnew, Ynew, Yerrnew, params=None):
         repository: https://github.com/lammps/lammps
     """
 
-    yaml = YAML()
-    yaml.explicit_start = True
-    yaml.indent(mapping=4, sequence=4, offset=2)
     metadata = yaml.load(readme_template)
 
     # Update metadata

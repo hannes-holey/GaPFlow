@@ -25,7 +25,8 @@ dependencies = [
 	"pandas==2.3.2",
 	"jaxopt==0.8.5",
 	"dtoolcore==3.19.0",
-	"dtool-lookup-api==0.10.2"
+	"dtool-lookup-api==0.10.2",
+	"ruamel.yaml"
 ]
 
 [project.optional-dependencies]
