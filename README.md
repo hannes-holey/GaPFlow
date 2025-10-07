@@ -112,7 +112,11 @@ Simulation output is stored under the location specified in the input file. Afte
 - `Xtrain.npy` (Optional): Training data inputs
 - `Ytrain.npy` (Optional): Training data observations
 
-The code comes with a few handy command line tools for visualization...
+The code comes with a few handy [command line tools](GaPFlow/cli/) for visualizations like this one
+
+![journal](doc/assets/journal.gif)
+
+which shows the transient solution of a 1D journal bearing with active learning of the constitutive behavior. 
 
 ## Documentation
 ...

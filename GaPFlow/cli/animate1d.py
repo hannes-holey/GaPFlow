@@ -2,6 +2,7 @@ import os
 import numpy as np
 from importlib import resources
 import matplotlib.pyplot as plt
+from argparse import ArgumentParser
 from GaPFlow.plotting import animate, animate_gp, get_pipeline
 
 import pandas as pd
@@ -10,7 +11,17 @@ import pandas as pd
 plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
 
 
+def get_parser():
+
+    parser = ArgumentParser()
+    parser.add_argument('-s', '--save', action='store_true', default=False)
+
+    return parser
+
+
 def main():
+
+    args = get_parser().parse_args()
 
     file = get_pipeline(name='sol.nc', mode='single')
 
@@ -31,6 +42,6 @@ def main():
 
     # TODO: should also work if not all are stress models
     if tol_s is None or tol_p is None:
-        animate(file)
+        animate(file, save=args.save)
     else:
-        animate_gp(file, tol_p=tol_p, tol_s=tol_s)
+        animate_gp(file, save=args.save, tol_p=tol_p, tol_s=tol_s)
