@@ -170,7 +170,7 @@ def sanitize_grid(d):
             raise IOError("Need to specify Dirichlet BC value")
 
     if any(out['bc_yN_D']):
-        out['bc_yN_D_val'] = d.get('xW_D', None)
+        out['bc_yN_D_val'] = d.get('yN_D', None)
         if out['bc_yN_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value")
 

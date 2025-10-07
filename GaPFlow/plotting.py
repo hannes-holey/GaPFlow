@@ -100,7 +100,7 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress'])
+    tau_nc = np.asarray(data.variables['wall_stress_xz'])
 
     nt, nc, _, nx, ny = q_nc.shape
 
@@ -205,7 +205,7 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
 
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress'])
+    tau_nc = np.asarray(data.variables['wall_stress_xz'])
 
     nt, nc, _, nx, ny = q_nc.shape
     x, _ = _get_centerline_coords(nx, ny, disc)
@@ -229,8 +229,8 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
     else:
         ax[1, 0].plot(x, p_nc[frame, 1:-1, ny // 2], color=color_p)
 
-    if 'wall_stress_var' in data.variables.keys():
-        tauvar_nc = np.asarray(data.variables['wall_stress_var'])
+    if 'wall_stress_xz_var' in data.variables.keys():
+        tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
 
         _plot_gp(ax[1, 1],
                  x, tau_nc[frame, 4, 0, 1:-1, ny // 2],
@@ -271,7 +271,7 @@ def animate(filename, seconds=10, save=False, show=True, disc=None):
     data = netCDF4.Dataset(filename)
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress'])
+    tau_nc = np.asarray(data.variables['wall_stress_xz'])
 
     nt, nc, _, nx, ny = q_nc.shape
 
@@ -361,11 +361,13 @@ def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=Non
     # adaptive_ylim(ax)
 
     data = netCDF4.Dataset(filename)
+    print(data.variables)
+
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
     pvar_nc = np.asarray(data.variables['pressure_var'])
-    tau_nc = np.asarray(data.variables['wall_stress'])
-    tauvar_nc = np.asarray(data.variables['wall_stress_var'])
+    tau_nc = np.asarray(data.variables['wall_stress_xz'])
+    tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
 
     nt, nc, _, nx, ny = q_nc.shape
 
@@ -398,6 +400,104 @@ def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=Non
                                   update_lines,
                                   frames=nt,
                                   fargs=(q_nc, p_nc, pvar_nc, tau_nc, tauvar_nc),
+                                  interval=100,
+                                  repeat=True)
+
+    if save:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=int(nt / seconds),
+                        codec='libx264',
+                        extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
+
+        outfile = os.path.join(os.path.dirname(filename),
+                               os.path.dirname(filename).split(os.sep)[-1]) + ".mp4"
+
+        ani.save(outfile, writer=writer, dpi=600)
+
+    plt.show()
+
+
+def animate2d(filename, seconds=10, save=False, show=True, disc=None):
+
+    def update_fields(i, q, p, tau):
+
+        # firstr row (q)
+        im, = ax[0, 0].get_images()
+        im.set_array(q[i, 0, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=q[:, 0].min(), vmax=q[:, 0].max())
+
+        im, = ax[0, 1].get_images()
+        im.set_array(q[i, 1, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=q[:, 1].min(), vmax=q[:, 1].max())
+
+        im, = ax[0, 2].get_images()
+        im.set_array(q[i, 2, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=q[:, 2].min(), vmax=q[:, 2].max())
+
+        # second row (p, tau_xz)
+        im, = ax[1, 0].get_images()
+        im.set_array(p[i, 1:-1, 1:-1].T)
+        im.set_clim(vmin=p.min(), vmax=p.max())
+
+        im, = ax[1, 1].get_images()
+        im.set_array(tau[i, 4, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=tau[:, 4].min(), vmax=tau[:, 4].max())
+
+        im, = ax[1, 2].get_images()
+        im.set_array(tau[i, 10, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=tau[:, 10].min(), vmax=tau[:, 10].max())
+
+        # third row (p, tau_yz)
+        im, = ax[2, 0].get_images()
+        im.set_array(p[i, 1:-1, 1:-1].T)
+        im.set_clim(vmin=p.min(), vmax=p.max())
+
+        im, = ax[2, 1].get_images()
+        im.set_array(tau[i, 3, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=tau[:, 3].min(), vmax=tau[:, 3].max())
+
+        im, = ax[2, 2].get_images()
+        im.set_array(tau[i, 9, 0, 1:-1, 1:-1].T)
+        im.set_clim(vmin=tau[:, 9].min(), vmax=tau[:, 9].max())
+
+    data = netCDF4.Dataset(filename)
+    q_nc = np.asarray(data.variables['solution'])
+    p_nc = np.asarray(data.variables['pressure'])
+    tau_xz_nc = np.asarray(data.variables['wall_stress_xz'])
+    tau_yz_nc = np.asarray(data.variables['wall_stress_yz'])
+    tau_nc = tau_xz_nc + tau_yz_nc
+
+    nt, nc, _, nx, ny = q_nc.shape
+
+    fig, ax = plt.subplots(3, 3, figsize=(12, 9))
+
+    imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
+
+    ax[0, 0].imshow(q_nc[0, 0, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[0, 1].imshow(q_nc[0, 1, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[0, 2].imshow(q_nc[0, 2, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    ax[1, 0].imshow(p_nc[0, 1:-1, 1:-1].T, **imshow_args)
+    ax[1, 1].imshow(tau_nc[0, 4, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[1, 2].imshow(tau_nc[0, 10, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    ax[2, 0].imshow(p_nc[0, 1:-1, 1:-1].T, **imshow_args)
+    ax[2, 1].imshow(tau_nc[0, 3, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[2, 2].imshow(tau_nc[0, 9, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    titles = [r'$\rho$', r'$j_x$', r'$j_y$',
+              r'$p$', r'$\tau_{xz}^\text{bot}$', r'$\tau_{xz}^\text{top}$',
+              r'$p$', r'$\tau_{yz}^\text{bot}$', r'$\tau_{yz}^\text{top}$', ]
+
+    for (a, title) in zip(ax.flat, titles):
+        a.set_xlabel(r'$x/L_x$')
+        a.set_ylabel(r'$y/L_y$')
+        a.set_title(title)
+
+    ani = animation.FuncAnimation(fig,
+                                  update_fields,
+                                  frames=nt,
+                                  fargs=(q_nc, p_nc, tau_nc),
                                   interval=100,
                                   repeat=True)
 
@@ -483,7 +583,7 @@ def _plot_gp_history(ax, filename='history.csv', index=0):
 
 def adaptive_ylim(ax):
 
-    def offset(x, y): return 0.05 * (x - y) if (x - y) != 0 else 1.
+    offset = lambda x, y: 0.05 * (x - y) if (x - y) != 0 else 1.
 
     try:
         axes = ax.flat
