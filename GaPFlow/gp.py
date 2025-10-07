@@ -1,11 +1,17 @@
 import abc
+import warnings
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
 
 import jax
 import jax.numpy as jnp
-import jaxopt
+
+# jaxopt is no longer maintained
+# may switch to optax or other optimization library
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import jaxopt
 
 from tinygp import GaussianProcess, kernels, transforms
 

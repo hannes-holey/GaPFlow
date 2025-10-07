@@ -14,18 +14,20 @@ classifiers = [
     # "License :: OSI Approved :: MIT License"
 ]
 
-requires-python = ">=3.9, <3.13"
+requires-python = ">=3.10, <3.15"
 dynamic = ["version"]
 dependencies = [
-	"muGrid==0.95.0",
-	"matplotlib==3.10.6",
-	"mpi4py==4.1.0",
+	"muGrid>=0.95.0",
+	"netCDF4>=1.7.2",
+	"mpi4py>=4.1.0",
+	"jax>=0.7.2",
+	"equinox>=0.13.1",
 	"tinygp==0.3.0",
-	"netCDF4==1.7.2",
-	"pandas==2.3.2",
 	"jaxopt==0.8.5",
-	"dtoolcore==3.19.0",
-	"dtool-lookup-api==0.10.2",
+	"dtoolcore>=3.19.0",
+	"dtool-lookup-api>=0.10.2",
+	"pandas",
+	"matplotlib",
 	"ruamel.yaml"
 ]
 
