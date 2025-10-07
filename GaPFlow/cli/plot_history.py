@@ -25,12 +25,12 @@ def main():
     files_gp_press = []
     files_gp_shear = []
     if args.gp:
-        files_gp_press = [(os.path.join(os.path.dirname(file), 'gp_press.csv'), i)
+        files_gp_press = [(os.path.join(os.path.dirname(file), 'gp_zz.csv'), i)
                           for i, file in enumerate(files)
-                          if 'gp_press.csv' in os.listdir(os.path.dirname(file))]
+                          if 'gp_zz.csv' in os.listdir(os.path.dirname(file))]
 
-        files_gp_shear = [(os.path.join(os.path.dirname(file), 'gp_shear.csv'), i)
+        files_gp_shear = [(os.path.join(os.path.dirname(file), 'gp_xz.csv'), i)
                           for i, file in enumerate(files)
-                          if 'gp_shear.csv' in os.listdir(os.path.dirname(file))]
+                          if 'gp_xz.csv' in os.listdir(os.path.dirname(file))]
 
     plot_history(files, files_gp_press, files_gp_shear)

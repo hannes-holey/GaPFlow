@@ -14,9 +14,9 @@ def main():
 
     file = get_pipeline(name='sol.nc', mode='single')
 
-    gp_p = os.path.join(os.path.dirname(file), 'gp_press.csv')
-    gp_s_xz = os.path.join(os.path.dirname(file), 'gp_shear_xz.csv')
-    gp_s_yz = os.path.join(os.path.dirname(file), 'gp_shear_yz.csv')
+    gp_p = os.path.join(os.path.dirname(file), 'gp_zz.csv')
+    gp_s_xz = os.path.join(os.path.dirname(file), 'gp_xz.csv')
+    gp_s_yz = os.path.join(os.path.dirname(file), 'gp_yz.csv')
 
     try:
         df_p = pd.read_csv(gp_p)

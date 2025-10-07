@@ -361,7 +361,6 @@ def animate_gp(filename, seconds=10, save=False, show=True, disc=None, tol_p=Non
     # adaptive_ylim(ax)
 
     data = netCDF4.Dataset(filename)
-    print(data.variables)
 
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
