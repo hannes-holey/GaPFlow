@@ -134,24 +134,34 @@ class WallStress(GaussianProcessSurrogate):
 
     def update(self, predictor=False):
 
+        U = self.geo['U']
+        V = self.geo['V']
+        eta = self.prop['shear']
+        zeta = self.prop['bulk']
+
+        s_bot = stress_bottom(self.density,
+                              self.gap,
+                              U, V, eta, zeta, 0.)
+
+        s_top = stress_top(self.density,
+                           self.gap,
+                           U, V, eta, zeta, 0.)
+
+        # FIXME: this is probably wrong if only one direction (xz or yz) is a GP model
+        self.__field.p[:3] = s_bot[:3] / 2.
+        self.__field.p[6:9] = s_top[:3] / 2.
+
+        self.__field.p[5] = s_bot[-1] / 2.
+        self.__field.p[11] = s_top[-1] / 2.
+
         if self.is_gp_model:
             mean, var = self.predict(predictor)
             self.__field.p[self._out_index] = mean[0, :, :]
             self.__field.p[self._out_index + 6] = mean[1, :, :]
             self.__field_variance.p = var[0, :, :]
         else:
-            U = self.geo['U']
-            V = self.geo['V']
-            eta = self.prop['shear']
-            zeta = self.prop['bulk']
-
-            self.__field.p[self._out_index] = stress_bottom(self.density,
-                                                            self.gap,
-                                                            U, V, eta, zeta, 0.)[self._out_index]
-
-            self.__field.p[self._out_index + 6] = stress_top(self.density,
-                                                             self.gap,
-                                                             U, V, eta, zeta, 0.)[self._out_index]
+            self.__field.p[self._out_index] = s_bot[self._out_index]
+            self.__field.p[self._out_index + 6] = s_top[self._out_index]
 
 
 class BulkStress(GaussianProcessSurrogate):
