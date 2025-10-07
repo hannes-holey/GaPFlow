@@ -69,15 +69,22 @@ class Problem:
         # Dependent fields
         self.bulk_stress = BulkStress(fc, prop, geo, data=database)
 
+        if grid['dim'] == 1:
+            gpx = gp if gp['shear_gp'] else None
+            gpy = None
+        elif grid['dim'] == 2:
+            gpx = gp if gp['shear_gp'] else None
+            gpy = gp if gp['shear_gp'] else None
+
         self.wall_stress_xz = WallStress(fc, prop, geo,
                                          direction='x',
                                          data=database,
-                                         gp=gp if gp['shear_gp'] else None)
+                                         gp=gpx)
 
         self.wall_stress_yz = WallStress(fc, prop, geo,
                                          direction='y',
                                          data=database,
-                                         gp=gp if gp['shear_gp'] else None)
+                                         gp=gpy)
 
         self.pressure = Pressure(fc, prop, geo,
                                  data=database,
@@ -114,9 +121,13 @@ class Problem:
                                      OpenMode.Overwrite)
 
             field_names = ['solution', 'pressure', 'wall_stress_xz', 'wall_stress_yz']
-            if gp['shear_gp']:
+
+            if gpx is not None:
                 field_names.append('wall_stress_xz_var')
+
+            if gpy is not None:
                 field_names.append('wall_stress_yz_var')
+
             if gp['press_gp']:
                 field_names.append('pressure_var')
             self.file.register_field_collection(fc, field_names=field_names)
@@ -186,18 +197,18 @@ class Problem:
 
         # Print runtime
         print(33 * '=')
-        print("Total walltime     : ", str(walltime).split('.')[0])
+        print("Total walltime   : ", str(walltime).split('.')[0])
         print(f"({speed:.2f} steps/s)")
 
         if self.pressure.is_gp_model:
-            print(" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
-            print(" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
+            print(" - GP train (zz) : ", str(self.pressure.cumtime_train).split('.')[0])
+            print(" - GP infer (zz) : ", str(self.pressure.cumtime_infer).split('.')[0])
         if self.wall_stress_xz.is_gp_model:
-            print(" - GP train (shear_xz): ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
-            print(" - GP infer (shear_xz): ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
+            print(" - GP train (xz) : ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
+            print(" - GP infer (xz) : ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
         if self.wall_stress_yz.is_gp_model:
-            print(" - GP train (shear_yz): ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
-            print(" - GP infer (shear_yz): ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
+            print(" - GP train (yz) : ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
+            print(" - GP infer (yz) : ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
 
         print(33 * '=')
 
@@ -205,18 +216,18 @@ class Problem:
             history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
 
             if self.pressure.is_gp_model:
-                history_to_csv(os.path.join(self.outdir, 'gp_press.csv'), self.pressure.history)
-                with open(os.path.join(self.outdir, 'gp_press.txt'), 'w') as f:
+                history_to_csv(os.path.join(self.outdir, 'gp_zz.csv'), self.pressure.history)
+                with open(os.path.join(self.outdir, 'gp_zz.txt'), 'w') as f:
                     print(self.pressure.gp, file=f)
 
             if self.wall_stress_xz.is_gp_model:
-                history_to_csv(os.path.join(self.outdir, 'gp_shear_xz.csv'), self.wall_stress_xz.history)
-                with open(os.path.join(self.outdir, 'gp_shear_xz.txt'), 'w') as f:
+                history_to_csv(os.path.join(self.outdir, 'gp_xz.csv'), self.wall_stress_xz.history)
+                with open(os.path.join(self.outdir, 'gp_xz.txt'), 'w') as f:
                     print(self.wall_stress_xz.gp, file=f)
 
             if self.wall_stress_yz.is_gp_model:
-                history_to_csv(os.path.join(self.outdir, 'gp_shear_yz.csv'), self.wall_stress_yz.history)
-                with open(os.path.join(self.outdir, 'gp_shear_yz.txt'), 'w') as f:
+                history_to_csv(os.path.join(self.outdir, 'gp_yz.csv'), self.wall_stress_yz.history)
+                with open(os.path.join(self.outdir, 'gp_yz.txt'), 'w') as f:
                     print(self.wall_stress_yz.gp, file=f)
 
     # TODO: use these properties as accessors to fields without ghost cells

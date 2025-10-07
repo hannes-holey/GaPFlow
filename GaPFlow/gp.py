@@ -156,7 +156,7 @@ class GaussianProcessSurrogate:
 
         reasons = ['DB', "AL"]
 
-        print('#' + 15 * '-' + f"GP TRAINING ({self.name.upper()})" + 16 * '-')
+        print('#' + 17 * '-' + f"GP TRAINING ({self.name.upper()})" + 17 * '-')
         print('# Timestep     :', self.step)
         print('# Reason       :', reasons[reason])
         print('# Database size:', self.database.size)
@@ -240,7 +240,7 @@ class GaussianProcessSurrogate:
 
                 after = self.maximum_variance / self.variance_tol
 
-                print(f"# AL {counter}/{self.max_steps}       : {before:.3f} --> {after:.3f}")
+                print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
 
         return m, v

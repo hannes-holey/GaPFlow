@@ -10,13 +10,11 @@ from GaPFlow.models.sound import eos_sound_velocity
 
 class WallStress(GaussianProcessSurrogate):
 
-    name = "shear"
-
     def __init__(self, fc, prop, geo, direction='x', data=None, gp=None):
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
         self.geo = geo
         self.prop = prop
-        self.name = f'shear_{direction}z'
+        self.name = f'{direction}z'
 
         if direction == 'x':
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
@@ -213,7 +211,7 @@ class BulkStress(GaussianProcessSurrogate):
 
 class Pressure(GaussianProcessSurrogate):
 
-    name = "press"
+    name = "zz"
 
     def __init__(self, fc, prop, geo, data=None, gp=None):
 
