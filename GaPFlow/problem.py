@@ -68,9 +68,17 @@ class Problem:
 
         # Dependent fields
         self.bulk_stress = BulkStress(fc, prop, geo, data=database)
-        self.wall_stress = WallStress(fc, prop, geo,
-                                      data=database,
-                                      gp=gp if gp['shear_gp'] else None)
+
+        self.wall_stress_xz = WallStress(fc, prop, geo,
+                                         direction='x',
+                                         data=database,
+                                         gp=gp if gp['shear_gp'] else None)
+
+        self.wall_stress_yz = WallStress(fc, prop, geo,
+                                         direction='y',
+                                         data=database,
+                                         gp=gp if gp['shear_gp'] else None)
+
         self.pressure = Pressure(fc, prop, geo,
                                  data=database,
                                  gp=gp if gp['press_gp'] else None)
@@ -105,9 +113,10 @@ class Problem:
             self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
                                      OpenMode.Overwrite)
 
-            field_names = ['solution', 'pressure', 'wall_stress']
+            field_names = ['solution', 'pressure', 'wall_stress_xz', 'wall_stress_yz']
             if gp['shear_gp']:
-                field_names.append('wall_stress_var')
+                field_names.append('wall_stress_xz_var')
+                field_names.append('wall_stress_yz_var')
             if gp['press_gp']:
                 field_names.append('pressure_var')
             self.file.register_field_collection(fc, field_names=field_names)
@@ -183,9 +192,13 @@ class Problem:
         if self.pressure.is_gp_model:
             print(" - GP train (press): ", str(self.pressure.cumtime_train).split('.')[0])
             print(" - GP infer (press): ", str(self.pressure.cumtime_infer).split('.')[0])
-        if self.wall_stress.is_gp_model:
-            print(" - GP train (shear): ", str(self.wall_stress.cumtime_train).split('.')[0])
-            print(" - GP infer (shear): ", str(self.wall_stress.cumtime_infer).split('.')[0])
+        if self.wall_stress_xz.is_gp_model:
+            print(" - GP train (shear_xz): ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
+            print(" - GP infer (shear_xz): ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
+        if self.wall_stress_yz.is_gp_model:
+            print(" - GP train (shear_yz): ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
+            print(" - GP infer (shear_yz): ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
+
         print(33 * '=')
 
         if not self.options['silent']:
@@ -196,12 +209,18 @@ class Problem:
                 with open(os.path.join(self.outdir, 'gp_press.txt'), 'w') as f:
                     print(self.pressure.gp, file=f)
 
-            if self.wall_stress.is_gp_model:
-                history_to_csv(os.path.join(self.outdir, 'gp_shear.csv'), self.wall_stress.history)
-                with open(os.path.join(self.outdir, 'gp_shear.txt'), 'w') as f:
-                    print(self.wall_stress.gp, file=f)
+            if self.wall_stress_xz.is_gp_model:
+                history_to_csv(os.path.join(self.outdir, 'gp_shear_xz.csv'), self.wall_stress_xz.history)
+                with open(os.path.join(self.outdir, 'gp_shear_xz.txt'), 'w') as f:
+                    print(self.wall_stress_xz.gp, file=f)
+
+            if self.wall_stress_yz.is_gp_model:
+                history_to_csv(os.path.join(self.outdir, 'gp_shear_yz.csv'), self.wall_stress_yz.history)
+                with open(os.path.join(self.outdir, 'gp_shear_yz.txt'), 'w') as f:
+                    print(self.wall_stress_yz.gp, file=f)
 
     # TODO: use these properties as accessors to fields without ghost cells
+
     @property
     def q(self) -> npt.NDArray[np.float64]:
         return self.__field.p
@@ -263,7 +282,8 @@ class Problem:
         # write hyperparameters
         if params:
             self.pressure.write()
-            self.wall_stress.write()
+            self.wall_stress_xz.write()
+            self.wall_stress_yz.write()
 
     def _initialize(self, rho0, U, V):
         self.__field.p[0] = rho0
@@ -301,7 +321,8 @@ class Problem:
         for i, d in enumerate(directions):
 
             self.pressure.update(predictor=i == 0)
-            self.wall_stress.update(predictor=i == 0)
+            self.wall_stress_xz.update(predictor=i == 0)
+            self.wall_stress_yz.update(predictor=i == 0)
             self.bulk_stress.update()
 
             fX, fY = predictor_corrector(self.__field.p,
@@ -313,8 +334,8 @@ class Problem:
             src = source(self.__field.p,
                          self.__gap_height.p,
                          self.bulk_stress.stress,
-                         self.wall_stress.lower,
-                         self.wall_stress.upper)
+                         self.wall_stress_xz.lower + self.wall_stress_yz.lower,
+                         self.wall_stress_xz.upper + self.wall_stress_yz.upper)
 
             self.__field.p = self.__field.p - dt * (fX / dx + fY / dy - src)
 
@@ -344,8 +365,8 @@ class Problem:
         if np.all(self.grid['bc_yS_P']):
             self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
         else:
-            self.__field.p[self.grid['bc_yS_D'] == 'D', :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
-            self.__field.p[self.grid['bc_yS_D'] == 'N', :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
+            self.__field.p[self.grid['bc_yS_D'], :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
+            self.__field.p[self.grid['bc_yS_N'], :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
 
         # y1
         if np.all(self.grid['bc_yN_P']):

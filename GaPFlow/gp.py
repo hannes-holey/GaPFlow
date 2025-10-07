@@ -192,10 +192,7 @@ class GaussianProcessSurrogate:
     def _active_learning(self, var):
 
         imax = np.argmax(var)
-
         Xnew = self._Xtest[imax, :][:, None]
-        # Ynew = get_new_training_output_mock(Xnew, self.prop,
-        #                                     noise_stddev=self.noise)  # replace w/ MD call
 
         self.database.add_data(Xnew, prop=self.prop, geo=self.geo, noise=self.noise)
 
@@ -247,7 +244,7 @@ class GaussianProcessSurrogate:
         return jnp.vstack([self.gap,
                            self.density[0][None, :, :],
                            self.density[1][None, :, :],
-                           self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
+                           self.density[2][None, :, :]  # * jnp.sign(self.density[2][None, :, :])
                            ]).reshape(6, -1).T
 
 

@@ -111,7 +111,7 @@ class Database:
         self.write()
 
     def normalizer(self, x):
-        # TODO: different normalizers
+
         return jnp.maximum(jnp.max(jnp.abs(x), axis=0), 1e-12)
 
     @property
@@ -141,8 +141,8 @@ def get_new_training_input(Xtest, Nsample, width=1e-2):
         jabs = jnp.hypot(jnp.mean(Xtest[4, :]), jnp.mean(Xtest[5, :]))
         rho = jnp.mean(Xtest[3, :])
 
-        l_bounds = jnp.array([(1. - width) * rho, 0.5 * jabs, 0.])
-        u_bounds = jnp.array([(1. + width) * rho, 1.5 * jabs, 0.5 * jabs])
+        l_bounds = jnp.array([(1. - width) * rho, 0.5 * jabs, -0.5 * jabs])
+        u_bounds = jnp.array([(1. + width) * rho, 1.5 * jabs, +0.5 * jabs])
 
         dim = len(l_bounds)
 

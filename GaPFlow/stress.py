@@ -12,20 +12,27 @@ class WallStress(GaussianProcessSurrogate):
 
     name = "shear"
 
-    def __init__(self, fc, prop, geo, data=None, gp=None):
-        self.__field = fc.real_field('wall_stress', (12,))
+    def __init__(self, fc, prop, geo, direction='x', data=None, gp=None):
+        self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
         self.geo = geo
         self.prop = prop
+        self.name = f'shear_{direction}z'
+
+        if direction == 'x':
+            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
+            self._out_index = 4
+        elif direction == 'y':
+            self.active_dims = [0, 3, 5, ]
+            self._out_index = 3
 
         if gp is not None:
-            self.noise = (gp['press']['obs_stddev'],
-                          gp['shear']['obs_stddev'])
+            self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
+                          gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
 
             gp = gp['shear']
 
-            self.__field_variance = fc.real_field('wall_stress_var')
-            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
-            # self.noise = gp['obs_stddev']
+            self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
+
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
@@ -43,6 +50,8 @@ class WallStress(GaussianProcessSurrogate):
             }
 
             self._train()
+            self._infer()
+            # self.maximum_variance = self.kernel_variance
 
     @property
     def full(self):
@@ -80,8 +89,8 @@ class WallStress(GaussianProcessSurrogate):
 
     @property
     def Ytrain(self):
-        return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, 5],
-                                self.database.Ytrain[:self.last_fit_train_size, 11]])
+        return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, self._out_index + 1],
+                                self.database.Ytrain[:self.last_fit_train_size, self._out_index + 7]])
 
     @property
     def Yscale(self):
@@ -120,15 +129,15 @@ class WallStress(GaussianProcessSurrogate):
                           X[:3],  # h, dhdx, dhdy
                           U, V, eta, zeta, 0.)
 
-        return jnp.vstack([Ybot[4],
-                           Ytop[4]])
+        return jnp.vstack([Ybot[self._out_index],
+                           Ytop[self._out_index]])
 
     def update(self, predictor=False):
 
         if self.is_gp_model:
             mean, var = self.predict(predictor)
-            self.__field.p[4] = mean[0, :, :]
-            self.__field.p[10] = mean[1, :, :]
+            self.__field.p[self._out_index] = mean[0, :, :]
+            self.__field.p[self._out_index + 6] = mean[1, :, :]
             self.__field_variance.p = var[0, :, :]
         else:
             U = self.geo['U']
@@ -136,13 +145,13 @@ class WallStress(GaussianProcessSurrogate):
             eta = self.prop['shear']
             zeta = self.prop['bulk']
 
-            self.__field.p[:6] = stress_bottom(self.density,
-                                               self.gap,
-                                               U, V, eta, zeta, 0.)
+            self.__field.p[self._out_index] = stress_bottom(self.density,
+                                                            self.gap,
+                                                            U, V, eta, zeta, 0.)[self._out_index]
 
-            self.__field.p[6:] = stress_top(self.density,
-                                            self.gap,
-                                            U, V, eta, zeta, 0.)
+            self.__field.p[self._out_index + 6] = stress_top(self.density,
+                                                             self.gap,
+                                                             U, V, eta, zeta, 0.)[self._out_index]
 
 
 class BulkStress(GaussianProcessSurrogate):
@@ -203,10 +212,10 @@ class Pressure(GaussianProcessSurrogate):
         self.prop = prop
 
         if gp is not None:
-            self.noise = (gp['press']['obs_stddev'],
-                          gp['shear']['obs_stddev'])
+            self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
+                          gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
 
-            gp = gp['shear']
+            gp = gp['press']
 
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
