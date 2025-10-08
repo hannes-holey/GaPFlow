@@ -25,7 +25,7 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] Catch sigterm
 - [X] 2D problems
 - [X] Viscosity models with plots
-- [ ] Docstrings & typing
+- [X] Docstrings & typing (important parts)
 - [ ] MD setup
 - [ ] Unit tests and integration tests
 - [ ] MPI parallel
