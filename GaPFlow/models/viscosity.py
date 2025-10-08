@@ -1,6 +1,32 @@
 import numpy as np
 
 
+def piezoviscosity(p, mu0, piezo_dict):
+
+    # name = piezo_dict.pop('type', None)
+
+    if piezo_dict['name'] == 'Barus':
+        func = barus_piezo
+    elif piezo_dict['name'] == 'Roelands':
+        func = roelands_piezo
+    else:
+        func = lambda p, mu, **kwargs: np.ones_like(p) * mu
+
+    return func(p, mu0, **piezo_dict)
+
+
+def shear_thinning_factor(shear_rate, mu0, thinning_dict):
+
+    if thinning_dict['name'] == 'Eyring':
+        func = eyring_shear
+    elif thinning_dict['name'] == 'Carreau':
+        func = carreau_shear
+    else:
+        func = lambda gamma, mu, **kwargs: np.ones_like(gamma)
+
+    return func(shear_rate, mu0, **thinning_dict)
+
+
 def srate_wall_newton(dp_dx, h=1., u1=1., u2=0., mu=1.):
     """
     Shear rate of a Newtonian fluid at bottom and top walls.
@@ -12,7 +38,17 @@ def srate_wall_newton(dp_dx, h=1., u1=1., u2=0., mu=1.):
     return -duPois + duCarr, duPois + duCarr
 
 
-def barus_piezo(p, mu0, aB):
+def shear_rate_avg(dp_dx, dp_dy, h, u1, u2, mu):
+
+    # instead of different viscosities in x and y direction
+    grad_p = np.hypot(dp_dx, dp_dy)
+
+    sr_bot, sr_top = srate_wall_newton(grad_p, h, u1, u2, mu)
+
+    return (np.abs(sr_top) + np.abs(sr_bot)) / 2.
+
+
+def barus_piezo(p, mu0, aB=2.e-8, name='Barus'):
     """
     Computes viscosity under pressure using the Barus equation.
 
@@ -36,39 +72,39 @@ def barus_piezo(p, mu0, aB):
     return mu0 * np.exp(aB * p)
 
 
-def vogel_piezo(rho, rho0, mu_inf, phi_inf, BF, g):
+def roelands_piezo(p, mu0, mu_inf=1.e-3, p_ref=1.96e8, z=0.68, name='Roelands'):
     """
-    Computes viscosity from density using the Vogel-Fulcher-like empirical law.
+    Computes the pressure-dependent viscosity using Roeland's empirical piezoviscosity equation.
+
+    Roeland's equation models the increase of viscosity with pressure, commonly used 
+    in elastohydrodynamic lubrication and high-pressure fluid applications.
 
     .. math::
-        \\phi = \\left(\\frac{\\rho_0}{\\rho}\\right)^g, \\quad
-        \\mu(\\rho) = \\mu_\\infty e^{B_F \\phi_\\infty / (\\phi - \\phi_\\infty)}
+        \\mu(p) = \\mu_0 * \\exp( \\ln(\\mu_0/\\mu_{\\infty})(-1 + (1 + p/p_R)^z_R))
 
     Parameters
     ----------
-    rho : float or np.ndarray
-        Density.
-    rho0 : float
-        Reference density.
+    p : float or np.ndarray
+        Pressure at which the viscosity is evaluated.
+    mu0 : float
+        Viscosity at ambient pressure.
     mu_inf : float
-        Asymptotic high-density viscosity.
-    phi_inf : float
-        Vogel parameter.
-    BF : float
-        Vogel-Fulcher constant.
-    g : float
-        Density exponent.
+        Viscosity at very high pressure.
+    pR : float
+        Reference pressure, characteristic of the fluid.
+    zR : float
+        Pressure exponent, controlling the curvature of the viscosity increase.
 
     Returns
     -------
     float or np.ndarray
-        Density-dependent viscosity.
+        Pressure-dependent viscosity, same shape as `p`.
     """
-    phi = (rho0 / rho)**g
-    return mu_inf * np.exp(BF * phi_inf / (phi - phi_inf))
+
+    return mu0 * np.exp(np.log(mu0 / mu_inf) * (-1 + (1 + p / p_ref)**z))
 
 
-def eyring_shear(shear_rate, mu0, tau0):
+def eyring_shear(shear_rate, mu0, tauE=5.e5, name='Eyring'):
     """
     Computes shear-thinning viscosity using the Eyring model.
 
@@ -82,18 +118,19 @@ def eyring_shear(shear_rate, mu0, tau0):
         Shear rate.
     mu0 : float
         Zero-shear viscosity.
-    tau0 : float
-        Characteristic shear stress.
+    tauE : float
+        Eyring stress.
 
     Returns
     -------
     float or np.ndarray
         Shear-rate-dependent viscosity.
     """
-    return tau0 / shear_rate * np.arcsinh(mu0 * shear_rate / tau0)
+    tau0 = mu0 * shear_rate
+    return tauE / tau0 * np.arcsinh(tau0 / tauE)
 
 
-def carreau_shear(shear_rate, mu0, mu_inf, lam, a, N):
+def carreau_shear(shear_rate, mu0, mu_inf=1.e-3, lam=0.02, a=2, N=0.8, name='Carreau'):
     """
     Computes shear-thinning viscosity using the Carreau model.
 
@@ -121,28 +158,6 @@ def carreau_shear(shear_rate, mu0, mu_inf, lam, a, N):
     float or np.ndarray
         Shear-rate-dependent viscosity.
     """
-    return mu_inf + (mu0 - mu_inf) * (1 + (lam * shear_rate)**a)**((N - 1) / a)
+    mu = mu_inf + (mu0 - mu_inf) * (1 + (lam * shear_rate)**a)**((N - 1) / a)
 
-
-def power_law_shear(shear_rate, mu0, N):
-    """
-    Computes viscosity using the simple power-law model.
-
-    .. math::
-        \\mu(\\dot{\\gamma}) = \\mu_0 \\dot{\\gamma}^{N - 1}
-
-    Parameters
-    ----------
-    shear_rate : float or np.ndarray
-        Shear rate.
-    mu0 : float
-        Consistency coefficient.
-    N : float
-        Flow behavior index.
-
-    Returns
-    -------
-    float or np.ndarray
-        Shear-rate-dependent viscosity.
-    """
-    return mu0 * shear_rate**(N - 1)
+    return mu / mu0

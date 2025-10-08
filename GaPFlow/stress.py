@@ -6,12 +6,18 @@ from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
 from GaPFlow.models.sound import eos_sound_velocity
+from GaPFlow.models.viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
 
 
 class WallStress(GaussianProcessSurrogate):
 
     def __init__(self, fc, prop, geo, direction='x', data=None, gp=None):
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
+        self.__pressure = fc.get_real_field('pressure')
+        self.__gap = fc.get_real_field('gap')
+        self.__x = fc.get_real_field('x')
+        self.__y = fc.get_real_field('y')
+
         self.geo = geo
         self.prop = prop
         self.name = f'{direction}z'
@@ -64,6 +70,22 @@ class WallStress(GaussianProcessSurrogate):
         return self.__field.p[:6]
 
     @property
+    def pressure(self):
+        return self.__pressure.p
+
+    @property
+    def dp_dx(self):
+        return jnp.gradient(self.pressure, self.__x.p[:, 0], axis=0)
+
+    @property
+    def dp_dy(self):
+        return jnp.gradient(self.pressure, self.__y.p[0, :], axis=1)
+
+    @property
+    def height(self):
+        return self.__gap.p[0]
+
+    @property
     def Xtest(self):
 
         X = jnp.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
@@ -110,40 +132,47 @@ class WallStress(GaussianProcessSurrogate):
     def obs_stddev(self):
         return self.Yerr
 
-    def get_output(self, X):
-
-        # For MD data: call update method from database (or external)
-
-        U = self.geo['U']
-        V = self.geo['V']
-        eta = self.prop['shear']
-        zeta = self.prop['bulk']
-
-        Ybot = stress_bottom(X[3:],  # q
-                             X[:3],  # h, dhdx, dhdy
-                             U, V, eta, zeta, 0.)
-
-        Ytop = stress_top(X[3:],  # q
-                          X[:3],  # h, dhdx, dhdy
-                          U, V, eta, zeta, 0.)
-
-        return jnp.vstack([Ybot[self._out_index],
-                           Ytop[self._out_index]])
-
     def update(self, predictor=False):
 
-        U = self.geo['U']
-        V = self.geo['V']
-        eta = self.prop['shear']
-        zeta = self.prop['bulk']
+        # piezoviscosity
+        if 'piezo' in self.prop.keys():
+            mu0 = piezoviscosity(self.pressure,
+                                 self.prop['shear'],
+                                 self.prop['piezo'])
+        else:
+            mu0 = self.prop['shear']
+
+        # shear-thinning
+        if 'thinning' in self.prop.keys():
+            shear_rate = shear_rate_avg(self.dp_dx,
+                                        self.dp_dy,
+                                        self.height,
+                                        self.geo['U'],
+                                        self.geo['V'],
+                                        mu0)
+
+            shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
+                                                          self.prop['thinning'])
+        else:
+            shear_viscosity = mu0
 
         s_bot = stress_bottom(self.density,
                               self.gap,
-                              U, V, eta, zeta, 0.)
+                              self.geo['U'],
+                              self.geo['V'],
+                              shear_viscosity,
+                              self.prop['bulk'],
+                              0.  # slip length
+                              )
 
         s_top = stress_top(self.density,
                            self.gap,
-                           U, V, eta, zeta, 0.)
+                           self.geo['U'],
+                           self.geo['V'],
+                           shear_viscosity,
+                           self.prop['bulk'],
+                           0.  # slip length
+                           )
 
         # FIXME: this is probably wrong if only one direction (xz or yz) is a GP model
         self.__field.p[:3] = s_bot[:3] / 2.
@@ -168,9 +197,13 @@ class BulkStress(GaussianProcessSurrogate):
 
     def __init__(self, fc, prop, geo, data=None, gp=None):
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
+        self.__pressure = fc.get_real_field('pressure')
+        self.__gap = fc.get_real_field('gap')
+        self.__x = fc.get_real_field('x')
+        self.__y = fc.get_real_field('y')
+
         self.geo = geo
         self.prop = prop
-
         self.is_gp_model = False
         self.noise = 0.
 
@@ -180,33 +213,53 @@ class BulkStress(GaussianProcessSurrogate):
     def stress(self):
         return self.__field.p
 
-    def model_setup(self):
-        pass
+    @property
+    def pressure(self):
+        return self.__pressure.p
 
-    def get_output(self, X):
+    @property
+    def dp_dx(self):
+        return jnp.gradient(self.pressure, self.__x.p[:, 0], axis=0)
 
-        # For MD data: call update method from database (or external)
+    @property
+    def dp_dy(self):
+        return jnp.gradient(self.pressure, self.__y.p[0, :], axis=1)
 
-        U = self.geo['U']
-        V = self.geo['V']
-        eta = self.prop['shear']
-        zeta = self.prop['bulk']
-
-        Y = stress_avg(X[3:],  # q
-                       X[:3],  # h, dhdx, dhdy
-                       U, V, eta, zeta, 0.)
-
-        return Y
+    @property
+    def height(self):
+        return self.__gap.p[0]
 
     def update(self):
-        U = self.geo['U']
-        V = self.geo['V']
-        eta = self.prop['shear']
-        zeta = self.prop['bulk']
+        # piezoviscosity
+        if 'piezo' in self.prop.keys():
+            mu0 = piezoviscosity(self.pressure,
+                                 self.prop['shear'],
+                                 self.prop['piezo'])
+        else:
+            mu0 = self.prop['shear']
+
+        # shear-thinning
+        if 'thinning' in self.prop.keys():
+            shear_rate = shear_rate_avg(self.dp_dx,
+                                        self.dp_dy,
+                                        self.height,
+                                        self.geo['U'],
+                                        self.geo['V'],
+                                        mu0)
+
+            shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
+                                                          self.prop['thinning'])
+        else:
+            shear_viscosity = mu0
 
         self.__field.p = stress_avg(self.density,
                                     self.gap,
-                                    U, V, eta, zeta, 0.)
+                                    self.geo['U'],
+                                    self.geo['V'],
+                                    shear_viscosity,
+                                    self.prop['bulk'],
+                                    0.  # slip length
+                                    )
 
 
 class Pressure(GaussianProcessSurrogate):
@@ -298,10 +351,6 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def obs_stddev(self):
         return self.Yerr
-
-    def get_output(self, X):
-        # For MD data: call update method from database (or external)
-        return eos_pressure(X[3], self.prop)[None, :]
 
     def update(self, predictor=False):
 

@@ -36,8 +36,6 @@ class Problem:
         else:
             db = None
 
-        assert 0
-
         # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics
@@ -69,14 +67,18 @@ class Problem:
         self.__gap_height = fc.get_real_field('gap')
 
         # Dependent fields
-        self.bulk_stress = BulkStress(fc, prop, geo, data=database)
-
         if grid['dim'] == 1:
             gpx = gp if gp['shear_gp'] else None
             gpy = None
         elif grid['dim'] == 2:
             gpx = gp if gp['shear_gp'] else None
             gpy = gp if gp['shear_gp'] else None
+
+        self.pressure = Pressure(fc, prop, geo,
+                                 data=database,
+                                 gp=gp if gp['press_gp'] else None)
+
+        self.bulk_stress = BulkStress(fc, prop, geo, data=database)
 
         self.wall_stress_xz = WallStress(fc, prop, geo,
                                          direction='x',
@@ -87,10 +89,6 @@ class Problem:
                                          direction='y',
                                          data=database,
                                          gp=gpy)
-
-        self.pressure = Pressure(fc, prop, geo,
-                                 data=database,
-                                 gp=gp if gp['press_gp'] else None)
 
         # TODO: numerics settings override (to continue a simulation)
         # Numerics

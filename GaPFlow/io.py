@@ -227,6 +227,8 @@ def sanitize_properties(d):
     if out['shear'] < 0.:
         raise IOError("Specify a a (non-negative) shear viscosity")
     out['bulk'] = float(d.get('bulk', -1.))
+    if out['shear'] < 0.:
+        raise IOError("Specify a a (non-negative) bulk viscosity")
 
     # EOS
     available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR']
@@ -266,43 +268,40 @@ def sanitize_properties(d):
         out['rho0'] = float(d.get('rho0', 1.))
 
     # Non-Newtonian behavior
-    # Piezoviscosity: Barus, Vogel, (Roelandts)
-    available_piezo = ['Barus', 'Vogel']
+    # Piezoviscosity: Barus, Roelands
+    available_piezo = ['Barus', 'Roelands']
     if 'piezo' in d.keys():
         out['piezo'] = {}
-        out['piezo']['type'] = str(d['piezo'].get('type', 'none'))
+        out['piezo']['name'] = str(d['piezo'].get('name', 'none'))
 
-        if out['piezo']['type'] == "Vogel":
-            keys = ['rho0', 'mu_inf', 'phi_inf', 'BF', 'g']
-            defaults = []
-        elif out['piezo']['type'] == "Barus":
+        if out['piezo']['name'] == "Roelands":
+            keys = ['mu_inf', 'p_ref', 'z']
+            defaults = [1.e-3, 1.96e8, 0.68]
+        elif out['piezo']['name'] == "Barus":
             keys = ['aB']
-            defaults = []
+            defaults = [20e-9]
 
-        if out['piezo']['type'] in available_piezo:
+        if out['piezo']['name'] in available_piezo:
             for k, de in zip(keys, defaults):
-                out[k] = float(d.get(k, de))
+                out['piezo'][k] = float(d['piezo'].get(k, de))
 
     # Shear-thinning:
-    available_thinning = ['Carreau', 'Eyring', 'PL']
+    available_thinning = ['Carreau', 'Eyring']
 
     if 'thinning' in d.keys():
         out["thinning"] = {}
-        out["thinning"]["type"] = str(d['thinning'].get('type', 'none'))
+        out["thinning"]["name"] = str(d['thinning'].get('name', 'none'))
 
-        if out['thinning']['type'] == "Carreau":
+        if out['thinning']['name'] == "Carreau":
             keys = ['mu_inf', 'lam', 'a', 'N']
-            defaults = []
-        elif out['thinning']['type'] == "Eyring":
-            keys = ['tau0']
-            defaults = []
-        elif out['thinning']['type'] == "PL":
-            keys = ['N']
-            defaults = []
+            defaults = [1.e-9, 1e-6, 2., 0.6]
+        elif out['thinning']['name'] == "Eyring":
+            keys = ['tauE']
+            defaults = [5.e5, ]
 
-        if out['thinning']['type'] in available_thinning:
+        if out['thinning']['name'] in available_thinning:
             for k, de in zip(keys, defaults):
-                out['thinning'][k] = float(d.get(k, de))
+                out['thinning'][k] = float(d['thinning'].get(k, de))
 
     print_dict(out)
 
