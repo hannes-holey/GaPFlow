@@ -11,6 +11,6 @@ def test_addition():
     Xnew = np.random.uniform(size=(10, 6))
     geo = {'U': 1., 'V': 0.}
     prop = {'shear': 1., 'bulk': 0., 'EOS': 'PL'}
-    db.add_data(Xnew.T, prop=prop, geo=geo)
+    db.add_data(Xnew, prop=prop, geo=geo)
 
     assert db.size == 10

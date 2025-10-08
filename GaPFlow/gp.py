@@ -304,7 +304,7 @@ class GaussianProcessSurrogate:
             Predictive variance field.
         """
         imax = np.argmax(var)
-        Xnew = self._Xtest[imax, :][:, None]
+        Xnew = self._Xtest[imax, :][None, :]
         self.database.add_data(Xnew, prop=self.prop, geo=self.geo, noise=self.noise)
 
     # ------------------------------------------------------------------
