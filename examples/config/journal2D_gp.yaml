@@ -22,7 +22,7 @@ geometry:
     U: 0.1
     V: 0.
 numerics:
-    CFL: 0.1
+    CFL: 0.25
     adaptive: 1
     tol: 1e-9
     dt: 1e-10
