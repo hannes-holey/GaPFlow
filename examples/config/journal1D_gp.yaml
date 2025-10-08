@@ -20,7 +20,7 @@ geometry:
     U: 0.1
     V: 0.
 numerics:
-    CFL: 0.5
+    CFL: 0.25
     adaptive: 1
     tol: 1e-9
     dt: 1e-10
@@ -34,6 +34,10 @@ properties:
     T0: 323.15
     C1: 3.5e10
     C2: 1.23
+    thinning:
+        type: 'PL'
+    piezo:
+        type: 'Barus'
 gp:
     press:
         fix_noise: True

@@ -74,9 +74,14 @@ class Gap:
 
     def __init__(self, fc, grid, geo):
 
-        self.field = fc.real_field('gap', (3,))
-
         xx, yy = create_midpoint_grid(grid)
+
+        self.__field = fc.real_field('gap', (3,))
+        self._x = fc.real_field('x')
+        self._y = fc.real_field('y')
+
+        self._x.p = xx
+        self._y.p = yy
 
         if geo['type'] == 'journal':
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
@@ -94,18 +99,18 @@ class Gap:
             ix = 2
             iy = 1
 
-        self.field.p[0] = h
-        self.field.p[ix] = dh_dx
-        self.field.p[iy] = dh_dy
+        self.__field.p[0] = h
+        self.__field.p[ix] = dh_dx
+        self.__field.p[iy] = dh_dy
 
     @property
     def h(self):
-        return self.field.p[0]
+        return self.__field.p[0]
 
     @property
     def dh_dx(self):
-        return self.field.p[1]
+        return self.__field.p[1]
 
     @property
     def dh_dy(self):
-        return self.field.p[2]
+        return self.__field.p[2]

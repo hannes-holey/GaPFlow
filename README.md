@@ -24,10 +24,10 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] DB config via sep YAML block
 - [X] Catch sigterm
 - [X] 2D problems
-- [ ] MD setup
-- [ ] Viscosity models with plots
-- [ ] Unit tests and integration tests
+- [X] Viscosity models with plots
 - [ ] Docstrings & typing
+- [ ] MD setup
+- [ ] Unit tests and integration tests
 - [ ] MPI parallel
 - [ ] Documentation with examples
 - [ ] JOSS submission (w or w/o elasticity?)
