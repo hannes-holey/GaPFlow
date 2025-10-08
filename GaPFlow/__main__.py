@@ -1,5 +1,7 @@
-from argparse import ArgumentParser
 from GaPFlow.problem import Problem
+from argparse import ArgumentParser
+# from jaxtyping import install_import_hook
+# install_import_hook("GaPFlow", "beartype")
 
 
 def get_parser():

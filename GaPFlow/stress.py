@@ -1,5 +1,9 @@
+import numpy as np
+import numpy.typing as npt
 import jax.numpy as jnp
 from jax import vmap, grad
+from jax import Array
+from typing import Optional, Tuple, Any
 
 from GaPFlow.gp import GaussianProcessSurrogate
 from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
@@ -8,10 +12,43 @@ from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
 from GaPFlow.models.sound import eos_sound_velocity
 from GaPFlow.models.viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
 
+NDArray = npt.NDArray[np.floating]
+JAXArray = Array
+
 
 class WallStress(GaussianProcessSurrogate):
+    """
+    Wall stress model (wall shear/stress in xz or yz direction).
 
-    def __init__(self, fc, prop, geo, direction='x', data=None, gp=None):
+    This class can operate in two modes:
+    - Deterministic: compute wall/boundary stresses from viscous models.
+    - GP-based surrogate: train/predict wall stress using GaussianProcessSurrogate.
+
+    Parameters
+    ----------
+    fc : muGrid.GlobalFieldCollection
+        Field collection that provides access to 'pressure', 'gap', 'x', 'y', etc.
+    prop : dict
+        Physical properties (e.g., 'shear', 'bulk', optionally 'piezo', 'thinning').
+    geo : dict
+        Geometry and flow parameters (e.g., 'U', 'V').
+    direction : {'x', 'y'}, optional
+        Direction of the wall stress ('x' -> xz component, 'y' -> yz component).
+    data : Database or None, optional
+        Training database if using GP surrogates.
+    gp : dict or None, optional
+        GP configuration dictionary (if using GP surrogates).
+    """
+
+    def __init__(
+        self,
+        fc: Any,
+        prop: dict,
+        geo: dict,
+        direction: str = 'x',
+        data: Optional[Any] = None,
+        gp: Optional[dict] = None
+    ) -> None:
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
         self.__pressure = fc.get_real_field('pressure')
         self.__gap = fc.get_real_field('gap')
@@ -57,37 +94,104 @@ class WallStress(GaussianProcessSurrogate):
             self._infer()
             # self.maximum_variance = self.kernel_variance
 
+    # -------------------------
+    # Properties
+    # -------------------------
     @property
-    def full(self):
+    def full(self) -> NDArray:
+        """
+        Full wall stress field including upper and lower components.
+
+        Returns
+        -------
+        ndarray
+            Array holding 12 components for wall stress (6 lower + 6 upper).
+        """
         return self.__field.p
 
     @property
-    def upper(self):
+    def upper(self) -> NDArray:
+        """
+        Upper-wall stress slice.
+
+        Returns
+        -------
+        ndarray
+            Upper half of the wall stress components (6 entries).
+        """
         return self.__field.p[6:]
 
     @property
-    def lower(self):
+    def lower(self) -> NDArray:
+        """
+        Lower-wall stress slice.
+
+        Returns
+        -------
+        ndarray
+            Lower half of the wall stress components (6 entries).
+        """
         return self.__field.p[:6]
 
     @property
-    def pressure(self):
+    def pressure(self) -> NDArray:
+        """
+        Local pressure field.
+
+        Returns
+        -------
+        ndarray
+            Pressure field from the field collection.
+        """
         return self.__pressure.p
 
     @property
-    def dp_dx(self):
-        return jnp.gradient(self.pressure, self.__x.p[:, 0], axis=0)
+    def dp_dx(self) -> NDArray:
+        """
+        Partial derivative of pressure with respect to x (∂p/∂x).
+
+        Returns
+        -------
+        ndarra
+            Gradient along x computed with jnp.gradient.
+        """
+        return np.gradient(self.pressure, self.__x.p[:, 0], axis=0)
 
     @property
-    def dp_dy(self):
-        return jnp.gradient(self.pressure, self.__y.p[0, :], axis=1)
+    def dp_dy(self) -> NDArray:
+        """
+        Partial derivative of pressure with respect to y (∂p/∂y).
+
+        Returns
+        -------
+        ndarray
+            Gradient along y computed with jnp.gradient.
+        """
+        return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
 
     @property
-    def height(self):
+    def height(self) -> NDArray:
+        """
+        Gap height field.
+
+        Returns
+        -------
+        ndarray
+            Gap height array (typically the first component of gap field).
+        """
         return self.__gap.p[0]
 
     @property
-    def Xtest(self):
+    def Xtest(self) -> Tuple[JAXArray, JAXArray]:
+        """
+        Test inputs for GP prediction.
 
+        Returns
+        -------
+        tuple of jax.Array
+            (X, flag) where X contains duplicated and scaled features and flag
+            indicates which output (lower/upper) the sample corresponds to.
+        """
         X = jnp.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
                              (self._Xtest / self.database.X_scale)[:, self.active_dims]])
 
@@ -97,8 +201,15 @@ class WallStress(GaussianProcessSurrogate):
         return X, flag
 
     @property
-    def Xtrain(self):
+    def Xtrain(self) -> Tuple[JAXArray, JAXArray]:
+        """
+        Training inputs for GP (duplicated to account for two outputs).
 
+        Returns
+        -------
+        tuple of jax.Array
+            (X, flag) where X contains duplicated input rows and flag labels.
+        """
         X = jnp.concatenate([self.database.Xtrain[:, self.active_dims],
                              self.database.Xtrain[:, self.active_dims]])
 
@@ -108,32 +219,71 @@ class WallStress(GaussianProcessSurrogate):
         return X, flag
 
     @property
-    def Ytrain(self):
+    def Ytrain(self) -> JAXArray:
+        """
+        Training outputs for GP corresponding to the lower and upper wall stress.
+
+        Returns
+        -------
+        jax.Array
+            Concatenated array of training outputs (lower then upper).
+        """
         return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, self._out_index + 1],
                                 self.database.Ytrain[:self.last_fit_train_size, self._out_index + 7]])
 
     @property
-    def Yscale(self):
+    def Yscale(self) -> JAXArray:
+        """
+        Output scaling factor used for normalization.
+
+        Returns
+        -------
+        jax.Array
+            Scalar-like array representing the maximum of selected Y scales.
+        """
         return jnp.max(self.database.Y_scale[jnp.array([5, 11], dtype=int)])
 
     @property
-    def Yerr(self):
+    def Yerr(self) -> JAXArray:
+        """
+        Observational error (normalized by Yscale).
+
+        Returns
+        -------
+        jax.Array
+            Observation noise standard deviation normalized by Yscale.
+        """
         return self.noise[1] / self.Yscale
 
     @property
-    def kernel_variance(self):
+    def kernel_variance(self) -> JAXArray:
+        """Return kernel variance (JAX scalar or array)."""
         return self.gp.kernel.kernels[0].kernel1.value
 
     @property
-    def kernel_lengthscale(self):
+    def kernel_lengthscale(self) -> JAXArray:
+        """Return kernel lengthscale(s)."""
         return self.gp.kernel.kernels[0].kernel2.scale
 
     @property
-    def obs_stddev(self):
+    def obs_stddev(self) -> JAXArray:
+        """Observation standard deviation (normalized)."""
         return self.Yerr
 
-    def update(self, predictor=False):
+    # -------------------------
+    # Update
+    # -------------------------
+    def update(self, predictor: bool = False) -> None:
+        """
+        Update wall stress: compute deterministic stresses and, if enabled,
+        perform GP prediction and place predicted mean and variance into the
+        appropriate field entries.
 
+        Parameters
+        ----------
+        predictor : bool, optional
+            Whether this update is part of the predictor stage.
+        """
         # piezoviscosity
         if 'piezo' in self.prop.keys():
             mu0 = piezoviscosity(self.pressure,
@@ -192,10 +342,21 @@ class WallStress(GaussianProcessSurrogate):
 
 
 class BulkStress(GaussianProcessSurrogate):
+    """
+    Bulk (gap-averaged) viscous stress model.
+
+    This model currently operates deterministically (no GP surrogate).
+    """
 
     name = "bulk"
 
-    def __init__(self, fc, prop, geo, data=None, gp=None):
+    def __init__(self,
+                 fc: Any,
+                 prop: dict,
+                 geo: dict,
+                 data: Optional[Any] = None,
+                 gp: Optional[dict] = None) -> None:
+
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
         self.__pressure = fc.get_real_field('pressure')
         self.__gap = fc.get_real_field('gap')
@@ -210,26 +371,32 @@ class BulkStress(GaussianProcessSurrogate):
         super().__init__(fc, data)
 
     @property
-    def stress(self):
+    def stress(self) -> NDArray:
+        """Return the bulk viscous stress field."""
         return self.__field.p
 
     @property
-    def pressure(self):
+    def pressure(self) -> NDArray:
+        """Return the pressure field."""
         return self.__pressure.p
 
     @property
-    def dp_dx(self):
-        return jnp.gradient(self.pressure, self.__x.p[:, 0], axis=0)
+    def dp_dx(self) -> NDArray:
+        """Return ∂p/∂x."""
+        return np.gradient(self.pressure, self.__x.p[:, 0], axis=0)
 
     @property
-    def dp_dy(self):
-        return jnp.gradient(self.pressure, self.__y.p[0, :], axis=1)
+    def dp_dy(self) -> NDArray:
+        """Return ∂p/∂y."""
+        return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
 
     @property
-    def height(self):
+    def height(self) -> NDArray:
+        """Return gap height array."""
         return self.__gap.p[0]
 
-    def update(self):
+    def update(self) -> None:
+        """Compute and store bulk viscous stress using viscous model."""
         # piezoviscosity
         if 'piezo' in self.prop.keys():
             mu0 = piezoviscosity(self.pressure,
@@ -263,10 +430,20 @@ class BulkStress(GaussianProcessSurrogate):
 
 
 class Pressure(GaussianProcessSurrogate):
+    """
+    Pressure model.
+
+    Supports deterministic pressure via eos_pressure or a GP surrogate.
+    """
 
     name = "zz"
 
-    def __init__(self, fc, prop, geo, data=None, gp=None):
+    def __init__(self,
+                 fc: Any,
+                 prop: dict,
+                 geo: dict,
+                 data: Optional[Any] = None,
+                 gp: Optional[dict] = None) -> None:
 
         self.__field = fc.real_field('pressure')
         self.geo = geo
@@ -304,11 +481,21 @@ class Pressure(GaussianProcessSurrogate):
             self._train()
 
     @property
-    def pressure(self):
+    def pressure(self) -> NDArray:
+        """Pressure field."""
         return self.__field.p
 
     @property
-    def v_sound(self) -> float:
+    def v_sound(self) -> NDArray | JAXArray:
+        """
+        Effective sound speed computed from the GP-based eos (if available)
+        or from the analytic eos_sound_velocity.
+
+        Returns
+        -------
+        jax.Array or scalar-like
+            Sound speed (may be a JAX array/scalar).
+        """
         if self.is_gp_model:
             eos_grad = vmap(grad(self.eos))
             vsound_squared = eos_grad(self.Xtest)[:, 1].max() * self.Yscale / self.database.X_scale[3]
@@ -318,42 +505,53 @@ class Pressure(GaussianProcessSurrogate):
             return eos_sound_velocity(self.mass_density, self.prop).max()
 
     @property
-    def Xtest(self):
+    def Xtest(self) -> JAXArray:
+        """Test inputs for pressure GP (not normalized)."""
         # not normalized
         return (self._Xtest / self.database.X_scale)[:, self.active_dims]
 
     @property
-    def Xtrain(self):
+    def Xtrain(self) -> JAXArray:
+        """Training inputs for pressure GP (normalized)."""
         # normalized
         return self.database.Xtrain[:, self.active_dims]
 
     @property
-    def Ytrain(self):
+    def Ytrain(self) -> JAXArray:
+        """Training outputs for pressure GP (normalized)."""
         # normalized
         return self.database.Ytrain[:self.last_fit_train_size, 0]
 
     @property
-    def Yscale(self):
+    def Yscale(self) -> JAXArray:
+        """Output scale for pressure (scalar-like jax.Array)."""
         return self.database.Y_scale[0]
 
     @property
-    def Yerr(self):
+    def Yerr(self) -> JAXArray:
+        """Observation noise (normalized) for pressure."""
         return self.noise[0] / self.Yscale
 
     @property
-    def kernel_variance(self):
+    def kernel_variance(self) -> JAXArray:
+        """Kernel variance for pressure GP."""
         return self.gp.kernel.kernel1.value
 
     @property
-    def kernel_lengthscale(self):
+    def kernel_lengthscale(self) -> JAXArray:
+        """Kernel lengthscale for pressure GP."""
         return self.gp.kernel.kernel2.scale
 
     @property
-    def obs_stddev(self):
+    def obs_stddev(self) -> JAXArray:
+        """Observation standard deviation for pressure GP."""
         return self.Yerr
 
-    def update(self, predictor=False):
-
+    def update(self, predictor: bool = False) -> None:
+        """
+        Update the pressure field: perform GP inference if enabled or
+        compute analytic pressure via eos_pressure.
+        """
         if self.is_gp_model:
             mean, var = self.predict(predictor)
             self.__field.p = mean

@@ -3,6 +3,7 @@ import io
 import signal
 import numpy as np
 import numpy.typing as npt
+from typing import Self, Type
 from copy import deepcopy
 from datetime import datetime
 from collections import deque
@@ -16,8 +17,22 @@ from GaPFlow.db import Database
 
 
 class Problem:
+    """
+    Problem driver for GaPFlow simulations.
 
-    def __init__(self, input_dict):
+    Sets up field collections, constitutive models (pressure, wall stress,
+    bulk stress), optional Gaussian-process surrogate databases, time-stepping
+    parameters, and I/O.
+
+    Parameters
+    ----------
+    input_dict : dict
+        Configuration dictionary parsed from YAML. Expected keys include
+        ``options``, ``grid``, ``properties``, ``geometry``, ``numerics``,
+        and optionally ``gp`` and ``db``.
+    """
+
+    def __init__(self, input_dict: dict) -> None:
 
         options = input_dict['options']
         grid = input_dict['grid']
@@ -132,26 +147,64 @@ class Problem:
                 field_names.append('pressure_var')
             self.file.register_field_collection(fc, field_names=field_names)
 
+    # ---------------------------
+    # Constructors
+    # ---------------------------
     @classmethod
-    def from_yaml(cls, fname):
-        print(f'Reading input file: {fname}')
-        with open(fname, 'r') as ymlfile:
+    def from_yaml(cls: Type[Self], fname: str) -> Self:
+        """
+        Create a Problem instance from a YAML file.
+
+        Parameters
+        ----------
+        fname : str
+            Path to YAML configuration file.
+
+        Returns
+        -------
+        Problem
+            Instantiated `Problem` object.
+        """
+        print(f"Reading input file: {fname}")
+        with open(fname, "r") as ymlfile:
             input_dict = read_yaml_input(ymlfile)
         return cls(input_dict)
 
     @classmethod
-    def from_string(cls, ymlstring):
+    def from_string(cls: Type[Self], ymlstring: str) -> Self:
+        """
+        Create a Problem instance from a YAML string.
+
+        Parameters
+        ----------
+        ymlstring : str
+            YAML content as a string.
+
+        Returns
+        -------
+        Problem
+            Instantiated `Problem` object.
+        """
         with io.StringIO(ymlstring) as ymlfile:
             input_dict = read_yaml_input(ymlfile)
         return cls(input_dict)
 
     @classmethod
-    def from_problem(cls, config, outfile):
-        # TODO: read a sanitized config file (yaml) and a NetCDF file
-        # to initialize a new problem from the last frame of an existing one
+    def from_problem(cls: Type[Self], config: str, outfile: str) -> Self:
+        """
+        Initialize a Problem from a sanitized config and an existing NetCDF file.
+        (Not implemented.)
+        """
         raise NotImplementedError
 
-    def run(self):
+    # ---------------------------
+    # Main run loop
+    # ---------------------------
+    def run(self) -> None:
+        """
+        Run the time-stepping loop until convergence, maximum iterations,
+        or until a termination signal is received.
+        """
 
         self._stop = False
 
@@ -181,12 +234,18 @@ class Problem:
 
         self.post_run()
 
-    def receive_signal(self, signum, frame):
+    def receive_signal(self, signum, frame) -> None:
+        """
+        Signal handler: set the `_stop` flag on termination signals.
+        """
         signals = [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGUSR1]
         if signum in signals:
             self._stop = True
 
-    def post_run(self):
+    def post_run(self) -> None:
+        """
+        Finalize run: write history, print timing and GP timing info.
+        """
 
         walltime = datetime.now() - self._tic
 
@@ -230,54 +289,58 @@ class Problem:
                 with open(os.path.join(self.outdir, 'gp_yz.txt'), 'w') as f:
                     print(self.wall_stress_yz.gp, file=f)
 
-    # TODO: use these properties as accessors to fields without ghost cells
+    # ---------------------------
+    # Convenience properties (field accessors)
+    # ---------------------------
 
     @property
-    def q(self) -> npt.NDArray[np.float64]:
+    def q(self) -> npt.NDArray[np.floating]:
+        """Full density field"""
         return self.__field.p
 
     @property
-    def density(self) -> npt.NDArray[np.float64]:
-        # centerline
+    def centerline_mass_density(self) -> npt.NDArray[np.floating]:
+        """Centerline mass density w/o ghost buffers"""
         return self.__field.p[0, 1:-1, self.grid['Ny'] // 2]
 
     @property
-    def flux_x(self) -> npt.NDArray[np.float64]:
-        # centerline
-        return self.__field.p[1, 1:-1, self.grid['Ny'] // 2]
-
-    @property
-    def flux_y(self) -> npt.NDArray[np.float64]:
-        # centerline
-        return self.__field.p[2, 1:-1, self.grid['Ny'] // 2]
-
-    @property
-    def mass(self) -> float:
+    def mass(self) -> np.floating:
+        """Total mass integrated over domain (scalar)."""
         return np.sum(self.__field.p[0] * self.__gap_height.p[0] * self.grid['dx'] * self.grid['dy'])
 
     @property
-    def kinetic_energy(self) -> float:
+    def kinetic_energy(self) -> np.floating:
+        """Total kinetic energy (scalar)."""
         return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
 
     @property
-    def v_max(self) -> float:
+    def v_max(self) -> np.floating:
+        """Maximum speed in the domain (scalar)."""
         return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
 
     @property
-    def dt_crit(self) -> float:
+    def dt_crit(self) -> np.floating:
+        """Critical timestep determined by grid spacing and sound speed."""
         return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.pressure.v_sound)
 
     @property
-    def cfl(self) -> float:
+    def cfl(self) -> np.floating:
+        """Current CFL number."""
         return self.dt / self.dt_crit
 
     @property
     def converged(self) -> bool:
+        """Return True if residuals in the buffer are below tolerance."""
         return np.all(np.array(self.residual_buffer) < self.tol)
 
-    def write(self, scalars=True, fields=True, params=True):
+    # ---------------------------
+    # I/O and state writing
+    # ---------------------------
 
-        # write scalars
+    def write(self, scalars: bool = True, fields: bool = True, params: bool = True) -> None:
+        """
+        Write scalars, fields and hyperparameters to disk as configured.
+        """
         if scalars:
             print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
             self.history["step"].append(self.step)
@@ -286,27 +349,34 @@ class Problem:
             self.history["residual"].append(self.residual)
             self.history["vsound"].append(self.pressure.v_sound)
 
-        # write fields
         if fields:
             self.file.append_frame().write()
 
-        # write hyperparameters
         if params:
             self.pressure.write()
             self.wall_stress_xz.write()
             self.wall_stress_yz.write()
 
-    def _initialize(self, rho0, U, V):
+    # ---------------------------
+    # Initialization and update helpers
+    # ---------------------------
+    def _initialize(self, rho0: float, U: float, V: float) -> None:
+        """
+        Initialize solution field with given base density and mean velocities.
+        """
         self.__field.p[0] = rho0
-        self.__field.p[1] = rho0 * U / 2.
-        self.__field.p[2] = rho0 * V / 2.
+        self.__field.p[1] = rho0 * U / 2.0
+        self.__field.p[2] = rho0 * V / 2.0
 
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
     def post_update(self) -> None:
+        """
+        Operations executed after each timestep: ghost cell comms, residual
+        update, time advance, and adaptive dt update if enabled.
+        """
         self._communicate_ghost_buffers()
 
-        # last_cfl = np.copy(self.cfl)
         self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old / self.cfl
         self.residual_buffer.append(self.residual)
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
@@ -314,13 +384,15 @@ class Problem:
         self.step += 1
         self.simtime += self.dt
 
-        # New time step
         if self.numerics["adaptive"]:
             self.dt = self.numerics["CFL"] * self.dt_crit
 
     def update(self) -> None:
-
-        switch = (self.step % 2 == 0) * 2 - 1 if self.numerics['MC_order'] == 0 else self.numerics['MC_order']
+        """
+        Single update iteration performing predictor-corrector for each sweep
+        direction and updating constitutive models (pressure, wall/bulk stress).
+        """
+        switch = (self.step % 2 == 0) * 2 - 1 if self.numerics["MC_order"] == 0 else self.numerics["MC_order"]
         directions = [[-1, 1], [1, -1]][(switch + 1) // 2]
 
         dx = self.grid["dx"]
@@ -330,133 +402,150 @@ class Problem:
         q0 = self.__field.p.copy()
 
         for i, d in enumerate(directions):
-
+            # update surrogates / constitutive models (predictor on first pass)
             self.pressure.update(predictor=i == 0)
             self.wall_stress_xz.update(predictor=i == 0)
             self.wall_stress_yz.update(predictor=i == 0)
             self.bulk_stress.update()
 
-            fX, fY = predictor_corrector(self.__field.p,
-                                         self.__gap_height.p,
-                                         self.pressure.pressure,
-                                         self.bulk_stress.stress,
-                                         d)
+            # fluxes and source terms
+            fX, fY = predictor_corrector(
+                self.__field.p,
+                self.__gap_height.p,
+                self.pressure.pressure,
+                self.bulk_stress.stress,
+                d,
+            )
 
-            src = source(self.__field.p,
-                         self.__gap_height.p,
-                         self.bulk_stress.stress,
-                         self.wall_stress_xz.lower + self.wall_stress_yz.lower,
-                         self.wall_stress_xz.upper + self.wall_stress_yz.upper)
+            src = source(
+                self.__field.p,
+                self.__gap_height.p,
+                self.bulk_stress.stress,
+                self.wall_stress_xz.lower + self.wall_stress_yz.lower,
+                self.wall_stress_xz.upper + self.wall_stress_yz.upper,
+            )
 
             self.__field.p = self.__field.p - dt * (fX / dx + fY / dy - src)
 
             self._communicate_ghost_buffers()
 
-        self.__field.p = (self.__field.p + q0) / 2.
+        # second-order temporal averaging (Crank-Nicolson-like)
+        self.__field.p = (self.__field.p + q0) / 2.0
 
         self.post_update()
 
+    # ---------------------------
+    # Ghost cell handling
+    # ---------------------------
     def _communicate_ghost_buffers(self) -> None:
-
-        # x0
-        if all(self.grid['bc_xE_P']):
+        """
+        Update ghost-cell values according to boundary conditions stored in
+        `self.grid`. This mutates the solution field `self.__field.p`.
+        """
+        # x0 (left)
+        if all(self.grid["bc_xE_P"]):
             self.__field.p[:, 0, :] = self.__field.p[:, -2, :].copy()
         else:
-            self.__field.p[self.grid['bc_xE_D'], :1, :] = self._get_ghost_cell_values('D', axis=0, direction=-1)
-            self.__field.p[self.grid['bc_xE_N'], :1, :] = self._get_ghost_cell_values('N', axis=0, direction=-1)
+            self.__field.p[self.grid["bc_xE_D"], :1, :] = self._get_ghost_cell_values("D", axis=0, direction=-1)
+            self.__field.p[self.grid["bc_xE_N"], :1, :] = self._get_ghost_cell_values("N", axis=0, direction=-1)
 
-        # x1
-        if np.all(self.grid['bc_xW_P']):
+        # x1 (right)
+        if np.all(self.grid["bc_xW_P"]):
             self.__field.p[:, -1, :] = self.__field.p[:, 1, :].copy()
         else:
-            self.__field.p[self.grid['bc_xW_D'], -1:, :] = self._get_ghost_cell_values('D', axis=0, direction=1)
-            self.__field.p[self.grid['bc_xW_N'], -1:, :] = self._get_ghost_cell_values('N', axis=0, direction=1)
+            self.__field.p[self.grid["bc_xW_D"], -1:, :] = self._get_ghost_cell_values("D", axis=0, direction=1)
+            self.__field.p[self.grid["bc_xW_N"], -1:, :] = self._get_ghost_cell_values("N", axis=0, direction=1)
 
-        # y0
-        if np.all(self.grid['bc_yS_P']):
+        # y0 (bottom)
+        if np.all(self.grid["bc_yS_P"]):
             self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
         else:
-            self.__field.p[self.grid['bc_yS_D'], :, :1] = self._get_ghost_cell_values('D', axis=1, direction=-1)
-            self.__field.p[self.grid['bc_yS_N'], :, :1] = self._get_ghost_cell_values('N', axis=1, direction=-1)
+            self.__field.p[self.grid["bc_yS_D"], :, :1] = self._get_ghost_cell_values("D", axis=1, direction=-1)
+            self.__field.p[self.grid["bc_yS_N"], :, :1] = self._get_ghost_cell_values("N", axis=1, direction=-1)
 
-        # y1
-        if np.all(self.grid['bc_yN_P']):
+        # y1 (top)
+        if np.all(self.grid["bc_yN_P"]):
             self.__field.p[:, :, -1] = self.__field.p[:, :, 1].copy()
         else:
-            self.__field.p[self.grid['bc_yN_D'], :, -1:] = self._get_ghost_cell_values('D', axis=1, direction=1)
-            self.__field.p[self.grid['bc_yN_N'], :, -1:] = self._get_ghost_cell_values('N', axis=1, direction=1)
+            self.__field.p[self.grid["bc_yN_D"], :, -1:] = self._get_ghost_cell_values("D", axis=1, direction=1)
+            self.__field.p[self.grid["bc_yN_N"], :, -1:] = self._get_ghost_cell_values("N", axis=1, direction=1)
 
-    def _get_ghost_cell_values(self, bc_type, axis, direction, num_ghost=1):
-        """Computes the ghost cell values for boundary conditions.
-
-        For Dirichlet BCs, the target value is reached at the interface between
-        the outermost cell within the physical domain and the first ghost cell.
-
-        Neumann BCs will always be with zero gradient.
-
-        For both type of BCs, two different interpolation schemes are implemented
-        depending on the number of ghost cells (num_ghost<=2).
-
+    def _get_ghost_cell_values(self,
+                               bc_type: str,
+                               axis: int,
+                               direction: int,
+                               num_ghost: int = 1) -> npt.NDArray[np.floating]:
+        """
+        Computes ghost cell values for Dirichlet ('D') or Neumann ('N') boundary
+        conditions.
 
         Parameters
         ----------
         bc_type : str
-            'D' for Dirichlet or 'N' for Neumann
+            'D' for Dirichlet or 'N' for Neumann.
         axis : int
-            Axis, either 0 for x or 1 for y axis.
+            0 for x-axis, 1 for y-axis.
         direction : int
-            Upstream (<0) or downstream (>1) direction.
+            Upstream (<0) or downstream (>0) direction.
         num_ghost : int
-            Number of ghost cells.
+            Number of ghost cells (<= 2 supported).
 
         Returns
         -------
-        np.ndarray
-            Ghost cell values.
+        Array
+            Ghost cell values extracted/computed for the selected mask.
         """
-
         assert bc_type in ["D", "N"]
 
-        if axis == 0:  # x
+        if axis == 0:  # x-axis
             if direction > 0:  # downstream
                 mask = self.grid[f"bc_xE_{bc_type}"]
                 q_target = self.grid["bc_xE_D_val"]
-                q_adj = self.__field.p[mask, -(num_ghost + num_ghost):-num_ghost, :]
+                q_adj = self.__field.p[mask, -(num_ghost + num_ghost): -num_ghost, :]
             else:  # upstream
                 mask = self.grid[f"bc_xW_{bc_type}"]
                 q_target = self.grid["bc_xW_D_val"]
-                q_adj = self.__field.p[mask, num_ghost:num_ghost + num_ghost, :]
+                q_adj = self.__field.p[mask, num_ghost: num_ghost + num_ghost, :]
 
-        elif axis == 1:  # y
+        elif axis == 1:  # y-axis
             if direction > 0:  # downstream
                 mask = self.grid[f"bc_yS_{bc_type}"]
                 q_target = self.grid["bc_yS_D_val"]
-                q_adj = self.__field.p[mask, :, -(num_ghost + num_ghost):-num_ghost]
+                q_adj = self.__field.p[mask, :, -(num_ghost + num_ghost): -num_ghost]
             else:  # upstream
                 mask = self.grid[f"bc_yN_{bc_type}"]
                 q_target = self.grid["bc_yN_D_val"]
-                q_adj = self.__field.p[mask, :, num_ghost:num_ghost + num_ghost]
+                q_adj = self.__field.p[mask, :, num_ghost: num_ghost + num_ghost]
         else:
-            raise RuntimeError("axis must be either 0 (x) or (y)")
+            raise RuntimeError("axis must be either 0 (x) or 1 (y)")
 
-        a1 = 1. / 2.
-        a2 = 0.
+        a1 = 0.5
+        a2 = 0.0
         q1 = q_adj
-        q2 = 0.
+        q2 = 0.0
 
         if bc_type == "D":
             Q = (q_target - a1 * q1 + a2 * q2) / (a1 - a2)
         else:
-            Q = ((1. - a1) * q1 + a2 * q2) / (a1 - a2)
+            Q = ((1.0 - a1) * q1 + a2 * q2) / (a1 - a2)
 
         return Q
 
+# ---------------------------
+# Signal handling helper
+# ---------------------------
 
-def handle_signals(func):
-    for s in [signal.SIGHUP,
-              signal.SIGINT,
-              signal.SIGHUP,
-              signal.SIGTERM,
-              signal.SIGUSR1,
-              signal.SIGUSR2]:
+
+def handle_signals(func) -> None:
+    """
+    Register a function as the handler for common termination signals.
+    """
+    for s in [
+        signal.SIGHUP,
+        signal.SIGINT,
+        signal.SIGHUP,
+        signal.SIGTERM,
+        signal.SIGUSR1,
+        signal.SIGUSR2,
+    ]:
         signal.signal(s, func)

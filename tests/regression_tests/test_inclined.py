@@ -69,7 +69,7 @@ def test_pressure(setup):
 
 def test_density(setup):
     problem, nc = setup
-    r_new = problem.density
+    r_new = problem.centerline_mass_density
     r_old = np.asarray(nc.variables['solution'])[-1, 0, 0, 1:-1, 1]
 
     np.testing.assert_almost_equal(r_new / r_new[0], r_old / r_old[0], decimal=4)

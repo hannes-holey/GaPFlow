@@ -1,9 +1,26 @@
 import numpy as np
+import numpy.typing as npt
 
 
-def piezoviscosity(p, mu0, piezo_dict):
+def piezoviscosity(p: float | npt.NDArray,
+                   mu0: float | npt.NDArray,
+                   piezo_dict: dict) -> float | npt.NDArray:
+    """Wrapper around implemented piezoviscosity models.
 
-    # name = piezo_dict.pop('type', None)
+    Parameters
+    ----------
+    p : float or Array
+        Pressure (field)
+    mu0 : float
+        Newtonian viscosity
+    piezo_dict : dict
+        Parameters
+
+    Returns
+    -------
+    float or Array
+        Pressure-dependent viscosity
+    """
 
     if piezo_dict['name'] == 'Barus':
         func = barus_piezo
@@ -15,7 +32,25 @@ def piezoviscosity(p, mu0, piezo_dict):
     return func(p, mu0, **piezo_dict)
 
 
-def shear_thinning_factor(shear_rate, mu0, thinning_dict):
+def shear_thinning_factor(shear_rate: float | npt.NDArray,
+                          mu0: float | npt.NDArray,
+                          thinning_dict: dict) -> float | npt.NDArray:
+    """Wrapper around implemented piezoviscosity models.
+
+    Parameters
+    ----------
+    shear_rate : float or Array
+        Shear rate (field)
+    mu0 : float
+        Newtonian viscosity
+    thinning_dict : dict
+        Parameters
+
+    Returns
+    -------
+    float or Array
+        Shear rate-dependent viscosity
+    """
 
     if thinning_dict['name'] == 'Eyring':
         func = eyring_shear
@@ -39,6 +74,30 @@ def srate_wall_newton(dp_dx, h=1., u1=1., u2=0., mu=1.):
 
 
 def shear_rate_avg(dp_dx, dp_dy, h, u1, u2, mu):
+    """Average shear rate.
+
+    This assumes a Newtonian flow profile, i.e. a linear shear rate across the gap.
+
+    Parameters
+    ----------
+    dp_dx : float or Array
+        Pressure gradient x
+    dp_dy : float or Array
+        Pressure gradient y
+    h : float or Array
+        Gap height
+    u1 : float
+        Velocity lower wall
+    u2 : float
+        Velocity upper wall
+    mu : float or Array
+        Viscosity
+
+    Returns
+    -------
+    float or Array
+        Average shear rate
+    """
 
     # instead of different viscosities in x and y direction
     grad_p = np.hypot(dp_dx, dp_dy)
@@ -57,7 +116,7 @@ def barus_piezo(p, mu0, aB=2.e-8, name='Barus'):
 
     Parameters
     ----------
-    p : float or np.ndarray
+    p : float or Array
         Pressure.
     mu0 : float
         Reference viscosity.
@@ -66,7 +125,7 @@ def barus_piezo(p, mu0, aB=2.e-8, name='Barus'):
 
     Returns
     -------
-    float or np.ndarray
+    float or Array
         Pressure-dependent viscosity.
     """
     return mu0 * np.exp(aB * p)
@@ -80,11 +139,11 @@ def roelands_piezo(p, mu0, mu_inf=1.e-3, p_ref=1.96e8, z=0.68, name='Roelands'):
     in elastohydrodynamic lubrication and high-pressure fluid applications.
 
     .. math::
-        \\mu(p) = \\mu_0 * \\exp( \\ln(\\mu_0/\\mu_{\\infty})(-1 + (1 + p/p_R)^z_R))
+        \\mu(p) = \\mu_0 * \\exp( \\ln(\\mu_0/\\mu_{\\infty})(-1 + (1 + p/p_{ref})^z))
 
     Parameters
     ----------
-    p : float or np.ndarray
+    p : float or Array
         Pressure at which the viscosity is evaluated.
     mu0 : float
         Viscosity at ambient pressure.
@@ -97,7 +156,7 @@ def roelands_piezo(p, mu0, mu_inf=1.e-3, p_ref=1.96e8, z=0.68, name='Roelands'):
 
     Returns
     -------
-    float or np.ndarray
+    float or Array
         Pressure-dependent viscosity, same shape as `p`.
     """
 
@@ -114,7 +173,7 @@ def eyring_shear(shear_rate, mu0, tauE=5.e5, name='Eyring'):
 
     Parameters
     ----------
-    shear_rate : float or np.ndarray
+    shear_rate : float or Array
         Shear rate.
     mu0 : float
         Zero-shear viscosity.
@@ -123,7 +182,7 @@ def eyring_shear(shear_rate, mu0, tauE=5.e5, name='Eyring'):
 
     Returns
     -------
-    float or np.ndarray
+    float or Array
         Shear-rate-dependent viscosity.
     """
     tau0 = mu0 * shear_rate
@@ -140,7 +199,7 @@ def carreau_shear(shear_rate, mu0, mu_inf=1.e-3, lam=0.02, a=2, N=0.8, name='Car
 
     Parameters
     ----------
-    shear_rate : float or np.ndarray
+    shear_rate : float or Array
         Shear rate.
     mu0 : float
         Zero-shear viscosity.
@@ -155,7 +214,7 @@ def carreau_shear(shear_rate, mu0, mu_inf=1.e-3, lam=0.02, a=2, N=0.8, name='Car
 
     Returns
     -------
-    float or np.ndarray
+    float or Array
         Shear-rate-dependent viscosity.
     """
     mu = mu_inf + (mu0 - mu_inf) * (1 + (lam * shear_rate)**a)**((N - 1) / a)
