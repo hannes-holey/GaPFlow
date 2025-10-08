@@ -14,8 +14,8 @@ def main():
 
     file = get_pipeline(name='sol.nc', mode='single')
 
-    gp_p = os.path.join(os.path.dirname(file), 'gp_press.csv')
-    gp_s = os.path.join(os.path.dirname(file), 'gp_shear.csv')
+    gp_p = os.path.join(os.path.dirname(file), 'gp_zz.csv')
+    gp_s = os.path.join(os.path.dirname(file), 'gp_xz.csv')
 
     try:
         df_p = pd.read_csv(gp_p)
@@ -29,7 +29,8 @@ def main():
     except FileNotFoundError:
         tol_s = None
 
-    if tol_s is None and tol_p is None:
+    # TODO: should also work if not all are stress models
+    if tol_s is None or tol_p is None:
         animate(file)
     else:
         animate_gp(file, tol_p=tol_p, tol_s=tol_s)

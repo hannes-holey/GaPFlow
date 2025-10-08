@@ -124,6 +124,9 @@ def sanitize_grid(d):
     else:
         raise IOError("Must specify grid size (Ny) with either dy or Ly.")
 
+    ndim = int(out['Nx'] > 1) + int(out['Ny'] > 1)
+    out['dim'] = ndim
+
     # x BCs
     bc_xE = list(d.get('xE', ['P', 'P', 'P']))
     bc_xW = list(d.get('xW', ['P', 'P', 'P']))
@@ -170,7 +173,7 @@ def sanitize_grid(d):
             raise IOError("Need to specify Dirichlet BC value")
 
     if any(out['bc_yN_D']):
-        out['bc_yN_D_val'] = d.get('xW_D', None)
+        out['bc_yN_D_val'] = d.get('yN_D', None)
         if out['bc_yN_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value")
 

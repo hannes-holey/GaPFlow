@@ -1,11 +1,17 @@
 import abc
+import warnings
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
 
 import jax
 import jax.numpy as jnp
-import jaxopt
+
+# jaxopt is no longer maintained
+# may switch to optax or other optimization library
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    import jaxopt
 
 from tinygp import GaussianProcess, kernels, transforms
 
@@ -150,7 +156,7 @@ class GaussianProcessSurrogate:
 
         reasons = ['DB', "AL"]
 
-        print('#' + 15 * '-' + f"GP TRAINING ({self.name.upper()})" + 16 * '-')
+        print('#' + 17 * '-' + f"GP TRAINING ({self.name.upper()})" + 17 * '-')
         print('# Timestep     :', self.step)
         print('# Reason       :', reasons[reason])
         print('# Database size:', self.database.size)
@@ -192,10 +198,7 @@ class GaussianProcessSurrogate:
     def _active_learning(self, var):
 
         imax = np.argmax(var)
-
         Xnew = self._Xtest[imax, :][:, None]
-        # Ynew = get_new_training_output_mock(Xnew, self.prop,
-        #                                     noise_stddev=self.noise)  # replace w/ MD call
 
         self.database.add_data(Xnew, prop=self.prop, geo=self.geo, noise=self.noise)
 
@@ -237,7 +240,7 @@ class GaussianProcessSurrogate:
 
                 after = self.maximum_variance / self.variance_tol
 
-                print(f"# AL {counter}/{self.max_steps}       : {before:.3f} --> {after:.3f}")
+                print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
 
         return m, v
@@ -247,7 +250,7 @@ class GaussianProcessSurrogate:
         return jnp.vstack([self.gap,
                            self.density[0][None, :, :],
                            self.density[1][None, :, :],
-                           self.density[2][None, :, :] * jnp.sign(self.density[2][None, :, :])
+                           self.density[2][None, :, :]  # * jnp.sign(self.density[2][None, :, :])
                            ]).reshape(6, -1).T
 
 
