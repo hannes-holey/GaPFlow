@@ -1,0 +1,22 @@
+# Couette flow
+velocity        freezeL set v_vWall 0. 0. units box
+
+# Poiseuille flow
+variable        uCOM equal ${input_fluxX}*(lx*ly*v_gap)/mass(TraPPE)
+variable        vCOM equal ${input_fluxY}*(lx*ly*v_gap)/mass(TraPPE)
+
+velocity        TraPPE zero linear
+velocity        TraPPE set v_uCOM v_vCOM 0. sum yes units box
+
+# 2nd equilibration (Langevin walls)
+fix             1 TraPPE nve
+fix             2 solid nve
+fix             2L thermL langevin ${input_temp} ${input_temp} $(100.0*dt) 435623
+fix             2U thermU langevin ${input_temp} ${input_temp} $(100.0*dt) 435623
+fix             3 frozen store/force
+fix             4 frozen setforce 0. 0. 0.
+fix             5 TraPPE flow/gauss 1 1 0
+
+# Subtract COM velocity from lower (moving) wall atoms for thermostatting
+compute         thermotemp_wall thermL temp/com
+fix_modify      2L temp thermotemp_wall

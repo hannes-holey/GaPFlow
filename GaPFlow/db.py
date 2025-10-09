@@ -5,6 +5,7 @@ import jax.random as jr
 from jaxtyping import Float
 from jax import Array
 
+
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top
 from GaPFlow.dtool import get_readme_list_local, init_dataset, write_readme
@@ -71,12 +72,6 @@ class Database:
         self.db_init_width = db['init_width']  # density only
 
         self.md = md
-        # if self.system == "lj":
-        #     self._stress_scale = 1.
-        # else:  # moltemplate
-        #     # Alkane/gold
-        #     # from kcal/mol/A^3 to g/mol/A/fs^2
-        #     self._stress_scale = float(self.md.get('scaleRM', sci.calorie * 1e-4))
 
         self._Xtrain = Xtrain
         self._Ytrain = Ytrain
@@ -167,6 +162,11 @@ class Database:
         return self._Ytrain / self.Y_scale
 
     @property
+    def Ytrain_err(self) -> ArrayY:
+        """Normalized observation error of shape (Ntrain, 13)."""
+        return self._Ytrain_err / self.Y_scale
+
+    @property
     def size(self) -> int:
         """Number of training samples currently stored."""
         return self._Xtrain.shape[0]
@@ -244,9 +244,16 @@ class Database:
 
             if self.md is None:
                 Y = get_new_training_output_mock(X[None, :], prop, geo, noise_stddev=noise).squeeze()
-                Ye = jnp.zeros((13,))
+                Ye = jnp.array([
+                    noise[0],  # p
+                    0., 0., 0.,  # xx, yy, zz
+                    noise[1], noise[1], 0.,  # yz, xz, xy
+                    0., 0., 0.,  # xx, yy, zz
+                    noise[1], noise[1], 0.  # yz, xz, xy
+                ])
+
             else:
-                write_input_files(X, proto_ds, self.md)  # into dtool datapath
+                num_cpu = write_input_files(X, proto_ds, proto_ds_path, self.md)  # into dtool datapath
 
                 # Move to dtool directory
                 basedir = os.getcwd()
@@ -255,13 +262,13 @@ class Database:
                 # Run MD
                 pretty_print(proto_ds_path, X)
 
-                if self.md['ncpu'] > 1:
-                    run_parallel(self.md['ncpu'])
+                if num_cpu > 1:
+                    run_parallel(num_cpu, self.md['system'])
                 else:
-                    run_serial()
+                    run_serial(self.md['system'])
 
                 # Read output
-                Y, Ye = read_output_files()
+                Y, Ye = read_output_files(self.md['system'])
 
                 # Return to base directory
                 os.chdir(basedir)

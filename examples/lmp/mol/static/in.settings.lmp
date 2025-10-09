@@ -1,0 +1,67 @@
+# Constants
+variable		NA equal 6.02214076e23
+
+# Group definitions
+
+# Walls
+region          lower block INF INF INF INF INF $(lz/2) units box
+region          upper block INF INF INF INF $(lz/2) INF units box
+group           lower region lower
+group           upper region upper
+group           surfL intersect solid lower
+group           surfU intersect solid upper
+
+variable		zloL equal $(bound(surfL, zmin))
+variable		zhiL equal $(bound(surfL, zmax))
+variable		zloU equal $(bound(surfU, zmin))
+variable		zhiU equal $(bound(surfU, zmax))
+
+variable        thickness equal ${zhiL}-${zloL}  # wall thickness
+variable        layer equal ${thickness}/(${nwall}*3-1)/2.  # half (111) distance
+variable        thermal equal ${ntherm}*2*${layer}	  		# thickness thermalized layer
+
+# lower and upper frozen layers
+region          freezeU block INF INF INF INF $(v_zhiU-v_layer*v_angle_sf) INF units box
+group           freezeU region freezeU
+
+region          freezeL block INF INF INF INF INF $(v_zloL+v_layer) units box
+group           freezeL region freezeL
+
+group           frozen union freezeL freezeU
+group           notfrozen subtract solid frozen
+neigh_modify    exclude group frozen frozen
+
+# thermalized layers (4)
+region          thermL block INF INF INF INF $(v_zloL+v_layer) $(v_zloL+v_layer+v_thermal) units box
+region          thermU block INF INF INF INF $(v_zhiU-v_layer*v_angle_sf-v_thermal) $(v_zhiU-v_layer*v_angle_sf) units box
+group           thermL region thermL
+group           thermU region thermU
+group           therm union thermL thermU
+
+# Dynamic output variables
+
+# Gap height
+variable        gap_fluid equal (bound(TraPPE,zmax)-bound(TraPPE,zmin))
+variable        gap_solid equal (bound(surfU,zmin)-bound(surfL,zmax))
+variable        gap equal (v_gap_fluid+v_gap_solid)/2.
+
+# Density
+variable		density_real equal mass(TraPPE)/lx/ly/v_gap
+variable		density_SI equal v_density_real/v_NA*1e27  # kg/m^3
+
+# Flux
+variable		fluxCouette_real equal v_density_real*v_vWall/2.
+variable		fluxX_real equal v_density_real*vcm(TraPPE,x)
+variable		fluxY_real equal v_density_real*vcm(TraPPE,y)
+variable		fluxX_nondim equal v_fluxX_real/v_fluxCouette_real
+variable		fluxY_nondim equal v_fluxY_real/v_fluxCouette_real
+
+
+thermo          100
+thermo_modify   norm no
+thermo_style    custom step temp press pe ke v_gap v_density_SI v_fluxX_nondim v_fluxY_nondim
+compute         thermotemp TraPPE temp
+thermo_modify   temp thermotemp
+
+timestep        ${dt}
+

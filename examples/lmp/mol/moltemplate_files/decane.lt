@@ -1,0 +1,31 @@
+# Decane
+
+import "moltemplate_files/trappe1998.lt"
+
+decane inherits TraPPE {
+    write("Data Atoms"){
+        $atom:C10    $mol:... @atom:CH3    -0.020000  4.4918174878E+00 -1.5257182070E+00  3.6549480450E-01
+        $atom:C9     $mol:... @atom:CH2     0.016000  3.7279185932E+00 -4.6228471040E-01 -4.2967871250E-01
+        $atom:C8     $mol:... @atom:CH2     0.017000  2.4939053417E+00  7.4995580100E-02  3.0850834580E-01
+        $atom:C7     $mol:... @atom:CH2    -0.006000  1.7455643209E+00  1.1571652923E+00 -4.7945845310E-01
+        $atom:C6     $mol:... @atom:CH2    -0.007000  5.2844656370E-01  1.7619694561E+00  2.4365491860E-01
+        $atom:C5     $mol:... @atom:CH2    -0.007000 -6.1292596830E-01  7.8764657340E-01  5.9264875560E-01
+        $atom:C4     $mol:... @atom:CH2    -0.006000 -1.2092620337E+00  4.8571498100E-02 -6.1508539060E-01
+        $atom:C3     $mol:... @atom:CH2     0.017000 -2.4560345164E+00 -7.9631474490E-01 -2.9939034130E-01
+        $atom:C1     $mol:... @atom:CH2     0.016000 -3.7224262591E+00  1.3695494600E-02  1.8568413300E-02
+        $atom:C2     $mol:... @atom:CH3    -0.020000 -4.9525556970E+00 -8.7147152650E-01  2.4612576880E-01
+    }
+    write("Data Bonds"){
+        $bond:b4      @bond:saturated    $atom:C10    $atom:C9     
+        $bond:b7      @bond:saturated    $atom:C9     $atom:C8     
+        $bond:b10     @bond:saturated    $atom:C8     $atom:C7     
+        $bond:b13     @bond:saturated    $atom:C7     $atom:C6     
+        $bond:b16     @bond:saturated    $atom:C6     $atom:C5     
+        $bond:b19     @bond:saturated    $atom:C5     $atom:C4     
+        $bond:b22     @bond:saturated    $atom:C4     $atom:C3     
+        $bond:b25     @bond:saturated    $atom:C3     $atom:C1     
+        $bond:b28     @bond:saturated    $atom:C1     $atom:C2     
+    }
+    write("Data Impropers"){
+    }
+}

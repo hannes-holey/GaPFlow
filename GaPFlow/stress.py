@@ -241,7 +241,8 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Scalar-like array representing the maximum of selected Y scales.
         """
-        return jnp.max(self.database.Y_scale[jnp.array([5, 11], dtype=int)])
+        return jnp.max(self.database.Y_scale[jnp.array([self._out_index + 1,
+                                                        self._out_index + 7], dtype=int)])
 
     @property
     def Yerr(self) -> JAXArray:
@@ -253,7 +254,11 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Observation noise standard deviation normalized by Yscale.
         """
-        return self.noise[1] / self.Yscale
+
+        Yerr_all = jnp.concatenate([self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
+                                    self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
+
+        return jnp.mean(Yerr_all)
 
     @property
     def kernel_variance(self) -> JAXArray:
@@ -366,7 +371,6 @@ class BulkStress(GaussianProcessSurrogate):
         self.geo = geo
         self.prop = prop
         self.is_gp_model = False
-        self.noise = 0.
 
         super().__init__(fc, data)
 
@@ -398,6 +402,7 @@ class BulkStress(GaussianProcessSurrogate):
     def update(self) -> None:
         """Compute and store bulk viscous stress using viscous model."""
         # piezoviscosity
+
         if 'piezo' in self.prop.keys():
             mu0 = piezoviscosity(self.pressure,
                                  self.prop['shear'],
@@ -457,7 +462,6 @@ class Pressure(GaussianProcessSurrogate):
 
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml
             self.__field_variance = fc.real_field('pressure_var')
-            # self.noise = gp['obs_stddev']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
@@ -528,9 +532,9 @@ class Pressure(GaussianProcessSurrogate):
         return self.database.Y_scale[0]
 
     @property
-    def Yerr(self) -> JAXArray:
+    def Yerr(self) -> float:
         """Observation noise (normalized) for pressure."""
-        return self.noise[0] / self.Yscale
+        return jnp.mean(self.database.Ytrain_err[:self.last_fit_train_size, 0])
 
     @property
     def kernel_variance(self) -> JAXArray:

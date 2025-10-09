@@ -1,5 +1,6 @@
-import numpy as np
 import os
+import numpy as np
+import scipy.constants as sci
 
 import os
 import sys
@@ -9,23 +10,25 @@ try:
 except ImportError:
     pass
 
+from GaPFlow.moltemplate.main import write_template, build_template
+
 
 def main():
 
     comm = MPI.Comm.Get_parent()
 
-    run_serial()
+    run_serial(sys.argv[1])
 
     comm.Barrier()
     comm.Free()
 
 
-def run_parallel(nworker):
+def run_parallel(nworker, system):
 
     worker_file = os.path.abspath(__file__)
 
     sub_comm = MPI.COMM_SELF.Spawn(sys.executable,
-                                   args=[worker_file],
+                                   args=[worker_file, system],
                                    maxprocs=nworker)
 
     # Parameter broadcasting fails on some systems
@@ -58,73 +61,91 @@ if __name__ == "__main__":
     main()
 
 
-def write_input_files(X, proto_ds, md):
+def write_input_files(X, proto_ds, proto_ds_path, md):
 
     # LJ system
+    if md['system'] == "lj":
 
-    num_cpu = md['ncpu']
+        num_cpu = md['ncpu']
 
-    # write variables file (# FIXME: height, indices not hardcoded)
-    variables_str = f"""
+        # write variables file (# FIXME: height, indices not hardcoded)
+        variables_str = f"""
 variable    input_gap equal {X[0]}
 variable    input_dens equal {X[3]}
 variable    input_fluxX equal {X[4]}
 variable    input_fluxY equal {X[5]}
 """
 
-    # if md['mode'] == 'slip'
-    #     variables_str += f'variable input_kappa equal {X[?]}\n'
+        # if md['mode'] == 'slip'
+        #     variables_str += f'variable input_kappa equal {X[?]}\n'
 
-    excluded = ['infile', 'wallfile', 'ncpu']
-    for k, v in md.items():
-        if k not in excluded:
-            variables_str += f'variable {k} equal {v}\n'
+        excluded = ['infile', 'wallfile', 'ncpu']
+        for k, v in md.items():
+            if k not in excluded:
+                variables_str += f'variable {k} equal {v}\n'
 
-    with open(os.path.join('in.param'), 'w') as f:
-        f.writelines(variables_str)
+        with open(os.path.join('in.param'), 'w') as f:
+            f.writelines(variables_str)
 
-    # Move inputfiles to proto dataset
-    proto_ds.put_item(md['wallfile'], 'in.wall')
-    proto_ds.put_item(md['infile'], 'in.run')
-    proto_ds.put_item('in.param', 'in.param')
-    os.remove('in.param')
+        # Move inputfiles to proto dataset
+        proto_ds.put_item(md['wallfile'], 'in.wall')
+        proto_ds.put_item(md['infile'], 'in.run')
+        proto_ds.put_item('in.param', 'in.param')
+        os.remove('in.param')
 
     # Gold / alkane system
+    elif md['system'] == 'mol':
 
-    # args = self.md
+        proto_ds_datapath = os.path.join(proto_ds_path, 'data')
 
-    # # Move inputfiles to proto dataset
-    # os.makedirs(os.path.join("moltemplate_files"))
-    # os.makedirs(os.path.join("static"))
+        # Move inputfiles to proto dataset
+        os.makedirs(os.path.join(proto_ds_datapath,
+                                 'moltemplate_files'))
 
-    # proto_ds.put_item(self.md['fftemplate'],
-    #                   os.path.join("moltemplate_files", os.path.basename(self.md['fftemplate'])))
-    # proto_ds.put_item(self.md['topo'],
-    #                   os.path.join("moltemplate_files", os.path.basename(self.md['topo'])))
+        os.makedirs(os.path.join(proto_ds_datapath,
+                                 'static'))
 
-    # for f in os.listdir(self.md["staticFiles"]):
-    #     proto_ds.put_item(os.path.join(self.md["staticFiles"], f), os.path.join("static", f))
+        proto_ds.put_item(md['fftemplate'],
+                          os.path.join("moltemplate_files",
+                                       os.path.basename(md['fftemplate'])
+                                       )
+                          )
 
-    # # TODO: separate section of metadata
+        proto_ds.put_item(md['topo'],
+                          os.path.join("moltemplate_files",
+                                       os.path.basename(md['topo'])
+                                       )
+                          )
 
-    # args["density"] = float(Xnew[-3, index])
-    # args["fluxX"] = float(Xnew[-2, index])
-    # args["fluxY"] = float(Xnew[-1, index])
+        for f in os.listdir(md["staticFiles"]):
+            proto_ds.put_item(os.path.join(md["staticFiles"], f),
+                              os.path.join("static", f))
 
-    # if self.mode.startswith('gap'):
-    #     args["gap_height"] = float(Xnew[0, index])
+        # TODO: separate section of metadata
+        args = md
+        args["gap_height"] = float(X[0])
+        args["density"] = float(X[3])
+        args["fluxX"] = float(X[4])
+        args["fluxY"] = float(X[5])
 
-    # if self.mode == "gap_angle":
-    #     args["rotation"] = float(Xnew[1, index])
+        cwd = os.getcwd()
+        os.chdir(proto_ds_datapath)
+        num_cpu = write_template(args)
+        build_template(args)
+        os.chdir(cwd)
 
-    # num_cpu = write_template(args)
-    # build_template(args)
+    return num_cpu
 
 
-def read_output_files():
+def read_output_files(system):
     # Get stress
     # Apply unit conversion from LAMMPS output to READMEs
-    md_data = np.loadtxt('stress_wall.dat')  # * self._stress_scale
+
+    scale_factors = {'lj': 1.,
+                     'mol': sci.calorie * 1e-4}  # from kcal/mol/A^3 to g/mol/A/fs^2
+    scale_factor = scale_factors[system]
+
+    md_data = np.loadtxt('stress_wall.dat') * scale_factor
 
     Y = np.zeros((13,))
     Yerr = np.zeros((13,))
@@ -155,9 +176,9 @@ def read_output_files():
         Y[0] = (pressL + pressU) / 2.
         Y[5] = tauL
         Y[11] = tauU
-        Yerr[0] = (pL_err + pU_err) / 2.
-        Yerr[5] = tauxzL_err
-        Yerr[11] = tauxzU_err
+        Yerr[0] = np.sqrt((pL_err + pU_err) / 2.)
+        Yerr[5] = np.sqrt(tauxzL_err)
+        Yerr[11] = np.sqrt(tauxzU_err)
 
     elif md_data.shape[1] == 7:
         # 2D
@@ -193,11 +214,11 @@ def read_output_files():
         Y[5] = tauxzL
         Y[10] = tauyzU
         Y[11] = tauxzU
-        Yerr[0] = (pL_err + pU_err) / 2.
-        Yerr[4] = tauyzL_err
-        Yerr[5] = tauxzL_err
-        Yerr[10] = tauyzU_err
-        Yerr[11] = tauxzU_err
+        Yerr[0] = np.sqrt((pL_err + pU_err) / 2.)
+        Yerr[4] = np.sqrt(tauyzL_err)
+        Yerr[5] = np.sqrt(tauxzL_err)
+        Yerr[10] = np.sqrt(tauyzU_err)
+        Yerr[11] = np.sqrt(tauxzU_err)
 
     return Y, Yerr
 

@@ -51,11 +51,14 @@ class Problem:
         else:
             db = None
 
-        # TODO: check what is needed
         self.grid = grid
         self.numerics = numerics
         self.options = options
         self.prop = prop
+
+        if md is not None:
+            self.prop['shear'] = 0.
+            self.prop['bulk'] = 0.
 
         if not self.options['silent']:
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])

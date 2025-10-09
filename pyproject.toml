@@ -28,7 +28,9 @@ dependencies = [
 	"dtool-lookup-api>=0.10.2",
 	"pandas",
 	"matplotlib",
-	"ruamel.yaml"
+	"ruamel.yaml",
+	"ase",
+	"moltemplate"
 ]
 
 [project.optional-dependencies]
