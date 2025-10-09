@@ -41,10 +41,10 @@ class Problem:
         numerics = input_dict['numerics']
 
         # Optional inputs
-        if 'gp' in input_dict.keys():
-            gp = input_dict['gp']
-        else:
-            gp = {'shear_gp': False, 'press_gp': False}
+        gp = input_dict.get('gp',
+                            {'shear_gp': False, 'press_gp': False})
+
+        md = input_dict.get('md', None)
 
         if gp['shear_gp'] or gp['press_gp']:
             db = input_dict['db']
@@ -64,7 +64,7 @@ class Problem:
 
         # Intialize database
         if db is not None:
-            database = Database.from_dtool(db, outdir=self.outdir)
+            database = Database.from_dtool(db, md, outdir=self.outdir)
         else:
             database = None
 

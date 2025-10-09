@@ -8,6 +8,8 @@ from jax import Array
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top
 from GaPFlow.dtool import get_readme_list_local, init_dataset, write_readme
+from GaPFlow.md import write_input_files, run_serial, run_parallel, read_output_files
+from GaPFlow.utils import bordered_text
 
 # ----------------------------------------------------------------------
 # Fixed-shape array type aliases
@@ -42,7 +44,7 @@ class Database:
     Attributes
     ----------
     use_dtool : bool
-        Whether to use DTool for dataset storage.
+        Whether to use dtool for dataset storage.
     outdir : str or None
         Output directory for saving arrays.
     minimum_size : int
@@ -56,6 +58,7 @@ class Database:
     def __init__(
         self,
         db: dict,
+        md: dict | None = None,
         Xtrain: ArrayX = jnp.empty((0, 6)),
         Ytrain: ArrayY = jnp.empty((0, 13)),
         Ytrain_err: ArrayY = jnp.empty((0, 13)),
@@ -66,6 +69,14 @@ class Database:
         self.outdir = outdir
         self.minimum_size = db['init_size']
         self.db_init_width = db['init_width']  # density only
+
+        self.md = md
+        # if self.system == "lj":
+        #     self._stress_scale = 1.
+        # else:  # moltemplate
+        #     # Alkane/gold
+        #     # from kcal/mol/A^3 to g/mol/A/fs^2
+        #     self._stress_scale = float(self.md.get('scaleRM', sci.calorie * 1e-4))
 
         self._Xtrain = Xtrain
         self._Ytrain = Ytrain
@@ -99,7 +110,7 @@ class Database:
         raise NotImplementedError
 
     @classmethod
-    def from_dtool(cls, db: dict, outdir: str) -> Self:
+    def from_dtool(cls, db: dict, md: dict | None, outdir: str) -> Self:
         """
         Load or initialize a dtool-based dataset.
 
@@ -139,7 +150,7 @@ class Database:
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 13))
 
-        return cls(db, Xtrain, Ytrain, Yerr, outdir)
+        return cls(db, md, Xtrain, Ytrain, Yerr, outdir)
 
     # ------------------------------------------------------------------
     # Properties
@@ -224,27 +235,68 @@ class Database:
         """
         size_before = self.size
 
-        if prop is not None:
-            Ynew = get_new_training_output_mock(Xnew, prop, geo, noise_stddev=noise)
-            Yerr = jnp.zeros((Ynew.shape[0], 13))
-        else:
-            raise NotImplementedError("Real MD data integration not implemented.")
+        for X in Xnew:
+            size_before += 1
 
-        self._Xtrain = jnp.vstack([self._Xtrain, Xnew])
-        self._Ytrain = jnp.vstack([self._Ytrain, Ynew])
-        self._Ytrain_err = jnp.vstack([self._Ytrain_err, Yerr])
-
-        self.X_scale = self.normalizer(self._Xtrain)
-        self.Y_scale = self.normalizer(self._Ytrain)
-
-        if self.use_dtool:
-            for X, Y, Ye in zip(Xnew, Ynew, Yerr):
-                size_before += 1
+            if self.use_dtool:
                 proto_ds, proto_ds_path = init_dataset(self.dtool_basepath, size_before)
+                proto_ds_datapath = os.path.join(proto_ds_path, 'data')
+
+            if self.md is None:
+                Y = get_new_training_output_mock(X[None, :], prop, geo, noise_stddev=noise).squeeze()
+                Ye = jnp.zeros((13,))
+            else:
+                write_input_files(X, proto_ds, self.md)  # into dtool datapath
+
+                # Move to dtool directory
+                basedir = os.getcwd()
+                os.chdir(proto_ds_datapath)
+
+                # Run MD
+                pretty_print(proto_ds_path, X)
+
+                if self.md['ncpu'] > 1:
+                    run_parallel(self.md['ncpu'])
+                else:
+                    run_serial()
+
+                # Read output
+                Y, Ye = read_output_files()
+
+                # Return to base directory
+                os.chdir(basedir)
+
+            # Finalize dtool dataset
+            if self.use_dtool:
                 write_readme(proto_ds_path, X, Y, Ye)
                 proto_ds.freeze()
 
+            self._Xtrain = jnp.vstack([self._Xtrain, X])
+            self._Ytrain = jnp.vstack([self._Ytrain, Y])
+            self._Ytrain_err = jnp.vstack([self._Ytrain_err, Ye])
+
+            self.X_scale = self.normalizer(self._Xtrain)
+            self.Y_scale = self.normalizer(self._Ytrain)
+
         self.write()
+
+
+def pretty_print(proto_datapath, X):
+    ascii_art = r"""
+  _        _    __  __ __  __ ____  ____
+ | |      / \  |  \/  |  \/  |  _ \/ ___|
+ | |     / _ \ | |\/| | |\/| | |_) \___ \
+ | |___ / ___ \| |  | | |  | |  __/ ___) |
+ |_____/_/   \_\_|  |_|_|  |_|_|   |____/
+
+"""
+    text = ['Run next MD simulation in:', f'{proto_datapath}']
+    text.append(ascii_art)
+    text.append('---')
+    for i, Xi in enumerate(X):
+        text.append(f'Input {i+1}: {Xi:.3g}')
+    print(bordered_text('\n'.join(text)))
+
 
 # ----------------------------------------------------------------------
 # Mock data generation

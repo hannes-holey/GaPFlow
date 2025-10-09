@@ -69,14 +69,14 @@ def read_yaml_input(file):
                             'numerics': sanitize_numerics,
                             'properties': sanitize_properties,
                             'gp': sanitize_gp,
-                            'db': sanitize_db}
+                            'db': sanitize_db,
+                            'md': sanitize_md}
 
     sanitized_dict = {}
 
     raw_dict = yaml.full_load(file)
 
     for key, value in raw_dict.items():
-
         if key in sanitizing_functions.keys():
             print(f'- {key}:')
             sanitized_dict[key] = sanitizing_functions[key](raw_dict[key])
@@ -361,3 +361,18 @@ def sanitize_db(d):
     print_dict(out)
 
     return out
+
+
+def sanitize_md(d):
+
+    out = {}
+
+    keys = ['ncpu', 'infile', 'wallfile', 'cutoff', 'temp', 'vWall', 'tsample']
+    types = [int, str, str, float, float, float, int]
+
+    # no check (so far)
+    out = d
+
+    print_dict(out)
+
+    return d

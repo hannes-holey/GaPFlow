@@ -42,7 +42,7 @@ def get_readme_list_remote():
                  for ds in progressbar(remote_ds_list,
                                        prefix="Loading remote datasets based on dtool query: ")]
 
-    readme_list = [yaml.full_load(ds.get_readme_content()) for ds in remote_ds]
+    readme_list = [yaml.load(ds.get_readme_content()) for ds in remote_ds]
 
     return readme_list
 
@@ -61,7 +61,7 @@ def get_readme_list_local(local_path):
         os.makedirs(local_path)
         return []
 
-    readme_list = [yaml.full_load(ds.get_readme_content())
+    readme_list = [yaml.load(ds.get_readme_content())
                    for ds in dtoolcore.iter_datasets_in_base_uri(local_path)]
 
     print(f"Loading {len(readme_list)} local datasets in '{local_path}'.")
