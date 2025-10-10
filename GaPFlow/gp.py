@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
+from typing import Tuple, List
 
 import jax
 import jax.numpy as jnp
@@ -13,6 +14,8 @@ with warnings.catch_warnings():
     import jaxopt
 
 from tinygp import GaussianProcess, kernels, transforms
+
+JAXArray = jax.Array
 
 
 class MultiOutputKernel(kernels.Kernel):
@@ -35,10 +38,13 @@ class MultiOutputKernel(kernels.Kernel):
         Evaluate the kernel covariance between input sets `X1` and `X2`.
     """
 
-    kernels: list[kernels.Kernel | transforms.Linear]
-    projection: jax.Array  # shape = (num_outputs, num_latents)
+    kernels: List[kernels.Kernel | transforms.Linear]
+    projection: JAXArray  # shape = (num_outputs, num_latents)
 
-    def evaluate(self, X1, X2):
+    def evaluate(self,
+                 X1: Tuple[JAXArray, JAXArray],
+                 X2: Tuple[JAXArray, JAXArray],
+                 ) -> JAXArray:
         """
         Compute the covariance matrix between two sets of inputs.
 
@@ -97,7 +103,7 @@ class GaussianProcessSurrogate:
     atol: float
     max_steps: int
     params_init: dict
-    noise: float
+    noise: Tuple[float, float]
     prop: dict
     geo: dict
 
@@ -184,29 +190,29 @@ class GaussianProcessSurrogate:
     # Convenience properties
     # ------------------------------------------------------------------
     @property
-    def mass_density(self):
+    def mass_density(self) -> JAXArray:
         """Return the first component of the solution field (mass density)."""
         return self.__solution.p[0]
 
     @property
-    def density(self):
+    def density(self) -> JAXArray:
         """Return full density field from the solution."""
         return self.__solution.p
 
     @property
-    def gap(self):
+    def gap(self) -> JAXArray:
         """Return the gap field."""
         return self.__gap.p
 
     @property
-    def trusted(self):
+    def trusted(self) -> bool:
         """Return True if model predictive variance is below tolerance."""
         return self.maximum_variance < self.variance_tol
 
     # ------------------------------------------------------------------
     # Logging and summary
     # ------------------------------------------------------------------
-    def write(self):
+    def write(self) -> None:
         """Log current GP hyperparameters and diagnostics."""
         if self.is_gp_model:
             self.history['step'].append(self.step)
@@ -219,7 +225,7 @@ class GaussianProcessSurrogate:
             for i, l in enumerate(self.active_dims):
                 self.history[f'lengthscale_{l}'].append(self.kernel_lengthscale[i])
 
-    def print_opt_summary(self, obj):
+    def print_opt_summary(self, obj: float) -> None:
         """Print summary of optimization results."""
         print(f'# Objective    : {obj:.5g}')
         print("# Hyperparam   :", end=' ')
@@ -232,7 +238,7 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Training and Inference
     # ------------------------------------------------------------------
-    def _train(self, reason=0):
+    def _train(self, reason: int = 0) -> None:
         """
         Train the Gaussian process model via marginal likelihood maximization.
 
@@ -267,7 +273,7 @@ class GaussianProcessSurrogate:
         if reason == 0:
             print('#' + 50 * '-')
 
-    def _infer(self):
+    def _infer(self) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction on test data.
 
@@ -294,7 +300,7 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Active Learning
     # ------------------------------------------------------------------
-    def _active_learning(self, var):
+    def _active_learning(self, var: JAXArray) -> None:
         """
         Select new training point using maximum variance criterion.
 
@@ -310,7 +316,7 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
     # ------------------------------------------------------------------
-    def predict(self, predictor=True):
+    def predict(self, predictor: bool = True) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction, optionally updating the model via active learning
         (only in predictor step of the predictor-corrector time integration scheme)
@@ -369,7 +375,7 @@ class GaussianProcessSurrogate:
     # Helper Property
     # ------------------------------------------------------------------
     @property
-    def _Xtest(self):
+    def _Xtest(self) -> JAXArray:
         """
         Construct flattened test input array from physical fields.
 
@@ -389,7 +395,9 @@ class GaussianProcessSurrogate:
 # ----------------------------------------------------------------------
 # Utility kernel builders
 # ----------------------------------------------------------------------
-def multi_in_single_out(params, X, yerr):
+def multi_in_single_out(params: dict,
+                        X: JAXArray,
+                        yerr: float | JAXArray) -> GaussianProcess:
     """
     Build a single-output anisotropic Matern GP.
 
@@ -416,7 +424,9 @@ def multi_in_single_out(params, X, yerr):
     return GaussianProcess(kernel, X, diag=yerr**2)
 
 
-def multi_in_multi_out(params, X, yerr):
+def multi_in_multi_out(params: dict,
+                       X: JAXArray,
+                       yerr: float | JAXArray) -> GaussianProcess:
     """
     Build a multi-output anisotropic Matern GP.
 
