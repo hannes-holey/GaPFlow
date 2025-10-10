@@ -26,11 +26,11 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 - [X] 2D problems
 - [X] Viscosity models with plots
 - [X] Docstrings & typing (important parts)
-- [ ] MD setup
-- [ ] Unit tests and integration tests
-- [ ] MPI parallel
+- [X] MD setup
 - [ ] Documentation with examples
-- [ ] JOSS submission (w or w/o elasticity?)
+- [ ] Unit tests and integration tests
+- [ ] JOSS submission (w/o elasticity)
+- [ ] MPI parallel
 
 ## Installation
 
@@ -108,9 +108,10 @@ Simulation output is stored under the location specified in the input file. Afte
 - `gap.nc`: NetCDF file containing the gap height and gradients.
 - `sol.nc`: NetCDF file containing the solution and stress fields.
 - `history.csv`: Contains the time series of scalar quantities (step, Ekin, residual, ...)
-- `gp_[shear,press].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
+- `gp_[xz,yz,zz].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
 - `Xtrain.npy` (Optional): Training data inputs
 - `Ytrain.npy` (Optional): Training data observations
+- `Ytrain_err.npy` (Optional): Training data observation error
 
 The code comes with a few handy [command line tools](GaPFlow/cli/) for visualizations like this one
 

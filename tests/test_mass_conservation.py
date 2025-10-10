@@ -46,7 +46,7 @@ def test_x_y():
     with io.StringIO(sim) as file:
         input_dict = read_yaml_input(file)
 
-    problem = Problem(input_dict)
+    problem = Problem.from_dict(input_dict)
 
     mass_before = problem.mass.copy()
 

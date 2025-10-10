@@ -114,7 +114,7 @@ class GaussianProcessSurrogate:
 
         if self.is_gp_model:
             self.database = database
-            self.database.fill_missing(self._Xtest, self.prop, self.geo, self.noise)
+            self.database.fill_missing(self._Xtest)
             self.last_fit_train_size = self.database.size
 
             # Initialize timers
@@ -311,7 +311,7 @@ class GaussianProcessSurrogate:
         """
         imax = np.argmax(var)
         Xnew = self._Xtest[imax, :][None, :]
-        self.database.add_data(Xnew, prop=self.prop, geo=self.geo, noise=self.noise)
+        self.database.add_data(Xnew)
 
     # ------------------------------------------------------------------
     # Main Predict/Active Loop

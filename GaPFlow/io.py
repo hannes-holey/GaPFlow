@@ -26,7 +26,7 @@ def print_dict(d):
                 print(f'    - {kk:<23s}: {vv}')
 
 
-def create_output_directory(name, use_tstamp=True):
+def _get_output_path(name, use_tstamp=True):
 
     if use_tstamp:
         timestamp = datetime.now().replace(microsecond=0).strftime("%Y-%m-%d_%H%M%S") + '_'
@@ -36,6 +36,13 @@ def create_output_directory(name, use_tstamp=True):
     outbase = os.path.dirname(name)
     outname = timestamp + os.path.basename(name)
     outdir = os.path.join(outbase, outname)
+
+    return outdir
+
+
+def create_output_directory(name, use_tstamp=True):
+
+    outdir = _get_output_path(name, use_tstamp)
 
     if not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -355,7 +362,7 @@ def sanitize_db(d):
     out['dtool'] = bool(d.get('dtool', True))
     out['dtool_path'] = d.get('dtool_path', None)
     out['init_size'] = int(d.get('init_size', 5))
-    out['init_samp'] = str(d.get('init', 'rand'))  # TODO: lhc, sobol
+    out['init_method'] = str(d.get('init_method', 'rand'))  # TODO: lhc, sobol
     out['init_width'] = float(d.get('init_width', 1e-2))
 
     print_dict(out)

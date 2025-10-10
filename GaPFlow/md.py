@@ -1,16 +1,32 @@
 import os
-import numpy as np
+import sys
+import abc
+import dtoolcore
+from mpi4py import MPI
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
+from ruamel.yaml import YAML
+from getpass import getuser
+from socket import gethostname
 import scipy.constants as sci
 
-import os
-import sys
-from mpi4py import MPI
 try:
     from lammps import lammps
 except ImportError:
     pass
 
+import jax.random as jr
+import jax.numpy as jnp
+import numpy as np
+
+from GaPFlow.models.pressure import eos_pressure
+from GaPFlow.models.viscous import stress_bottom, stress_top
 from GaPFlow.moltemplate.main import write_template, build_template
+from GaPFlow.utils import bordered_text
+
+yaml = YAML()
+yaml.explicit_start = True
+yaml.indent(mapping=4, sequence=4, offset=2)
 
 
 def main():
@@ -23,37 +39,26 @@ def main():
     comm.Free()
 
 
-def run_parallel(nworker, system):
+def run_parallel(fname, nworker):
 
     worker_file = os.path.abspath(__file__)
 
     sub_comm = MPI.COMM_SELF.Spawn(sys.executable,
-                                   args=[worker_file, system],
+                                   args=[worker_file, fname],
                                    maxprocs=nworker)
-
-    # Parameter broadcasting fails on some systems
-    # kw_args = sub_comm.bcast(kw_args, root=0)
 
     # Wait for MD to complete and free spawned communicator
     sub_comm.Barrier()
     sub_comm.Free()
 
 
-def run_serial(system='lj'):
+def run_serial(fname):
 
     nargs = ["-log", "log.lammps"]
-
     lmp = lammps(cmdargs=nargs)
-
     assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
 
-    if system == 'lj':
-        # Invoke parameters and wall definition
-        lmp.command("include in.param")
-        lmp.command("variable slabfile index in.wall")
-        lmp.file("in.run")
-    elif system == 'mol':
-        lmp.file("run.in.all")
+    lmp.file(fname)
 
 
 if __name__ == "__main__":
@@ -61,42 +66,224 @@ if __name__ == "__main__":
     main()
 
 
-def write_input_files(X, proto_ds, proto_ds_path, md):
+class MolecularDynamics:
+    __metaclass__ = abc.ABCMeta
 
-    # LJ system
-    if md['system'] == "lj":
+    name = str
+    params: dict
+    main_file: str
+    num_worker: int
+    path: str
+    _dtool_basepath: str
+    readme_template: str = ""
+    ascii_art: str = r"""
+  _        _    __  __ __  __ ____  ____
+ | |      / \  |  \/  |  \/  |  _ \/ ___|
+ | |     / _ \ | |\/| | |\/| | |_) \___ \
+ | |___ / ___ \| |  | | |  | |  __/ ___) |
+ |_____/_/   \_\_|  |_|_|  |_|_|   |____/
 
-        num_cpu = md['ncpu']
-
-        # write variables file (# FIXME: height, indices not hardcoded)
-        variables_str = f"""
-variable    input_gap equal {X[0]}
-variable    input_dens equal {X[3]}
-variable    input_fluxX equal {X[4]}
-variable    input_fluxY equal {X[5]}
 """
 
-        # if md['mode'] == 'slip'
-        #     variables_str += f'variable input_kappa equal {X[?]}\n'
+    @property
+    def dtool_basepath(self):
+        return self._dtool_basepath
 
-        excluded = ['infile', 'wallfile', 'ncpu']
-        for k, v in md.items():
+    @dtool_basepath.setter
+    def dtool_basepath(self, name):
+        self._dtool_basepath = name
+
+    @abc.abstractmethod
+    def build_input_files(self, dataset, location, X):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def read_output(self):
+        raise NotImplementedError
+
+    def add_metadata_to_readme(self):
+        raise NotImplementedError
+
+    def pretty_print(self, proto_datapath, X):
+        text = ['Run next MD simulation in:', f'{proto_datapath}']
+        text.append(self.ascii_art)
+        text.append('---')
+        for i, Xi in enumerate(X):
+            text.append(f'Input {i + 1}: {Xi:.3g}')
+        print(bordered_text('\n'.join(text)))
+
+    def write_dtool_readme(self, dataset_path, Xnew, Ynew, Yerrnew):
+        if len(self.readme_template) == 0:
+            metadata = {}
+        else:
+            metadata = yaml.load(self.readme_template)
+
+        # Update metadata
+        metadata["owners"] = [{'username': getuser()}]
+        metadata["creation_date"] = date.today()
+        metadata["expiration_date"] = metadata["creation_date"] + relativedelta(years=10)
+
+        out_fname = os.path.join(dataset_path, 'README.yml')
+
+        X = [float(item) for item in np.asarray(Xnew)]
+        Y = [float(item) for item in np.asarray(Ynew)]
+        Yerr = [float(item) for item in np.asarray(Yerrnew)]
+
+        metadata.update({'parameters': self.params})
+
+        metadata['X'] = X
+        metadata['Y'] = Y
+        metadata['Yerr'] = Yerr
+
+        with open(out_fname, 'w') as outfile:
+            yaml.dump(metadata, outfile)
+
+    def create_dtool_dataset(self, tag):
+        ds_name = f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_{self.name}-{tag:03}'
+
+        proto_ds = dtoolcore.create_proto_dataset(name=ds_name,
+                                                  base_uri=self.dtool_basepath)
+
+        proto_ds_path = proto_ds.uri.removeprefix('file://' + gethostname())
+
+        return proto_ds, proto_ds_path
+
+    def run(self, X, tag):
+
+        # Setup MD simulation
+        dataset, location = self.create_dtool_dataset(tag)
+        self.build_input_files(dataset, location, X)
+
+        self.pretty_print(location, X)
+
+        # Move to dtool datapath...
+        basedir = os.getcwd()
+        os.chdir(os.path.join(location, 'data'))
+
+        # ...Run MD...
+        if self.num_worker > 1:
+            run_parallel(self.main_file, self.num_worker)
+        elif self.num_worker == 1:
+            run_serial(self.main_file)
+        else:
+            pass
+
+        # ...Read output / post-process MD result...
+        Y, Ye = self.read_output()
+
+        # ...and return to cwd
+        os.chdir(basedir)
+
+        # Finalize dataset
+        self.write_dtool_readme(location, X, Y, Ye)
+        dataset.freeze()
+
+        return Y, Ye
+
+
+class Mock(MolecularDynamics):
+
+    name = 'mock'
+
+    ascii_art: str = r"""
+  __  __  ___   ____ _  __
+ |  \/  |/ _ \ / ___| |/ /
+ | |\/| | | | | |   | ' / 
+ | |  | | |_| | |___| . \ 
+ |_|  |_|\___/ \____|_|\_\
+                          
+"""
+
+    def __init__(self, prop, geo, gp):
+
+        self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
+                      gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
+
+        self.num_worker = 0
+        self.geo = geo
+        self.prop = prop
+
+        self.params = {}
+        self.params.update(prop)
+
+    def build_input_files(self, dataset, location, X):
+        self.X = X
+
+    def read_output(self):
+        key = jr.key(123)
+        key, subkey = jr.split(key)
+        noise_p = jr.normal(key) * self.noise[0]
+        noise_s0 = jr.normal(key) * self.noise[1]
+        noise_s1 = jr.normal(key) * self.noise[1]
+
+        U, V = self.geo["U"], self.geo["V"]
+        eta, zeta = self.prop["shear"], self.prop["bulk"]
+
+        X = self.X
+        tau_bot = stress_bottom(X[3:], X[:3], U, V, eta, zeta, 0.0) + noise_s0
+        tau_top = stress_top(X[3:], X[:3], U, V, eta, zeta, 0.0) + noise_s1
+        press = eos_pressure(X[3:4], self.prop) + noise_p
+
+        Y = jnp.hstack([press, tau_bot, tau_top]).T
+        Ye = jnp.array([
+            self.noise[0],  # p
+            0., 0., 0.,  # xx, yy, zz
+            self.noise[1], self.noise[1], 0.,  # yz, xz, xy
+            0., 0., 0.,  # xx, yy, zz
+            self.noise[1], self.noise[1], 0.  # yz, xz, xy
+        ])
+
+        return Y, Ye
+
+
+class LennardJones(MolecularDynamics):
+
+    name = 'lj'
+
+    def __init__(self, params):
+        self.main_file = 'in.run'
+        self.num_worker = params['ncpu']
+        self.params = params
+
+    def build_input_files(self, dataset, location, X):
+        # write variables file
+        variables_str = f"""
+variable\tinput_gap equal {X[0]}
+variable\tinput_dens equal {X[3]}
+variable\tinput_fluxX equal {X[4]}
+variable\tinput_fluxY equal {X[5]}
+"""
+        excluded = ['infile', 'wallfile', 'ncpu', 'system']
+
+        # equal-style variables
+        for k, v in self.params.items():
             if k not in excluded:
-                variables_str += f'variable {k} equal {v}\n'
+                variables_str += f'variable\t{k} equal {v}\n'
 
-        with open(os.path.join('in.param'), 'w') as f:
+        variables_str += 'variable\tslabfile index in.wall\n'
+
+        with open(os.path.join(location, 'data', 'in.param'), 'w') as f:
             f.writelines(variables_str)
 
         # Move inputfiles to proto dataset
-        proto_ds.put_item(md['wallfile'], 'in.wall')
-        proto_ds.put_item(md['infile'], 'in.run')
-        proto_ds.put_item('in.param', 'in.param')
-        os.remove('in.param')
+        dataset.put_item(self.params['wallfile'], 'in.wall')
+        dataset.put_item(self.params['infile'], 'in.run')
 
-    # Gold / alkane system
-    elif md['system'] == 'mol':
+    def read_output(self):
+        return read_output_files()
 
-        proto_ds_datapath = os.path.join(proto_ds_path, 'data')
+
+class GoldAlkane(MolecularDynamics):
+
+    name = 'mol'
+
+    def __init__(self, params):
+        self.main_file = 'run.in.all'
+        self.params = params
+        self.num_worker = params['ncpu']
+
+    def build_input_files(self, dataset, location, X):
+        proto_ds_datapath = os.path.join(location, 'data')
 
         # Move inputfiles to proto dataset
         os.makedirs(os.path.join(proto_ds_datapath,
@@ -105,24 +292,24 @@ variable    input_fluxY equal {X[5]}
         os.makedirs(os.path.join(proto_ds_datapath,
                                  'static'))
 
-        proto_ds.put_item(md['fftemplate'],
-                          os.path.join("moltemplate_files",
-                                       os.path.basename(md['fftemplate'])
-                                       )
-                          )
+        dataset.put_item(self.params['fftemplate'],
+                         os.path.join("moltemplate_files",
+                                      os.path.basename(self.params['fftemplate'])
+                                      )
+                         )
 
-        proto_ds.put_item(md['topo'],
-                          os.path.join("moltemplate_files",
-                                       os.path.basename(md['topo'])
-                                       )
-                          )
+        dataset.put_item(self.params['topo'],
+                         os.path.join("moltemplate_files",
+                                      os.path.basename(self.params['topo'])
+                                      )
+                         )
 
-        for f in os.listdir(md["staticFiles"]):
-            proto_ds.put_item(os.path.join(md["staticFiles"], f),
-                              os.path.join("static", f))
+        for f in os.listdir(self.params["staticFiles"]):
+            dataset.put_item(os.path.join(self.params["staticFiles"], f),
+                             os.path.join("static", f))
 
         # TODO: separate section of metadata
-        args = md
+        args = self.params
         args["gap_height"] = float(X[0])
         args["density"] = float(X[3])
         args["fluxX"] = float(X[4])
@@ -130,30 +317,24 @@ variable    input_fluxY equal {X[5]}
 
         cwd = os.getcwd()
         os.chdir(proto_ds_datapath)
-        num_cpu = write_template(args)
+        self.num_worker = write_template(args)
         build_template(args)
         os.chdir(cwd)
 
-    return num_cpu
+    def read_output(self):
+        sf = sci.calorie * 1e-4  # from kcal/mol/A^3 to g/mol/A/fs^2
+        return read_output_files(sf=sf)
 
 
-def read_output_files(system):
-    # Get stress
-    # Apply unit conversion from LAMMPS output to READMEs
+def read_output_files(fname='stress_wall.dat', sf=1.):
 
-    scale_factors = {'lj': 1.,
-                     'mol': sci.calorie * 1e-4}  # from kcal/mol/A^3 to g/mol/A/fs^2
-    scale_factor = scale_factors[system]
-
-    md_data = np.loadtxt('stress_wall.dat') * scale_factor
+    md_data = np.loadtxt(fname) * sf
 
     Y = np.zeros((13,))
     Yerr = np.zeros((13,))
 
     if md_data.shape[1] == 5:
         # 1D
-        # step, pL_t, tauL_t, pU_t, tauU_t = np.loadtxt('stress_wall.dat', unpack=True)
-
         # timeseries
         pressL_t = md_data[:, 1]
         pressU_t = md_data[:, 3]
@@ -182,8 +363,6 @@ def read_output_files(system):
 
     elif md_data.shape[1] == 7:
         # 2D
-        # step, pL_t, tauxzL_t, pU_t, tauxzU_t, tauyzL_t, tauyzU_t = np.loadtxt('stress_wall.dat', unpack=True)
-
         # timeseries data
         pressL_t = md_data[:, 1]
         pressU_t = md_data[:, 3]

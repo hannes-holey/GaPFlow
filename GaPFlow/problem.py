@@ -14,6 +14,7 @@ from GaPFlow.stress import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.gap import Gap
 from GaPFlow.db import Database
+from GaPFlow.md import Mock, LennardJones, GoldAlkane
 
 
 class Problem:
@@ -32,48 +33,25 @@ class Problem:
         and optionally ``gp`` and ``db``.
     """
 
-    def __init__(self, input_dict: dict) -> None:
+    def __init__(self,
+                 outdir: str,
+                 options: dict,
+                 grid: dict,
+                 numerics: dict,
+                 prop: dict,
+                 geo: dict,
+                 gp: dict | None = None,
+                 database: Database | None = None
+                 ) -> None:
 
-        options = input_dict['options']
-        grid = input_dict['grid']
-        prop = input_dict['properties']
-        geo = input_dict['geometry']
-        numerics = input_dict['numerics']
-
-        # Optional inputs
-        gp = input_dict.get('gp',
-                            {'shear_gp': False, 'press_gp': False})
-
-        md = input_dict.get('md', None)
-
-        if gp['shear_gp'] or gp['press_gp']:
-            db = input_dict['db']
-        else:
-            db = None
-
+        self.outdir = outdir
+        self.options = options
         self.grid = grid
         self.numerics = numerics
-        self.options = options
-        self.prop = prop
-
-        if md is not None:
-            self.prop['shear'] = 0.
-            self.prop['bulk'] = 0.
-
-        if not self.options['silent']:
-            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
-        else:
-            self.outdir = None
-
-        # Intialize database
-        if db is not None:
-            database = Database.from_dtool(db, md, outdir=self.outdir)
-        else:
-            database = None
 
         # Initialize field collection
-        nb_grid_pts = (grid['Nx'] + 2,
-                       grid['Ny'] + 2)
+        nb_grid_pts = (self.grid['Nx'] + 2,
+                       self.grid['Ny'] + 2)
         fc = GlobalFieldCollection(nb_grid_pts)
 
         # Solution field
@@ -81,34 +59,28 @@ class Problem:
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
         # Intialize gap
-        self.gap = Gap(fc, grid, geo)
+        self.gap = Gap(fc, self.grid, geo)
         self.__gap_height = fc.get_real_field('gap')
 
-        # Dependent fields
-        if grid['dim'] == 1:
-            gpx = gp if gp['shear_gp'] else None
-            gpy = None
-        elif grid['dim'] == 2:
-            gpx = gp if gp['shear_gp'] else None
-            gpy = gp if gp['shear_gp'] else None
+        # Active GP models
+        if gp is not None:
+            if self.grid['dim'] == 1:
+                gpz = gp if gp['press_gp'] else None
+                gpx = gp if gp['shear_gp'] else None
+                gpy = None
+            elif self.grid['dim'] == 2:
+                gpz = gp if gp['press_gp'] else None
+                gpx = gp if gp['shear_gp'] else None
+                gpy = gp if gp['shear_gp'] else None
+        else:
+            gpx, gpy, gpz = None, None, None
 
-        self.pressure = Pressure(fc, prop, geo,
-                                 data=database,
-                                 gp=gp if gp['press_gp'] else None)
+        # Stress fields
+        self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
+        self.bulk_stress = BulkStress(fc, prop, geo, data=None, gp=None)
+        self.wall_stress_xz = WallStress(fc, prop, geo, direction='x', data=database, gp=gpx)
+        self.wall_stress_yz = WallStress(fc, prop, geo, direction='y', data=database, gp=gpy)
 
-        self.bulk_stress = BulkStress(fc, prop, geo, data=database)
-
-        self.wall_stress_xz = WallStress(fc, prop, geo,
-                                         direction='x',
-                                         data=database,
-                                         gp=gpx)
-
-        self.wall_stress_yz = WallStress(fc, prop, geo,
-                                         direction='y',
-                                         data=database,
-                                         gp=gpy)
-
-        # TODO: numerics settings override (to continue a simulation)
         # Numerics
         self.step = 0
         self.simtime = 0.
@@ -125,8 +97,6 @@ class Problem:
 
         # I/O
         if not self.options['silent']:
-            # Sanitized config file
-            write_yaml(input_dict, os.path.join(self.outdir, 'config.yml'))
 
             # Write gap height and gradients once
             gapfile = FileIONetCDF(os.path.join(self.outdir, 'gap.nc'), OpenMode.Write)
@@ -153,6 +123,7 @@ class Problem:
     # ---------------------------
     # Constructors
     # ---------------------------
+
     @classmethod
     def from_yaml(cls: Type[Self], fname: str) -> Self:
         """
@@ -171,7 +142,7 @@ class Problem:
         print(f"Reading input file: {fname}")
         with open(fname, "r") as ymlfile:
             input_dict = read_yaml_input(ymlfile)
-        return cls(input_dict)
+        return cls(*_split_input(input_dict))
 
     @classmethod
     def from_string(cls: Type[Self], ymlstring: str) -> Self:
@@ -190,19 +161,29 @@ class Problem:
         """
         with io.StringIO(ymlstring) as ymlfile:
             input_dict = read_yaml_input(ymlfile)
-        return cls(input_dict)
+        return cls(*_split_input(input_dict))
 
     @classmethod
-    def from_problem(cls: Type[Self], config: str, outfile: str) -> Self:
+    def from_dict(cls: Type[Self], input_dict: dict) -> Self:
         """
-        Initialize a Problem from a sanitized config and an existing NetCDF file.
-        (Not implemented.)
+        Create a Problem instance from a YAML string.
+
+        Parameters
+        ----------
+        ymlstring : str
+            YAML content as a string.
+
+        Returns
+        -------
+        Problem
+            Instantiated `Problem` object.
         """
-        raise NotImplementedError
+        return cls(*_split_input(input_dict))
 
     # ---------------------------
     # Main run loop
     # ---------------------------
+
     def run(self) -> None:
         """
         Run the time-stepping loop until convergence, maximum iterations,
@@ -233,7 +214,7 @@ class Problem:
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
 
-            handle_signals(self.receive_signal)
+            _handle_signals(self.receive_signal)
 
         self.post_run()
 
@@ -535,11 +516,48 @@ class Problem:
         return Q
 
 # ---------------------------
-# Signal handling helper
+# Helper functions
 # ---------------------------
 
 
-def handle_signals(func) -> None:
+def _split_input(input_dict):
+    # Mandatory inputs
+    options = input_dict['options']
+    grid = input_dict['grid']
+    numerics = input_dict['numerics']
+    prop = input_dict['properties']
+    geo = input_dict['geometry']
+
+    outdir = create_output_directory(options['output'], options['use_tstamp'])
+    if not options['silent']:
+        write_yaml(input_dict, os.path.join(outdir, 'config.yml'))
+
+    # Optional inputs
+    gp = input_dict.get('gp', None)  # {'shear_gp': False, 'press_gp': False}
+    md = input_dict.get('md', None)
+    db = input_dict.get('db', None)
+
+    # Intialize database
+    if db is not None:
+        if md is None:
+            MD = Mock(prop, geo, gp)
+        else:
+            prop['shear'] = 0.
+            prop['bulk'] = 0.
+
+            if md['system'] == 'lj':
+                MD = LennardJones(md)
+            elif md['system'] == 'mol':
+                MD = GoldAlkane(md)
+
+        database = Database.from_dtool(db, MD, outdir)
+    else:
+        database = None
+
+    return outdir, options, grid, numerics, prop, geo, gp, database
+
+
+def _handle_signals(func) -> None:
     """
     Register a function as the handler for common termination signals.
     """

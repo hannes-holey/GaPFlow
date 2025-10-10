@@ -67,8 +67,6 @@ class WallStress(GaussianProcessSurrogate):
             self._out_index = 3
 
         if gp is not None:
-            self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
-                          gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
 
             gp = gp['shear']
 
@@ -329,7 +327,6 @@ class WallStress(GaussianProcessSurrogate):
                            0.  # slip length
                            )
 
-        # FIXME: this is probably wrong if only one direction (xz or yz) is a GP model
         self.__field.p[:3] = s_bot[:3] / 2.
         self.__field.p[6:9] = s_top[:3] / 2.
 
@@ -455,9 +452,6 @@ class Pressure(GaussianProcessSurrogate):
         self.prop = prop
 
         if gp is not None:
-            self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
-                          gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
-
             gp = gp['press']
 
             self.active_dims = [0, 3, 4, ]  # TODO: from yaml

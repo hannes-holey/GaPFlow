@@ -54,4 +54,6 @@ include = ["GaPFlow/resources/*"]
 [tool.pytest.ini_options]
 addopts = "-v"
 testpaths = ["tests"]
+filterwarnings = "ignore::DeprecationWarning"
+
 

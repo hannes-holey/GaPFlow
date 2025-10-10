@@ -1,20 +1,9 @@
 import os
 import dtoolcore
-from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
-from getpass import getuser
 from ruamel.yaml import YAML
 from dtool_lookup_api import query
-from socket import gethostname
-
 
 from GaPFlow.utils import progressbar
-
-try:
-    import lammps
-except ImportError:
-    from unittest.mock import Mock as lammps
-    lammps.__version__ = "0.0.0"
 
 yaml = YAML()
 yaml.explicit_start = True
@@ -70,81 +59,63 @@ def get_readme_list_local(local_path):
 
     return readme_list
 
+# def write_readme(path, Xnew, Ynew, Yerrnew, params=None):
+#     """Write dtool README.yml
 
-def init_dataset(base_uri, suffix):
+#     Parameters
+#     ----------
+#     path : str
+#         dtool proto dataset path
+#     Xnew : numpy.ndarray
+#         New input data
+#     Ynew : numpy.ndarray
+#         New output data
+#     Yerrnew : numpy.ndarray
+#         New output data error (signal noise)
+#     """
 
-    ds_name = f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_dataset-{suffix:03}'
-    proto_ds = dtoolcore.create_proto_dataset(name=ds_name, base_uri=base_uri)
-    proto_ds_path = proto_ds.uri.removeprefix('file://' + gethostname())
+#     # TODO from file
+#     readme_template = """
+#     project: Multiscale Simulation of Lubrication
+#     description: Automatically generated MD run of confined fluid for multiscale simulations
+#     owners:
+#       - name: Hannes Holey
+#         email: hannes.holey@unimi.it
+#         username: hannes
+#         orcid: 0000-0002-4547-8791
+#     funders:
+#       - organization: Deutsche Forschungsgemeinschaft (DFG)
+#         program: Graduiertenkolleg
+#         code: GRK 2450
+#     creation_date: {DATE}
+#     expiration_date: {EXPIRATION_DATE}
+#     software_packages:
+#       - name: LAMMPS
+#         version: {version}
+#         website: https://lammps.sandia.gov/
+#         repository: https://github.com/lammps/lammps
+#     """
 
-    # proto_ds.update_name(f"{suffix:03}_{proto_ds.uuid}")
-    # new_name = os.path.join(base_uri, proto_ds.name)
-    # import shutil
-    # shutil.move(old_name, new_name)
+#     metadata = yaml.load(readme_template)
 
-    # proto_ds_path = os.path.join(base_uri, ds_name)
-    # proto_ds_datapath = os.path.join(base_uri, ds_name, 'data')
+#     # Update metadata
+#     metadata["owners"][0].update(dict(username=getuser()))
+#     metadata["creation_date"] = date.today()
+#     metadata["expiration_date"] = metadata["creation_date"] + relativedelta(years=10)
+#     metadata["software_packages"][0]["version"] = str(lammps.__version__)
 
-    return proto_ds, proto_ds_path
+#     if params is not None:
+#         metadata['parameters'] = {k: v for k, v in params.items()}
 
+#     out_fname = os.path.join(path, 'README.yml')
 
-def write_readme(path, Xnew, Ynew, Yerrnew, params=None):
-    """Write dtool README.yml
+#     X = [float(item) for item in Xnew]
+#     Y = [float(item) for item in Ynew]
+#     Yerr = [float(item) for item in Yerrnew]
 
-    Parameters
-    ----------
-    path : str
-        dtool proto dataset path
-    Xnew : numpy.ndarray
-        New input data
-    Ynew : numpy.ndarray
-        New output data
-    Yerrnew : numpy.ndarray
-        New output data error (signal noise)
-    """
+#     metadata['X'] = X
+#     metadata['Y'] = Y
+#     metadata['Yerr'] = Yerr
 
-    # TODO from file
-    readme_template = """
-    project: Multiscale Simulation of Lubrication
-    description: Automatically generated MD run of confined fluid for multiscale simulations
-    owners:
-      - name: Hannes Holey
-        email: hannes.holey@unimi.it
-        username: hannes
-        orcid: 0000-0002-4547-8791
-    funders:
-      - organization: Deutsche Forschungsgemeinschaft (DFG)
-        program: Graduiertenkolleg
-        code: GRK 2450
-    creation_date: {DATE}
-    expiration_date: {EXPIRATION_DATE}
-    software_packages:
-      - name: LAMMPS
-        version: {version}
-        website: https://lammps.sandia.gov/
-        repository: https://github.com/lammps/lammps
-    """
-
-    metadata = yaml.load(readme_template)
-
-    # Update metadata
-    metadata["owners"][0].update(dict(username=getuser()))
-    metadata["creation_date"] = date.today()
-    metadata["expiration_date"] = metadata["creation_date"] + relativedelta(years=10)
-    metadata["software_packages"][0]["version"] = str(lammps.__version__)
-
-    if params is not None:
-        metadata['parameters'] = {k: v for k, v in params.items()}
-
-    out_fname = os.path.join(path, 'README.yml')
-
-    X = [float(item) for item in Xnew]
-    Y = [float(item) for item in Ynew]
-    Yerr = [float(item) for item in Yerrnew]
-
-    metadata['X'] = X
-    metadata['Y'] = Y
-    metadata['Yerr'] = Yerr
-
-    with open(out_fname, 'w') as outfile:
-        yaml.dump(metadata, outfile)
+#     with open(out_fname, 'w') as outfile:
+#         yaml.dump(metadata, outfile)

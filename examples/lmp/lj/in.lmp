@@ -1,11 +1,12 @@
 # STATE POINT
 
+include			"in.param"
+
 # variable 		input_gap equal 20.
+# variable 		input_dens equal 0.8
 # variable 		input_fluxX equal 0.08
 # variable 		input_fluxY equal 0.08
-# variable 		input_dens equal 0.8
-# variable 		input_vWall equal 0.12
-# variable 		slabfile index "wall.lmp" 
+# variable 		slabfile index "wall.lmp"
 
 variable    	cutoff equal 2.5
 
