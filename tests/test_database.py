@@ -14,7 +14,7 @@ def test_addition(tmp_path):
 
     md = Mock(prop, geo, gp)
 
-    db = Database.from_dtool(db_config, md, str(tmp_path))
+    db = Database(str(tmp_path), md, db_config)
 
     Xtest = np.random.uniform(size=(100, 6))
     db.fill_missing(Xtest)
@@ -25,7 +25,7 @@ def test_addition(tmp_path):
     db.add_data(Xnew)
     assert db.size == 15
 
-    new_db = Database.from_dtool(db_config, md, str(tmp_path))
+    new_db = Database(str(tmp_path), md, db_config)
     assert new_db.size == 15
 
     new_db.write()

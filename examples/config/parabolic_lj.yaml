@@ -45,8 +45,7 @@ gp:
         obs_stddev: 4.e-3
         max_steps: 10
 db:
-    dtool: True
     # dtool_path: data/train  # defaults to options['output']/train   
     init_size: 5
-    init_samp: rand
+    init_method: rand
     init_width: 0.01 # default (for density)

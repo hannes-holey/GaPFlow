@@ -533,7 +533,7 @@ def _split_input(input_dict):
         write_yaml(input_dict, os.path.join(outdir, 'config.yml'))
 
     # Optional inputs
-    gp = input_dict.get('gp', None)  # {'shear_gp': False, 'press_gp': False}
+    gp = input_dict.get('gp', None)
     md = input_dict.get('md', None)
     db = input_dict.get('db', None)
 
@@ -550,7 +550,7 @@ def _split_input(input_dict):
             elif md['system'] == 'mol':
                 MD = GoldAlkane(md)
 
-        database = Database.from_dtool(db, MD, outdir)
+        database = Database(outdir, MD, db)
     else:
         database = None
 

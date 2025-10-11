@@ -359,7 +359,6 @@ def sanitize_db(d):
 
     out = {}
 
-    out['dtool'] = bool(d.get('dtool', True))
     out['dtool_path'] = d.get('dtool_path', None)
     out['init_size'] = int(d.get('init_size', 5))
     out['init_method'] = str(d.get('init_method', 'rand'))  # TODO: lhc, sobol

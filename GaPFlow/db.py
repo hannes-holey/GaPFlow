@@ -1,5 +1,5 @@
 import os
-from typing import Self, Any
+from typing import Any
 import jax.numpy as jnp
 import jax.random as jr
 from jaxtyping import Float
@@ -53,61 +53,15 @@ class Database:
         self,
         output_path: str,
         md: Any,
-        training_path: str | None = None,
-        init_size: int = 5,
-        init_method: str = 'rand',
-        init_width: float | None = None,
-        Xtrain: ArrayX = jnp.empty((0, 6)),
-        Ytrain: ArrayY = jnp.empty((0, 13)),
-        Ytrain_err: ArrayY = jnp.empty((0, 13)),
+        db: dict,
     ) -> None:
 
         self.output_path = output_path
-        self.training_path = training_path
-
+        self.training_path = db.get('dtool_path')
         if self.training_path is None:
-            self.training_path = os.path.join(self.output_path, 'train')
-            get_readme_list_local(self.training_path)
+            self.training_path = os.path.join(self.output_path, "train")
 
-        self.minimum_size = init_size
-        self.db_init_width = init_width  # density only
-
-        self.md = md
-        self.md.dtool_basepath = self.training_path
-
-        self._Xtrain = Xtrain
-        self._Ytrain = Ytrain
-        self._Ytrain_err = Ytrain_err
-
-        if self.size == 0:
-            self.X_scale = jnp.ones((6,))
-            self.Y_scale = jnp.ones((13,))
-        else:
-            self.X_scale = self.normalizer(self._Xtrain)  # shape=(6, )
-            self.Y_scale = self.normalizer(self._Ytrain)  # shape=(13, )
-
-    # ------------------------------------------------------------------
-    # Constructors
-    # ------------------------------------------------------------------
-    @classmethod
-    def from_dtool(cls, db: dict, md: Any, outdir: str) -> Self:
-        """
-        Load or initialize a dtool-based dataset.
-
-        Parameters
-        ----------
-        db : dict
-            Database configuration dictionary.
-        outdir : str
-            Output directory for dataset initialization.
-
-        Returns
-        -------
-        Database
-            Database instance linked to a dtool dataset.
-        """
-        dtool_basepath = db.get('dtool_path', os.path.join(outdir, "train"))
-        readme_list = get_readme_list_local(dtool_basepath)
+        readme_list = get_readme_list_local(self.training_path)
 
         if len(readme_list) > 0:
             Xtrain, Ytrain, Yerr = [], [], []
@@ -120,20 +74,29 @@ class Database:
             Ytrain = jnp.array(Ytrain)
             Yerr = jnp.array(Yerr)
         else:
-            print(f"Start with empty dtool database in {dtool_basepath}")
+            print(f"Start with empty dtool database in {self.training_path}")
             Xtrain = jnp.empty((0, 6))
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 13))
 
-        return cls(outdir,
-                   md,
-                   dtool_basepath,
-                   init_size=db['init_size'],
-                   init_method=db["init_method"],
-                   init_width=db["init_width"],
-                   Xtrain=Xtrain,
-                   Ytrain=Ytrain,
-                   Ytrain_err=Yerr)
+        # self.minimum_size = init_size
+        self.minimum_size = db['init_size']
+        self.init_method = db["init_method"]
+        self.init_width = db["init_width"]
+
+        self.md = md
+        self.md.dtool_basepath = self.training_path
+
+        self._Xtrain = Xtrain
+        self._Ytrain = Ytrain
+        self._Ytrain_err = Yerr
+
+        if self.size == 0:
+            self.X_scale = jnp.ones((6,))
+            self.Y_scale = jnp.ones((13,))
+        else:
+            self.X_scale = self.normalizer(self._Xtrain)  # shape=(6, )
+            self.Y_scale = self.normalizer(self._Ytrain)  # shape=(13, )
 
     # ------------------------------------------------------------------
     # Properties
@@ -188,7 +151,7 @@ class Database:
             Candidate test points of shape (n_test, 6).
         """
         num_missing = self.minimum_size - self.size
-        Xnew = get_new_training_input(Xtest, Nsample=num_missing, width=self.db_init_width)
+        Xnew = get_new_training_input(Xtest, Nsample=num_missing, width=self.init_width)
 
         self.add_data(Xnew)
 
