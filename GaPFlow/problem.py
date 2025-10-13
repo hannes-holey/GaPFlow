@@ -528,9 +528,11 @@ def _split_input(input_dict):
     prop = input_dict['properties']
     geo = input_dict['geometry']
 
-    outdir = create_output_directory(options['output'], options['use_tstamp'])
     if not options['silent']:
+        outdir = create_output_directory(options['output'], options['use_tstamp'])
         write_yaml(input_dict, os.path.join(outdir, 'config.yml'))
+    else:
+        outdir = "/tmp/"
 
     # Optional inputs
     gp = input_dict.get('gp', {'press_gp': False, 'shear_gp': False})
