@@ -533,7 +533,7 @@ def _split_input(input_dict):
         write_yaml(input_dict, os.path.join(outdir, 'config.yml'))
 
     # Optional inputs
-    gp = input_dict.get('gp', None)
+    gp = input_dict.get('gp', {'press_gp': False, 'shear_gp': False})
     md = input_dict.get('md', None)
     db = input_dict.get('db', None)
 
