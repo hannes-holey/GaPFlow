@@ -1,13 +1,15 @@
 import os
+import pytest
 import numpy as np
 
 from GaPFlow.db import Database
 from GaPFlow.md import Mock
 
 
-def test_addition(tmp_path):
+@pytest.mark.parametrize('method', ['rand', 'lhc', 'sobol'])
+def test_addition(tmp_path, method):
 
-    db_config = {'init_size': 5, 'init_width': 0.01, 'init_method': 'rand'}
+    db_config = {'init_size': 4, 'init_width': 0.01, 'init_method': method, 'init_seed': 42}
     geo = {'U': 1., 'V': 0.}
     prop = {'shear': 1., 'bulk': 0., 'EOS': 'PL'}
     gp = {'press_gp': False, 'shear_gp': False}
@@ -17,16 +19,16 @@ def test_addition(tmp_path):
     db = Database(str(tmp_path), md, db_config)
 
     Xtest = np.random.uniform(size=(100, 6))
-    db.fill_missing(Xtest)
+    db.initialize(Xtest)
 
     assert db.size == db_config['init_size']
 
     Xnew = np.random.uniform(size=(10, 6))
     db.add_data(Xnew)
-    assert db.size == 15
+    assert db.size == 14
 
     new_db = Database(str(tmp_path), md, db_config)
-    assert new_db.size == 15
+    assert new_db.size == 14
 
     new_db.write()
 

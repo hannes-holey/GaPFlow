@@ -80,7 +80,7 @@ class GaussianProcessSurrogate:
     fc : muGrid.GlobalFieldCollection
         Field container with accessors for real fields such as 'solution' and 'gap'.
     database : GaPFlow.db.Database
-        Training database providing `fill_missing`, `add_data`, and `size` attributes.
+        Training database providing `initialize`, `add_data`, and `size` attributes.
 
     Attributes
     ----------
@@ -114,7 +114,11 @@ class GaussianProcessSurrogate:
 
         if self.is_gp_model:
             self.database = database
-            self.database.fill_missing(self._Xtest)
+
+            _, _, nx, ny = self.__gap.shape
+            dim = int((nx - 2) > 1) + int((ny - 2) > 1)
+            self.database.initialize(self._Xtest, dim)
+
             self.last_fit_train_size = self.database.size
 
             # Initialize timers

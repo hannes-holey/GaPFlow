@@ -361,8 +361,11 @@ def sanitize_db(d):
 
     out['dtool_path'] = d.get('dtool_path', None)
     out['init_size'] = int(d.get('init_size', 5))
-    out['init_method'] = str(d.get('init_method', 'rand'))  # TODO: lhc, sobol
+    out['init_method'] = str(d.get('init_method', 'lhc'))
     out['init_width'] = float(d.get('init_width', 1e-2))
+    out['init_seed'] = int(d.get('init_width', 123))
+
+    assert out['init_method'] in ['rand', 'lhc', 'sobol']
 
     print_dict(out)
 

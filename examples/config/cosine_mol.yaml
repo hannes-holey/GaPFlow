@@ -48,7 +48,7 @@ db:
     dtool: True
     dtool_path: data/train_mol
     init_size: 5
-    init_samp: rand
+    init_method: rand
 md:
     system: mol
     ncpu: 6 

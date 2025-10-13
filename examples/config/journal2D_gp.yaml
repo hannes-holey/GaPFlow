@@ -53,5 +53,5 @@ db:
     dtool: True
     # dtool_path: ... # defaults to options['output']/train   
     init_size: 5
-    init_samp: rand
+    init_method: rand
     init_width: 1.e-6

@@ -4,6 +4,7 @@ import jax.numpy as jnp
 import jax.random as jr
 from jaxtyping import Float
 from jax import Array
+from scipy.stats import qmc
 
 from GaPFlow.dtool import get_readme_list_local
 
@@ -83,6 +84,7 @@ class Database:
         self.minimum_size = db['init_size']
         self.init_method = db["init_method"]
         self.init_width = db["init_width"]
+        self.init_seed = db["init_seed"]
 
         self.md = md
         self.md.dtool_basepath = self.training_path
@@ -138,22 +140,64 @@ class Database:
     # ------------------------------------------------------------------
     # Data management
     # ------------------------------------------------------------------
-    def fill_missing(
+    def initialize(
         self,
         Xtest: ArrayX,
-    ) -> None:
+        dim: int = 1
+    ) -> ArrayX:
         """
-        Fill the database to reach the minimum required number of samples.
+        Initialize database.
 
         Parameters
         ----------
-        Xtest : ndarray
+        Xtest : jax.Array
             Candidate test points of shape (n_test, 6).
+        Returns
+        -------
+        Xnew : jax.Array
+            New input samples of shape (n_new, 6).
         """
-        num_missing = self.minimum_size - self.size
-        Xnew = get_new_training_input(Xtest, Nsample=num_missing, width=self.init_width)
 
-        self.add_data(Xnew)
+        Nsample = self.minimum_size - self.size
+
+        if Nsample > 0:
+            if dim == 1:
+                flux = jnp.mean(Xtest[:, 4])
+                active = jnp.array([0, 1])
+            else:
+                flux = jnp.hypot(jnp.mean(Xtest[:, 4]), jnp.mean(Xtest[:, 5]))
+                active = (0, 1, 2)
+
+            rho = jnp.mean(Xtest[:, 3])
+
+            l_bounds = jnp.array([(1.0 - self.init_width) * rho,
+                                  0.5 * flux,
+                                  -0.5 * flux])[active]
+
+            u_bounds = jnp.array([(1.0 + self.init_width) * rho,
+                                  1.5 * flux,
+                                  0.5 * flux])[active]
+
+            key = jr.key(self.init_seed)
+            key, subkey = jr.split(key)
+
+            if self.init_method == 'rand':
+                _samples = _get_random_samples(subkey, Nsample, l_bounds, u_bounds)
+            elif self.init_method == 'lhc':
+                _samples = _get_lhc_samples(Nsample, l_bounds, u_bounds)
+            elif self.init_method == 'sobol':
+                _samples = _get_sobol_samples(Nsample, l_bounds, u_bounds)
+                Nsample = _samples.shape[0]
+
+            key, subkey = jr.split(key)
+            choice = jr.choice(subkey, Xtest.shape[0], shape=(Nsample,), replace=False).tolist()
+
+            Xnew = jnp.column_stack([
+                Xtest[choice, :3],  # h dh_dx dh_dy
+                jnp.hstack([_samples, jnp.zeros((Nsample, 1))]) if len(active) == 2 else _samples  # rho, jx, jy
+            ])
+
+            self.add_data(Xnew)
 
     def add_data(
         self,
@@ -184,50 +228,35 @@ class Database:
         self.write()
 
 
-def get_new_training_input(
-    Xtest: ArrayX,
-    Nsample: int,
-    width: float = 1e-2,
-) -> ArrayX:
-    """
-    Generate new input samples for initial database population.
+def _get_random_samples(key, N, lo, hi):
+    dim = len(lo)
+    samples = jr.uniform(
+        key,
+        shape=(N, dim),
+        minval=lo[None, :],
+        maxval=hi[None, :],
+    )
 
-    Parameters
-    ----------
-    Xtest : jax.Array
-        Candidate test points of shape (n_test, 6).
-    Nsample : int
-        Number of new samples to generate.
-    width : float, optional
-        Relative sampling width for density and flux components.
+    return samples
 
-    Returns
-    -------
-    Xnew : jax.Array
-        New input samples of shape (n_new, 6).
-    """
-    if Nsample > 0:
-        jabs = jnp.hypot(jnp.mean(Xtest[:, 4]), jnp.mean(Xtest[:, 5]))
-        rho = jnp.mean(Xtest[:, 3])
 
-        l_bounds = jnp.array([(1.0 - width) * rho, 0.5 * jabs, -0.5 * jabs])
-        u_bounds = jnp.array([(1.0 + width) * rho, 1.5 * jabs, +0.5 * jabs])
+def _get_lhc_samples(N, lo, hi):
+    dim = len(lo)
+    sampler = qmc.LatinHypercube(d=dim)
+    sample = sampler.random(n=N)
+    scaled_samples = qmc.scale(sample, lo, hi)
 
-        key = jr.key(123)
-        key, subkey = jr.split(key)
-        choice = jr.choice(key, Xtest.shape[0], shape=(Nsample,), replace=False).tolist()
+    return scaled_samples
 
-        scaled_samples = jr.uniform(
-            key, shape=(Nsample, 3),
-            minval=l_bounds[None, :],
-            maxval=u_bounds[None, :],
-        )
 
-        Xnew = jnp.column_stack([
-            Xtest[choice, :3],  # gap height and derivatives
-            scaled_samples,     # rho, flux_x, flux_y
-        ])
-    else:
-        Xnew = jnp.empty((0, 6))
+def _get_sobol_samples(N, lo, hi):
+    dim = len(lo)
+    sampler = qmc.Sobol(d=dim)
+    m = int(jnp.log2(N))
+    if int(2**m) != N:
+        m = int(jnp.ceil(jnp.log2(N)))
+        print(f'Sample size should be a power of 2 for Sobol sampling. Use Ninit={2**m}.')
+    sample = sampler.random_base2(m=m)
+    scaled_samples = qmc.scale(sample, lo, hi)
 
-    return Xnew
+    return scaled_samples

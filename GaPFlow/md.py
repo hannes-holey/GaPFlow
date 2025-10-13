@@ -212,8 +212,10 @@ class Mock(MolecularDynamics):
     def read_output(self):
         key = jr.key(123)
         key, subkey = jr.split(key)
-        noise_p = jr.normal(key) * self.noise[0]
+        noise_p = jr.normal(subkey) * self.noise[0]
+        key, subkey = jr.split(subkey)
         noise_s0 = jr.normal(key) * self.noise[1]
+        key, subkey = jr.split(subkey)
         noise_s1 = jr.normal(key) * self.noise[1]
 
         U, V = self.geo["U"], self.geo["V"]

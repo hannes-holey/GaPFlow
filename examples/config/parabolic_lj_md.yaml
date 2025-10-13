@@ -48,7 +48,7 @@ db:
     dtool: True
     dtool_path: data/train_lj  # defaults to options['output']/train   
     init_size: 5
-    init_samp: rand
+    init_method: rand
     init_width: 0.01 # default (for density)
 md:
     system: lj
