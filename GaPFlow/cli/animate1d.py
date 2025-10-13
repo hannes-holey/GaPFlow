@@ -1,14 +1,15 @@
 import os
+import pandas as pd
 import numpy as np
 from importlib import resources
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser
-from GaPFlow.plotting import animate, animate_gp, get_pipeline
 
-import pandas as pd
+from GaPFlow.viz.utils import get_pipeline
+from GaPFlow.viz.animations import animate, animate_gp
 
 
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
+plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def get_parser():

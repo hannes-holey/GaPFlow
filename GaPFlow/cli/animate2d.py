@@ -1,13 +1,14 @@
 import os
 import numpy as np
+import pandas as pd
 from importlib import resources
 import matplotlib.pyplot as plt
-from GaPFlow.plotting import animate2d, get_pipeline
 
-import pandas as pd
+from GaPFlow.viz.utils import get_pipeline
+from GaPFlow.viz.animations import animate2d
 
 
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
+plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def main():

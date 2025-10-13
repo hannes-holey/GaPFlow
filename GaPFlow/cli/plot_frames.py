@@ -1,10 +1,12 @@
 from importlib import resources
 from argparse import ArgumentParser
 import matplotlib.pyplot as plt
-from GaPFlow.plotting import plot_evolution, get_pipeline
+
+from GaPFlow.viz.utils import get_pipeline
+from GaPFlow.viz.plotting import plot_evolution
 
 
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
+plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def get_parser():
