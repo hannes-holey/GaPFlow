@@ -371,14 +371,6 @@ def sanitize_db(d):
 
 def sanitize_md(d):
 
-    out = {}
-
-    keys = ['ncpu', 'infile', 'wallfile', 'cutoff', 'temp', 'vWall', 'tsample']
-    types = [int, str, str, float, float, float, int]
-
-    # no check (so far)
-    out = d
-
-    print_dict(out)
+    print_dict(d)
 
     return d
