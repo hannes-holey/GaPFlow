@@ -238,7 +238,7 @@ def sanitize_properties(d):
         raise IOError("Specify a a (non-negative) bulk viscosity")
 
     # EOS
-    available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR']
+    available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR', 'Bayada']
     out['EOS'] = str(d.get('EOS', 'none'))
 
     if out['EOS'] not in available_eos:
@@ -268,6 +268,10 @@ def sanitize_properties(d):
         keys = ['T', 'gamma']
         defaults = [2., 3.0]
 
+    elif out["EOS"] == "Bayada":
+        keys = ['rho_l', 'rho_v', 'c_l', 'c_v']
+        defaults = [850., 0.019, 1600., 352.]
+
     for k, de in zip(keys, defaults):
         out[k] = float(d.get(k, de))
 
@@ -276,7 +280,7 @@ def sanitize_properties(d):
 
     # Non-Newtonian behavior
     # Piezoviscosity: Barus, Roelands
-    available_piezo = ['Barus', 'Roelands']
+    available_piezo = ['Barus', 'Roelands', 'Dukler', 'McAdams']
     if 'piezo' in d.keys():
         out['piezo'] = {}
         out['piezo']['name'] = str(d['piezo'].get('name', 'none'))
@@ -287,6 +291,9 @@ def sanitize_properties(d):
         elif out['piezo']['name'] == "Barus":
             keys = ['aB']
             defaults = [20e-9]
+        elif (out['piezo']['name'] == "Dukler") or (out['piezo']['name'] == "McAdams"):
+            keys = ['eta_v', 'rho_l', 'rho_v']
+            defaults = [3.9e-5, 850., 0.019]
 
         if out['piezo']['name'] in available_piezo:
             for k, de in zip(keys, defaults):

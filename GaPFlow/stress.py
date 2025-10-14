@@ -289,7 +289,7 @@ class WallStress(GaussianProcessSurrogate):
         """
         # piezoviscosity
         if 'piezo' in self.prop.keys():
-            mu0 = piezoviscosity(self.pressure,
+            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.mass_density,
                                  self.prop['shear'],
                                  self.prop['piezo'])
         else:
@@ -401,7 +401,7 @@ class BulkStress(GaussianProcessSurrogate):
         # piezoviscosity
 
         if 'piezo' in self.prop.keys():
-            mu0 = piezoviscosity(self.pressure,
+            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.mass_density,
                                  self.prop['shear'],
                                  self.prop['piezo'])
         else:

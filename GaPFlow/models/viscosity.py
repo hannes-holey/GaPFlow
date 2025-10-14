@@ -10,7 +10,7 @@ def piezoviscosity(p: float | npt.NDArray,
     Parameters
     ----------
     p : float or Array
-        Pressure (field)
+        Pressure (field) (or density for Bayada-Chupin EoS)
     mu0 : float
         Newtonian viscosity
     piezo_dict : dict
@@ -26,6 +26,11 @@ def piezoviscosity(p: float | npt.NDArray,
         func = barus_piezo
     elif piezo_dict['name'] == 'Roelands':
         func = roelands_piezo
+    # for cavitation model of Bayada & Chupin
+    elif piezo_dict['name'] == 'Dukler':
+        func = dukler_mixture
+    elif piezo_dict['name'] == 'McAdams':
+        func = mc_adams_mixture
     else:
         func = lambda p, mu, **kwargs: np.ones_like(p) * mu
 
@@ -161,6 +166,68 @@ def roelands_piezo(p, mu0, mu_inf=1.e-3, p_ref=1.96e8, z=0.68, name='Roelands'):
     """
 
     return mu0 * np.exp(np.log(mu0 / mu_inf) * (-1 + (1 + p / p_ref)**z))
+
+
+def dukler_mixture(rho, eta_l, eta_v=3.9e-5, rho_l=850., rho_v=0.019, name='Dukler'):
+    """
+    Computes mixture viscosity using the linear Dukler model.
+
+    .. math::
+        \\eta = \\alpha \\eta_v + (1 - \\alpha) \\eta_l
+
+    where :math:`\\alpha = \\frac{\\rho - \\rho_l}{\\rho_v - \\rho_l}` is the vapor mass fraction.
+
+    Parameters
+    ----------
+    rho : float or np.ndarray
+        Mixture density.
+    rho_l : float
+        Liquid density.
+    rho_v : float
+        Vapor density.
+    eta_l : float
+        Viscosity of the liquid phase.
+    eta_v : float
+        Viscosity of the vapor phase.
+
+    Returns
+    -------
+    float or np.ndarray
+        Mixture viscosity.
+    """
+    alpha = (rho - rho_l) / (rho_v - rho_l)
+    return alpha * eta_v + (1 - alpha) * eta_l
+
+
+def mc_adams_mixture(rho, eta_l, eta_v=3.9e-5, rho_l=850., rho_v=0.019, name='McAdams'):
+    """
+    Computes mixture viscosity using the McAdams model.
+
+    .. math::
+        M = \\alpha \\frac{\\rho_v}{\\rho}, \\quad
+        \\eta = \\frac{\\eta_v \\eta_l}{\\eta_l M + \\eta_v (1 - M)}
+
+    Parameters
+    ----------
+    rho : float or np.ndarray
+        Mixture density.
+    eta_l : float
+        Viscosity of the liquid phase.
+    eta_v : float
+        Viscosity of the vapor phase.
+    rho_l : float
+        Liquid density.
+    rho_v : float
+        Vapor density.
+
+    Returns
+    -------
+    float or np.ndarray
+        Mixture viscosity.
+    """
+    alpha = (rho - rho_l) / (rho_v - rho_l)
+    M = alpha * rho_v / rho
+    return eta_v * eta_l / (eta_l * M + eta_v * (1 - M))
 
 
 def eyring_shear(shear_rate, mu0, tauE=5.e5, name='Eyring'):

@@ -42,6 +42,9 @@ def eos_sound_velocity(density, prop):
     elif prop['EOS'] == "BWR":
         func = bwr
         args = ['T', 'gamma']
+    elif prop['EOS'] == 'Bayada':
+        func = bayada_chupin
+        args = ['rho_l', 'rho_v', 'c_l', 'c_v']
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -251,3 +254,47 @@ def bwr(rho, T, gamma=3.0):
     )
 
     return np.sqrt(dp_drho)
+
+
+def bayada_chupin(rho, rho_l, rho_v, c_l, c_v):
+    """
+    Computes the isothermal speed of sound using the Bayada-Chupin cavitation model.
+
+
+    Parameters
+    ----------
+    rho : float or np.ndarray
+        Density.
+    rho_l : float
+        Liquid density.
+    rho_v : float
+        Vapor density.
+    c_l : float
+        Speed of sound in liquid.
+    c_v : float
+        Speed of sound in vapor.
+
+    Returns
+    -------
+    float or np.ndarray
+        Speed of sound.
+    """
+
+    alpha = (rho - rho_l) / (rho_v - rho_l)
+
+    if np.isscalar(rho):
+        if alpha < 0:
+            c_squared = c_l**2
+        elif alpha >= 0 and alpha <= 1:
+            c_squared = rho_v * rho_l * (c_v * c_l) ** 2 / (alpha * rho_l * c_l**2 + (1 - alpha) * rho_v * c_v**2) / rho
+        else:
+            c_squared = c_v**2
+
+    else:
+        mix = np.logical_and(alpha <= 1, alpha >= 0)
+        c_squared = np.ones_like(rho) * c_v**2
+        c_squared[alpha < 0] = c_l**2
+        c_squared[mix] = rho_v * rho_l * (c_v * c_l) ** 2 / (alpha[mix] * rho_l * c_l **
+                                                             2 + (1 - alpha[mix]) * rho_v * c_v**2) / rho[mix]
+
+    return np.sqrt(c_squared)

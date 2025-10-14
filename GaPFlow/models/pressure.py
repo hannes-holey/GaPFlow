@@ -37,6 +37,9 @@ def eos_pressure(density, prop):
     elif prop['EOS'] == "BWR":
         func = bwr
         args = ['T', 'gamma']
+    elif prop['EOS'] == 'Bayada':
+        func = bayada_chupin
+        args = ['rho_l', 'rho_v', 'c_l', 'c_v']
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -205,7 +208,7 @@ def bwr(dens, T, gamma=3.):
 
     Parameters
     ----------
-    rho : float or np.ndarray
+    dens : float or np.ndarray
         Density.
     T : float
         Temperature.
@@ -236,5 +239,56 @@ def bwr(dens, T, gamma=3.):
                                     dens**9 * (x[25] / T**2 + x[26] / T**4) +  # noqa: W504
                                     dens**11 * (x[27] / T**2 + x[28] / T**3) +  # noqa: W504
                                     dens**13 * (x[29] / T**2 + x[30] / T**3 + x[31] / T**4))
+
+    return p
+
+
+def bayada_chupin(dens, rho_l, rho_v, c_l, c_v):
+    """
+    Computes pressure using the Bayada-Chupin cavitation model.
+
+    Models lubricated film pressure in the presence of phase change.
+    Reference: Bayada, G., & Chupin, L. (2013). *Journal of Tribology, 135(4), 041703*.
+
+    Parameters
+    ----------
+    dens : float or np.ndarray
+        Current density.
+    rho_l : float
+        Liquid density.
+    rho_v : float
+        Vapor density.
+    c_l : float
+        Speed of sound in liquid.
+    c_v : float
+        Speed of sound in vapor.
+
+    Returns
+    -------
+    float or np.ndarray
+        Computed pressure.
+
+    """
+    N = rho_v * c_v**2 * rho_l * c_l**2 * (rho_v - rho_l) / (rho_v**2 * c_v**2 - rho_l**2 * c_l**2)
+    Pcav = rho_v * c_v**2 - N * np.log(rho_v**2 * c_v**2 / (rho_l**2 * c_l**2))
+    alpha = (dens - rho_l) / (rho_v - rho_l)
+
+    if np.isscalar(dens):
+        if alpha < 0:
+            p = Pcav + (dens - rho_l) * c_l**2
+        elif alpha >= 0 and alpha <= 1:
+            denominator = rho_l * (rho_v * c_v**2 * (1 - alpha) + rho_l * c_l**2 * alpha)
+            p = Pcav + N * np.log(rho_v * c_v**2 * dens / denominator)
+        else:
+            p = c_v**2 * dens
+
+    else:
+        dens_mix = dens[np.logical_and(alpha <= 1, alpha >= 0)]
+        alpha_mix = alpha[np.logical_and(alpha <= 1, alpha >= 0)]
+
+        p = c_v**2 * dens
+        p[alpha < 0] = Pcav + (dens[alpha < 0] - rho_l) * c_l**2
+        denominator = rho_l * (rho_v * c_v**2 * (1 - alpha_mix) + rho_l * c_l**2 * alpha_mix)
+        p[np.logical_and(alpha <= 1, alpha >= 0)] = Pcav + N * np.log(rho_v * c_v**2 * dens_mix / denominator)
 
     return p
