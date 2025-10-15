@@ -76,6 +76,7 @@ class MolecularDynamics:
     path: str
     _dtool_basepath: str
     readme_template: str = ""
+    input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
     ascii_art: str = r"""
   _        _    __  __ __  __ ____  ____
  | |      / \  |  \/  |  \/  |  _ \/ ___|
@@ -108,8 +109,8 @@ class MolecularDynamics:
         text = ['Run next MD simulation in:', f'{proto_datapath}']
         text.append(self.ascii_art)
         text.append('---')
-        for i, Xi in enumerate(X):
-            text.append(f'Input {i + 1}: {Xi:.3g}')
+        for i, (Xi, name) in enumerate(zip(X, self.input_names)):
+            text.append(f'Input {i + 1}: {Xi:+.3e}    ({name})')
         print(bordered_text('\n'.join(text)))
 
     def write_dtool_readme(self, dataset_path, Xnew, Ynew, Yerrnew):
@@ -222,9 +223,9 @@ class Mock(MolecularDynamics):
         eta, zeta = self.prop["shear"], self.prop["bulk"]
 
         X = self.X
-        tau_bot = stress_bottom(X[3:], X[:3], U, V, eta, zeta, 0.0) + noise_s0
-        tau_top = stress_top(X[3:], X[:3], U, V, eta, zeta, 0.0) + noise_s1
-        press = eos_pressure(X[3:4], self.prop) + noise_p
+        tau_bot = stress_bottom(X[:3], X[3:6], U, V, eta, zeta, 0.0) + noise_s0
+        tau_top = stress_top(X[:3], X[3:6], U, V, eta, zeta, 0.0) + noise_s1
+        press = eos_pressure(X[0:1], self.prop) + noise_p
 
         Y = jnp.hstack([press, tau_bot, tau_top]).T
         Ye = jnp.array([

@@ -114,6 +114,7 @@ class GaussianProcessSurrogate:
 
         if self.is_gp_model:
             self.database = database
+            self.__extra = fc.get_real_field('extra')
 
             _, _, nx, ny = self.__topo.shape
             dim = int((nx - 2) > 1) + int((ny - 2) > 1)
@@ -194,19 +195,19 @@ class GaussianProcessSurrogate:
     # Convenience properties
     # ------------------------------------------------------------------
     @property
-    def mass_density(self) -> JAXArray:
-        """Return the first component of the solution field (mass density)."""
-        return self.__solution.p[0]
-
-    @property
-    def density(self) -> JAXArray:
-        """Return full density field from the solution."""
+    def solution(self):
+        """Return full solution field."""
         return self.__solution.p
 
     @property
     def topography(self) -> JAXArray:
-        """Return the gap field."""
+        """Return the topography (height and gradients)."""
         return self.__topo.p
+
+    @property
+    def extra(self):
+        """Return extra constant field, which can be used as input."""
+        return self.__extra.p
 
     @property
     def height(self):
@@ -301,7 +302,7 @@ class GaussianProcessSurrogate:
             Predicted variance field.
         """
         m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
-        _, nx, ny = self.density.shape
+        _, nx, ny = self.solution.shape
 
         predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
@@ -401,11 +402,10 @@ class GaussianProcessSurrogate:
             Test inputs of shape (n_samples, 6).
         """
         return jnp.vstack([
+            self.solution,
             self.topography,
-            self.density[0][None, :, :],
-            self.density[1][None, :, :],
-            self.density[2][None, :, :]
-        ]).reshape(6, -1).T
+            self.extra
+        ]).reshape(self.database.num_features, -1).T
 
 
 # ----------------------------------------------------------------------

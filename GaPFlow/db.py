@@ -55,7 +55,11 @@ class Database:
         output_path: str,
         md: Any,
         db: dict,
+        extra_feat: int = 0
     ) -> None:
+
+        #  number of possible features, actual ones are selected from GP's active_dims
+        self.num_features = 6 + extra_feat
 
         self.output_path = output_path
         self.training_path = db.get('dtool_path')
@@ -74,9 +78,11 @@ class Database:
             Xtrain = jnp.array(Xtrain)
             Ytrain = jnp.array(Ytrain)
             Yerr = jnp.array(Yerr)
+
+            assert Xtrain.shape[0] != 6 + extra_feat
         else:
             print(f"Start with empty dtool database in {self.training_path}")
-            Xtrain = jnp.empty((0, 6))
+            Xtrain = jnp.empty((0, self.num_features))
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 13))
 
@@ -94,11 +100,11 @@ class Database:
         self._Ytrain_err = Yerr
 
         if self.size == 0:
-            self.X_scale = jnp.ones((6,))
+            self.X_scale = jnp.ones((self.num_features,))
             self.Y_scale = jnp.ones((13,))
         else:
-            self.X_scale = self.normalizer(self._Xtrain)  # shape=(6, )
-            self.Y_scale = self.normalizer(self._Ytrain)  # shape=(13, )
+            self.X_scale = self.normalizer(self._Xtrain)
+            self.Y_scale = self.normalizer(self._Ytrain)
 
     # ------------------------------------------------------------------
     # Properties
@@ -162,13 +168,13 @@ class Database:
 
         if Nsample > 0:
             if dim == 1:
-                flux = jnp.mean(Xtest[:, 4])
+                flux = jnp.mean(Xtest[:, 1])
                 active = jnp.array([0, 1])
             else:
-                flux = jnp.hypot(jnp.mean(Xtest[:, 4]), jnp.mean(Xtest[:, 5]))
+                flux = jnp.hypot(jnp.mean(Xtest[:, 1]), jnp.mean(Xtest[:, 2]))
                 active = jnp.array([0, 1, 2])
 
-            rho = jnp.mean(Xtest[:, 3])
+            rho = jnp.mean(Xtest[:, 0])
 
             l_bounds = jnp.array([(1.0 - self.init_width) * rho,
                                   0.5 * flux,
@@ -193,8 +199,8 @@ class Database:
             choice = jr.choice(subkey, Xtest.shape[0], shape=(Nsample,), replace=False).tolist()
 
             Xnew = jnp.column_stack([
-                Xtest[choice, :3],  # h dh_dx dh_dy
-                jnp.hstack([_samples, jnp.zeros((Nsample, 1))]) if len(active) == 2 else _samples  # rho, jx, jy
+                jnp.hstack([_samples, jnp.zeros((Nsample, 1))]) if len(active) == 2 else _samples,  # rho, jx, jy
+                Xtest[choice, 3:],  # h dh_dx dh_dy + ...
             ])
 
             self.add_data(Xnew)

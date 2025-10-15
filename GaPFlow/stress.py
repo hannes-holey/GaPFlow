@@ -58,16 +58,12 @@ class WallStress(GaussianProcessSurrogate):
         self.prop = prop
         self.name = f'{direction}z'
 
-        if direction == 'x':
-            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
-            self._out_index = 4
-        elif direction == 'y':
-            self.active_dims = [0, 3, 5, ]
-            self._out_index = 3
+        self._out_index = {'x': 4, 'y': 3}[direction]
 
         if gp is not None:
-
             gp = gp['shear']
+            self.active_dims = {'x': gp.get('active_dims', [0, 1, 3]),
+                                'y': gp.get('active_dims', [0, 2, 3])}[direction]
 
             self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
 
@@ -89,7 +85,6 @@ class WallStress(GaussianProcessSurrogate):
 
             self._train()
             self._infer()
-            # self.maximum_variance = self.kernel_variance
 
     # -------------------------
     # Properties
@@ -276,7 +271,7 @@ class WallStress(GaussianProcessSurrogate):
         """
         # piezoviscosity
         if 'piezo' in self.prop.keys():
-            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.mass_density,
+            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.solution[0],
                                  self.prop['shear'],
                                  self.prop['piezo'])
         else:
@@ -296,7 +291,7 @@ class WallStress(GaussianProcessSurrogate):
         else:
             shear_viscosity = mu0
 
-        s_bot = stress_bottom(self.density,
+        s_bot = stress_bottom(self.solution,
                               self.topography,
                               self.geo['U'],
                               self.geo['V'],
@@ -305,7 +300,7 @@ class WallStress(GaussianProcessSurrogate):
                               0.  # slip length
                               )
 
-        s_top = stress_top(self.density,
+        s_top = stress_top(self.solution,
                            self.topography,
                            self.geo['U'],
                            self.geo['V'],
@@ -382,7 +377,7 @@ class BulkStress(GaussianProcessSurrogate):
         # piezoviscosity
 
         if 'piezo' in self.prop.keys():
-            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.mass_density,
+            mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.solution[0],
                                  self.prop['shear'],
                                  self.prop['piezo'])
         else:
@@ -402,7 +397,7 @@ class BulkStress(GaussianProcessSurrogate):
         else:
             shear_viscosity = mu0
 
-        self.__field.p = stress_avg(self.density,
+        self.__field.p = stress_avg(self.solution,
                                     self.topography,
                                     self.geo['U'],
                                     self.geo['V'],
@@ -435,7 +430,7 @@ class Pressure(GaussianProcessSurrogate):
         if gp is not None:
             gp = gp['press']
 
-            self.active_dims = [0, 3, 4, ]  # TODO: from yaml
+            self.active_dims = gp.get('active_dims', [0, 3])
             self.__field_variance = fc.real_field('pressure_var')
             self.atol = gp['atol']
             self.rtol = gp['rtol']
@@ -477,11 +472,12 @@ class Pressure(GaussianProcessSurrogate):
         """
         if self.is_gp_model:
             eos_grad = vmap(grad(self.eos))
-            vsound_squared = eos_grad(self.Xtest)[:, 1].max() * self.Yscale / self.database.X_scale[3]
+            # FIXME: density dimension hard-coded
+            vsound_squared = eos_grad(self.Xtest)[:, 0].max() * self.Yscale / self.database.X_scale[0]
             vsound = jnp.sqrt(vsound_squared)
             return vsound
         else:
-            return eos_sound_velocity(self.mass_density, self.prop).max()
+            return eos_sound_velocity(self.solution[0], self.prop).max()
 
     @property
     def Xtest(self) -> JAXArray:
@@ -536,4 +532,4 @@ class Pressure(GaussianProcessSurrogate):
             self.__field.p = mean
             self.__field_variance.p = var
         else:
-            self.__field.p = eos_pressure(self.density[0], self.prop)
+            self.__field.p = eos_pressure(self.solution[0], self.prop)

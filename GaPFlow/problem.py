@@ -71,8 +71,13 @@ class Problem:
                 gpz = gp if gp['press_gp'] else None
                 gpx = gp if gp['shear_gp'] else None
                 gpy = gp if gp['shear_gp'] else None
+
         else:
             gpx, gpy, gpz = None, None, None
+
+        if database is not None:
+            # Initialize extra field (optional)
+            fc.real_field('extra', (database.num_features - 6,))
 
         # Stress fields
         self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
@@ -550,7 +555,7 @@ def _split_input(input_dict):
             elif md['system'] == 'mol':
                 MD = GoldAlkane(md)
 
-        database = Database(outdir, MD, db)
+        database = Database(outdir, MD, db, extra_feat=1)
     else:
         database = None
 
