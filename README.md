@@ -100,7 +100,7 @@ which shows the transient solution of a 1D journal bearing with active learning 
 A Sphinx-generated documentation can be built locally with
 ```
 cd doc
-sphinx-apidoc -o . ../hans
+sphinx-apidoc -o . ../GaPFlow
 make html
 ```
 
