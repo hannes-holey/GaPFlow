@@ -51,7 +51,6 @@ class WallStress(GaussianProcessSurrogate):
     ) -> None:
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
         self.__pressure = fc.get_real_field('pressure')
-        self.__gap = fc.get_real_field('gap')
         self.__x = fc.get_real_field('x')
         self.__y = fc.get_real_field('y')
 
@@ -166,18 +165,6 @@ class WallStress(GaussianProcessSurrogate):
             Gradient along y computed with jnp.gradient.
         """
         return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
-
-    @property
-    def height(self) -> NDArray:
-        """
-        Gap height field.
-
-        Returns
-        -------
-        ndarray
-            Gap height array (typically the first component of gap field).
-        """
-        return self.__gap.p[0]
 
     @property
     def Xtest(self) -> Tuple[JAXArray, JAXArray]:
@@ -310,7 +297,7 @@ class WallStress(GaussianProcessSurrogate):
             shear_viscosity = mu0
 
         s_bot = stress_bottom(self.density,
-                              self.gap,
+                              self.topography,
                               self.geo['U'],
                               self.geo['V'],
                               shear_viscosity,
@@ -319,7 +306,7 @@ class WallStress(GaussianProcessSurrogate):
                               )
 
         s_top = stress_top(self.density,
-                           self.gap,
+                           self.topography,
                            self.geo['U'],
                            self.geo['V'],
                            shear_viscosity,
@@ -361,7 +348,6 @@ class BulkStress(GaussianProcessSurrogate):
 
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
         self.__pressure = fc.get_real_field('pressure')
-        self.__gap = fc.get_real_field('gap')
         self.__x = fc.get_real_field('x')
         self.__y = fc.get_real_field('y')
 
@@ -391,11 +377,6 @@ class BulkStress(GaussianProcessSurrogate):
         """Return ∂p/∂y."""
         return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
 
-    @property
-    def height(self) -> NDArray:
-        """Return gap height array."""
-        return self.__gap.p[0]
-
     def update(self) -> None:
         """Compute and store bulk viscous stress using viscous model."""
         # piezoviscosity
@@ -422,7 +403,7 @@ class BulkStress(GaussianProcessSurrogate):
             shear_viscosity = mu0
 
         self.__field.p = stress_avg(self.density,
-                                    self.gap,
+                                    self.topography,
                                     self.geo['U'],
                                     self.geo['V'],
                                     shear_viscosity,

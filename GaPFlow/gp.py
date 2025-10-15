@@ -110,7 +110,7 @@ class GaussianProcessSurrogate:
     def __init__(self, fc, database):
         self.step = 0
         self.__solution = fc.get_real_field('solution')
-        self.__gap = fc.get_real_field('gap')
+        self.__topo = fc.get_real_field('topography')
 
         if self.is_gp_model:
             self.database = database
@@ -204,9 +204,21 @@ class GaussianProcessSurrogate:
         return self.__solution.p
 
     @property
-    def gap(self) -> JAXArray:
+    def topography(self) -> JAXArray:
         """Return the gap field."""
-        return self.__gap.p
+        return self.__topo.p
+
+    @property
+    def height(self):
+        return self.__topo.p[0]
+
+    @property
+    def dh_dx(self):
+        return self.__topo.p[1]
+
+    @property
+    def dh_dy(self):
+        return self.__topo.p[2]
 
     @property
     def trusted(self) -> bool:

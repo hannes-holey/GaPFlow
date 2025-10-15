@@ -12,7 +12,7 @@ from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from GaPFlow.stress import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
-from GaPFlow.gap import Gap
+from GaPFlow.topography import Topography
 from GaPFlow.db import Database
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
 
@@ -59,8 +59,7 @@ class Problem:
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
         # Intialize gap
-        self.gap = Gap(fc, self.grid, geo)
-        self.__gap_height = fc.get_real_field('gap')
+        self.topo = Topography(fc, self.grid, geo)
 
         # Active GP models
         if gp is not None:
@@ -99,10 +98,10 @@ class Problem:
         if not self.options['silent']:
 
             # Write gap height and gradients once
-            gapfile = FileIONetCDF(os.path.join(self.outdir, 'gap.nc'), OpenMode.Write)
-            gapfile.register_field_collection(fc, field_names=['gap'])
-            gapfile.append_frame().write()
-            gapfile.close()
+            topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Write)
+            topofile.register_field_collection(fc, field_names=['topography'])
+            topofile.append_frame().write()
+            topofile.close()
 
             # Solution fields
             self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
@@ -290,7 +289,7 @@ class Problem:
     @property
     def mass(self) -> np.floating:
         """Total mass integrated over domain (scalar)."""
-        return np.sum(self.__field.p[0] * self.__gap_height.p[0] * self.grid['dx'] * self.grid['dy'])
+        return np.sum(self.__field.p[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
 
     @property
     def kinetic_energy(self) -> np.floating:
@@ -395,7 +394,6 @@ class Problem:
             # fluxes and source terms
             fX, fY = predictor_corrector(
                 self.__field.p,
-                self.__gap_height.p,
                 self.pressure.pressure,
                 self.bulk_stress.stress,
                 d,
@@ -403,7 +401,7 @@ class Problem:
 
             src = source(
                 self.__field.p,
-                self.__gap_height.p,
+                self.topo.height_and_slopes,
                 self.bulk_stress.stress,
                 self.wall_stress_xz.lower + self.wall_stress_yz.lower,
                 self.wall_stress_xz.upper + self.wall_stress_yz.upper,

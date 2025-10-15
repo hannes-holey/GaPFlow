@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import netCDF4
 
-from GaPFlow.gap import create_midpoint_grid
+from GaPFlow.topography import create_midpoint_grid
 from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp
 
 

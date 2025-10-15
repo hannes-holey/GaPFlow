@@ -3,7 +3,7 @@ import time
 import numpy as np
 
 
-from GaPFlow.gap import create_midpoint_grid
+from GaPFlow.topography import create_midpoint_grid
 
 
 def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):

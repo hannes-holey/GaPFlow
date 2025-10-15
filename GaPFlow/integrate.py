@@ -5,7 +5,6 @@ import numpy.typing as npt
 
 def predictor_corrector(
     q: npt.NDArray[np.floating],
-    h: npt.NDArray[np.floating],
     p: npt.NDArray[np.floating],
     tau: npt.NDArray[np.floating],
     direction: int
@@ -20,8 +19,6 @@ def predictor_corrector(
     ----------
     q : ndarray
         Density array of shape (3, nx, ny).
-    h : ndarray
-        Geometry array of the same shape as `q`. Contains gap height and gradients.
     p : ndarray
         Pressure field of shape (nx, ny).
     tau : ndarray
@@ -37,7 +34,7 @@ def predictor_corrector(
         Flux contribution along the y-direction.
     """
     FxH, FyH = hyperbolicFlux(q, p)
-    FxD, FyD = diffusiveFlux(q, h, tau)
+    FxD, FyD = diffusiveFlux(q, tau)
 
     Fx = FxH + FxD
     Fy = FyH + FyD
@@ -132,7 +129,6 @@ def hyperbolicFlux(
 
 def diffusiveFlux(
     q: npt.NDArray[np.floating],
-    h: npt.NDArray[np.floating],
     tau: npt.NDArray[np.floating]
 ) -> Tuple[npt.NDArray[np.floating], npt.NDArray[np.floating]]:
     """
@@ -142,8 +138,6 @@ def diffusiveFlux(
     ----------
     q : ndarray
         Density array of shape (3, nx, ny).
-    h : ndarray
-        Geometry array of the same shape as `q`. Contains gap height and gradients.
     tau : ndarray
         Gap-averaged viscous stress tensor components of shape (3, nx, ny).
 

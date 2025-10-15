@@ -70,13 +70,13 @@ def parabolic_slider(xx, grid, geo):
     return h, dh_dx, dh_dy
 
 
-class Gap:
+class Topography:
 
     def __init__(self, fc, grid, geo):
 
         xx, yy = create_midpoint_grid(grid)
 
-        self.__field = fc.real_field('gap', (3,))
+        self.__field = fc.real_field('topography', (3,))
         self._x = fc.real_field('x')
         self._y = fc.real_field('y')
 
@@ -102,6 +102,10 @@ class Gap:
         self.__field.p[0] = h
         self.__field.p[ix] = dh_dx
         self.__field.p[iy] = dh_dy
+
+    @property
+    def height_and_slopes(self):
+        return self.__field.p
 
     @property
     def h(self):

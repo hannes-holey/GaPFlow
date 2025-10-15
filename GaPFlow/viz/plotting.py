@@ -3,7 +3,7 @@ import netCDF4
 import numpy as np
 import pandas as pd
 
-from GaPFlow.gap import create_midpoint_grid
+from GaPFlow.topography import create_midpoint_grid
 from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp
 
 
@@ -55,7 +55,7 @@ def plot_height(filename, disc=None):
     fig, ax = plt.subplots(1)
 
     data = netCDF4.Dataset(filename)
-    h_nc = np.asarray(data.variables['gap'])
+    h_nc = np.asarray(data.variables['topography'])
     _, _, _, nx, ny = h_nc.shape
 
     x, _ = _get_centerline_coords(nx, ny, disc)

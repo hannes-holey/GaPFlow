@@ -9,6 +9,6 @@ plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def main():
-    nc_files = get_pipeline(name='gap.nc')
+    nc_files = get_pipeline(name='topo.nc')
     for file in nc_files:
         plot_height(file)
