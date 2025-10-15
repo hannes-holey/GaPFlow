@@ -38,7 +38,7 @@ test = ['pytest',
 		'coverage']
 
 doc = ['sphinx',
-	   'sphinx_rtd_theme',
+	   'furo',
 	   'myst-nb',
 	   'jupytext',
 	   'sympy']
