@@ -166,7 +166,7 @@ class Database:
                 active = jnp.array([0, 1])
             else:
                 flux = jnp.hypot(jnp.mean(Xtest[:, 4]), jnp.mean(Xtest[:, 5]))
-                active = (0, 1, 2)
+                active = jnp.array([0, 1, 2])
 
             rho = jnp.mean(Xtest[:, 3])
 

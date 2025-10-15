@@ -193,7 +193,7 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined', 'parabolic']
+    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity']
     out = {}
 
     out['U'] = float(d.get('U', 1.))
@@ -214,11 +214,19 @@ def sanitize_geometry(d):
         else:
             raise IOError("Need to specify either clearance ratio and eccentrity or min/max gap height")
     elif out['type'] == 'inclined':
-        out['h0'] = float(d.get('h0'))
-        out['h1'] = float(d.get('h1'))
+        out['hmax'] = float(d.get('hmax'))
+        out['hmin'] = float(d.get('hmin'))
     elif out['type'] == 'parabolic':
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
+    elif out['type'] == 'cdc':
+        out['hmin'] = float(d.get('hmin'))
+        out['hmax'] = float(d.get('hmax'))
+        out['b'] = float(d.get('b'))
+    elif out['type'] == 'asperity':
+        out['hmin'] = float(d.get('hmin'))
+        out['hmax'] = float(d.get('hmax'))
+        out['num'] = int(d.get('num', 1))
 
     print_dict(out)
 

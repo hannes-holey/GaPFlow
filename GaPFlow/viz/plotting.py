@@ -50,17 +50,30 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
     return fig, ax
 
 
-def plot_height(filename, disc=None):
+def plot_height(filename, grid=None):
+
+    data = netCDF4.Dataset(filename)
+    topo = np.asarray(data.variables['topography'])[0]
+
+    nx, ny = topo.shape[-2:]
+
+    is_1d = ny == 3
+
+    if is_1d:
+        _plot_height_1d(topo, grid)
+    else:
+        _plot_height_2d(topo, grid)
+
+
+def _plot_height_1d(topography, grid):
 
     fig, ax = plt.subplots(1)
 
-    data = netCDF4.Dataset(filename)
-    h_nc = np.asarray(data.variables['topography'])
-    _, _, _, nx, ny = h_nc.shape
+    _, _, _, nx, ny = topography.shape
 
-    x, _ = _get_centerline_coords(nx, ny, disc)
+    x, _ = _get_centerline_coords(nx, ny, grid)
 
-    gap_height_1d = h_nc[0, 0, 0, 1:-1, ny // 2]
+    gap_height_1d = topography[0, 0, 1:-1, ny // 2]
 
     ax.fill_between(x,
                     gap_height_1d,
@@ -77,17 +90,46 @@ def plot_height(filename, disc=None):
     ax.plot(x, np.zeros_like(gap_height_1d), color='C0')
 
     ax.set_ylabel('Gap height $h$')
-    ax.set_xlabel('$x/L_x$' if disc is None else '$x$')
+    ax.set_xlabel('$x/L_x$' if grid is None else '$x$')
 
     plt.show()
 
 
-def plot_single_frame(file_list, frame=-1, savefig=False, show=True, disc=None):
+def _plot_height_2d(topography, grid):
 
-    fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+    fig, ax = plt.subplots(1, 3, figsize=(9, 3))
 
-    for file in file_list:
-        _plot_single_frame(ax, file, frame, disc)
+    h = topography[0, 0, 1:-1, 1:-1]
+    dh_dx = topography[1, 0, 1:-1, 1:-1]
+    dh_dy = topography[2, 0, 1:-1, 1:-1]
+
+    imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
+    ax[0].imshow(h.T, **imshow_args)
+    ax[1].imshow(dh_dx.T, **imshow_args)
+    ax[2].imshow(dh_dy.T, **imshow_args)
+
+    titles = [r'$h$', r'$\partial h/ \partial x$', r'$\partial h/ \partial y$']
+    for (a, title) in zip(ax.flat, titles):
+        a.set_xlabel(r'$x/L_x$')
+        a.set_ylabel(r'$y/L_y$')
+        a.set_title(title)
+
+    plt.show()
+
+
+def plot_single_frame(file_list, dim, frame=-1, savefig=False, show=True, disc=None):
+
+    if dim == 1:
+        fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+
+        for file in file_list:
+            _plot_single_frame(ax, file, frame, disc)
+
+    elif dim == 2:
+        fig, ax = plt.subplots(3, 3, figsize=(9, 9))
+
+        for file in file_list:
+            _plot_single_frame_2d(ax, file, frame, disc)
 
     if savefig:
         fig.savefig('out_nc_last.pdf')
@@ -143,6 +185,41 @@ def _plot_single_frame(ax, filename, frame=-1, disc=None):
         ax[1, 2].plot(x, tau_nc[frame, 10, 0, 1:-1, ny // 2], color=color_t)
 
     set_axes_labels(ax)
+
+
+def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
+
+    data = netCDF4.Dataset(filename)
+
+    q_nc = np.asarray(data.variables['solution'])
+    p_nc = np.asarray(data.variables['pressure'])
+    tau_xz_nc = np.asarray(data.variables['wall_stress_xz'])
+    tau_yz_nc = np.asarray(data.variables['wall_stress_yz'])
+
+    nt, nc, _, nx, ny = q_nc.shape
+
+    imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
+
+    ax[0, 0].imshow(q_nc[frame, 0, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[0, 1].imshow(q_nc[frame, 1, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[0, 2].imshow(q_nc[frame, 2, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    ax[1, 0].imshow(p_nc[frame, 1:-1, 1:-1].T, **imshow_args)
+    ax[1, 1].imshow(tau_xz_nc[frame, 4, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[1, 2].imshow(tau_yz_nc[frame, 3, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    ax[2, 0].imshow(p_nc[frame, 1:-1, 1:-1].T, **imshow_args)
+    ax[2, 1].imshow(tau_xz_nc[frame, 10, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[2, 2].imshow(tau_yz_nc[frame, 9, 0, 1:-1, 1:-1].T, **imshow_args)
+
+    titles = [r'$\rho$', r'$j_x$', r'$j_y$',
+              r'$p$', r'$\tau_{xz}^\text{bot}$', r'$\tau_{xz}^\text{top}$',
+              r'$p$', r'$\tau_{yz}^\text{bot}$', r'$\tau_{yz}^\text{top}$', ]
+
+    for (a, title) in zip(ax.flat, titles):
+        a.set_xlabel(r'$x/L_x$')
+        a.set_ylabel(r'$y/L_y$')
+        a.set_title(title)
 
 
 def plot_history(file_list,

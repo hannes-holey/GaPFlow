@@ -43,8 +43,8 @@ def journal_bearing(xx, grid, geo):
 def inclined_slider(xx, grid, geo):
 
     Lx = grid['Lx']
-    h0 = geo['h0']
-    h1 = geo['h1']
+    h0 = geo['hmax']
+    h1 = geo['hmin']
     slope = (h1 - h0) / Lx
 
     h = h0 + slope * xx
@@ -70,6 +70,72 @@ def parabolic_slider(xx, grid, geo):
     return h, dh_dx, dh_dy
 
 
+def cdc(xx, grid, geo):
+    Lx = grid['Lx']
+    h0 = geo['hmin']
+    h1 = geo['hmax']
+    b = geo['b']
+
+    slope = (h1 - h0) / (Lx / 2 - 2 * b)
+
+    conv = np.logical_and(xx >= b, xx < Lx / 2 - b)
+    center = np.logical_and(xx >= Lx / 2 - b, xx < Lx / 2 + b)
+    div = np.logical_and(xx >= Lx / 2 + b, xx < Lx - b)
+
+    h = np.ones_like(xx) * h1
+    h[conv] = h1 - slope * (xx[conv] - b)
+    h[center] = h0
+    h[div] = h0 + slope * (xx[div] - (Lx / 2 + b))
+
+    dh_dx = np.zeros_like(h)
+    dh_dy = np.zeros_like(h)
+
+    dh_dx[conv] = -slope
+    dh_dx[div] = slope
+
+    return h, dh_dx, dh_dy
+
+
+def asperity(xx, yy, grid, geo):
+    h0 = geo['hmin']
+    h1 = geo['hmax']
+    num = geo['num']  # per side
+
+    Lx = grid['Lx']
+    Ly = grid['Ly']
+
+    if num == 1:
+        hmins = np.array([h0])
+    else:
+        # Gaussian 99% between hmin and hmax
+        std = (h1 - h0) / 2. / 2.57
+        hmins = np.random.normal(loc=h0 + (h1 - h0) / 2., scale=std, size=num**2)
+
+    xid = (xx // (Lx / num)).astype(int)
+    yid = (yy // (Ly / num)).astype(int)
+
+    masks = []
+    for i in range(num):
+        for j in range(num):
+            masks.append(np.logical_and(xid == i, yid == j))
+
+    bx = np.pi / (Lx / num)
+    by = np.pi / (Ly / num)
+
+    h = np.ones_like(xx) * h1
+    dh_dx = np.zeros_like(h)
+    dh_dy = np.zeros_like(h)
+
+    for m, h0 in zip(masks, hmins):
+        cx = np.mean(xx[m])
+        cy = np.mean(yy[m])
+        h[m] -= (h1 - h0) * (np.cos(bx * (xx[m] - cx)) * np.cos(by * (yy[m] - cy)))
+        dh_dx[m] += bx * (h1 - h0) * (np.sin(bx * (xx[m] - cx)) * np.cos(by * (yy[m] - cy)))
+        dh_dy[m] += by * (h1 - h0) * (np.cos(bx * (xx[m] - cx)) * np.sin(by * (yy[m] - cy)))
+
+    return h, dh_dx, dh_dy
+
+
 class Topography:
 
     def __init__(self, fc, grid, geo):
@@ -83,12 +149,19 @@ class Topography:
         self._x.p = xx
         self._y.p = yy
 
+        # 1D profiles
         if geo['type'] == 'journal':
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
         elif geo['type'] == 'inclined':
             h, dh_dx, dh_dy = inclined_slider(xx, grid, geo)
         elif geo['type'] == 'parabolic':
             h, dh_dx, dh_dy = parabolic_slider(xx, grid, geo)
+        elif geo['type'] == 'cdc':
+            h, dh_dx, dh_dy = cdc(xx, grid, geo)
+
+        # 2D profiles
+        elif geo['type'] == 'asperity':
+            h, dh_dx, dh_dy = asperity(xx, yy, grid, geo)
 
         ix = 1
         iy = 2

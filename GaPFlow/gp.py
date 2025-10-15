@@ -115,7 +115,7 @@ class GaussianProcessSurrogate:
         if self.is_gp_model:
             self.database = database
 
-            _, _, nx, ny = self.__gap.shape
+            _, _, nx, ny = self.__topo.shape
             dim = int((nx - 2) > 1) + int((ny - 2) > 1)
             self.database.initialize(self._Xtest, dim)
 
@@ -401,7 +401,7 @@ class GaussianProcessSurrogate:
             Test inputs of shape (n_samples, 6).
         """
         return jnp.vstack([
-            self.gap,
+            self.topography,
             self.density[0][None, :, :],
             self.density[1][None, :, :],
             self.density[2][None, :, :]

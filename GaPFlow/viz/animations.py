@@ -226,7 +226,7 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
 
     nt, nc, _, nx, ny = q_nc.shape
 
-    fig, ax = plt.subplots(3, 3, figsize=(12, 9))
+    fig, ax = plt.subplots(3, 3, figsize=(9, 9))
 
     imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
 

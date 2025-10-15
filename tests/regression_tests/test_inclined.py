@@ -23,8 +23,8 @@ grid:
     xW_D: 1.1853
 geometry:
     type: inclined
-    h0: 6.6e-5
-    h1: 1e-5
+    hmax: 6.6e-5
+    hmin: 1e-5
     U: 50.
     V: 0.
 numerics:
