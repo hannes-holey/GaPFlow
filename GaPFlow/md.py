@@ -223,8 +223,8 @@ class Mock(MolecularDynamics):
         eta, zeta = self.prop["shear"], self.prop["bulk"]
 
         X = self.X
-        tau_bot = stress_bottom(X[:3], X[3:6], U, V, eta, zeta, 0.0) + noise_s0
-        tau_top = stress_top(X[:3], X[3:6], U, V, eta, zeta, 0.0) + noise_s1
+        tau_bot = stress_bottom(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s0
+        tau_top = stress_top(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s1
         press = eos_pressure(X[0:1], self.prop) + noise_p
 
         Y = jnp.hstack([press, tau_bot, tau_top]).T
@@ -251,10 +251,10 @@ class LennardJones(MolecularDynamics):
     def build_input_files(self, dataset, location, X):
         # write variables file
         variables_str = f"""
-variable\tinput_gap equal {X[0]}
-variable\tinput_dens equal {X[3]}
-variable\tinput_fluxX equal {X[4]}
-variable\tinput_fluxY equal {X[5]}
+variable\tinput_gap equal {X[3]}
+variable\tinput_dens equal {X[0]}
+variable\tinput_fluxX equal {X[1]}
+variable\tinput_fluxY equal {X[2]}
 """
         excluded = ['infile', 'wallfile', 'ncpu', 'system']
 
@@ -313,10 +313,10 @@ class GoldAlkane(MolecularDynamics):
 
         # TODO: separate section of metadata
         args = self.params
-        args["gap_height"] = float(X[0])
-        args["density"] = float(X[3])
-        args["fluxX"] = float(X[4])
-        args["fluxY"] = float(X[5])
+        args["density"] = float(X[0])
+        args["fluxX"] = float(X[1])
+        args["fluxY"] = float(X[2])
+        args["gap_height"] = float(X[3])
 
         cwd = os.getcwd()
         os.chdir(proto_ds_datapath)

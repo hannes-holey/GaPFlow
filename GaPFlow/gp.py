@@ -111,10 +111,10 @@ class GaussianProcessSurrogate:
         self.step = 0
         self.__solution = fc.get_real_field('solution')
         self.__topo = fc.get_real_field('topography')
+        self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
             self.database = database
-            self.__extra = fc.get_real_field('extra')
 
             _, _, nx, ny = self.__topo.shape
             dim = int((nx - 2) > 1) + int((ny - 2) > 1)

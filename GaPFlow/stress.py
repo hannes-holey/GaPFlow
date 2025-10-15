@@ -62,8 +62,8 @@ class WallStress(GaussianProcessSurrogate):
 
         if gp is not None:
             gp = gp['shear']
-            self.active_dims = {'x': gp.get('active_dims', [0, 1, 3]),
-                                'y': gp.get('active_dims', [0, 2, 3])}[direction]
+            self.active_dims = {'x': gp.get('active_dims_x', [0, 1, 3]),
+                                'y': gp.get('active_dims_y', [0, 2, 3])}[direction]
 
             self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
 
@@ -297,7 +297,7 @@ class WallStress(GaussianProcessSurrogate):
                               self.geo['V'],
                               shear_viscosity,
                               self.prop['bulk'],
-                              0.  # slip length
+                              self.extra  # slip length
                               )
 
         s_top = stress_top(self.solution,
@@ -306,7 +306,7 @@ class WallStress(GaussianProcessSurrogate):
                            self.geo['V'],
                            shear_viscosity,
                            self.prop['bulk'],
-                           0.  # slip length
+                           self.extra  # slip length
                            )
 
         self.__field.p[:3] = s_bot[:3] / 2.
@@ -403,7 +403,7 @@ class BulkStress(GaussianProcessSurrogate):
                                     self.geo['V'],
                                     shear_viscosity,
                                     self.prop['bulk'],
-                                    0.  # slip length
+                                    self.extra  # slip length
                                     )
 
 

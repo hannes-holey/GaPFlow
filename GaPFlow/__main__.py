@@ -24,6 +24,4 @@ if __name__ == "__main__":
     problem = Problem.from_yaml(args.filename)
 
     # Run
-    # maybe pass some args to run method as they are not problem specific
-    # e.g., max_steps, tolerance, adaptive, integrator (only MC a.t.m.)
     problem.run()

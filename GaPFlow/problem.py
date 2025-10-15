@@ -41,7 +41,8 @@ class Problem:
                  prop: dict,
                  geo: dict,
                  gp: dict | None = None,
-                 database: Database | None = None
+                 database: Database | None = None,
+                 extra_field: npt.NDArray | None = None
                  ) -> None:
 
         self.outdir = outdir
@@ -61,6 +62,12 @@ class Problem:
         # Intialize gap
         self.topo = Topography(fc, self.grid, geo)
 
+        # Initialize extra field
+        num_extra_features = 1 if database is None else database.num_features - 6
+        extra = fc.real_field('extra', (num_extra_features,))
+        if extra_field is not None:
+            extra.p = extra_field
+
         # Active GP models
         if gp is not None:
             if self.grid['dim'] == 1:
@@ -74,10 +81,6 @@ class Problem:
 
         else:
             gpx, gpy, gpz = None, None, None
-
-        if database is not None:
-            # Initialize extra field (optional)
-            fc.real_field('extra', (database.num_features - 6,))
 
         # Stress fields
         self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
@@ -120,8 +123,9 @@ class Problem:
             if gpy is not None:
                 field_names.append('wall_stress_yz_var')
 
-            if gp['press_gp']:
+            if gpz:
                 field_names.append('pressure_var')
+
             self.file.register_field_collection(fc, field_names=field_names)
 
     # ---------------------------
@@ -555,7 +559,7 @@ def _split_input(input_dict):
             elif md['system'] == 'mol':
                 MD = GoldAlkane(md)
 
-        database = Database(outdir, MD, db, extra_feat=1)
+        database = Database(outdir, MD, db)
     else:
         database = None
 

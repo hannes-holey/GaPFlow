@@ -16,18 +16,18 @@ def test_addition(tmp_path, method):
 
     md = Mock(prop, geo, gp)
 
-    db = Database(str(tmp_path), md, db_config)
+    db = Database(str(tmp_path), md, db_config, num_extra_features=1)
 
-    Xtest = np.random.uniform(size=(100, 6))
+    Xtest = np.random.uniform(size=(100, 7))
     db.initialize(Xtest)
 
     assert db.size == db_config['init_size']
 
-    Xnew = np.random.uniform(size=(10, 6))
+    Xnew = np.random.uniform(size=(10, 7))
     db.add_data(Xnew)
     assert db.size == 14
 
-    new_db = Database(str(tmp_path), md, db_config)
+    new_db = Database(str(tmp_path), md, db_config, num_extra_features=1)
     assert new_db.size == 14
 
     new_db.write()

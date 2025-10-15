@@ -365,6 +365,14 @@ def sanitize_gp(d):
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
 
+            # For shear/2D: need to distinguish (x and y)
+            if sk == 'press':
+                out[sk]['active_dims'] = list(ds.get('active_dims', [0, 3]))
+            elif sk == 'shear':
+                ds_ad = ds.get('active_dims', {})
+                out[sk]['active_dims_x'] = ds_ad.get('x', [0, 1, 3])
+                out[sk]['active_dims_y'] = ds_ad.get('y', [0, 2, 3])
+
     print_dict(out)
 
     return out

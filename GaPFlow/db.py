@@ -11,7 +11,7 @@ from GaPFlow.dtool import get_readme_list_local
 # ----------------------------------------------------------------------
 # Fixed-shape array type aliases
 # ----------------------------------------------------------------------
-ArrayX = Float[Array, "Ntrain 6"]   # Input features
+ArrayX = Float[Array, "Ntrain Nfeat"]   # Input features
 ArrayY = Float[Array, "Ntrain 13"]  # Output features
 
 
@@ -55,11 +55,11 @@ class Database:
         output_path: str,
         md: Any,
         db: dict,
-        extra_feat: int = 0
+        num_extra_features: int = 1
     ) -> None:
 
         #  number of possible features, actual ones are selected from GP's active_dims
-        self.num_features = 6 + extra_feat
+        self.num_features = 6 + num_extra_features
 
         self.output_path = output_path
         self.training_path = db.get('dtool_path')
@@ -79,7 +79,7 @@ class Database:
             Ytrain = jnp.array(Ytrain)
             Yerr = jnp.array(Yerr)
 
-            assert Xtrain.shape[0] != 6 + extra_feat
+            assert Xtrain.shape[0] != 6 + num_extra_features
         else:
             print(f"Start with empty dtool database in {self.training_path}")
             Xtrain = jnp.empty((0, self.num_features))
