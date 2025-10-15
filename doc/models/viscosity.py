@@ -46,7 +46,7 @@ properties:
 
 if __name__ == "__main__":
 
-    plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
+    plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
     fig, ax = plt.subplots(1, 2)
     fig.suptitle('Viscosity models (with default parameters)')

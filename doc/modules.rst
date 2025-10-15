@@ -1,7 +1,7 @@
-hans
+API Reference
 ====
 
 .. toctree::
    :maxdepth: 4
 
-   hans
+   GaPFlow

@@ -8,7 +8,7 @@
 
 import GaPFlow
 
-project = 'hans'
+project = 'GaPFlow'
 copyright = '2025, Hannes Holey'
 author = 'Hannes Holey'
 version = GaPFlow.__version__

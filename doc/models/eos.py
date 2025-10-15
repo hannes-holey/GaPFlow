@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from GaPFlow.models.pressure import eos_pressure
 
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gpjax.mplstyle"))
+plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def plot_bwr(ax):
