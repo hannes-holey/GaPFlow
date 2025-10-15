@@ -37,6 +37,12 @@ dependencies = [
 test = ['pytest',
 		'coverage']
 
+doc = ['sphinx',
+	   'sphinx_rtd_theme',
+	   'myst-nb',
+	   'jupytext',
+	   'sympy']
+
 [project.scripts]
 gpf_plot_height="GaPFlow.cli:plot_height.main"
 gpf_plot_history="GaPFlow.cli:plot_history.main"

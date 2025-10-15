@@ -13,8 +13,7 @@ dist
 .idea
 
 
-
 # Doc
 _templates/
 _static/
-_build/__pycache__
+_build/

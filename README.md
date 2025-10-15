@@ -9,29 +9,6 @@ The extension to atomistic-continuum multiscale simulations with Gaussian proces
 
 The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
 
-## Roadmap
-- [X] Active learning in base class, test with pressure only
-- [X] Implement GP surrogates for shear stress
-- [X] Problem class with YAML input
-- [X] Output fields, history, gap
-- [X] Start plotting scripts
-- [X] Output GP hyperparams, training data
-- [X] Adaptive time stepping
-- [X] Adaptive time stepping GP
-- [X] Equation of state w/ plots
-- [X] Plotting scripts
-- [X] dtool Datasets
-- [X] DB config via sep YAML block
-- [X] Catch sigterm
-- [X] 2D problems
-- [X] Viscosity models with plots
-- [X] Docstrings & typing (important parts)
-- [X] MD setup
-- [ ] Documentation with examples
-- [ ] Unit tests and integration tests
-- [ ] JOSS submission (w/o elasticity)
-- [ ] MPI parallel
-
 ## Installation
 
 Install [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
@@ -120,7 +97,12 @@ The code comes with a few handy [command line tools](GaPFlow/cli/) for visualiza
 which shows the transient solution of a 1D journal bearing with active learning of the constitutive behavior. 
 
 ## Documentation
-...
+A Sphinx-generated documentation can be built locally with
+```
+cd doc
+sphinx-apidoc -o . ../hans
+make html
+```
 
 ## Funding
 This work received funding from the German Research Foundation (DFG) through GRK 2450 and from the Alexander von Humboldt Foundation through a Feodor Lynen Fellowship.

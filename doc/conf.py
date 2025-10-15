@@ -6,12 +6,12 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-import hans
+import GaPFlow
 
 project = 'hans'
 copyright = '2025, Hannes Holey'
 author = 'Hannes Holey'
-version = hans.__version__
+version = GaPFlow.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -47,7 +47,7 @@ nb_execution_timeout = 90
 myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
-    ]
+]
 
 # The following makes mystnb convert notebooks with jupytext
 # before execution and documentation rendering. This allows
@@ -57,5 +57,5 @@ myst_enable_extensions = [
 # instead of .ipynb. Also see
 #   https://myst-nb.readthedocs.io/en/latest/authoring/custom-formats.html#using-jupytext
 nb_custom_formats = {
-  ".py": ["jupytext.reads", {"fmt": "py:percent"}]
+    ".py": ["jupytext.reads", {"fmt": "py:percent"}]
 }
