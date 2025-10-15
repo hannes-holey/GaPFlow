@@ -1,0 +1,1040 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>hans.models package &mdash; hans  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="hans.multiscale package" href="hans.multiscale.html" />
+    <link rel="prev" title="hans.cli package" href="hans.cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            hans
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">HANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory/index.html">Theory</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">hans</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="hans.html">hans package</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="hans.html#subpackages">Subpackages</a><ul class="current">
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html">hans.cli package</a></li>
+<li class="toctree-l4 current"><a class="current reference internal" href="#">hans.models package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html">hans.multiscale package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.special.html">hans.special package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.field">hans.field module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.geometry">hans.geometry module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.input">hans.input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.integrate">hans.integrate module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.material">hans.material module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.plottools">hans.plottools module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.problem">hans.problem module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.stress">hans.stress module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans.tools">hans.tools module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#module-hans">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">hans</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">hans</a></li>
+          <li class="breadcrumb-item"><a href="hans.html">hans package</a></li>
+      <li class="breadcrumb-item active">hans.models package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/hans.models.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hans-models-package">
+<h1>hans.models package<a class="headerlink" href="#hans-models-package" title="Link to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-hans.models.density">
+<span id="hans-models-density-module"></span><h2>hans.models.density module<a class="headerlink" href="#module-hans.models.density" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.density.bayada_chupin">
+<span class="sig-prename descclassname"><span class="pre">hans.models.density.</span></span><span class="sig-name descname"><span class="pre">bayada_chupin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.density.bayada_chupin" title="Link to this definition"></a></dt>
+<dd><p>Computes density from pressure using the Bayada-Chupin cavitation model.</p>
+<p>This model accounts for phase transitions in lubricated thin films.
+Reference: Bayada &amp; Chupin, <em>J. Tribology</em>, 135(4), 2013.</p>
+<p>The model defines density as a piecewise function depending on pressure:</p>
+<ul class="simple">
+<li><p>For <span class="math notranslate nohighlight">\(P &gt; P_{cav}\)</span>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\rho = \rho_l + \frac{P - P_{cav}}{c_l^2}\]</div>
+<ul class="simple">
+<li><p>For <span class="math notranslate nohighlight">\(P &lt; c_v^2 \rho_v\)</span>:</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\rho = \frac{P}{c_v^2}\]</div>
+<ul class="simple">
+<li><p>Else (mixture phase):</p></li>
+</ul>
+<div class="math notranslate nohighlight">
+\[\rho = \frac{(c_l^2 \rho_l^3 - c_v^2 \rho_l \rho_v^2) \exp\left(\frac{P - P_{cav}}{N}\right)}
+{(c_l^2 \rho_l^2 - c_v^2 \rho_l \rho_v) \exp\left(\frac{P - P_{cav}}{N}\right) + c_v^2 \rho_v (\rho_l - \rho_v)}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Pressure.</p></li>
+<li><p><strong>rho_l</strong> (<em>float</em>) – Liquid density.</p></li>
+<li><p><strong>rho_v</strong> (<em>float</em>) – Vapor density.</p></li>
+<li><p><strong>c_l</strong> (<em>float</em>) – Speed of sound in liquid.</p></li>
+<li><p><strong>c_v</strong> (<em>float</em>) – Speed of sound in vapor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed density.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.density.dowson_higginson">
+<span class="sig-prename descclassname"><span class="pre">hans.models.density.</span></span><span class="sig-name descname"><span class="pre">dowson_higginson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.density.dowson_higginson" title="Link to this definition"></a></dt>
+<dd><p>Computes density using the inverse of the Dowson-Higginson isothermal equation of state.</p>
+<p>This model is often used to describe lubricants under high pressure.</p>
+<div class="math notranslate nohighlight">
+\[\rho(P) = \rho_0 \frac{C_1 + C_2 (P - P_0)}{C_1 + (P - P_0)}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Pressure.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>C1</strong> (<em>float</em>) – Empirical constant.</p></li>
+<li><p><strong>C2</strong> (<em>float</em>) – Empirical constant.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed density.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.density.murnaghan_tait">
+<span class="sig-prename descclassname"><span class="pre">hans.models.density.</span></span><span class="sig-name descname"><span class="pre">murnaghan_tait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.density.murnaghan_tait" title="Link to this definition"></a></dt>
+<dd><p>Computes density from pressure using the inverse of the Murnaghan-Tait equation of state.</p>
+<p>Commonly used in shockwave modeling and compressible fluid flow.</p>
+<div class="math notranslate nohighlight">
+\[\rho(P) = \rho_0 \left(1 + \frac{n}{K} (P - P_0) \right)^{1/n}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Pressure.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>K</strong> (<em>float</em>) – Bulk modulus.</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Murnaghan exponent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed density.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.density.power_law">
+<span class="sig-prename descclassname"><span class="pre">hans.models.density.</span></span><span class="sig-name descname"><span class="pre">power_law</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.density.power_law" title="Link to this definition"></a></dt>
+<dd><p>Computes density from pressure using an inverse power-law equation of state.</p>
+<p>This general form includes the ideal gas law as a special case when <span class="math notranslate nohighlight">\(\alpha = 0\)</span>.</p>
+<div class="math notranslate nohighlight">
+\[\rho(P) = \rho_0 \left(\frac{P}{P_0}\right)^{1 - \alpha/2}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Pressure.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Power-law parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed density.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.pressure">
+<span id="hans-models-pressure-module"></span><h2>hans.models.pressure module<a class="headerlink" href="#module-hans.models.pressure" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.bayada_chupin">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">bayada_chupin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.bayada_chupin" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using the Bayada-Chupin cavitation model.</p>
+<p>Models lubricated film pressure in the presence of phase change.
+Reference: Bayada, G., &amp; Chupin, L. (2013). <em>Journal of Tribology, 135(4), 041703</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current density.</p></li>
+<li><p><strong>rho_l</strong> (<em>float</em>) – Liquid density.</p></li>
+<li><p><strong>rho_v</strong> (<em>float</em>) – Vapor density.</p></li>
+<li><p><strong>c_l</strong> (<em>float</em>) – Speed of sound in liquid.</p></li>
+<li><p><strong>c_v</strong> (<em>float</em>) – Speed of sound in vapor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.bwr">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">bwr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.bwr" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using the Benedict–Webb–Rubin (BWR) equation of state.</p>
+<p>This complex EoS models real fluid behavior accurately over wide conditions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>T</strong> (<em>float</em>) – Temperature.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em><em>, </em><em>optional</em>) – Exponential decay parameter (default is 3.0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.cubic">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">cubic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.cubic" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using a general cubic polynomial fit.</p>
+<div class="math notranslate nohighlight">
+\[P(\rho) = a \rho^3 + b \rho^2 + c \rho + d\]</div>
+<p>Useful for empirical models where data fits a polynomial relationship.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>a</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>b</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>c</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>d</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.dowson_higginson">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">dowson_higginson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.dowson_higginson" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using the Dowson-Higginson isothermal equation of state.</p>
+<div class="math notranslate nohighlight">
+\[P(\rho) = P_0 + \frac{C_1 (\rho/\rho_0 - 1)}{C_2 - \rho/\rho_0}\]</div>
+<p>This equation is used to describe lubricant behavior under high-pressure conditions.
+Reference: Dowson, D., &amp; Higginson, G. R. (1977). <em>Elastohydrodynamic Lubrication</em>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current fluid density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Pressure at reference density.</p></li>
+<li><p><strong>C1</strong> (<em>float</em>) – Empirical constant.</p></li>
+<li><p><strong>C2</strong> (<em>float</em>) – Empirical constant limiting maximum density ratio.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.murnaghan_tait">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">murnaghan_tait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.murnaghan_tait" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using the Murnaghan-Tait equation of state.</p>
+<div class="math notranslate nohighlight">
+\[P(\rho) = \frac{K}{n} \left(\left(\frac{\rho}{\rho_0}\right)^n - 1\right) + P_0\]</div>
+<p>Commonly used in compressible fluid and shock wave studies.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>K</strong> (<em>float</em>) – Bulk modulus.</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Murnaghan exponent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.power_law">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">power_law</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.power_law" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using a power-law equation of state.</p>
+<div class="math notranslate nohighlight">
+\[P(\rho) = P_0 \left(\frac{\rho}{\rho_0}\right)^{1 / (1 - \frac{\alpha}{2})}\]</div>
+<p>A generalization that includes ideal gas as a special case when alpha=0.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Power-law exponent parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.pressure.van_der_waals">
+<span class="sig-prename descclassname"><span class="pre">hans.models.pressure.</span></span><span class="sig-name descname"><span class="pre">van_der_waals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.pressure.van_der_waals" title="Link to this definition"></a></dt>
+<dd><p>Computes pressure using the Van der Waals equation of state.</p>
+<div class="math notranslate nohighlight">
+\[P = \frac{RT \rho}{M - b \rho} - a \frac{\rho^2}{M^2}\]</div>
+<p>Includes molecular interaction (a) and finite size (b) corrections to ideal gas law.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Molar density (mol/m³).</p></li>
+<li><p><strong>M</strong> (<em>float</em>) – Molar mass (g/mol).</p></li>
+<li><p><strong>T</strong> (<em>float</em>) – Temperature (K).</p></li>
+<li><p><strong>a</strong> (<em>float</em>) – Attraction parameter.</p></li>
+<li><p><strong>b</strong> (<em>float</em>) – Repulsion parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Computed pressure.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.sound_speed">
+<span id="hans-models-sound-speed-module"></span><h2>hans.models.sound_speed module<a class="headerlink" href="#module-hans.models.sound_speed" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.bayada_chupin">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">bayada_chupin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c_v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.bayada_chupin" title="Link to this definition"></a></dt>
+<dd><p>Computes the isothermal speed of sound using the Bayada-Chupin cavitation model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>rho_l</strong> (<em>float</em>) – Liquid density.</p></li>
+<li><p><strong>rho_v</strong> (<em>float</em>) – Vapor density.</p></li>
+<li><p><strong>c_l</strong> (<em>float</em>) – Speed of sound in liquid.</p></li>
+<li><p><strong>c_v</strong> (<em>float</em>) – Speed of sound in vapor.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.bwr">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">bwr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3.0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.bwr" title="Link to this definition"></a></dt>
+<dd><p>Computes the speed of sound using the Benedict–Webb–Rubin (BWR) equation of state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>T</strong> (<em>float</em>) – Temperature.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em><em>, </em><em>optional</em>) – Exponential decay parameter (default is 3.0).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.cubic">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">cubic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">c</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.cubic" title="Link to this definition"></a></dt>
+<dd><p>Computes the speed of sound from a cubic polynomial pressure law.</p>
+<div class="math notranslate nohighlight">
+\[c = \sqrt{\frac{dp}{d\rho}} = \sqrt{3a \rho^2 + 2b \rho + c}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>a</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>b</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>c</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+<li><p><strong>d</strong> (<em>float</em>) – Polynomial coefficients.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.dowson_higginson">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">dowson_higginson</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">C2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.dowson_higginson" title="Link to this definition"></a></dt>
+<dd><p>Computes the isothermal speed of sound using the Dowson-Higginson equation of state.</p>
+<div class="math notranslate nohighlight">
+\[c = \sqrt{\frac{dp}{d\rho}} = \sqrt{\frac{C_1 \rho_0 (C_2 - 1)}{\rho^2 (C_2 \rho_0 / \rho - 1)^2}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>C1</strong> (<em>float</em>) – Empirical constant.</p></li>
+<li><p><strong>C2</strong> (<em>float</em>) – Empirical constant.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.murnaghan_tait">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">murnaghan_tait</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">K</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.murnaghan_tait" title="Link to this definition"></a></dt>
+<dd><p>Computes the speed of sound from the Murnaghan-Tait equation of state.</p>
+<div class="math notranslate nohighlight">
+\[c = \sqrt{\frac{dp}{d\rho}} = \sqrt{\frac{K}{\rho_0^n} \rho^{n - 1}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Current density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>K</strong> (<em>float</em>) – Bulk modulus.</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Murnaghan exponent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.power_law">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">power_law</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">P0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alpha</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.power_law" title="Link to this definition"></a></dt>
+<dd><p>Computes the isothermal speed of sound using a power-law equation of state.</p>
+<div class="math notranslate nohighlight">
+\[c = \sqrt{\frac{dp}{d\rho}} = \sqrt{\frac{-2 P_0}{(\alpha - 2) \rho}
+\left(\frac{\rho}{\rho_0}\right)^{-2 / (\alpha - 2)}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>P0</strong> (<em>float</em>) – Reference pressure.</p></li>
+<li><p><strong>alpha</strong> (<em>float</em>) – Power-law exponent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.sound_speed.van_der_waals">
+<span class="sig-prename descclassname"><span class="pre">hans.models.sound_speed.</span></span><span class="sig-name descname"><span class="pre">van_der_waals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dens</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.sound_speed.van_der_waals" title="Link to this definition"></a></dt>
+<dd><p>Computes the speed of sound using the Van der Waals equation of state.</p>
+<div class="math notranslate nohighlight">
+\[c = \sqrt{\frac{dp}{d\rho}} = \sqrt{\frac{RTM}{(M - b\rho)^2} - \frac{2a\rho}{M^2}}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dens</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>M</strong> (<em>float</em>) – Molar mass.</p></li>
+<li><p><strong>T</strong> (<em>float</em>) – Temperature (K).</p></li>
+<li><p><strong>a</strong> (<em>float</em>) – Attraction parameter.</p></li>
+<li><p><strong>b</strong> (<em>float</em>) – Repulsion parameter.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Speed of sound.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.velocity_profile">
+<span id="hans-models-velocity-profile-module"></span><h2>hans.models.velocity_profile module<a class="headerlink" href="#module-hans.models.velocity_profile" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.velocity_profile.get_velocity_profiles">
+<span class="sig-prename descclassname"><span class="pre">hans.models.velocity_profile.</span></span><span class="sig-name descname"><span class="pre">get_velocity_profiles</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ls</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'both'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.velocity_profile.get_velocity_profiles" title="Link to this definition"></a></dt>
+<dd><p>Velocity profiles for a given flow rate and wall velcoty</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>z</strong> (<em>array-like</em>) – Gap coordinate (z)</p></li>
+<li><p><strong>q</strong> (<em>array-like</em>) – Height-averaged solution, (rho, jx, jy) for a single point (shape=(3,))
+or a field (shape=(3, nx, ny))</p></li>
+<li><p><strong>Ls</strong> (<em>float</em><em>, </em><em>optional</em>) – Slip length (the default is 0.0, which means no-slip)</p></li>
+<li><p><strong>U</strong> (<em>float</em><em>, </em><em>optional</em>) – Lower wall velocity in x direction (the default is 1.0)</p></li>
+<li><p><strong>V</strong> (<em>float</em><em>, </em><em>optional</em>) – Lower wall velocity in y direction (the default is 1.0)</p></li>
+<li><p><strong>slip</strong> (<em>str</em><em>, </em><em>optional</em>) – Type of slip boundary conditions (“both”, “top”, “bottom”, or “none”)
+(the default is “both”, which means Ls applies to both the upper and lower wall)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Discretized profiles u(z) and v(z)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>array-like, array-like</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.viscosity">
+<span id="hans-models-viscosity-module"></span><h2>hans.models.viscosity module<a class="headerlink" href="#module-hans.models.viscosity" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.barus_piezo">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">barus_piezo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aB</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.barus_piezo" title="Link to this definition"></a></dt>
+<dd><p>Computes viscosity under pressure using the Barus equation.</p>
+<div class="math notranslate nohighlight">
+\[\mu(p) = \mu_0 e^{a_B p}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>p</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Pressure.</p></li>
+<li><p><strong>mu0</strong> (<em>float</em>) – Reference viscosity.</p></li>
+<li><p><strong>aB</strong> (<em>float</em>) – Barus pressure-viscosity coefficient.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pressure-dependent viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.carreau_shear">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">carreau_shear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shear_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lam</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">N</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.carreau_shear" title="Link to this definition"></a></dt>
+<dd><p>Computes shear-thinning viscosity using the Carreau model.</p>
+<div class="math notranslate nohighlight">
+\[\mu(\dot{\gamma}) = \mu_\infty + (\mu_0 - \mu_\infty) \left[1 + (\lambda \dot{\gamma})^a \right]^{(N - 1)/a}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shear_rate</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Shear rate.</p></li>
+<li><p><strong>mu0</strong> (<em>float</em>) – Zero-shear viscosity.</p></li>
+<li><p><strong>mu_inf</strong> (<em>float</em>) – Infinite-shear viscosity.</p></li>
+<li><p><strong>lam</strong> (<em>float</em>) – Time constant (relaxation time).</p></li>
+<li><p><strong>a</strong> (<em>float</em>) – Power-law exponent factor.</p></li>
+<li><p><strong>N</strong> (<em>float</em>) – Flow behavior index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shear-rate-dependent viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.dukler_mixture">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">dukler_mixture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta_v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.dukler_mixture" title="Link to this definition"></a></dt>
+<dd><p>Computes mixture viscosity using the linear Dukler model.</p>
+<div class="math notranslate nohighlight">
+\[\eta = \alpha \eta_v + (1 - \alpha) \eta_l\]</div>
+<p>where <span class="math notranslate nohighlight">\(\alpha = \frac{\rho - \rho_l}{\rho_v - \rho_l}\)</span> is the vapor mass fraction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Mixture density.</p></li>
+<li><p><strong>rho_l</strong> (<em>float</em>) – Liquid density.</p></li>
+<li><p><strong>rho_v</strong> (<em>float</em>) – Vapor density.</p></li>
+<li><p><strong>eta_l</strong> (<em>float</em>) – Viscosity of the liquid phase.</p></li>
+<li><p><strong>eta_v</strong> (<em>float</em>) – Viscosity of the vapor phase.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mixture viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.eyring_shear">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">eyring_shear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shear_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.eyring_shear" title="Link to this definition"></a></dt>
+<dd><p>Computes shear-thinning viscosity using the Eyring model.</p>
+<div class="math notranslate nohighlight">
+\[\mu(\dot{\gamma}) = \frac{\tau_0}{\dot{\gamma}} \sinh^{-1}\left(\frac{\mu_0 \dot{\gamma}}{\tau_0}\right)\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shear_rate</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Shear rate.</p></li>
+<li><p><strong>mu0</strong> (<em>float</em>) – Zero-shear viscosity.</p></li>
+<li><p><strong>tau0</strong> (<em>float</em>) – Characteristic shear stress.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shear-rate-dependent viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.mc_adams_mixture">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">mc_adams_mixture</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho_v</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta_l</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta_v</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.mc_adams_mixture" title="Link to this definition"></a></dt>
+<dd><p>Computes mixture viscosity using the McAdams model.</p>
+<div class="math notranslate nohighlight">
+\[M = \alpha \frac{\rho_v}{\rho}, \quad
+\eta = \frac{\eta_v \eta_l}{\eta_l M + \eta_v (1 - M)}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Mixture density.</p></li>
+<li><p><strong>rho_l</strong> (<em>float</em>) – Liquid density.</p></li>
+<li><p><strong>rho_v</strong> (<em>float</em>) – Vapor density.</p></li>
+<li><p><strong>eta_l</strong> (<em>float</em>) – Viscosity of the liquid phase.</p></li>
+<li><p><strong>eta_v</strong> (<em>float</em>) – Viscosity of the vapor phase.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mixture viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.power_law_shear">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">power_law_shear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shear_rate</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">N</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.power_law_shear" title="Link to this definition"></a></dt>
+<dd><p>Computes viscosity using the simple power-law model.</p>
+<div class="math notranslate nohighlight">
+\[\mu(\dot{\gamma}) = \mu_0 \dot{\gamma}^{N - 1}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shear_rate</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Shear rate.</p></li>
+<li><p><strong>mu0</strong> (<em>float</em>) – Consistency coefficient.</p></li>
+<li><p><strong>N</strong> (<em>float</em>) – Flow behavior index.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Shear-rate-dependent viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscosity.vogel_piezo">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscosity.</span></span><span class="sig-name descname"><span class="pre">vogel_piezo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rho</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mu_inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phi_inf</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BF</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">g</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscosity.vogel_piezo" title="Link to this definition"></a></dt>
+<dd><p>Computes viscosity from density using the Vogel-Fulcher-like empirical law.</p>
+<div class="math notranslate nohighlight">
+\[\phi = \left(\frac{\rho_0}{\rho}\right)^g, \quad
+\mu(\rho) = \mu_\infty e^{B_F \phi_\infty / (\phi - \phi_\infty)}\]</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>rho</strong> (<em>float</em><em> or </em><em>np.ndarray</em>) – Density.</p></li>
+<li><p><strong>rho0</strong> (<em>float</em>) – Reference density.</p></li>
+<li><p><strong>mu_inf</strong> (<em>float</em>) – Asymptotic high-density viscosity.</p></li>
+<li><p><strong>phi_inf</strong> (<em>float</em>) – Vogel parameter.</p></li>
+<li><p><strong>BF</strong> (<em>float</em>) – Vogel-Fulcher constant.</p></li>
+<li><p><strong>g</strong> (<em>float</em>) – Density exponent.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Density-dependent viscosity.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float or np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.viscous_stress_newton">
+<span id="hans-models-viscous-stress-newton-module"></span><h2>hans.models.viscous_stress_newton module<a class="headerlink" href="#module-hans.models.viscous_stress_newton" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_newton.stress_avg">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_newton.</span></span><span class="sig-name descname"><span class="pre">stress_avg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zeta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'top'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_newton.stress_avg" title="Link to this definition"></a></dt>
+<dd><p>Gap-averaged viscous stress tensor (normal and in-plane shear components).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q</strong> (<em>numpy.ndarray</em>) – Height-averaged variables field. First index is mass density, 2nd
+and 3rd mass flux in x and y direction, respectively.</p></li>
+<li><p><strong>h</strong> (<em>numpy.ndarray</em>) – Gap height field. First index is actual height, 2nd
+and 3rd heihgt gradients in x and y direction, respectively.</p></li>
+<li><p><strong>U</strong> (<em>float</em>) – Lower wall velocity in x direction.</p></li>
+<li><p><strong>V</strong> (<em>float</em>) – Upper wall velocity in y direction.</p></li>
+<li><p><strong>eta</strong> (<em>float</em>) – Dynamic shear viscosity</p></li>
+<li><p><strong>zeta</strong> (<em>float</em>) – Dynamic bulk viscosity</p></li>
+<li><p><strong>Ls</strong> (<em>float</em>) – Slip length</p></li>
+<li><p><strong>dqx</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>dqy</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>slip</strong> (<em>str</em><em>, </em><em>optional</em>) – Slipping walls keyword, either “both”, “top”, or “bottom”.
+(the default is ‘top’, which means no slip bottom wall)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Gap-averaged viscous stress tensor components</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_newton.stress_bottom">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_newton.</span></span><span class="sig-name descname"><span class="pre">stress_bottom</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zeta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'top'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_newton.stress_bottom" title="Link to this definition"></a></dt>
+<dd><p>Viscous stress tensor at the bottom wall.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q</strong> (<em>numpy.ndarray</em>) – Height-averaged variables field. First index is mass density, 2nd
+and 3rd mass flux in x and y direction, respectively.</p></li>
+<li><p><strong>h</strong> (<em>numpy.ndarray</em>) – Gap height field. First index is actual height, 2nd
+and 3rd heihgt gradients in x and y direction, respectively.</p></li>
+<li><p><strong>U</strong> (<em>float</em>) – Lower wall velocity in x direction.</p></li>
+<li><p><strong>V</strong> (<em>float</em>) – Upper wall velocity in y direction.</p></li>
+<li><p><strong>eta</strong> (<em>float</em>) – Dynamic shear viscosity</p></li>
+<li><p><strong>zeta</strong> (<em>float</em>) – Dynamic bulk viscosity</p></li>
+<li><p><strong>Ls</strong> (<em>float</em>) – Slip length</p></li>
+<li><p><strong>dqx</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>dqy</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>slip</strong> (<em>str</em><em>, </em><em>optional</em>) – Slipping walls keyword, either “both”, “top”, or “bottom”.
+(the default is ‘top’, which means no slip bottom wall)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Viscous stress tensor components</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_newton.stress_top">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_newton.</span></span><span class="sig-name descname"><span class="pre">stress_top</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">zeta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Ls</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqx</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dqy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">slip</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'top'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_newton.stress_top" title="Link to this definition"></a></dt>
+<dd><p>Viscous stress tensor at the top wall.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>q</strong> (<em>numpy.ndarray</em>) – Height-averaged variables field. First index is mass density, 2nd
+and 3rd mass flux in x and y direction, respectively.</p></li>
+<li><p><strong>h</strong> (<em>numpy.ndarray</em>) – Gap height field. First index is actual height, 2nd
+and 3rd heihgt gradients in x and y direction, respectively.</p></li>
+<li><p><strong>U</strong> (<em>float</em>) – Lower wall velocity in x direction.</p></li>
+<li><p><strong>V</strong> (<em>float</em>) – Upper wall velocity in y direction.</p></li>
+<li><p><strong>eta</strong> (<em>float</em>) – Dynamic shear viscosity</p></li>
+<li><p><strong>zeta</strong> (<em>float</em>) – Dynamic bulk viscosity</p></li>
+<li><p><strong>Ls</strong> (<em>float</em>) – Slip length</p></li>
+<li><p><strong>dqx</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>dqy</strong> (<em>numpy.ndarray</em><em>, </em><em>optional</em>) – Gradient (x) field of the height-averaged variables. First index is mass density,
+2nd and 3rd mass flux in x and y direction, respectively.
+(the default is None, which falls back to zero)</p></li>
+<li><p><strong>slip</strong> (<em>str</em><em>, </em><em>optional</em>) – Slipping walls keyword, either “both”, “top”, or “bottom”.
+(the default is ‘top’, which means no slip bottom wall)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Viscous stress tensor components</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models.viscous_stress_powerlaw">
+<span id="hans-models-viscous-stress-powerlaw-module"></span><h2>hans.models.viscous_stress_powerlaw module<a class="headerlink" href="#module-hans.models.viscous_stress_powerlaw" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.approximate_zmax">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">approximate_zmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Um</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Vm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.approximate_zmax" title="Link to this definition"></a></dt>
+<dd><p>Approximate the location of maximum velocity in z-direction to compute the power law stresses.
+Exact values have been found numerically for both cases, but a good approximation
+is given by a hyperbola with vertical asymptote at jx/rho = U/2 (Couette profile).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>U</strong> (<em>float</em>) – Sliding velocity of the lower surface in x-direction.</p></li>
+<li><p><strong>V</strong> (<em>float</em>) – Sliding velocity of the lower surface in y-direction.</p></li>
+<li><p><strong>Um</strong> (<em>numpy.ndarray</em>) – Array of mean velocities in x-direction (jx/rho).</p></li>
+<li><p><strong>Vm</strong> (<em>numpy.ndarray</em>) – Array of mean velocities in y-direction (jy/rho).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>numpy.ndarray</em> – Nondimensional z-coordinate of velocity maximum in x-direction</p></li>
+<li><p><em>numpy.ndarray</em> – Nondimensional z-coordinate of velocity maximum in y-direction</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.solve_zmax">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">solve_zmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">um</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">vm</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.solve_zmax" title="Link to this definition"></a></dt>
+<dd><p>Calculate the location of maximum velocity in z-direction to compute the power law stresses.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>U</strong> (<em>float</em>) – Sliding velocity of the lower surface in x-direction.</p></li>
+<li><p><strong>V</strong> (<em>float</em>) – Sliding velocity of the lower surface in y-direction.</p></li>
+<li><p><strong>Um</strong> (<em>numpy.ndarray</em>) – Array of mean velocities in x-direction (jx/rho).</p></li>
+<li><p><strong>Vm</strong> (<em>numpy.ndarray</em>) – Array of mean velocities in y-direction (jy/rho).</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Exponent</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>numpy.ndarray</em> – Nondimensional z-coordinate of velocity maximum in x-direction</p></li>
+<li><p><em>numpy.ndarray</em> – Nondimensional z-coordinate of velocity maximum in y-direction</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.stress_powerlaw_bottom">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">stress_powerlaw_bottom</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exact'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.stress_powerlaw_bottom" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.stress_powerlaw_top">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">stress_powerlaw_top</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">U</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">V</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'exact'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.stress_powerlaw_top" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.zmax_nleq_case1">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">zmax_nleq_case1</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">zmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">un</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.zmax_nleq_case1" title="Link to this definition"></a></dt>
+<dd><p>Definition of nonlinear equation (Case 1) to be solved for zmax with scipy.optimize.fsolve.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>zmax</strong> (<em>float</em>) – z-location of velocity maximum</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Power-law exponent</p></li>
+<li><p><strong>un</strong> (<em>float</em>) – non-dimensional height-averaged velocity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Function value f(zmax) = 0 for root-finding.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="hans.models.viscous_stress_powerlaw.zmax_nleq_case2">
+<span class="sig-prename descclassname"><span class="pre">hans.models.viscous_stress_powerlaw.</span></span><span class="sig-name descname"><span class="pre">zmax_nleq_case2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">zmax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">un</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#hans.models.viscous_stress_powerlaw.zmax_nleq_case2" title="Link to this definition"></a></dt>
+<dd><p>Definition of nonlinear equation (Case 2) to be solved for zmax with scipy.optimize.fsolve.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>zmax</strong> (<em>float</em>) – z-location of velocity maximum</p></li>
+<li><p><strong>n</strong> (<em>float</em>) – Power-law exponent</p></li>
+<li><p><strong>un</strong> (<em>float</em>) – non-dimensional height-averaged velocity.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Function value f(zmax) = 0 for root-finding.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-hans.models">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-hans.models" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="hans.cli.html" class="btn btn-neutral float-left" title="hans.cli package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hans.multiscale.html" class="btn btn-neutral float-right" title="hans.multiscale package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hannes Holey.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

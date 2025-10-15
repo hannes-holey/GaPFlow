@@ -1,0 +1,53 @@
+options:
+    output: data/asperity_lj
+    write_freq: 100
+    use_tstamp: True
+grid:
+    Lx: 1470.
+    Ly: 1470.
+    Nx: 100
+    Ny: 100
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['D', 'N', 'N']
+    yN: ['D', 'N', 'N']
+    xE_D: 0.8
+    xW_D: 0.8
+    yS_D: 0.8
+    yN_D: 0.8
+geometry:
+    type: asperity
+    hmin: 12.
+    hmax: 60.
+    U: 0.12
+    V: 0.
+numerics:
+    CFL: 0.5
+    adaptive: 1
+    tol: 1e-8
+    dt: 0.05
+    max_it: 5_000
+properties:
+    shear: 2.15
+    bulk: 0.
+    EOS: BWR
+    T: 1.0
+    rho0: 0.8
+gp:
+    press:
+        fix_noise: True
+        atol: 1.5
+        rtol: 0.
+        obs_stddev: 2.e-2
+        max_steps: 10
+    shear:
+        fix_noise: True
+        atol: 1.5
+        rtol: 0.
+        obs_stddev: 4.e-3
+        max_steps: 10
+db:
+    # dtool_path: data/train  # defaults to options['output']/train   
+    init_size: 5
+    init_method: rand
+    init_width: 0.01 # default (for density)

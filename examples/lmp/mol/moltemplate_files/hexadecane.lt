@@ -1,0 +1,43 @@
+# Hexadecane
+
+import "moltemplate_files/trappe1998.lt"
+
+hexadecane inherits TraPPE {
+    write("Data Atoms"){
+        $atom:C16    $mol:... @atom:CH3    -0.017000  9.6266047140E+00 -3.3532146290E-01  5.4509827700E-02
+        $atom:C14    $mol:... @atom:CH2     0.012000  8.3426939583E+00  4.8672100410E-01 -1.0661540670E-01
+        $atom:C12    $mol:... @atom:CH2     0.015000  7.0651977514E+00 -3.4638665820E-01  6.7954944100E-02
+        $atom:C10    $mol:... @atom:CH2    -0.011000  5.7731252870E+00  4.6698321640E-01 -8.8304046300E-02
+        $atom:C8     $mol:... @atom:CH2    -0.007000  4.4974289739E+00 -3.7069272640E-01  7.3312864600E-02
+        $atom:C6     $mol:... @atom:CH2     0.009000  3.2052388100E+00  4.4604421490E-01 -6.2585376900E-02
+        $atom:C4     $mol:... @atom:CH2     0.005000  1.9296791779E+00 -4.0004783880E-01  4.7423550500E-02
+        $atom:C2     $mol:... @atom:CH2    -0.006000  6.3774896850E-01  4.2669610680E-01 -6.2921333000E-03
+        $atom:C1     $mol:... @atom:CH2    -0.006000 -6.3789371410E-01 -4.2695508240E-01 -5.9995122000E-03
+        $atom:C3     $mol:... @atom:CH2     0.005000 -1.9295829685E+00  3.9974267430E-01  5.0398954100E-02
+        $atom:C5     $mol:... @atom:CH2     0.009000 -3.2052645901E+00 -4.4568726430E-01 -6.1745123400E-02
+        $atom:C7     $mol:... @atom:CH2    -0.007000 -4.4973821926E+00  3.7130072880E-01  7.3112765600E-02
+        $atom:C9     $mol:... @atom:CH2    -0.011000 -5.7730471510E+00 -4.6649141590E-01 -8.8407819200E-02
+        $atom:C11    $mol:... @atom:CH2     0.015000 -7.0653012231E+00  3.4683570290E-01  6.6952691000E-02
+        $atom:C13    $mol:... @atom:CH2     0.012000 -8.3425221943E+00 -4.8665796520E-01 -1.0676149720E-01
+        $atom:C15    $mol:... @atom:CH3    -0.017000 -9.6264649714E+00  3.3527268010E-01  5.3675672800E-02
+    }
+    write("Data Bonds"){
+        $bond:b4      @bond:saturated    $atom:C16    $atom:C14    
+        $bond:b7      @bond:saturated    $atom:C14    $atom:C12    
+        $bond:b10     @bond:saturated    $atom:C12    $atom:C10    
+        $bond:b13     @bond:saturated    $atom:C10    $atom:C8     
+        $bond:b16     @bond:saturated    $atom:C8     $atom:C6     
+        $bond:b19     @bond:saturated    $atom:C6     $atom:C4     
+        $bond:b22     @bond:saturated    $atom:C4     $atom:C2     
+        $bond:b25     @bond:saturated    $atom:C2     $atom:C1     
+        $bond:b28     @bond:saturated    $atom:C1     $atom:C3     
+        $bond:b31     @bond:saturated    $atom:C3     $atom:C5     
+        $bond:b34     @bond:saturated    $atom:C5     $atom:C7     
+        $bond:b37     @bond:saturated    $atom:C7     $atom:C9     
+        $bond:b40     @bond:saturated    $atom:C9     $atom:C11    
+        $bond:b43     @bond:saturated    $atom:C11    $atom:C13    
+        $bond:b46     @bond:saturated    $atom:C13    $atom:C15    
+    }
+    write("Data Impropers"){
+    }
+}

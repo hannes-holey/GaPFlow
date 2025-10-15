@@ -1,9 +1,7 @@
-matplotlib>=3.2.0
-numpy>=1.22.4, <2.0.0
-netCDF4>=1.5.3
-PyYAML>=5.3
-mpi4py>=3.0
-scipy>=1.12
-GPy>=1.13.2
-dtool
-dtool-lookup-api==0.5.1
+muGrid==0.95.0
+matplotlib==3.10.6
+mpi4py==4.1.0
+tinygp==0.3.0
+netCDF4==1.7.2
+pandas==2.3.2
+jaxopt==0.8.5

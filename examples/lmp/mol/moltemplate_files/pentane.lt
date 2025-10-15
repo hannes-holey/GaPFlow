@@ -1,0 +1,21 @@
+#   Pentane
+
+import "moltemplate_files/trappe1998.lt"
+
+pentane inherits TraPPE {
+    write("Data Atoms"){
+        $atom:C5     $mol:... @atom:CH3    -0.008000  1.6222477548E+00 -1.0317867759E+00 2.9139561000E-03
+        $atom:C4     $mol:... @atom:CH2     0.007000  1.4008040445E+00  4.8320827340E-01 -9.8483062200E-02
+        $atom:C3     $mol:... @atom:CH2     0.002000  2.4504859700E-02  9.9589188780E-01 3.6596671510E-01
+        $atom:C2     $mol:... @atom:CH2     0.007000 -1.1941051449E+00  4.7302589940E-01 -4.2962055170E-01
+        $atom:C1     $mol:... @atom:CH3    -0.008000 -1.8455217500E+00 -7.9261689330E-01 1.4645743790E-01
+    }
+    write("Data Bonds"){
+        $bond:b1      @bond:saturated    $atom:C5     $atom:C4     
+        $bond:b2      @bond:saturated    $atom:C4     $atom:C3     
+        $bond:b3      @bond:saturated    $atom:C3     $atom:C2     
+        $bond:b4      @bond:saturated    $atom:C2     $atom:C1     
+    }
+    write("Data Impropers"){
+    }
+}

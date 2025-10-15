@@ -1,0 +1,55 @@
+options:
+    output: data/journal_gp
+    write_freq: 100
+    use_tstamp: True
+grid:
+    dx: 1.e-5
+    dy: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 877.7007
+    xW_D: 877.7007
+geometry:
+    type: journal
+    CR: 1.e-2
+    eps: 0.7
+    U: 0.1
+    V: 0.
+numerics:
+    CFL: 0.25
+    adaptive: 1
+    tol: 1e-9
+    dt: 1e-10
+    max_it: 1_000
+properties:
+    shear: 0.0794
+    bulk: 0.
+    EOS: DH
+    P0: 101325
+    rho0: 877.7007
+    T0: 323.15
+    C1: 3.5e10
+    C2: 1.23
+gp:
+    press:
+        fix_noise: True
+        atol: 1.
+        rtol: 0.1
+        obs_stddev: 100.
+        max_steps: 5
+    shear:
+        fix_noise: True
+        atol: 1.
+        rtol: 0.1
+        obs_stddev: 1.
+        max_steps: 5
+db:
+    dtool: True
+    # dtool_path: ... # defaults to options['output']/train   
+    init_size: 5
+    init_method: lhc
+    init_width: 1.e-6

@@ -1,49 +1,126 @@
-# HANS
+# GaPFlow
+*Gap-averaged flow simulations with Gaussian Process regression.*
 
-[![PyPI version](https://badge.fury.io/py/hans.svg)](https://badge.fury.io/py/hans) [![CI](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/hans/actions/workflows/ci.yaml) [![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
+This code implements the solution of time-dependent lubrication problems as described in:
+- [Holey, H. et al., Tribology Letters 70 (2022)](https://doi.org/10.1007/s11249-022-01576-5)
 
-This code implements the Height-Averaged Navier-Stokes (HANS) scheme for two-dimensional lubrication problems as described in the following paper:
+The extension to atomistic-continuum multiscale simulations with Gaussian process (GP) surrogate models has been described in:
+- [Holey, H. et al., Science Advances 11, eadx4546 (2025)](https://doi.org/10.1126/sciadv.adx4546)
 
-[Holey, H. et al. (2022) Tribology Letters, 70(2), p. 36.
-](https://doi.org/10.1007/s11249-022-01576-5)
+The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
+
+## Roadmap
+- [X] Active learning in base class, test with pressure only
+- [X] Implement GP surrogates for shear stress
+- [X] Problem class with YAML input
+- [X] Output fields, history, gap
+- [X] Start plotting scripts
+- [X] Output GP hyperparams, training data
+- [X] Adaptive time stepping
+- [X] Adaptive time stepping GP
+- [X] Equation of state w/ plots
+- [X] Plotting scripts
+- [X] dtool Datasets
+- [X] DB config via sep YAML block
+- [X] Catch sigterm
+- [X] 2D problems
+- [X] Viscosity models with plots
+- [X] Docstrings & typing (important parts)
+- [X] MD setup
+- [ ] Documentation with examples
+- [ ] Unit tests and integration tests
+- [ ] JOSS submission (w/o elasticity)
+- [ ] MPI parallel
 
 ## Installation
-Packaged versions can be installed via
-```
-pip install hans
-```
-Multiscale simulations require a working installation of [LAMMPS](https://www.lammps.org/#gsc.tab=0). 
-New molecular dynamics runs are triggered using the Python interface of LAMMPS. 
-Therefore LAMMPS has to be build as a shared library.
-Please follow the installation instructions of [LAMMPS](https://docs.lammps.org/Python_install.html).
 
-## Examples
-Run from the command line with
+Install [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
 ```
-mpirun -n <NP> python3 -m hans -i <input_file> [-p] [-r <restart_file>]
+pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 ```
-where `NP` is the number of MPI processes. The plot option (`-p`, `--plot`) is only available for serial execution. Example input files as well as jupyter-notebooks can be found in the [examples](examples/) directory.
+and make sure MPI and PnetCDF get detected. For manual installations of PnetCDF (recommended), you may need to tell `pkg_config` where to find it, e.g.
+```
+export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
+```
+for instalations under `$HOME/.local/`.
 
-The command line interface contains some scripts for plotting and creating animations.
-For instance, 1D profiles of converged solutions can be displayed with
+After that run
 ```
-plot1D_last.py
+pip install -e .[test]
+```
+for an editable installation with optional dependecies for testing (using `pytest`).
+
+## Minimal example
+Simulation inputs are commonly provided in YAML files. A typical input file might look like this:
+
+```yaml
+# examples/journal.yaml
+options:
+    output: data/journal
+    write_freq: 10
+grid:
+    dx: 1.e-5
+    dy: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 877.7007
+    xW_D: 877.7007
+geometry:
+    type: journal
+    CR: 1.e-2
+    eps: 0.7
+    U: 0.1
+    V: 0.
+numerics:
+    tol: 1e-9
+    dt: 1e-10
+    max_it: 200
+properties:
+    shear: 0.0794
+    bulk: 0.
+    EOS: DH
+    P0: 101325
+    rho0: 877.7007
+    T0: 323.15
+    C1: 3.5e10
+    C2: 1.23
 ```
 
-## Tests
-Run all tests from the main source directory with
+Note that this example uses fixed-form constitutive laws without GP surrogate models or MD data. More example input files can be found in the [examples](examples/) directory.
+
+The input files can be used to start a simulation from the command line
+```bash
+python -m GaPFlow -i my_input_file.yaml
 ```
-pytest
+or from a Python script
+```python
+from GaPFlow.problem import Problem
+
+myProblem = Problem.from_yaml('my_input_file.yaml')
+myProblem.run()
 ```
-or append the path to the test definition file (located in [tests](tests)) to run selected tests only.
+Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
+- `config.yml`: A sanitized version of your simulation input.
+- `gap.nc`: NetCDF file containing the gap height and gradients.
+- `sol.nc`: NetCDF file containing the solution and stress fields.
+- `history.csv`: Contains the time series of scalar quantities (step, Ekin, residual, ...)
+- `gp_[xz,yz,zz].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
+- `Xtrain.npy` (Optional): Training data inputs
+- `Ytrain.npy` (Optional): Training data observations
+- `Ytrain_err.npy` (Optional): Training data observation error
+
+The code comes with a few handy [command line tools](GaPFlow/cli/) for visualizations like this one
+
+![journal](doc/assets/journal.gif)
+
+which shows the transient solution of a 1D journal bearing with active learning of the constitutive behavior. 
 
 ## Documentation
-A Sphinx-generated documentation can be built locally with
-```
-cd doc
-sphinx-apidoc -o . ../hans
-make html
-```
+...
 
 ## Funding
-This work is funded by the German Research Foundation (DFG) through GRK 2450.
+This work received funding from the German Research Foundation (DFG) through GRK 2450 and from the Alexander von Humboldt Foundation through a Feodor Lynen Fellowship.

@@ -1,0 +1,14 @@
+###############
+# Non-equilibrium, establish steady-state
+velocity        surfU set 0.0 0.0 0.0
+# velocity        surfL set 0.0 0.0 0.0
+
+velocity        notfrozen create $(2*v_input_temp) 726403 dist gaussian mom yes
+
+include 		static/in.flow.lmp
+
+run             ${Nsteady}
+
+undump          1
+
+write_restart   restart.steady

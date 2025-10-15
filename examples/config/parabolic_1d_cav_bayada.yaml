@@ -1,0 +1,39 @@
+options:
+    output: data/pslider1d_cav
+    write_freq: 1000
+    use_tstamp: True
+grid:
+    Lx: 0.0762
+    Ly: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 850. # 101325
+    xW_D: 850. # 101325
+geometry:
+    type: parabolic
+    hmin: 2.54e-5
+    hmax: 5.08e-5
+    U: 4.57
+    V: 0.
+numerics:
+    adaptive: 1
+    CFL: 0.45
+    tol: 1e-7
+    dt: 1.e-10
+    max_it: 100_000
+properties:
+    EOS: Bayada
+    rho0: 850.
+    shear: 0.039
+    bulk: 0.
+    cl: 1600.
+    cv: 352.
+    piezo:
+        name: Dukler
+        shearv: 3.9e-5
+        rhol: 850.
+        rhov: 0.019

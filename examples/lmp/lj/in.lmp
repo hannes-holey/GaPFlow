@@ -1,0 +1,225 @@
+# STATE POINT
+
+include			"in.param"
+
+# variable 		input_gap equal 20.
+# variable 		input_dens equal 0.8
+# variable 		input_fluxX equal 0.08
+# variable 		input_fluxY equal 0.08
+# variable 		slabfile index "wall.lmp"
+
+variable    	cutoff equal 2.5
+
+variable	temp equal 1.0
+variable 	ndensAr equal ${input_dens}
+
+# TIME
+variable    	dt equal 0.005
+variable    	tinit equal 50000
+variable    	ttherm equal 50000
+# variable    	tsample equal 200000
+
+# SAMPLING
+variable	Nevery equal 10
+variable	Nrepeat equal 1
+variable	Nfreq equal ${Nevery}*${Nrepeat}
+
+# LJ PARAMETERS
+variable    	mAr equal 39.948            ## molar mass Argon (g/mole)
+variable    	sigAr equal 3.4             ## LJ parameter for Argon (Angstrom)
+variable    	epsAr equal 0.238           ## LJ parameter for Argon (kcal/mole)
+
+variable    	mAu equal 196.97	      	## molar mass Gold (g/mole)
+variable    	sigAu equal 2.951*2^(-1/6)  ## LJ parameter for Gold (Angstrom)
+variable    	epsAu equal 5.29	        ## LJ parameter for Gold (kcal/mole)
+
+# non-dimensional LJ parameters (wall)
+variable		mW equal ${mAu}/${mAr}
+variable		sigWW equal ${sigAu}/${sigAr}
+variable		epsWW equal ${epsAu}/${epsAr}
+
+# non-dimensional LJ parameters (wall-fluid mixing)
+variable		sigFW equal (1.0+v_sigWW)/2
+variable		epsFW equal sqrt(v_epsWW)
+
+variable 		gapheight equal ${input_gap}
+
+#############
+
+dimension       3
+
+boundary        p p s
+units           lj
+
+read_data 		${slabfile} group surfL
+# read_data 		../single_wall.lammps group surfL
+
+variable		thickness equal bound(surfL,zmax)-bound(surfL,zmin)
+
+read_data		${slabfile} add append shift 0. 0. $(v_thickness+v_gapheight+v_sigFW) group surfU
+
+pair_style      lj/cut ${cutoff}            ## LJ potential with cutoff radius
+pair_modify     shift yes                   ## LJ shifted to zero at cutoff
+
+# One frozen layer
+variable		layer equal 1.2/sqrt(3)
+region	 		freezeU block INF INF INF INF $(lz-v_layer) INF
+group 			freezeU region freezeU
+region	 		freezeL block INF INF INF INF INF ${layer}
+group 			freezeL region freezeL
+
+# Thermalized layers (wall thermostat)
+variable 		thermal equal (${thickness}-${layer})/2
+region	 		thermL block INF INF INF INF ${layer} $(v_layer+v_thermal)
+region	 		thermU block INF INF INF INF $(lz-v_layer-v_thermal) $(lz-v_layer)
+group			thermL region thermL
+group			thermU region thermU
+group 			therm union thermL thermU
+
+group			solid type 1
+group 			frozen union freezeL freezeU
+group 			notfrozen subtract all frozen
+
+neigh_modify    exclude group frozen frozen
+
+variable 		Vfluid equal (v_gapheight+v_sigFW)*lx*ly
+variable    	Natoms equal round(${ndensAr}*v_Vfluid)
+variable 		dens equal v_Natoms/v_Vfluid
+
+region			fluid block INF INF INF INF $(bound(surfL,zmax)+v_sigFW/2.) $(bound(surfU,zmin)-v_sigFW/2.) units box
+
+create_atoms    2 random ${Natoms} 7234508 fluid
+group           fluid type 2
+
+mass 			1 ${mW}
+mass 			2 1.
+
+pair_coeff		1 1 ${epsWW} ${sigWW} ${cutoff}
+pair_coeff		2 2 1. 1. ${cutoff}
+pair_coeff		1 2 ${epsFW} ${sigFW} ${cutoff}
+
+change_box 		all boundary p p f
+
+##############
+
+timestep        ${dt}
+
+thermo          1000
+thermo_modify   norm no
+thermo_style    custom step temp press pe ke v_dens
+compute         thermotemp fluid temp
+thermo_modify   temp thermotemp
+
+# rigid walls
+velocity        surfU set 0.0 0.0 0.0
+velocity        surfL set 0.0 0.0 0.0
+
+# initialize with random velocities
+velocity        fluid create ${temp} 726403 dist gaussian mom yes
+
+###############
+
+# 1st equilibration (Berendsen, limit)
+fix             1 fluid nve/limit 0.1
+fix             2 fluid temp/berendsen ${temp} ${temp} $(500*dt)
+
+run             ${tinit}
+
+unfix			1
+unfix			2
+
+###############
+
+# Couette flow
+velocity		freezeL set v_vWall 0. 0. units box
+
+# Poiseuille flow
+variable 		gap equal bound(fluid,zmax)-bound(fluid,zmin)
+variable		uCOM equal ${input_fluxX}*(lx*ly*v_gap)/mass(fluid) 			
+variable		vCOM equal ${input_fluxY}*(lx*ly*v_gap)/mass(fluid) 			
+velocity		fluid set v_uCOM v_vCOM 0. units box
+
+# 2nd equilibration (Nose-Hoover)
+fix             1 fluid nve
+fix 			2 solid nve
+fix 			2a therm langevin ${temp} ${temp} $(100.0*dt) 435623
+fix 			3 frozen store/force
+fix 			4 frozen setforce 0. 0. 0.
+fix 			5 fluid flow/gauss 1 1 0
+
+# Subtract COM velocity from wall atoms for thermostatting 
+compute			thermotemp_wall therm temp/com
+fix_modify 		2a temp thermotemp_wall
+
+run 			${ttherm}
+reset_timestep 	0
+
+###############
+
+# Sampling
+
+# fix             1 fluid nve
+# fix 			2 solid nve
+# fix 			2a therm langevin ${temp} ${temp} $(100.0*dt) 435623
+# fix 			3 frozen store/force
+# fix 			4 frozen setforce 0.0 0.0 0.0
+
+
+# Define bins as chunks
+variable		nbins index 200
+variable		dz equal ${gapheight}/${nbins}
+compute 		cchunk all chunk/atom bin/1d z lower ${dz} bound z $(bound(surfL,zmax)+v_sigFW/2) $(bound(surfU,zmin)-v_sigFW/2) units box
+
+# Compute pressure profile
+compute 		stress fluid stress/atom NULL
+variable		pressN atom -c_stress[3]/(${dz}*lx*ly) # apply conversion to pressure early since we have no variable style for processing chunks
+variable		pressT atom -(c_stress[1]+c_stress[2])/(2.*(${dz}*lx*ly))
+variable		press atom -(c_stress[1]+c_stress[2]+c_stress[3])/(3.*(${dz}*lx*ly))
+
+compute 		binpress fluid reduce/chunk cchunk sum v_press
+compute 		binpressN fluid reduce/chunk cchunk sum v_pressN
+compute 		binpressT fluid reduce/chunk cchunk sum v_pressT
+
+# Compute pressure in center (h/3) of the channel
+variable       	lzcenter equal ${gapheight}/3. # 4*${cutoff}
+region 			center block INF INF INF INF $(lz/2.-v_lzcenter/2.) $(lz/2.+v_lzcenter/2.) units box
+variable		Vcenter equal lx*ly*${lzcenter}
+variable		centerpressX atom -c_stress[1]/${Vcenter}
+variable		centerpressY atom -c_stress[2]/${Vcenter}
+variable		centerpressZ atom -c_stress[3]/${Vcenter}
+variable		centerpress atom -(c_stress[1]+c_stress[2]+c_stress[3])/(3.0*${Vcenter})
+
+compute 		centerpress fluid reduce/region center sum v_centerpress v_centerpressX v_centerpressY v_centerpressZ 
+variable		pcentersq equal c_centerpress[1]*c_centerpress[1]
+
+# Compute pressure on the walls
+compute 		forceL surfL group/group fluid
+compute 		forceU fluid group/group surfU
+
+variable		pressL equal -c_forceL[3]/(lx*ly)
+variable 		pressU equal -c_forceU[3]/(lx*ly)
+
+variable		shearxzL equal c_forceL[1]/(lx*ly)
+variable		shearxzU equal c_forceU[1]/(lx*ly)
+
+variable		shearyzL equal c_forceL[2]/(lx*ly)
+variable		shearyzU equal c_forceU[2]/(lx*ly)
+
+variable 		pressW equal (v_pressL+v_pressU)/2.
+	
+# Averaged outputs
+# Z-PROFILES
+fix			avedens fluid ave/chunk 5 100 500 cchunk density/number ave running overwrite file dens_profile.dat
+fix 			avevelX fluid ave/chunk 5 100 500 cchunk vx ave running overwrite file velX_profile.dat
+fix 			avevelY fluid ave/chunk 5 100 500 cchunk vy ave running overwrite file velY_profile.dat
+fix 			avebin fluid ave/time 5 100 500 c_binpress mode vector ave running overwrite file press_profile.dat
+fix 			avebinN fluid ave/time 5 100 500 c_binpressN mode vector ave running overwrite file pressN_profile.dat
+fix 			avebinT fluid ave/time 5 100 500 c_binpressT mode vector ave running overwrite file pressT_profile.dat
+
+# MEAN STRESS
+fix 			avewall all ave/time ${Nevery} ${Nrepeat} ${Nfreq} v_pressL v_shearxzL v_pressU v_shearxzU v_shearyzL v_shearyzU file stress_wall.dat 
+fix 			avecenter fluid ave/time ${Nevery} ${Nrepeat} ${Nfreq} c_centerpress[*] file press_center.dat
+
+dump        		1 all custom 10000 out.xyz type id x y z
+
+run 			${tsample}

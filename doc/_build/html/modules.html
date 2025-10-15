@@ -1,0 +1,355 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>hans &mdash; hans  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="hans package" href="hans.html" />
+    <link rel="prev" title="Viscous stress tensor calculation with wall slip" href="theory/stress_sympy.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            hans
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="readme.html">HANS</a></li>
+<li class="toctree-l1"><a class="reference internal" href="theory/index.html">Theory</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">hans</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="hans.html">hans package</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">hans</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">hans</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hans">
+<h1>hans<a class="headerlink" href="#hans" title="Link to this heading"></a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="hans.html">hans package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.cli.html">hans.cli package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.animate1D">hans.cli.animate1D module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.animate2D">hans.cli.animate2D module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.generate_roughness">hans.cli.generate_roughness module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot1D_evolution">hans.cli.plot1D_evolution module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot1D_height">hans.cli.plot1D_height module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot1D_last">hans.cli.plot1D_last module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot2D_height">hans.cli.plot2D_height module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot2D_last">hans.cli.plot2D_last module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.plot_scalar">hans.cli.plot_scalar module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli.read_config">hans.cli.read_config module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.cli.html#module-hans.cli">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.models.html">hans.models package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.density">hans.models.density module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.pressure">hans.models.pressure module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.sound_speed">hans.models.sound_speed module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.velocity_profile">hans.models.velocity_profile module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.viscosity">hans.models.viscosity module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.viscous_stress_newton">hans.models.viscous_stress_newton module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models.viscous_stress_powerlaw">hans.models.viscous_stress_powerlaw module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.models.html#module-hans.models">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.multiscale.html">hans.multiscale package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html#module-hans.multiscale.db">hans.multiscale.db module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html#module-hans.multiscale.gp">hans.multiscale.gp module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html#module-hans.multiscale.md">hans.multiscale.md module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.multiscale.html#module-hans.multiscale">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.special.html">hans.special package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.special.html#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.special.html#module-hans.special.flux_limiter">hans.special.flux_limiter module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.special.html#module-hans.special">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.field">hans.field module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.field.DoubleTensorField"><code class="docutils literal notranslate"><span class="pre">DoubleTensorField</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.field.Field"><code class="docutils literal notranslate"><span class="pre">Field</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.centerline_x"><code class="docutils literal notranslate"><span class="pre">Field.centerline_x</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.centerline_y"><code class="docutils literal notranslate"><span class="pre">Field.centerline_y</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.edgeE"><code class="docutils literal notranslate"><span class="pre">Field.edgeE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.edgeN"><code class="docutils literal notranslate"><span class="pre">Field.edgeN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.edgeS"><code class="docutils literal notranslate"><span class="pre">Field.edgeS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.edgeW"><code class="docutils literal notranslate"><span class="pre">Field.edgeW</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.get_2d_cart_comm"><code class="docutils literal notranslate"><span class="pre">Field.get_2d_cart_comm()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.get_neighbors"><code class="docutils literal notranslate"><span class="pre">Field.get_neighbors()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.id_grid"><code class="docutils literal notranslate"><span class="pre">Field.id_grid</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.inner"><code class="docutils literal notranslate"><span class="pre">Field.inner</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.verticeNE"><code class="docutils literal notranslate"><span class="pre">Field.verticeNE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.verticeSW"><code class="docutils literal notranslate"><span class="pre">Field.verticeSW</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.field.Field.without_ghost"><code class="docutils literal notranslate"><span class="pre">Field.without_ghost</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.field.ScalarField"><code class="docutils literal notranslate"><span class="pre">ScalarField</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.field.TensorField"><code class="docutils literal notranslate"><span class="pre">TensorField</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.field.VectorField"><code class="docutils literal notranslate"><span class="pre">VectorField</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.geometry">hans.geometry module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.geometry.GapHeight"><code class="docutils literal notranslate"><span class="pre">GapHeight</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.add_roughness"><code class="docutils literal notranslate"><span class="pre">GapHeight.add_roughness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.add_roughness_from_file"><code class="docutils literal notranslate"><span class="pre">GapHeight.add_roughness_from_file()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.max_height"><code class="docutils literal notranslate"><span class="pre">GapHeight.max_height</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.min_height"><code class="docutils literal notranslate"><span class="pre">GapHeight.min_height</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.roughness_pbc"><code class="docutils literal notranslate"><span class="pre">GapHeight.roughness_pbc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.set_gradients"><code class="docutils literal notranslate"><span class="pre">GapHeight.set_gradients()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.GapHeight.set_profile"><code class="docutils literal notranslate"><span class="pre">GapHeight.set_profile()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.geometry.SlipLength"><code class="docutils literal notranslate"><span class="pre">SlipLength</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.geometry.SlipLength.fill"><code class="docutils literal notranslate"><span class="pre">SlipLength.fill()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.geometry.fourier_synthesis"><code class="docutils literal notranslate"><span class="pre">fourier_synthesis()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.geometry.self_affine_prefactor"><code class="docutils literal notranslate"><span class="pre">self_affine_prefactor()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.input">hans.input module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.input.Input"><code class="docutils literal notranslate"><span class="pre">Input</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.getProblem"><code class="docutils literal notranslate"><span class="pre">Input.getProblem()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_BC"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_BC()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_IC"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_IC()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_disc"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_disc()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_geometry"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_geometry()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_gp"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_gp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_material"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_material()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_md"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_md()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_numerics"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_numerics()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_options"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_options()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_roughness"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_roughness()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.input.Input.sanitize_surface"><code class="docutils literal notranslate"><span class="pre">Input.sanitize_surface()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.input.check_input"><code class="docutils literal notranslate"><span class="pre">check_input()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.integrate">hans.integrate module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.integrate.ConservedField"><code class="docutils literal notranslate"><span class="pre">ConservedField</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.cfl"><code class="docutils literal notranslate"><span class="pre">ConservedField.cfl</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.check_p_reset"><code class="docutils literal notranslate"><span class="pre">ConservedField.check_p_reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.check_tau_reset"><code class="docutils literal notranslate"><span class="pre">ConservedField.check_tau_reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.cubicInterpolation"><code class="docutils literal notranslate"><span class="pre">ConservedField.cubicInterpolation()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.diffusiveCD"><code class="docutils literal notranslate"><span class="pre">ConservedField.diffusiveCD()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.diffusiveFlux"><code class="docutils literal notranslate"><span class="pre">ConservedField.diffusiveFlux()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.dirichlet_bc_down"><code class="docutils literal notranslate"><span class="pre">ConservedField.dirichlet_bc_down()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.dirichlet_bc_up"><code class="docutils literal notranslate"><span class="pre">ConservedField.dirichlet_bc_up()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.dt_crit"><code class="docutils literal notranslate"><span class="pre">ConservedField.dt_crit</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.ekin"><code class="docutils literal notranslate"><span class="pre">ConservedField.ekin</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.fill_ghost_buffer"><code class="docutils literal notranslate"><span class="pre">ConservedField.fill_ghost_buffer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.get_source"><code class="docutils literal notranslate"><span class="pre">ConservedField.get_source()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.hyperbolicCD"><code class="docutils literal notranslate"><span class="pre">ConservedField.hyperbolicCD()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.hyperbolicFlux"><code class="docutils literal notranslate"><span class="pre">ConservedField.hyperbolicFlux()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.hyperbolicTVD"><code class="docutils literal notranslate"><span class="pre">ConservedField.hyperbolicTVD()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.initialize"><code class="docutils literal notranslate"><span class="pre">ConservedField.initialize()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.isnan"><code class="docutils literal notranslate"><span class="pre">ConservedField.isnan</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.lax_step"><code class="docutils literal notranslate"><span class="pre">ConservedField.lax_step()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.leap_frog"><code class="docutils literal notranslate"><span class="pre">ConservedField.leap_frog()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.mac_cormack"><code class="docutils literal notranslate"><span class="pre">ConservedField.mac_cormack()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.mass"><code class="docutils literal notranslate"><span class="pre">ConservedField.mass</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.neumann_bc_down"><code class="docutils literal notranslate"><span class="pre">ConservedField.neumann_bc_down()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.neumann_bc_up"><code class="docutils literal notranslate"><span class="pre">ConservedField.neumann_bc_up()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.post_integrate"><code class="docutils literal notranslate"><span class="pre">ConservedField.post_integrate()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.predictor_corrector"><code class="docutils literal notranslate"><span class="pre">ConservedField.predictor_corrector()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.richtmyer"><code class="docutils literal notranslate"><span class="pre">ConservedField.richtmyer()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.runge_kutta3"><code class="docutils literal notranslate"><span class="pre">ConservedField.runge_kutta3()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.tv"><code class="docutils literal notranslate"><span class="pre">ConservedField.tv</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.update"><code class="docutils literal notranslate"><span class="pre">ConservedField.update()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.vSound"><code class="docutils literal notranslate"><span class="pre">ConservedField.vSound</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.vmax"><code class="docutils literal notranslate"><span class="pre">ConservedField.vmax</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.vx_max"><code class="docutils literal notranslate"><span class="pre">ConservedField.vx_max</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.integrate.ConservedField.vy_max"><code class="docutils literal notranslate"><span class="pre">ConservedField.vy_max</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.material">hans.material module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.material.Material"><code class="docutils literal notranslate"><span class="pre">Material</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.eos_density"><code class="docutils literal notranslate"><span class="pre">Material.eos_density()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.eos_pressure"><code class="docutils literal notranslate"><span class="pre">Material.eos_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.eos_sound_speed"><code class="docutils literal notranslate"><span class="pre">Material.eos_sound_speed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.get_pressure"><code class="docutils literal notranslate"><span class="pre">Material.get_pressure()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.get_sound_speed"><code class="docutils literal notranslate"><span class="pre">Material.get_sound_speed()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.init_gp"><code class="docutils literal notranslate"><span class="pre">Material.init_gp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.material.Material.viscosity"><code class="docutils literal notranslate"><span class="pre">Material.viscosity()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.plottools">hans.plottools module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector"><code class="docutils literal notranslate"><span class="pre">DatasetSelector</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_NetCDF_Datasets"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_NetCDF_Datasets()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_centerline"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_centerline()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_centerline_height"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_centerline_height()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_centerlines"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_centerlines()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_field"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_field()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_fields"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_fields()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_filenames"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_filenames()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_files"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_files()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_height"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_height()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_metadata"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_metadata()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.plottools.DatasetSelector.get_scalar"><code class="docutils literal notranslate"><span class="pre">DatasetSelector.get_scalar()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.plottools.adaptiveLimits"><code class="docutils literal notranslate"><span class="pre">adaptiveLimits()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.problem">hans.problem module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.problem.Problem"><code class="docutils literal notranslate"><span class="pre">Problem</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.animate1D"><code class="docutils literal notranslate"><span class="pre">Problem.animate1D()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.get_initial_conditions"><code class="docutils literal notranslate"><span class="pre">Problem.get_initial_conditions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.init_netcdf"><code class="docutils literal notranslate"><span class="pre">Problem.init_netcdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.plot"><code class="docutils literal notranslate"><span class="pre">Problem.plot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.read_last_frame"><code class="docutils literal notranslate"><span class="pre">Problem.read_last_frame()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.receive_signal"><code class="docutils literal notranslate"><span class="pre">Problem.receive_signal()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.run"><code class="docutils literal notranslate"><span class="pre">Problem.run()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.write_to_netcdf"><code class="docutils literal notranslate"><span class="pre">Problem.write_to_netcdf()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.problem.Problem.write_to_stdout"><code class="docutils literal notranslate"><span class="pre">Problem.write_to_stdout()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.stress">hans.stress module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.stress.SymStressField2D"><code class="docutils literal notranslate"><span class="pre">SymStressField2D</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField2D.get"><code class="docutils literal notranslate"><span class="pre">SymStressField2D.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField2D.set"><code class="docutils literal notranslate"><span class="pre">SymStressField2D.set()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D"><code class="docutils literal notranslate"><span class="pre">SymStressField3D</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D.get_bot"><code class="docutils literal notranslate"><span class="pre">SymStressField3D.get_bot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D.get_top"><code class="docutils literal notranslate"><span class="pre">SymStressField3D.get_top()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D.set"><code class="docutils literal notranslate"><span class="pre">SymStressField3D.set()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D.set_Newton"><code class="docutils literal notranslate"><span class="pre">SymStressField3D.set_Newton()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.SymStressField3D.set_PowerLaw"><code class="docutils literal notranslate"><span class="pre">SymStressField3D.set_PowerLaw()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D"><code class="docutils literal notranslate"><span class="pre">WallStressField3D</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.del_gp"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.del_gp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.get_bot"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.get_bot()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.get_top"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.get_top()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.gp_wall_stress"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.gp_wall_stress()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.increment"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.increment()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.init_gp"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.init_gp()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.lower"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.lower</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.reset"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.reset</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.reset_reset"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.reset_reset()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.set"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.set()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="hans.html#hans.stress.WallStressField3D.upper"><code class="docutils literal notranslate"><span class="pre">WallStressField3D.upper</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans.tools">hans.tools module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.tools.abort"><code class="docutils literal notranslate"><span class="pre">abort()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.tools.bordered_text"><code class="docutils literal notranslate"><span class="pre">bordered_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.tools.handle_signals"><code class="docutils literal notranslate"><span class="pre">handle_signals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.tools.power"><code class="docutils literal notranslate"><span class="pre">power()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="hans.html#hans.tools.progressbar"><code class="docutils literal notranslate"><span class="pre">progressbar()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="hans.html#module-hans">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="theory/stress_sympy.html" class="btn btn-neutral float-left" title="Viscous stress tensor calculation with wall slip" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="hans.html" class="btn btn-neutral float-right" title="hans package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Hannes Holey.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
