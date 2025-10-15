@@ -233,7 +233,7 @@ class Problem:
 
         if not self.options['silent']:
             print(61 * '-')
-            print(f"{"Step":6s} {"Timestep":10s} {'Time':10s} {'CFL':10s} {"Residual":10s}")
+            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
             print(61 * '-')
             self.write(params=False)
 
