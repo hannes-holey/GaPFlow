@@ -214,3 +214,11 @@ class Topography:
     @property
     def dh_dy(self):
         return self.__field.p[2]
+
+    @property
+    def x(self):
+        return self._x.p
+
+    @property
+    def y(self):
+        return self._y.p
