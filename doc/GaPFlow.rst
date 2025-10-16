@@ -1,16 +1,6 @@
 GaPFlow package
 ===============
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   GaPFlow.models
-   GaPFlow.moltemplate
-   GaPFlow.viz
-
 Submodules
 ----------
 
@@ -94,10 +84,14 @@ GaPFlow.utils module
    :show-inheritance:
    :undoc-members:
 
-Module contents
----------------
 
-.. automodule:: GaPFlow
-   :members:
-   :show-inheritance:
-   :undoc-members:
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   GaPFlow.models
+   GaPFlow.moltemplate
+   GaPFlow.viz
+

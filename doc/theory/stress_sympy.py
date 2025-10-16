@@ -26,6 +26,8 @@ import numpy as np
 from copy import deepcopy
 import sympy as sp
 
+import GaPFlow.viz
+
 # Define Cartesian coordinates
 x, y, z = sp.symbols("x y z")
 
@@ -325,7 +327,7 @@ if write:
 
 def get_velocity_profiles(z, h, q, Ls=0.0, U=1.0, V=0.0, mode="both"):
 
-    assert mode in ["both", "top", "bottom", "none"]
+    assert mode in ["both", "top", "bottom", "no"]
 
     if mode == "both":
         u = (
@@ -400,7 +402,7 @@ def get_velocity_profiles(z, h, q, Ls=0.0, U=1.0, V=0.0, mode="both"):
             + 6 * h[0] ** 2 * q[2] * z
             - 6 * h[0] * q[2] * z**2
         ) / (h[0] ** 2 * q[0] * (4 * Ls + h[0]))
-    elif mode == "none":
+    elif mode == "no":
         u = (
             U * h[0] ** 2 * q[0]
             - U * h[0] * q[0] * z
@@ -1392,7 +1394,7 @@ def get_stress_profiles(
             )
             / (h[0] ** 2 * q[0] * (4 * Ls + h[0]))
         )
-    elif mode == "none":
+    elif mode == "no":
         tau_xx = (
             z
             * (
@@ -1573,7 +1575,7 @@ def get_stress_profiles(
 q_test = [1.0, 0.75, 0.25]
 dqx_test = [0.0, 0.0, 0.0]
 dqy_test = [0.0, 0.0, 0.0]
-h_test = [1.0, 0.1, 0.1]
+h_test = [1.0, 0.01, 0.01]  # "small slopes"
 z_test = np.linspace(0.0, h_test[0], 100)
 
 Ls = 0.2
@@ -1582,7 +1584,7 @@ V = 0.0
 
 fig, axes = plt.subplots(4, 3, sharey="row", sharex="col", figsize=(9, 12))
 
-for i, mode in enumerate(["both", "bottom", "top", "none"]):
+for i, mode in enumerate(["both", "bottom", "top", "no"]):
 
     ax = axes[i]
 
@@ -1627,14 +1629,17 @@ for i, mode in enumerate(["both", "bottom", "top", "none"]):
         ax[1].legend()
         ax[2].legend()
 
-    ax[1].set_title(mode)
+    ax[1].set_title(f"Slip on {mode} wall{'s' if mode == 'both' else ''}")
 
 ax[0].set_xlabel(r"$u, v$")
 ax[1].set_xlabel(r"$\tau$")
 ax[2].set_xlabel(r"$\tau$")
+# axes[3, 1].set_xlim(*axes[3, 2].get_xlim())
 
 plt.show()
 
+# %% [markdown]
+# Note the different scales for the shear stress in the central and the right column.
 
 # %% [markdown]
 # See also: [Holey, H. et al. (2022) Tribology Letters, 70(2), p. 36.](https://doi.org/10.1007/s11249-022-01576-5)

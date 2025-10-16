@@ -23,7 +23,7 @@ extensions = ['sphinx.ext.autodoc',
               'myst_nb']
 
 
-pygments_style = 'sphinx'
+pygments_style = 'default'
 source_suffix = {'.rst': 'restructuredtext'}
 
 todo_include_todos = False

@@ -44,10 +44,3 @@ GaPFlow.models.viscous module
    :show-inheritance:
    :undoc-members:
 
-Module contents
----------------
-
-.. automodule:: GaPFlow.models
-   :members:
-   :show-inheritance:
-   :undoc-members:

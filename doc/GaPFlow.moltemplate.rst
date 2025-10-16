@@ -60,10 +60,3 @@ GaPFlow.moltemplate.solid module
    :show-inheritance:
    :undoc-members:
 
-Module contents
----------------
-
-.. automodule:: GaPFlow.moltemplate
-   :members:
-   :show-inheritance:
-   :undoc-members:

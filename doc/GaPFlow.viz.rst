@@ -28,10 +28,3 @@ GaPFlow.viz.utils module
    :show-inheritance:
    :undoc-members:
 
-Module contents
----------------
-
-.. automodule:: GaPFlow.viz
-   :members:
-   :show-inheritance:
-   :undoc-members:
