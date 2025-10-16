@@ -72,6 +72,8 @@ class Problem:
         self.options = options
         self.grid = grid
         self.numerics = numerics
+        self.geo = geo
+        self.prop = prop
 
         # Initialize field collection
         nb_grid_pts = (self.grid['Nx'] + 2,

@@ -24,14 +24,9 @@
 import os
 import numpy as np
 import pandas as pd
-from importlib import resources
-import matplotlib.pyplot as plt
 
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.animations import animate2d
-
-
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def main():

@@ -21,14 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from importlib import resources
-import matplotlib.pyplot as plt
-
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.plotting import plot_height
-
-
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def main():
