@@ -8,9 +8,10 @@
 .. toctree::
    :maxdepth: 2
    :caption: Table of Contents
+   :hidden:
 
    self
-   ./theory/index
+   ./tutorials/index
    modules
 
 
