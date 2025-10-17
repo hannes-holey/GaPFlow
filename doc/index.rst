@@ -12,7 +12,8 @@
 
    self
    ./tutorials/index
-   modules
+   ./api/index
+   Github repository <https://github.com/hannes-holey/hans>
 
 
 Indices and tables

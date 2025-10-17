@@ -17,3 +17,4 @@ dist
 _templates/
 _static/
 _build/
+doc/api/summary
