@@ -104,19 +104,10 @@ if __name__ == "__main__":
     extra[0, :, 0] = extra[0, :, -2]
     extra[0, :, -1] = extra[0, :, 1]
 
-    # Setup system
-    output_path = options['output']
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-        np.save(os.path.join(output_path, 'extra.npy'), extra)
-
     md_runner = Mock(prop, geo, gp)
-    database = Database(output_path, md_runner, db)
-    # gp = None
-    # database = None
+    database = Database(md_runner, db)
 
-    problem = Problem(output_path,
-                      options,
+    problem = Problem(options,
                       grid,
                       numerics,
                       prop,

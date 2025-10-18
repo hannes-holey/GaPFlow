@@ -57,7 +57,6 @@ class Problem:
     """
 
     def __init__(self,
-                 outdir: str,
                  options: dict,
                  grid: dict,
                  numerics: dict,
@@ -68,7 +67,11 @@ class Problem:
                  extra_field: npt.NDArray | None = None
                  ) -> None:
 
-        self.outdir = outdir
+        if database is not None:
+            if not database.has_mock_md:
+                prop['shear'] = 0.
+                prop['bulk'] = 0.
+
         self.options = options
         self.grid = grid
         self.numerics = numerics
@@ -93,42 +96,39 @@ class Problem:
         if extra_field is not None:
             extra.p = extra_field
 
-        # Active GP models
-        if gp is not None:
-            if self.grid['dim'] == 1:
-                gpz = gp if gp['press_gp'] else None
-                gpx = gp if gp['shear_gp'] else None
-                gpy = None
-            elif self.grid['dim'] == 2:
-                gpz = gp if gp['press_gp'] else None
-                gpx = gp if gp['shear_gp'] else None
-                gpy = gp if gp['shear_gp'] else None
-
-        else:
-            gpx, gpy, gpz = None, None, None
-
         # Stress fields
+        gpx, gpy, gpz = self._select_gp_config(gp)
         self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
         self.bulk_stress = BulkStress(fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(fc, prop, geo, direction='y', data=database, gp=gpy)
 
-        # Numerics
-        self.step = 0
-        self.simtime = 0.
-        self.residual = 1.
-        self.residual_buffer = deque([self.residual, ], 5)
-
-        if self.numerics["adaptive"]:
-            self.dt = self.numerics["CFL"] * self.dt_crit
-        else:
-            self.dt = self.numerics['dt']
-
-        self.tol = self.numerics['tol']
-        self.max_it = self.numerics['max_it']
-
         # I/O
         if not self.options['silent']:
+
+            self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+
+            if database is not None:
+                database.set_training_path(os.path.join(self.outdir, 'train'))
+                database.output_path = self.outdir
+                options['output'] = self.outdir
+
+            # Reconstruct dict
+            full_dict = {}
+
+            for k, v in zip(['options', 'grid', 'numerics', 'geo', 'prop'],
+                            [options, grid, numerics, geo, prop]):
+                full_dict[k] = v
+
+            # Set training path inside output path
+            if database is not None:
+                database.output_path = self.outdir
+                database.set_training_path(os.path.join(self.outdir, 'train'))
+                full_dict['gp'] = gp
+                full_dict['db'] = database.db
+                full_dict['md'] = database.md.params
+
+            write_yaml(full_dict, os.path.join(self.outdir, 'config.yml'))
 
             # Write gap height and gradients once
             topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Write)
@@ -157,6 +157,46 @@ class Problem:
     # Constructors
     # ---------------------------
 
+    @staticmethod
+    def _get_mandatory_input(input_dict):
+
+        # Mandatory inputs
+        options = input_dict['options']
+        grid = input_dict['grid']
+        numerics = input_dict['numerics']
+        prop = input_dict['properties']
+        geo = input_dict['geometry']
+
+        return options, grid, numerics, prop, geo
+
+    @staticmethod
+    def _get_optional_input(input_dict):
+
+        # Optional inputs
+        gp = input_dict.get('gp', None)
+        md = input_dict.get('md', None)
+        db = input_dict.get('db', None)
+
+        # Intialize database
+        if db is not None:
+            if md is None:
+                prop = input_dict['properties']
+                geo = input_dict['geometry']
+                MD = Mock(prop, geo, gp)
+            else:
+                if md['system'] == 'lj':
+                    MD = LennardJones(md)
+                elif md['system'] == 'mol':
+                    MD = GoldAlkane(md)
+
+            database = Database(MD, db)
+        else:
+            database = None
+
+        return {'gp': gp,
+                'database': database,
+                'extra_field': None}
+
     @classmethod
     def from_yaml(cls: Type[Self], fname: str) -> Self:
         """
@@ -175,7 +215,8 @@ class Problem:
         print(f"Reading input file: {fname}")
         with open(fname, "r") as ymlfile:
             input_dict = read_yaml_input(ymlfile)
-        return cls(*_split_input(input_dict))
+
+        return cls.from_dict(input_dict)
 
     @classmethod
     def from_string(cls: Type[Self], ymlstring: str) -> Self:
@@ -194,7 +235,8 @@ class Problem:
         """
         with io.StringIO(ymlstring) as ymlfile:
             input_dict = read_yaml_input(ymlfile)
-        return cls(*_split_input(input_dict))
+
+        return cls.from_dict(input_dict)
 
     @classmethod
     def from_dict(cls: Type[Self], input_dict: dict) -> Self:
@@ -211,17 +253,42 @@ class Problem:
         Problem
             Instantiated `Problem` object.
         """
-        return cls(*_split_input(input_dict))
+        return cls(*cls._get_mandatory_input(input_dict),
+                   **cls._get_optional_input(input_dict))
 
     # ---------------------------
     # Main run loop
     # ---------------------------
+
+    def pre_run(self) -> None:
+        self.pressure.init_database(self.grid['dim'])
+        self.wall_stress_xz.init_database(self.grid['dim'])
+        self.wall_stress_yz.init_database(self.grid['dim'])
+
+        self.pressure.init()
+        self.wall_stress_xz.init()
+        self.wall_stress_yz.init()
+
+        # Numerics
+        self.step = 0
+        self.simtime = 0.
+        self.residual = 1.
+        self.residual_buffer = deque([self.residual, ], 5)
+
+        if self.numerics["adaptive"]:
+            self.dt = self.numerics["CFL"] * self.dt_crit
+        else:
+            self.dt = self.numerics['dt']
+
+        self.tol = self.numerics['tol']
+        self.max_it = self.numerics['max_it']
 
     def run(self) -> None:
         """
         Run the time-stepping loop until convergence, maximum iterations,
         or until a termination signal is received.
         """
+        self.pre_run()
 
         self._stop = False
 
@@ -377,6 +444,24 @@ class Problem:
     # ---------------------------
     # Initialization and update helpers
     # ---------------------------
+
+    def _select_gp_config(self, gp):
+        # Active GP models
+        if gp is not None:
+            if self.grid['dim'] == 1:
+                gpz = gp.get('press')
+                gpx = gp.get('shear')
+                gpy = None
+            elif self.grid['dim'] == 2:
+                gpz = gp.get('press')
+                gpx = gp.get('shear')
+                gpy = gp.get('shear')
+
+        else:
+            gpx, gpy, gpz = None, None, None
+
+        return gpx, gpy, gpz
+
     def _initialize(self, rho0: float, U: float, V: float) -> None:
         """
         Initialize solution field with given base density and mean velocities.
@@ -550,45 +635,6 @@ class Problem:
 # ---------------------------
 # Helper functions
 # ---------------------------
-
-
-def _split_input(input_dict):
-    # Mandatory inputs
-    options = input_dict['options']
-    grid = input_dict['grid']
-    numerics = input_dict['numerics']
-    prop = input_dict['properties']
-    geo = input_dict['geometry']
-
-    if not options['silent']:
-        outdir = create_output_directory(options['output'], options['use_tstamp'])
-        write_yaml(input_dict, os.path.join(outdir, 'config.yml'))
-    else:
-        outdir = "/tmp/"
-
-    # Optional inputs
-    gp = input_dict.get('gp', {'press_gp': False, 'shear_gp': False})
-    md = input_dict.get('md', None)
-    db = input_dict.get('db', None)
-
-    # Intialize database
-    if db is not None:
-        if md is None:
-            MD = Mock(prop, geo, gp)
-        else:
-            prop['shear'] = 0.
-            prop['bulk'] = 0.
-
-            if md['system'] == 'lj':
-                MD = LennardJones(md)
-            elif md['system'] == 'mol':
-                MD = GoldAlkane(md)
-
-        database = Database(outdir, MD, db)
-    else:
-        database = None
-
-    return outdir, options, grid, numerics, prop, geo, gp, database
 
 
 def _handle_signals(func) -> None:

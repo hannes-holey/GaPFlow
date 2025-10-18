@@ -70,6 +70,7 @@ def test_x_y():
         input_dict = read_yaml_input(file)
 
     problem = Problem.from_dict(input_dict)
+    problem.pre_run()
 
     mass_before = problem.mass.copy()
 

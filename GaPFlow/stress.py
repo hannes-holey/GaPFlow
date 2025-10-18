@@ -84,7 +84,6 @@ class WallStress(GaussianProcessSurrogate):
         self._out_index = {'x': 4, 'y': 3}[direction]
 
         if gp is not None:
-            gp = gp['shear']
             self.active_dims = {'x': gp.get('active_dims_x', [0, 1, 3]),
                                 'y': gp.get('active_dims_y', [0, 2, 3])}[direction]
 
@@ -99,15 +98,6 @@ class WallStress(GaussianProcessSurrogate):
             self.is_gp_model = False
 
         super().__init__(fc, data)
-
-        if self.is_gp_model:
-            self.params_init = {
-                "log_amp": jnp.log(1.),
-                "log_scale": jnp.log(jnp.std(self.Xtrain[0], axis=0))
-            }
-
-            self._train()
-            self._infer()
 
     # -------------------------
     # Properties
@@ -281,6 +271,16 @@ class WallStress(GaussianProcessSurrogate):
     # -------------------------
     # Update
     # -------------------------
+    def init(self):
+        if self.is_gp_model:
+            self.params_init = {
+                "log_amp": jnp.log(1.),
+                "log_scale": jnp.log(jnp.std(self.Xtrain[0], axis=0))
+            }
+
+            self._train()
+            self._infer()
+
     def update(self, predictor: bool = False) -> None:
         """
         Update wall stress: compute deterministic stresses and, if enabled,
@@ -451,8 +451,6 @@ class Pressure(GaussianProcessSurrogate):
         self.prop = prop
 
         if gp is not None:
-            gp = gp['press']
-
             self.active_dims = gp.get('active_dims', [0, 3])
             self.__field_variance = fc.real_field('pressure_var')
             self.atol = gp['atol']
@@ -460,22 +458,10 @@ class Pressure(GaussianProcessSurrogate):
             self.max_steps = gp['max_steps']
             self.is_gp_model = True
             self.build_gp = multi_in_single_out
-
-            # for sound speed
-            self.eos = lambda x: self.gp.predict(self.Ytrain, x[None, :]).squeeze()
-
         else:
             self.is_gp_model = False
 
         super().__init__(fc, data)
-
-        if self.is_gp_model:
-            self.params_init = {
-                "log_amp": jnp.log(1.),
-                "log_scale": jnp.log(jnp.std(self.Xtrain, axis=0))
-            }
-
-            self._train()
 
     @property
     def pressure(self) -> NDArray:
@@ -544,6 +530,19 @@ class Pressure(GaussianProcessSurrogate):
     def obs_stddev(self) -> JAXArray:
         """Observation standard deviation for pressure GP."""
         return self.Yerr
+
+    def init(self):
+        if self.is_gp_model:
+            # for sound speed
+            self.eos = lambda x: self.gp.predict(self.Ytrain, x[None, :]).squeeze()
+
+            self.params_init = {
+                "log_amp": jnp.log(1.),
+                "log_scale": jnp.log(jnp.std(self.Xtrain, axis=0))
+            }
+
+            self._train()
+            self._infer()
 
     def update(self, predictor: bool = False) -> None:
         """

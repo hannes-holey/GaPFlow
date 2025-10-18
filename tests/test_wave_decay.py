@@ -63,18 +63,12 @@ def setup():
 def test_shear_wave_decay(setup, n):
 
     input_dict = setup
+    problem = Problem.from_dict(input_dict)
+    problem.pre_run()
 
-    options = input_dict['options']
-    grid = input_dict['grid']
-    numerics = input_dict['numerics']
-    prop = input_dict['properties']
-    geo = input_dict['geometry']
-
-    problem = Problem(None, options, grid, numerics, prop, geo, None, None)
-
-    h = geo['hmin']
-    kin_visc = prop['shear'] / prop['rho0']
-    Lx = grid['Lx']
+    h = problem.geo['hmin']
+    kin_visc = problem.prop['shear'] / problem.prop['rho0']
+    Lx = problem.grid['Lx']
 
     kn = n * 2. * np.pi / Lx
     tau = h**2 / (6 * kin_visc)
@@ -96,18 +90,12 @@ def test_shear_wave_decay(setup, n):
 def test_sound_wave_decay(setup, n):
 
     input_dict = setup
+    problem = Problem.from_dict(input_dict)
+    problem.pre_run()
 
-    options = input_dict['options']
-    grid = input_dict['grid']
-    numerics = input_dict['numerics']
-    prop = input_dict['properties']
-    geo = input_dict['geometry']
-
-    problem = Problem(None, options, grid, numerics, prop, geo, None, None)
-
-    h = geo['hmin']
-    kin_visc = prop['shear'] / prop['rho0']
-    Lx = grid['Lx']
+    h = problem.geo['hmin']
+    kin_visc = problem.prop['shear'] / problem.prop['rho0']
+    Lx = problem.grid['Lx']
 
     kn = n * 2. * np.pi / Lx
     tau = h**2 / (6 * kin_visc)

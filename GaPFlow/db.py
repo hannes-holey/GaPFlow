@@ -75,21 +75,26 @@ class Database:
 
     def __init__(
         self,
-        output_path: str,
         md: Any,
         db: dict,
         num_extra_features: int = 1
     ) -> None:
 
+        self.md = md
+        self.db = db
+
         #  number of possible features, actual ones are selected from GP's active_dims
         self.num_features = 6 + num_extra_features
 
-        self.output_path = output_path
-        self.training_path = db.get('dtool_path')
-        if self.training_path is None:
-            self.training_path = os.path.join(self.output_path, "train")
+        self._output_path = None
+        _training_path = db.get('dtool_path')
 
-        readme_list = get_readme_list_local(self.training_path)
+        if _training_path is not None:
+            self.set_training_path(_training_path)
+            readme_list = get_readme_list_local(_training_path)
+        else:
+            self.set_training_path('/tmp/')
+            readme_list = []
 
         if len(readme_list) > 0:
             Xtrain, Ytrain, Yerr = [], [], []
@@ -102,9 +107,7 @@ class Database:
             Ytrain = jnp.array(Ytrain)
             Yerr = jnp.array(Yerr)
 
-            assert Xtrain.shape[0] != 6 + num_extra_features
         else:
-            print(f"Start with empty dtool database in {self.training_path}")
             Xtrain = jnp.empty((0, self.num_features))
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 13))
@@ -114,9 +117,6 @@ class Database:
         self.init_method = db["init_method"]
         self.init_width = db["init_width"]
         self.init_seed = db["init_seed"]
-
-        self.md = md
-        self.md.dtool_basepath = self.training_path
 
         self._Xtrain = Xtrain
         self._Ytrain = Ytrain
@@ -128,6 +128,14 @@ class Database:
         else:
             self.X_scale = self.normalizer(self._Xtrain)
             self.Y_scale = self.normalizer(self._Ytrain)
+
+    def set_training_path(self, new_path):
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+
+        self._training_path = new_path
+        self.md._dtool_basepath = new_path
+        self.db['dtool_path'] = new_path
 
     # ------------------------------------------------------------------
     # Properties
@@ -152,9 +160,22 @@ class Database:
         """Number of training samples currently stored."""
         return self._Xtrain.shape[0]
 
+    @property
+    def has_mock_md(self):
+        return self.md.is_mock
+
+    @property
+    def output_path(self):
+        return self._output_path
+
+    @output_path.setter
+    def output_path(self, path):
+        self._output_path = path
+
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
+
     def normalizer(self, x: ArrayX) -> ArrayX:
         """Compute feature-wise normalization factors."""
         return jnp.maximum(jnp.max(jnp.abs(x), axis=0), 1e-12)
@@ -190,6 +211,9 @@ class Database:
         Nsample = self.minimum_size - self.size
 
         if Nsample > 0:
+            print(f"Database contains less than {self.minimum_size} MD runs.")
+            print(f"Generate new training data in {self._training_path}")
+
             if dim == 1:
                 flux = jnp.mean(Xtest[:, 1])
                 active = jnp.array([0, 1])

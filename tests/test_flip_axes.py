@@ -79,6 +79,9 @@ def test_x_y():
     problem_x = Problem.from_dict(input_x)
     problem_y = Problem.from_dict(input_y)
 
+    problem_x.pre_run()
+    problem_y.pre_run()
+
     for _ in range(5):
         problem_x.update()
         problem_y.update()

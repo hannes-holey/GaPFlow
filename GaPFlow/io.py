@@ -93,6 +93,7 @@ def read_yaml_input(file):
 
     print_header("PROBLEM SETUP")
 
+    # TODO: check if complete
     sanitizing_functions = {'options': sanitize_options,
                             'grid': sanitize_grid,
                             'geometry': sanitize_geometry,
@@ -106,10 +107,10 @@ def read_yaml_input(file):
 
     raw_dict = yaml.full_load(file)
 
-    for key, value in raw_dict.items():
-        if key in sanitizing_functions.keys():
-            print(f'- {key}:')
-            sanitized_dict[key] = sanitizing_functions[key](raw_dict[key])
+    for key, func in sanitizing_functions.items():
+        print(f'- {key}:')
+        val = raw_dict.get(key)
+        sanitized_dict[key] = func(val) if val is not None else None
 
     print_header("PROBLEM SETUP COMPLETED")
 

@@ -97,7 +97,8 @@ class MolecularDynamics:
     main_file: str
     num_worker: int
     path: str
-    _dtool_basepath: str
+    is_mock: bool
+    _dtool_basepath: str = '/tmp/'
     readme_template: str = ""
     input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
     ascii_art: str = r"""
@@ -220,6 +221,8 @@ class Mock(MolecularDynamics):
 
     def __init__(self, prop, geo, gp):
 
+        self.is_mock = True
+
         self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
                       gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
 
@@ -267,6 +270,7 @@ class LennardJones(MolecularDynamics):
     name = 'lj'
 
     def __init__(self, params):
+        self.is_mock = False
         self.main_file = 'in.run'
         self.num_worker = params['ncpu']
         self.params = params
@@ -304,6 +308,7 @@ class GoldAlkane(MolecularDynamics):
     name = 'mol'
 
     def __init__(self, params):
+        self.is_mock = False
         self.main_file = 'run.in.all'
         self.params = params
         self.num_worker = params['ncpu']

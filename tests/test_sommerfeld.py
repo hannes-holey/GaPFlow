@@ -93,14 +93,9 @@ def setup():
 def test_pressure_profile(setup, eps):
 
     input_dict = setup
+    input_dict['geometry']['eps'] = eps
 
-    options = input_dict['options']
-    grid = input_dict['grid']
-    numerics = input_dict['numerics']
-    prop = input_dict['properties']
-    geo = input_dict['geometry']
-    geo['eps'] = eps
-    problem = Problem(None, options, grid, numerics, prop, geo, None, None)
+    problem = Problem.from_dict(input_dict)
     problem.run()
 
     p_num = problem.pressure.pressure[1:-1, 1]
