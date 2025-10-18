@@ -24,7 +24,7 @@
 from copy import deepcopy
 import io
 import numpy as np
-from GaPFlow.problem import Problem
+from GaPFlow import Problem
 from GaPFlow.io import read_yaml_input
 
 sim = """

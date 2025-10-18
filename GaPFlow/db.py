@@ -22,6 +22,9 @@
 # SOFTWARE.
 #
 import os
+import dtoolcore
+from ruamel.yaml import YAML
+from dtool_lookup_api import query
 from typing import Any
 import jax.numpy as jnp
 import jax.random as jr
@@ -29,13 +32,17 @@ from jaxtyping import Float
 from jax import Array
 from scipy.stats import qmc
 
-from GaPFlow.dtool import get_readme_list_local
+from GaPFlow.utils import progressbar
 
 # ----------------------------------------------------------------------
 # Fixed-shape array type aliases
 # ----------------------------------------------------------------------
 ArrayX = Float[Array, "Ntrain Nfeat"]   # Input features
 ArrayY = Float[Array, "Ntrain 13"]  # Output features
+
+yaml = YAML()
+yaml.explicit_start = True
+yaml.indent(mapping=4, sequence=4, offset=2)
 
 
 class Database:
@@ -91,7 +98,7 @@ class Database:
 
         if _training_path is not None:
             self.set_training_path(_training_path)
-            readme_list = get_readme_list_local(_training_path)
+            readme_list = self.get_readme_list_local()
         else:
             self.set_training_path('/tmp/')
             readme_list = []
@@ -129,14 +136,6 @@ class Database:
             self.X_scale = self.normalizer(self._Xtrain)
             self.Y_scale = self.normalizer(self._Ytrain)
 
-    def set_training_path(self, new_path):
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
-
-        self._training_path = new_path
-        self.md._dtool_basepath = new_path
-        self.db['dtool_path'] = new_path
-
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -172,9 +171,65 @@ class Database:
     def output_path(self, path):
         self._output_path = path
 
+    @property
+    def training_path(self):
+        return self._training_path
+
     # ------------------------------------------------------------------
     # Utilities
     # ------------------------------------------------------------------
+
+    def get_readme_list_local(self):
+        """Get list of dtool README files for existing MD runs
+        from a local directory.
+
+        Returns
+        -------
+        list
+            List of dicts containing the readme content
+        """
+
+        readme_list = [yaml.load(ds.get_readme_content())
+                       for ds in dtoolcore.iter_datasets_in_base_uri(self.training_path)]
+
+        print(f"Loading {len(readme_list)} local datasets in '{self.training_path}'.")
+        for ds in dtoolcore.iter_datasets_in_base_uri(self.training_path):
+            print(f'- {ds.uuid} ({ds.name})')
+
+        return readme_list
+
+    def get_readme_list_remote(self):
+        """Get list of dtool README files for existing MD runs
+        from a remote data server (via dtool_lookup_api)
+
+        In the future, one should be able to pass a valid MongoDB
+        query string to select data.
+
+        Returns
+        -------
+        list
+            List of dicts containing the readme content
+        """
+
+        # TODO: Pass a textfile w/ uuids or yaml with query string
+        query_dict = {"readme.description": {"$regex": "Dummy"}}
+        remote_ds_list = query(query_dict)
+
+        remote_ds = [dtoolcore.DataSet.from_uri(ds['uri'])
+                     for ds in progressbar(remote_ds_list,
+                                           prefix="Loading remote datasets based on dtool query: ")]
+
+        readme_list = [yaml.load(ds.get_readme_content()) for ds in remote_ds]
+
+        return readme_list
+
+    def set_training_path(self, new_path):
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+
+        self._training_path = new_path
+        self.md._dtool_basepath = new_path
+        self.db['dtool_path'] = new_path
 
     def normalizer(self, x: ArrayX) -> ArrayX:
         """Compute feature-wise normalization factors."""

@@ -24,7 +24,7 @@
 import pytest
 import numpy as np
 
-from GaPFlow.db import Database
+from GaPFlow import Database
 from GaPFlow.md import Mock
 
 

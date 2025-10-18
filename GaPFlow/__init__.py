@@ -21,6 +21,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from GaPFlow.db import Database  # noqa: F401
+from GaPFlow.problem import Problem  # noqa: F401
+
+
 from jax import config
 config.update("jax_enable_x64", True)
 

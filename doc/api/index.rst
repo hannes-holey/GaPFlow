@@ -9,30 +9,43 @@ Main drivers
 .. autosummary::
    :toctree: summary
 
-   problem.Problem
-   gp.GaussianProcessSurrogate
-   topography.Topography
-   stress.Pressure
-   stress.BulkStress
-   stress.WallStress
+   Problem
+   Database
+
+Models
+------
+
+.. currentmodule:: GaPFlow.models
+
+.. autosummary::
+   :toctree: summary
    
-Multiscale simulations
-----------------------
+   Pressure
+   BulkStress
+   WallStress
+   
+MolecularDynamics
+-----------------
+
+.. currentmodule:: GaPFlow.md
 
 .. autosummary::
    :toctree: summary
 
-   db.Database
-   md.MolecularDynamics
+   MolecularDynamics
+   Mock
+   LennardJones
+   GoldAlkane
 
-Subpackages
------------
+Visualization
+-------------
 
-.. toctree::
-   :maxdepth: 1
+.. currentmodule:: GaPFlow.viz
 
-   models
-   viz
-   moltemplate
+.. autosummary::
+   :toctree: summary
 
+   animations
+   plotting
+   utils
 

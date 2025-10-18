@@ -28,8 +28,8 @@ from jax import vmap, grad
 from jax import Array
 from typing import Optional, Tuple, Any
 
-from GaPFlow.gp import GaussianProcessSurrogate
-from GaPFlow.gp import multi_in_single_out, multi_in_multi_out
+from GaPFlow.models.gp import GaussianProcessSurrogate
+from GaPFlow.models.gp import multi_in_single_out, multi_in_multi_out
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
 from GaPFlow.models.sound import eos_sound_velocity
