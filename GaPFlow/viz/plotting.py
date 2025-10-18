@@ -24,7 +24,7 @@
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
-import pandas as pd
+import polars as pl
 
 from GaPFlow.topography import create_midpoint_grid
 from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp
@@ -281,7 +281,7 @@ def plot_history(file_list,
 
 def _plot_history(ax, filename='history.csv'):
 
-    df = pd.read_csv(filename)
+    df = pl.read_csv(filename)
 
     ax[0].plot(df['time'], df['ekin'])
     ax[0].set_ylabel('Kinetic energy')
@@ -299,7 +299,7 @@ def _plot_history(ax, filename='history.csv'):
 
 def _plot_gp_history(ax, filename='history.csv', index=0):
 
-    df = pd.read_csv(filename)
+    df = pl.read_csv(filename)
 
     ax[0].plot(df['step'], df['database_size'], color=f'C{index}')
     ax[0].set_ylabel('DB size')

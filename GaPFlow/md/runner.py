@@ -24,6 +24,7 @@
 import os
 import sys
 import abc
+import warnings
 import dtoolcore
 from mpi4py import MPI
 from datetime import datetime, date
@@ -36,7 +37,7 @@ import scipy.constants as sci
 try:
     from lammps import lammps
 except ImportError:
-    pass
+    warnings.warn('Failed to import lammps. Only Mock MD object available.')
 
 import jax.random as jr
 import jax.numpy as jnp

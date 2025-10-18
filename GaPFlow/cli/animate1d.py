@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 import os
-import pandas as pd
+import polars as pl
 import numpy as np
 from argparse import ArgumentParser
 
@@ -48,13 +48,13 @@ def main():
     gp_s = os.path.join(os.path.dirname(file), 'gp_xz.csv')
 
     try:
-        df_p = pd.read_csv(gp_p)
+        df_p = pl.read_csv(gp_p)
         tol_p = np.array(df_p['variance_tol'])
     except FileNotFoundError:
         tol_p = None
 
     try:
-        df_s = pd.read_csv(gp_s)
+        df_s = pl.read_csv(gp_s)
         tol_s = np.array(df_s['variance_tol'])
     except FileNotFoundError:
         tol_s = None

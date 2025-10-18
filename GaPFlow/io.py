@@ -24,7 +24,7 @@
 import os
 from datetime import datetime
 import yaml
-import pandas as pd
+import polars as pl
 
 
 def print_header(s, n=60, f0='*', f1=' '):
@@ -85,8 +85,8 @@ def write_yaml(output_dict, fname):
 
 
 def history_to_csv(fname, out):
-    df = pd.DataFrame(data=out)
-    df.to_csv(fname, index=False)
+    df = pl.DataFrame(out)
+    df.write_csv(fname)
 
 
 def read_yaml_input(file):
