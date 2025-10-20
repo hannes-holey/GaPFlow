@@ -28,6 +28,8 @@ source_suffix = {'.rst': 'restructuredtext'}
 
 todo_include_todos = False
 
+exclude_patterns = ['conf.py']
+
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
