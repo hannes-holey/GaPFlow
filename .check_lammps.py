@@ -4,7 +4,7 @@ except ImportError:
     lammps = None
 
 if lammps is not None:
-    lmp = lammps(cmdargs=['-log', 'none', "-screen", 'none'])
+    lmp = lammps(name='mpi', cmdargs=['-log', 'none', "-screen", 'none'])
     print('LAMMPS Version: ', lmp.version())
     print('OS:', lmp.get_os_info())
     print('MPI: ', lmp.has_mpi_support)
