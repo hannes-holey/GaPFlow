@@ -95,11 +95,13 @@ class Database:
 
         self._output_path = None
         _training_path = db.get('dtool_path')
+        self.overwrite_training_path = False
 
         if _training_path is not None:
             self.set_training_path(_training_path)
             readme_list = self.get_readme_list_local()
         else:
+            self.overwrite_training_path = True
             self.set_training_path('/tmp/')
             readme_list = []
 
@@ -267,7 +269,7 @@ class Database:
 
         if Nsample > 0:
             print(f"Database contains less than {self.minimum_size} MD runs.")
-            print(f"Generate new training data in {self._training_path}")
+            print(f"Generate new training data in {self.training_path}")
 
             if dim == 1:
                 flux = jnp.mean(Xtest[:, 1])

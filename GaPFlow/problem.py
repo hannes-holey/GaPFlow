@@ -109,7 +109,10 @@ class Problem:
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
             if database is not None:
-                database.set_training_path(os.path.join(self.outdir, 'train'))
+                # Set training path inside output path
+                if database.overwrite_training_path:
+                    database.set_training_path(os.path.join(self.outdir, 'train'))
+
                 database.output_path = self.outdir
                 options['output'] = self.outdir
 
@@ -120,10 +123,7 @@ class Problem:
                             [options, grid, numerics, geo, prop]):
                 full_dict[k] = v
 
-            # Set training path inside output path
             if database is not None:
-                database.output_path = self.outdir
-                database.set_training_path(os.path.join(self.outdir, 'train'))
                 full_dict['gp'] = gp
                 full_dict['db'] = database.db
                 full_dict['md'] = database.md.params
