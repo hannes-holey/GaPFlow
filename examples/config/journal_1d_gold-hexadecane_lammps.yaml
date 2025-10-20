@@ -51,13 +51,15 @@ db:
     init_method: rand
 md:
     system: mol
+    rotation: False
     ncpu: 6 
     wall: eam
     molecule: hexadecane
     fftemplate: lmp/mol/moltemplate_files/trappe1998.lt
     topo: lmp/mol/moltemplate_files/hexadecane.lt
     staticFiles: lmp/mol/static
-    size: 3
+    nx: 30
+    nz: 3
     vWall: 20.  # in m/s
     temperature: 400.
     Ninit: 25_000

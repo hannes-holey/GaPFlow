@@ -270,7 +270,7 @@ def sanitize_properties(d):
         raise IOError("Specify a a (non-negative) bulk viscosity")
 
     # EOS
-    available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR', 'Bayada']
+    available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR', 'Bayada', 'MD']
     out['EOS'] = str(d.get('EOS', 'none'))
 
     if out['EOS'] not in available_eos:
@@ -303,10 +303,14 @@ def sanitize_properties(d):
     elif out["EOS"] == "Bayada":
         keys = ['rho_l', 'rho_v', 'c_l', 'c_v']
         defaults = [850., 0.019, 1600., 352.]
+    elif out["EOS"] == "MD":
+        keys = ['rho0']
+        defaults = [1.]
 
     for k, de in zip(keys, defaults):
         out[k] = float(d.get(k, de))
 
+    # TODO: default rho0s for vdW, cubic, BWR, Bayada
     if 'rho0' not in out.keys():
         out['rho0'] = float(d.get('rho0', 1.))
 

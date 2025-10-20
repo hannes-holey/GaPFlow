@@ -47,7 +47,7 @@ from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top
 from GaPFlow.md.moltemplate import write_template, build_template
 from GaPFlow.md.utils import read_output_files
-from GaPFlow.utils import bordered_text
+from GaPFlow.utils import bordered_text, make_dumpable
 
 yaml = YAML()
 yaml.explicit_start = True
@@ -343,6 +343,10 @@ class GoldAlkane(MolecularDynamics):
         args["fluxX"] = float(X[1])
         args["fluxY"] = float(X[2])
         args["gap_height"] = float(X[3])
+
+        if self.params['rotation']:
+            dh_dz = float(X[4])
+            args["rotation"] = -np.arctan(dh_dz) / np.pi * 180.
 
         cwd = os.getcwd()
         os.chdir(proto_ds_datapath)
