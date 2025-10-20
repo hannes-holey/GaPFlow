@@ -152,15 +152,11 @@ class MolecularDynamics:
 
         out_fname = os.path.join(dataset_path, 'README.yml')
 
-        X = [float(item) for item in np.asarray(Xnew)]
-        Y = [float(item) for item in np.asarray(Ynew)]
-        Yerr = [float(item) for item in np.asarray(Yerrnew)]
+        metadata.update({'parameters': make_dumpable(self.params)})
 
-        metadata.update({'parameters': self.params})
-
-        metadata['X'] = X
-        metadata['Y'] = Y
-        metadata['Yerr'] = Yerr
+        metadata['X'] = make_dumpable(Xnew)
+        metadata['Y'] = make_dumpable(Ynew)
+        metadata['Yerr'] = make_dumpable(Yerrnew)
 
         with open(out_fname, 'w') as outfile:
             yaml.dump(metadata, outfile)
