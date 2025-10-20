@@ -11,7 +11,33 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 
 ## Installation
 
-Install [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
+- [ ] Create wheels with muGrid (serial/parallel?) and lammps
+
+```
+pip install GaPFlow
+```
+
+### Building from source
+
+When building from source follow these steps:
+
+0. Make sure you have MPI installed, e.g. on Debian-based systems `openmpi-bin` and `libopenmpi-dev` should be installed on your system.
+
+1. The multiscale framework depends on LAMMPS which is contained as a Git submodule in this repository. After cloning the repository initialize the submodule with
+```
+git submodule update --init
+```
+2. Install LAMMPS and mpi4py. We provide a script to build LAMMPS via `cmake` and install the Python package in your local environment. 
+```
+bash install_lammps.sh
+```
+Alternatively, follow the equivalent steps in the LAMMPS documentation with a complete list of build options. Make sure that you have the optional LAMMPS packages `MANYBODY`, `MOLECULES` and `ÈXTRA-FIX` installed. To make sure that everything is correctly installed run `python .check_lammps.py`. The last three lines should look similar to these:
+```
+MPI:  True
+mpi4py:  True
+Installed packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+```
+3. Build [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
 ```
 pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 ```
@@ -21,11 +47,12 @@ export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$
 ```
 for instalations under `$HOME/.local/`.
 
-After that run
+4. Finally, install the package with its remaining dependencies and testing capabilities
 ```
 pip install -e .[test]
 ```
-for an editable installation with optional dependecies for testing (using `pytest`).
+
+5. Make sure that everything works by running the tests with `pytest`.
 
 ## Minimal example
 Simulation inputs are commonly provided in YAML files. A typical input file might look like this:

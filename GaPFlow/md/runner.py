@@ -80,7 +80,7 @@ def run_parallel(fname, nworker):
 def run_serial(fname):
 
     nargs = ["-log", "log.lammps"]
-    lmp = lammps(cmdargs=nargs)
+    lmp = lammps(name='mpi', cmdargs=nargs)
     assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
 
     lmp.file(fname)
