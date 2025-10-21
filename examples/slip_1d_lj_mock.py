@@ -1,4 +1,3 @@
-import os
 import io
 import numpy as np
 from scipy.special import erf
@@ -33,7 +32,7 @@ numerics:
     CFL: 0.5
     adaptive: 1
     tol: 1e-8
-    dt: 0.05
+    dt: 0.1
     max_it: 5_000
 properties:
     shear: 2.15
@@ -58,7 +57,7 @@ gp:
      active_dims:     # optional, default is [0, 1, 3] (x) and [0, 2, 3] (y)
         x: [0, 1, 6]  # density, flux, slip length
 db:
- init_size: 5
+ init_size: 10
  init_method: lhc
  """
 
@@ -91,16 +90,11 @@ if __name__ == "__main__":
     extra[0, 0, :] = extra[0, -2, :]
     extra[0, -1, :] = extra[0, 1, :]
 
-    # Setup system
-    output_path = options['output']
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-        np.save(os.path.join(output_path, 'extra.npy'), extra)
-
     md_runner = Mock(prop, geo, gp)
-    database = Database(output_path, md_runner, db)
-    problem = Problem(output_path,
-                      options,
+
+    database = Database(md_runner, db)
+
+    problem = Problem(options,
                       grid,
                       numerics,
                       prop,
@@ -108,6 +102,5 @@ if __name__ == "__main__":
                       gp,
                       database,
                       extra_field=extra)
-
     # ... and run
     problem.run()

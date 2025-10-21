@@ -23,15 +23,10 @@
 #
 import os
 import numpy as np
-import pandas as pd
-from importlib import resources
-import matplotlib.pyplot as plt
+import polars as pl
 
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.animations import animate2d
-
-
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def main():
@@ -43,19 +38,19 @@ def main():
     gp_s_yz = os.path.join(os.path.dirname(file), 'gp_yz.csv')
 
     try:
-        df_p = pd.read_csv(gp_p)
+        df_p = pl.read_csv(gp_p)
         tol_p = np.array(df_p['variance_tol'])
     except FileNotFoundError:
         tol_p = None
 
     try:
-        df_s_xz = pd.read_csv(gp_s_xz)
+        df_s_xz = pl.read_csv(gp_s_xz)
         tol_s_xz = np.array(df_s_xz['variance_tol'])
     except FileNotFoundError:
         tol_s_xz = None
 
     try:
-        df_s_yz = pd.read_csv(gp_s_yz)
+        df_s_yz = pl.read_csv(gp_s_yz)
         tol_s_yz = np.array(df_s_yz['variance_tol'])
     except FileNotFoundError:
         tol_s_yz = None

@@ -23,8 +23,9 @@
 #
 import io
 import numpy as np
-from GaPFlow.problem import Problem
-from GaPFlow.io import read_yaml_input
+
+from GaPFlow import Problem
+
 
 sim = """
 options:
@@ -66,10 +67,8 @@ properties:
 
 def test_x_y():
 
-    with io.StringIO(sim) as file:
-        input_dict = read_yaml_input(file)
-
-    problem = Problem.from_dict(input_dict)
+    problem = Problem.from_string(sim)
+    problem.pre_run()
 
     mass_before = problem.mass.copy()
 

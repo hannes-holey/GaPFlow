@@ -24,6 +24,7 @@
 import os
 import sys
 import abc
+import warnings
 import dtoolcore
 from mpi4py import MPI
 from datetime import datetime, date
@@ -36,7 +37,7 @@ import scipy.constants as sci
 try:
     from lammps import lammps
 except ImportError:
-    pass
+    warnings.warn('Failed to import lammps. Only Mock MD object available.')
 
 import jax.random as jr
 import jax.numpy as jnp
@@ -44,7 +45,8 @@ import numpy as np
 
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top
-from GaPFlow.moltemplate.main import write_template, build_template
+from GaPFlow.md.moltemplate import write_template, build_template
+from GaPFlow.md.utils import read_output_files
 from GaPFlow.utils import bordered_text
 
 yaml = YAML()
@@ -78,7 +80,7 @@ def run_parallel(fname, nworker):
 def run_serial(fname):
 
     nargs = ["-log", "log.lammps"]
-    lmp = lammps(cmdargs=nargs)
+    lmp = lammps(name='mpi', cmdargs=nargs)
     assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
 
     lmp.file(fname)
@@ -97,7 +99,8 @@ class MolecularDynamics:
     main_file: str
     num_worker: int
     path: str
-    _dtool_basepath: str
+    is_mock: bool
+    _dtool_basepath: str = '/tmp/'
     readme_template: str = ""
     input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
     ascii_art: str = r"""
@@ -220,6 +223,8 @@ class Mock(MolecularDynamics):
 
     def __init__(self, prop, geo, gp):
 
+        self.is_mock = True
+
         self.noise = (gp['press']['obs_stddev'] if gp['press_gp'] else 0.,
                       gp['shear']['obs_stddev'] if gp['shear_gp'] else 0.)
 
@@ -267,6 +272,7 @@ class LennardJones(MolecularDynamics):
     name = 'lj'
 
     def __init__(self, params):
+        self.is_mock = False
         self.main_file = 'in.run'
         self.num_worker = params['ncpu']
         self.params = params
@@ -304,6 +310,7 @@ class GoldAlkane(MolecularDynamics):
     name = 'mol'
 
     def __init__(self, params):
+        self.is_mock = False
         self.main_file = 'run.in.all'
         self.params = params
         self.num_worker = params['ncpu']
@@ -350,163 +357,3 @@ class GoldAlkane(MolecularDynamics):
     def read_output(self):
         sf = sci.calorie * 1e-4  # from kcal/mol/A^3 to g/mol/A/fs^2
         return read_output_files(sf=sf)
-
-
-def read_output_files(fname='stress_wall.dat', sf=1.):
-
-    md_data = np.loadtxt(fname) * sf
-
-    Y = np.zeros((13,))
-    Yerr = np.zeros((13,))
-
-    if md_data.shape[1] == 5:
-        # 1D
-        # timeseries
-        pressL_t = md_data[:, 1]
-        pressU_t = md_data[:, 3]
-        tauL_t = md_data[:, 2]
-        tauU_t = md_data[:, 4]
-
-        # mean
-        pressL = np.mean(pressL_t)
-        pressU = np.mean(pressU_t)
-        tauL = np.mean(tauL_t)
-        tauU = np.mean(tauU_t)
-
-        # variance of mean
-        pL_err = variance_of_mean(pressL_t)
-        pU_err = variance_of_mean(pressU_t)
-        tauxzL_err = variance_of_mean(tauL_t)
-        tauxzU_err = variance_of_mean(tauU_t)
-
-        # fill into buffer
-        Y[0] = (pressL + pressU) / 2.
-        Y[5] = tauL
-        Y[11] = tauU
-        Yerr[0] = np.sqrt((pL_err + pU_err) / 2.)
-        Yerr[5] = np.sqrt(tauxzL_err)
-        Yerr[11] = np.sqrt(tauxzU_err)
-
-    elif md_data.shape[1] == 7:
-        # 2D
-        # timeseries data
-        pressL_t = md_data[:, 1]
-        pressU_t = md_data[:, 3]
-        tauxzL_t = md_data[:, 2]
-        tauxzU_t = md_data[:, 4]
-        tauyzL_t = md_data[:, 5]
-        tauyzU_t = md_data[:, 6]
-
-        # mean
-        pressL = np.mean(pressL_t)
-        pressU = np.mean(pressU_t)
-        tauxzL = np.mean(tauxzL_t)
-        tauxzU = np.mean(tauxzU_t)
-        tauyzL = np.mean(tauyzL_t)
-        tauyzU = np.mean(tauyzU_t)
-
-        # variance of mean
-        pL_err = variance_of_mean(pressL_t)
-        pU_err = variance_of_mean(pressU_t)
-        tauxzL_err = variance_of_mean(tauxzL_t)
-        tauxzU_err = variance_of_mean(tauxzU_t)
-        tauyzL_err = variance_of_mean(tauyzL_t)
-        tauyzU_err = variance_of_mean(tauyzU_t)
-
-        # fill into buffer
-        Y[0] = (pressL + pressU) / 2.
-        Y[4] = tauyzL
-        Y[5] = tauxzL
-        Y[10] = tauyzU
-        Y[11] = tauxzU
-        Yerr[0] = np.sqrt((pL_err + pU_err) / 2.)
-        Yerr[4] = np.sqrt(tauyzL_err)
-        Yerr[5] = np.sqrt(tauxzL_err)
-        Yerr[10] = np.sqrt(tauyzU_err)
-        Yerr[11] = np.sqrt(tauxzU_err)
-
-    return Y, Yerr
-
-
-def autocorr_func_1d(x):
-    """
-
-    Compute autocorrelation function of 1D time series.
-
-    Parameters
-    ----------
-    x : numpy.ndarry
-        The time series
-
-    Returns
-    -------
-    numpy.ndarray
-        Normalized time autocorrelation function
-    """
-    n = len(x)
-
-    # unbias
-    x -= np.mean(x)
-
-    # pad with zeros
-    ext_size = 2 * n - 1
-    fsize = 2**np.ceil(np.log2(ext_size)).astype('int')
-
-    # ACF from FFT
-    x_f = np.fft.fft(x, fsize)
-    C = np.fft.ifft(x_f * x_f.conjugate())[:n] / (n - np.arange(n))
-
-    # Normalize
-    C_t = C.real / C.real[0]
-
-    return C_t
-
-
-def statistical_inefficiency(timeseries, mintime):
-    """
-    see e.g. Chodera et al. J. Chem. Theory Comput., Vol. 3, No. 1, 2007
-
-    Parameters
-    ----------
-    timeseries : numpy.ndarray
-        The time series
-    mintime : int
-        Minimum time lag to calculate correlation time
-
-    Returns
-    -------
-    float
-        Statisitical inefficiency parameter
-    """
-    N = len(timeseries)
-    C_t = autocorr_func_1d(timeseries)
-    t_grid = np.arange(N).astype('float')
-    g_t = 2.0 * C_t * (1.0 - t_grid / float(N))
-    ind = np.where((C_t <= 0) & (t_grid > mintime))[0][0]
-    g = 1.0 + g_t[1:ind].sum()
-    return max(1.0, g)
-
-
-def variance_of_mean(timeseries, mintime=1):
-    """
-
-    Compute the variance of the mean value for a correlated time series
-
-    Parameters
-    ----------
-    timeseries : numpy.ndarray
-        The time series
-    mintime : int, optional
-        Minimum time lag to calculate correlation time
-
-    Returns
-    -------
-    float
-        Variance of the mean
-    """
-
-    g = statistical_inefficiency(timeseries, mintime)
-    n = len(timeseries)
-    var = np.var(timeseries) / n * g
-
-    return var

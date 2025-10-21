@@ -1,7 +1,12 @@
-muGrid==0.95.0
-matplotlib==3.10.6
-mpi4py==4.1.0
+muGrid>=0.95.0
 tinygp==0.3.0
-netCDF4==1.7.2
-pandas==2.3.2
 jaxopt==0.8.5
+netCDF4>=1.7.2
+dtoolcore>=3.19.0
+dtool-lookup-api>=0.10.2
+matplotlib
+polars
+ruamel.yaml
+ase
+mpi4py
+moltemplate

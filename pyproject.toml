@@ -11,27 +11,24 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    # "License :: OSI Approved :: MIT License"
+    "License :: OSI Approved :: MIT License"
 ]
 
 requires-python = ">3.10"
 dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.95.0",
-	"netCDF4>=1.7.2",
-	"mpi4py>=4.1.0",
-	"jax>=0.6.2",
-	"equinox>=0.13.1",
 	"tinygp==0.3.0",
 	"jaxopt==0.8.5",
+	"netCDF4>=1.7.2",
 	"dtoolcore>=3.19.0",
 	"dtool-lookup-api>=0.10.2",
-	"pandas",
 	"matplotlib",
+	"polars",
 	"ruamel.yaml",
-	"ase",
-	"moltemplate"
-]
+	"ase", 
+	"mpi4py",
+	"moltemplate"]
 
 [project.optional-dependencies]
 test = ['pytest',

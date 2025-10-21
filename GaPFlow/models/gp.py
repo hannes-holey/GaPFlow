@@ -138,12 +138,7 @@ class GaussianProcessSurrogate:
 
         if self.is_gp_model:
             self.database = database
-
-            _, _, nx, ny = self.__topo.shape
-            dim = int((nx - 2) > 1) + int((ny - 2) > 1)
-            self.database.initialize(self._Xtest, dim)
-
-            self.last_fit_train_size = self.database.size
+            self.last_fit_train_size = 0
 
             # Initialize timers
             ref = datetime.now()
@@ -163,9 +158,14 @@ class GaussianProcessSurrogate:
             for li in self.active_dims:
                 self.history[f'lengthscale_{li}'] = []
 
+    def init_database(self, dim):
+        if self.is_gp_model:
+            self.database.initialize(self._Xtest, dim)
+
     # ------------------------------------------------------------------
     # Abstract Properties (must be implemented by subclasses)
     # ------------------------------------------------------------------
+
     @property
     @abc.abstractmethod
     def kernel_lengthscale(self):

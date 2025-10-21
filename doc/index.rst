@@ -8,10 +8,12 @@
 .. toctree::
    :maxdepth: 2
    :caption: Table of Contents
+   :hidden:
 
    self
-   ./theory/index
-   modules
+   ./tutorials/index
+   ./api/index
+   Github repository <https://github.com/hannes-holey/hans>
 
 
 Indices and tables

@@ -21,14 +21,10 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from importlib import resources
-import matplotlib.pyplot as plt
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.plotting import plot_single_frame
-
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
 
 
 def get_parser():

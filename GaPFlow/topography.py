@@ -258,6 +258,14 @@ class Topography:
     def dh_dy(self) -> NDArray:
         return self.__field.p[2]
 
+    @property
+    def x(self):
+        return self._x.p
+
+    @property
+    def y(self):
+        return self._y.p
+
 
 class ElasticDeformation:
     """Wrapper class around the FFTElasticHalfSpace classes from ContactMechanics.

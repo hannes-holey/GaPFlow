@@ -24,7 +24,7 @@
 from copy import deepcopy
 import io
 import numpy as np
-from GaPFlow.problem import Problem
+from GaPFlow import Problem
 from GaPFlow.io import read_yaml_input
 
 sim = """
@@ -78,6 +78,9 @@ def test_x_y():
 
     problem_x = Problem.from_dict(input_x)
     problem_y = Problem.from_dict(input_y)
+
+    problem_x.pre_run()
+    problem_y.pre_run()
 
     for _ in range(5):
         problem_x.update()

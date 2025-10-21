@@ -23,10 +23,12 @@ extensions = ['sphinx.ext.autodoc',
               'myst_nb']
 
 
-pygments_style = 'sphinx'
+pygments_style = 'default'
 source_suffix = {'.rst': 'restructuredtext'}
 
 todo_include_todos = False
+
+exclude_patterns = ['conf.py']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -48,6 +50,13 @@ myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
 ]
+
+autodoc_default_options = {
+    'members': True,
+    'undoc-members': True,
+    'inherited-members': True,
+    'show-inheritance': True,
+}
 
 # The following makes mystnb convert notebooks with jupytext
 # before execution and documentation rendering. This allows
