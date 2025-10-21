@@ -92,7 +92,7 @@ def _plot_height_1d(topography, grid):
 
     fig, ax = plt.subplots(1)
 
-    _, _, _, nx, ny = topography.shape
+    _, _, nx, ny = topography.shape
 
     x, _ = _get_centerline_coords(nx, ny, grid)
 
