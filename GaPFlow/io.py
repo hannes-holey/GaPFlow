@@ -348,6 +348,14 @@ def sanitize_properties(d):
             for k, de in zip(keys, defaults):
                 out['thinning'][k] = float(d['thinning'].get(k, de))
 
+    # Elastic Deformation
+    if 'elastic' in d.keys():
+        out['elastic'] = {}
+        out['elastic']['enabled'] = True
+        out['elastic']['E'] = float(d['elastic'].get('E', 210e09))
+        out['elastic']['v'] = float(d['elastic'].get('v', 0.3))
+        out['elastic']['alpha_underrelax'] = float(d['elastic'].get('alpha_underrelax', 1e-03))
+
     print_dict(out)
 
     return out

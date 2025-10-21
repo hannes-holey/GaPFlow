@@ -82,8 +82,8 @@ class Problem:
         self.__field = fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
-        # Intialize gap
-        self.topo = Topography(fc, self.grid, geo)
+        # Initialize gap
+        self.topo = Topography(fc, self.grid, geo, prop)
 
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
