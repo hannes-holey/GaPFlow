@@ -304,7 +304,7 @@ class GaussianProcessSurrogate:
         self.params = soln.params
         self.gp = self.build_gp(self.params, self.Xtrain, self.Yerr)
 
-        obj = self.gp.log_probability(self.Ytrain)
+        obj = -self.gp.log_probability(self.Ytrain)
         self.print_opt_summary(obj)
 
         if self.step > 0:
