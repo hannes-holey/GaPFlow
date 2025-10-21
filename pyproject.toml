@@ -28,7 +28,8 @@ dependencies = [
 	"ruamel.yaml",
 	"ase", 
 	"mpi4py",
-	"moltemplate"]
+	"moltemplate",
+	"ContactMechanics @ git+https://github.com/ContactEngineering/ContactMechanics.git@SemiPeriodicFFTElasticHalfSpace"]
 
 [project.optional-dependencies]
 test = ['pytest',
