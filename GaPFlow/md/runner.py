@@ -33,6 +33,7 @@ from ruamel.yaml import YAML
 from getpass import getuser
 from socket import gethostname
 import scipy.constants as sci
+from copy import deepcopy
 
 try:
     from lammps import lammps
@@ -338,13 +339,13 @@ class GoldAlkane(MolecularDynamics):
                              os.path.join("static", f))
 
         # TODO: separate section of metadata
-        args = self.params
+        args = deepcopy(self.params)
         args["density"] = float(X[0])
         args["fluxX"] = float(X[1])
         args["fluxY"] = float(X[2])
         args["gap_height"] = float(X[3])
 
-        if self.params['rotation']:
+        if self.params['wall_rotation']:
             dh_dz = float(X[4])
             args["rotation"] = -np.arctan(dh_dz) / np.pi * 180.
 
