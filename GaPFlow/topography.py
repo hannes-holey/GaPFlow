@@ -169,12 +169,15 @@ class Topography:
 
         xx, yy = create_midpoint_grid(grid)
 
-        self.__field = fc.real_field('topography', (3,))
+        self.__field = fc.real_field('topography', (4,))
         self._x = fc.real_field('x')
         self._y = fc.real_field('y')
 
         self._x.p = xx
         self._y.p = yy
+
+        self.dx = grid['dx']
+        self.dy = grid['dy']
 
         # 1D profiles
         if geo['type'] == 'journal':
@@ -217,14 +220,16 @@ class Topography:
         self.__field.p[0] = h
         self.__field.p[ix] = dh_dx
         self.__field.p[iy] = dh_dy
+        self.__field.p[3] = np.zeros_like(h) # inital deformation set to zero
 
     def update(self) -> None:
         """Updates the topography field in case of enabled deformation.
         """
         if self.elastic:
             p = self.fc.get_real_field('pressure').p
-            disp = self.ElasticDeformation.get_deformation_underrelax(p)
-            self.h = self.h_undeformed + disp
+            deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+            self.deformation = deformation
+            self.h = self.h_undeformed + deformation
         else:
             pass
 
@@ -232,8 +237,8 @@ class Topography:
         """Updates gradient arrays using second-order central differences.
         """
         h = self.__field.p[0]
-        dh_dx = np.gradient(h, axis=0)
-        dh_dy = np.gradient(h, axis=1)
+        dh_dx = np.gradient(h, axis=0) / self.dx
+        dh_dy = np.gradient(h, axis=1) / self.dy
         self.__field.p[1] = dh_dx
         self.__field.p[2] = dh_dy
 
@@ -249,6 +254,14 @@ class Topography:
     def h(self, value: NDArray) -> None:
         self.__field.p[0] = value
         self.update_gradients()
+
+    @property
+    def deformation(self) -> NDArray:
+        return self.__field.p[3]
+
+    @deformation.setter
+    def deformation(self, value: NDArray) -> None:
+        self.__field.p[3] = value
 
     @property
     def dh_dx(self) -> NDArray:
@@ -281,7 +294,8 @@ class ElasticDeformation:
         
         self.p_bc = 0.
         self.area_per_cell = grid['dx'] * grid['dy']
-        self.u_prev = np.zeros((grid['Nx'], grid['Ny']))
+        Nx, Ny = grid['Nx']+2, grid['Ny']+2
+        self.u_prev = np.zeros((Nx, Ny))
         self.alpha_underrelax = alpha_underrelax
 
         perX = grid['bc_xE_P'][0]
@@ -291,19 +305,19 @@ class ElasticDeformation:
 
         if perX and perY:
             self.periodicity = 'full'
-            self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(grid['Nx'], grid['Ny']),
+            self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                         young=young_effective,
                                                         physical_sizes=(grid['Lx'], grid['Ly']),
                                                         periodicity=(perX, perY))
         elif (perX != perY):
             self.periodicity = 'half'
-            self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(grid['Nx'], grid['Ny']),
+            self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                             young=young_effective,
                                                             physical_sizes=(grid['Lx'], grid['Ly']),
                                                             periodicity=(perX, perY))
         else:
             self.periodicity = 'none'
-            self.ElDef = CM.FreeFFTElasticHalfSpace(nb_grid_pts=(grid['Nx'], grid['Ny']),
+            self.ElDef = CM.FreeFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                     young=young_effective,
                                                     physical_sizes=(grid['Lx'], grid['Ly']),
                                                     fft='mpi', communicator=self.comm)

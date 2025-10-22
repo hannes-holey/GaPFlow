@@ -22,7 +22,7 @@ geometry:
 numerics:
     adaptive: 1
     CFL: 0.45
-    tol: 1e-7
+    tol: 1e-8
     dt: 1.e-10
     max_it: 100_000
 properties:
@@ -33,7 +33,7 @@ properties:
     cl: 1600.
     cv: 352.
     elastic:
-        E: 210e09
+        E: 50e09
         v: 0.3
         alpha_underrelax: 1e-03
     piezo:

@@ -76,7 +76,7 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 def plot_height(filename, grid=None):
 
     data = netCDF4.Dataset(filename)
-    topo = np.asarray(data.variables['topography'])[0]
+    topo = np.asarray(data.variables['topography'])
 
     nx, ny = topo.shape[-2:]
 
@@ -84,11 +84,11 @@ def plot_height(filename, grid=None):
 
     if is_1d:
         _plot_height_1d(topo, grid)
+        # _plot_height_1d_old(topo[0], grid)
     else:
-        _plot_height_2d(topo, grid)
+        _plot_height_2d(topo[0], grid)
 
-
-def _plot_height_1d(topography, grid):
+def _plot_height_1d_old(topography, grid):
 
     fig, ax = plt.subplots(1)
 
@@ -117,6 +117,34 @@ def _plot_height_1d(topography, grid):
 
     plt.show()
 
+def _plot_height_1d(topography, grid):
+
+    fig, ax = plt.subplots(2, 1, figsize=(4,6))
+
+    h = topography[-1, 0, 0, 1:-1, 1:-1].ravel()
+    u = topography[-1, 3, 0, 1:-1, 1:-1].ravel()
+
+    nx, ny = topography.shape[-2:]
+    x, _ = _get_centerline_coords(nx, ny, grid)
+
+    ax[0].plot(x, h, color='C0')
+    ax[0].set_ylabel('Gap height $h$ in m')
+
+    ax[0].fill_between(x,
+                    h,
+                    np.ones_like(x) * 1.1 * h.max(),
+                    color='0.7', lw=0.)
+    ax[0].fill_between(x,
+                    np.zeros_like(x),
+                    -np.ones_like(x) * 0.1 * h.max(),
+                    color='0.7', lw=0.)
+    ax[0].plot(x, h, color='C0')
+    ax[0].plot(x, np.zeros_like(h), color='C0')
+
+    ax[1].plot(x, u, color='C1')
+    ax[1].set_ylabel('Deformation $u$ in m')
+
+    plt.show()
 
 def _plot_height_2d(topography, grid):
 

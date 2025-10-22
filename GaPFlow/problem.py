@@ -130,11 +130,14 @@ class Problem:
 
             write_yaml(full_dict, os.path.join(self.outdir, 'config.yml'))
 
-            # Write gap height and gradients once
-            topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Write)
-            topofile.register_field_collection(fc, field_names=['topography'])
-            topofile.append_frame().write()
-            topofile.close()
+            # Write gap height and gradients
+            # No elastic deformation - write once and close
+            # Elastic deformation - write initial topo and keep open
+            self.topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Overwrite)
+            self.topofile.register_field_collection(fc, field_names=['topography'])
+            self.topofile.append_frame().write()
+            if not self.prop['elastic']['enabled']:
+                self.topofile.close()
 
             # Solution fields
             self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
@@ -310,6 +313,7 @@ class Problem:
         self._tic = datetime.now()
         while not self.converged and self.step < self.max_it and not self._stop:
             self.update()
+            self.topo.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
@@ -440,6 +444,9 @@ class Problem:
             self.pressure.write()
             self.wall_stress_xz.write()
             self.wall_stress_yz.write()
+
+        if self.prop['elastic']['enabled']:
+            self.topofile.append_frame().write()
 
     # ---------------------------
     # Initialization and update helpers

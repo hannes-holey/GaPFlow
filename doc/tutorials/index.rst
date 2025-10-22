@@ -10,3 +10,4 @@ Tutorials
 	05_confined_fluids.ipynb
 	06_lubrication.ipynb
 	07_GP.ipynb
+	08_elastic_deformation.ipynb
