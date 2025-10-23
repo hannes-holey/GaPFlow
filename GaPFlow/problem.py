@@ -86,22 +86,27 @@ class Problem:
         # Solution field
         self.__field = fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
-
-        # Initialize gap
-        self.topo = Topography(fc, self.grid, geo, prop)
-
+        
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
             extra.p = extra_field
 
-        # Stress fields
+        # Forward declaration of cross-dependent fields
+        fc.register_real_field('x')
+        fc.register_real_field('y')
+        fc.register_real_field('pressure')
+        fc.register_real_field('topography', (4,))
+
+        # Initialize stress and topography models
         gpx, gpy, gpz = self._select_gp_config(gp)
         self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
         self.bulk_stress = BulkStress(fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(fc, prop, geo, direction='y', data=database, gp=gpy)
+
+        self.topo = Topography(fc, self.grid, geo, prop)
 
         # I/O
         if not self.options['silent']:
@@ -638,6 +643,12 @@ class Problem:
             Q = ((1.0 - a1) * q1 + a2 * q2) / (a1 - a2)
 
         return Q
+
+    def plot_height(self) -> None:
+        """Wrapper for plot_height in viz/plotting.py
+        """
+        pass
+
 
 # ---------------------------
 # Helper functions

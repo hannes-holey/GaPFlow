@@ -446,7 +446,7 @@ class Pressure(GaussianProcessSurrogate):
                  data: Optional[Any] = None,
                  gp: Optional[dict] = None) -> None:
 
-        self.__field = fc.real_field('pressure')
+        self.__field = fc.get_real_field('pressure')
         self.geo = geo
         self.prop = prop
 

@@ -169,9 +169,9 @@ class Topography:
 
         xx, yy = create_midpoint_grid(grid)
 
-        self.__field = fc.real_field('topography', (4,))
-        self._x = fc.real_field('x')
-        self._y = fc.real_field('y')
+        self.__field = fc.get_real_field('topography')
+        self._x = fc.get_real_field('x')
+        self._y = fc.get_real_field('y')
 
         self._x.p = xx
         self._y.p = yy
@@ -206,7 +206,7 @@ class Topography:
         if prop['elastic']['enabled']:
             self.elastic = True
             self.h_undeformed = h.copy()
-            self.fc = fc # to access pressure field later on
+            self.__pressure = fc.get_real_field('pressure')
 
             self.ElasticDeformation = ElasticDeformation(
                 E=prop['elastic']['E'],
@@ -226,10 +226,13 @@ class Topography:
         """Updates the topography field in case of enabled deformation.
         """
         if self.elastic:
-            p = self.fc.get_real_field('pressure').p
-            p = p - p[0,0] # reference pressure
-            deformation = self.ElasticDeformation.get_deformation_underrelax(p)
-            deformation = deformation - deformation[0,0] # reference deformation
+            if self.ElasticDeformation.periodicity in ['half', 'none']:
+                p = self.__pressure.p - self.__pressure.p[0,0] # reference pressure
+                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+                deformation = deformation - deformation[0,0] # reference deformation
+            else:
+                p = self.__pressure.p
+                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
         else:
@@ -308,20 +311,21 @@ class ElasticDeformation:
             self.periodicity = 'full'
             self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                         young=young_effective,
-                                                        physical_sizes=(grid['Lx'], grid['Ly']),
-                                                        periodicity=(perX, perY))
+                                                        physical_sizes=(grid['Lx'], grid['Ly'])
+                                                        )
         elif (perX != perY):
             self.periodicity = 'half'
             self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                             young=young_effective,
                                                             physical_sizes=(grid['Lx'], grid['Ly']),
-                                                            periodicity=(perX, perY))
+                                                            periodicity=(perX, perY)
+                                                            )
         else:
             self.periodicity = 'none'
             self.ElDef = CM.FreeFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                     young=young_effective,
-                                                    physical_sizes=(grid['Lx'], grid['Ly']),
-                                                    fft='mpi', communicator=self.comm)
+                                                    physical_sizes=(grid['Lx'], grid['Ly'])
+                                                    )
 
     def get_deformation(self, p: NDArray) -> NDArray:
         """Calculation of the elastic deformation due to given pressure field p.
