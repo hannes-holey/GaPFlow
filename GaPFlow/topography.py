@@ -311,7 +311,8 @@ class ElasticDeformation:
             self.periodicity = 'full'
             self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                         young=young_effective,
-                                                        physical_sizes=(grid['Lx'], grid['Ly'])
+                                                        physical_sizes=(grid['Lx'], grid['Ly']),
+                                                        stiffness_q0=0.0
                                                         )
         elif (perX != perY):
             self.periodicity = 'half'

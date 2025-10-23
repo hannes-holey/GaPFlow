@@ -38,6 +38,7 @@ from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, his
 from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
+from GaPFlow.viz.plotting import plot_height_1d
 
 
 class Problem:
@@ -646,9 +647,21 @@ class Problem:
 
     def plot_height(self) -> None:
         """Wrapper for plot_height in viz/plotting.py
+        - Detects 1D vs 2D
+        - Detects if elastic deformation is enabled
+        - Detects if initial or final simulation state
         """
-        pass
-
+        if self.grid['Ny'] == 1:
+            h = self.topo.h
+            if self.prop['elastic']['enabled'] and getattr(self, "step", 0) > 0:
+                u = self.topo.deformation
+                h0 = self.topo.h_undeformed
+                p = self.pressure.pressure
+                plot_height_1d(h, h0=h0, u=u, p=p)
+            else:
+                plot_height_1d(h)
+        else:
+            pass  # 2D plotting not implemented yet
 
 # ---------------------------
 # Helper functions
