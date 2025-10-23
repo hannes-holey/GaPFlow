@@ -227,7 +227,9 @@ class Topography:
         """
         if self.elastic:
             p = self.fc.get_real_field('pressure').p
+            p = p - p[0,0] # reference pressure
             deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+            deformation = deformation - deformation[0,0] # reference deformation
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
         else:
@@ -292,7 +294,6 @@ class ElasticDeformation:
                  grid: dict
     ) -> None:
         
-        self.p_bc = 0.
         self.area_per_cell = grid['dx'] * grid['dy']
         Nx, Ny = grid['Nx']+2, grid['Ny']+2
         self.u_prev = np.zeros((Nx, Ny))
@@ -336,7 +337,6 @@ class ElasticDeformation:
         disp : ndarray
             Array of resulting displacements [m].
         """
-        p = p - self.p_bc
         forces = p * self.area_per_cell
         disp = -self.ElDef.evaluate_disp(forces)
 

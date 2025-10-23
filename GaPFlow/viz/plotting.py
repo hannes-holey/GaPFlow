@@ -121,13 +121,15 @@ def _plot_height_1d(topography, grid):
 
     fig, ax = plt.subplots(2, 1, figsize=(4,6))
 
+    h0 = topography[0, 0, 0, 1:-1, 1:-1].ravel()
     h = topography[-1, 0, 0, 1:-1, 1:-1].ravel()
     u = topography[-1, 3, 0, 1:-1, 1:-1].ravel()
 
     nx, ny = topography.shape[-2:]
     x, _ = _get_centerline_coords(nx, ny, grid)
 
-    ax[0].plot(x, h, color='C0')
+    ax[0].plot(x, h, color='C0', linestyle='-', label='Final')
+    ax[0].plot(x, h0, color='C0', linestyle='--', label='Initial')
     ax[0].set_ylabel('Gap height $h$ in m')
 
     ax[0].fill_between(x,
@@ -140,6 +142,8 @@ def _plot_height_1d(topography, grid):
                     color='0.7', lw=0.)
     ax[0].plot(x, h, color='C0')
     ax[0].plot(x, np.zeros_like(h), color='C0')
+
+    ax[0].legend(loc='upper center')
 
     ax[1].plot(x, u, color='C1')
     ax[1].set_ylabel('Deformation $u$ in m')
