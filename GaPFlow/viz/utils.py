@@ -24,7 +24,7 @@
 import os
 import time
 import numpy as np
-
+from typing import Tuple
 
 from GaPFlow.topography import create_midpoint_grid
 
@@ -98,8 +98,15 @@ def set_axes_labels(ax, bDef=False):
         ax[1, 3].set_ylabel(r"Deformation $u$ in m")
 
 
-def set_axes_limits(ax, q, tol=None):
+def set_axes_limits(ax,
+                    q,
+                    tol=None, 
+                    x:Tuple[float,float]=None,
+                    rel_tol:float=None):
 
+    if x is not None:
+        ax.set_xlim(x[0], x[1])
+    
     q_min = q.min()
     q_max = q.max()
 
@@ -114,6 +121,11 @@ def set_axes_limits(ax, q, tol=None):
     if tol is not None:
         q_min -= tol
         q_max += tol
+
+    if rel_tol is not None:
+        delta = rel_tol * (q_max - q_min)
+        q_min -= delta
+        q_max += delta
 
     ax.set_ylim(q_min, q_max)
 

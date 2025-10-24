@@ -316,14 +316,14 @@ class ElasticDeformation:
 
         # check for semi-periodic 1D cases where direction with N=1 is marked as periodic
         if (perX != perY) and ((perY and grid['Ny'] == 1) or (perX and grid['Nx'] == 1)):
-                warnings.warn(
-                    "You specified a semi-periodic 1D problem.\n"
-                    "For the calculation of elastic deformation, we assume a line contact with "
-                    "non-periodic boundary conditions in both directions.\n"
-                    "For the calculation of the effective force F=p*A per cell, "
-                    "we assume a unit length of {} = 1 m."
-                    .format("Ly" if perY else "Lx"))
-            grid = copy.deepcopy(grid)  # do not modify original grid
+            warnings.warn(
+                "You specified a semi-periodic 1D problem.\n"
+                "For the calculation of elastic deformation, we assume a line contact with "
+                "non-periodic boundary conditions in both directions.\n"
+                "For the calculation of the effective force F=p*A per cell, "
+                "we assume a unit length of {} = 1 m."
+                .format("Ly" if perY else "Lx"))
+            grid = copy.deepcopy(grid) # do not modify original grid
             if perY:
                 grid['Ly'] = 1.0
             else:

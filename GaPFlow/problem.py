@@ -690,15 +690,18 @@ class Problem:
         """
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")
-        
+
         filename_sol = os.path.join(self.outdir, 'sol.nc')
         filename_topo = os.path.join(self.outdir, 'topo.nc')
+
         if self.grid['Ny'] == 1:
-            animate_1d(filename_sol,
-                       filename_topo,
-                       seconds=seconds,
-                       save=save,
-                       show_notebook=show_notebook)
+            anim = animate_1d(filename_sol,
+                              filename_topo,
+                              seconds=seconds,
+                              save=save,
+                              show_notebook=show_notebook)
+            if show_notebook:
+                return anim
         else:
             print("2D animation not yet implemented.")
 

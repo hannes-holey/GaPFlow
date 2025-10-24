@@ -296,12 +296,25 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
 
     plt.show()
 
-def animate_1d(filename_sol: str,
-               filename_topo: str,
-               seconds: float = 10.,
-               save: bool = False,
-               show_notebook: bool = False
-               ) -> None:
+def animate_1d(*args, **kwargs) -> None:
+    """Wrapper for applying mpl style context manager.
+    Prevents persistently changing global matplotlib settings.
+    """
+    try: # nicer looking plots with tueplots if available
+        from tueplots import bundles
+        rcparams = bundles.beamer_moml()
+    except ImportError:
+        rcparams = plt.rcParams.copy()
+
+    with plt.rc_context(rcparams):
+        return animate_1d_inner(*args, **kwargs)
+
+def animate_1d_inner(filename_sol: str,
+                     filename_topo: str,
+                     seconds: float = 10.,
+                     save: bool = False,
+                     show_notebook: bool = False
+                     ) -> None:
     """Animation of solution process for 1D simulations.
     - Option 1: Default. Showing in a matplotlib window.
     - Option 2: Showing in Jupyter notebook (show_notebook=True).
@@ -322,25 +335,6 @@ def animate_1d(filename_sol: str,
     """
     assert not (save and show_notebook), "Cannot both save and show in notebook."
 
-    def update_lines(i, q, p, tau, topo):
-
-        # Density & mass fluxes
-        ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, 1:-1, ny // 2])
-        ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, 1:-1, ny // 2])
-        ax[0, 2].get_lines()[0].set_ydata(q[i, 2, 0, 1:-1, ny // 2])
-
-        # Pressure & shear stress
-        ax[1, 0].get_lines()[0].set_ydata(p[i, 1:-1, ny // 2])
-        ax[1, 1].get_lines()[0].set_ydata(tau[i, 4, 0, 1:-1, ny // 2])
-        ax[1, 2].get_lines()[0].set_ydata(tau[i, 10, 0, 1:-1, ny // 2])
-
-        # Height & deformation
-        if bDef:
-            ax[0, 3].get_lines()[0].set_ydata(topo[i, 0, 0, 1:-1, ny // 2])
-            ax[1, 3].get_lines()[0].set_ydata(topo[i, 3, 0, 1:-1, ny // 2])
-
-        title.set_text(f"Simulation frame {i + 1}/{nt}")
-
     data_sol = netCDF4.Dataset(filename_sol)
     q_nc = np.asarray(data_sol.variables['solution'])
     p_nc = np.asarray(data_sol.variables['pressure'])
@@ -350,52 +344,74 @@ def animate_1d(filename_sol: str,
     topo_nc = np.asarray(data_topo.variables['topography'])
 
     nt, nc, _, nx, ny = q_nc.shape
-    x = np.arange(nx - 2) / (nx - 2)
-    x += x[1] / 2.
-    
-    # check if height has >1 time steps - yes: include height+deformation
-    bDef = True if topo_nc.shape[0] > 1 else False
+    x = np.linspace(0, 1, nx-2)
 
+    bDef = True if topo_nc.shape[0] > 1 else False
     fig, ax = plt.subplots(2, 3 + int(bDef), figsize=(10, 4))
-    title = fig.suptitle("Simulation frame 0", fontsize=14)
-    fig.canvas.manager.set_window_title("Simulation Progress 1D")
+    title = fig.suptitle("Simulation Animation 1D", fontsize=12)
 
     color_q, color_p, color_t, color_h = 'C0', 'C1', 'C2', 'C3'
 
-    ax[0, 0].plot(x, q_nc[0, 0, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 1].plot(x, q_nc[0, 1, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 2].plot(x, q_nc[0, 2, 0, 1:-1, ny // 2], color=color_q)
-
-    ax[1, 0].plot(x, p_nc[0, 1:-1, ny // 2], color=color_p)
-    ax[1, 1].plot(x, tau_nc[0, 4, 0, 1:-1, ny // 2], color=color_t)
-    ax[1, 2].plot(x, tau_nc[0, 10, 0, 1:-1, ny // 2], color=color_t)
-
-    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2])
-    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2])
-    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2])
-
-    set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2])
-    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2])
-    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2])
-
+    (line_rho,) = ax[0, 0].plot([], [], color=color_q)
+    (line_jx,) = ax[0, 1].plot([], [], color=color_q)
+    (line_jy,) = ax[0, 2].plot([], [], color=color_q)
+    (line_p,) = ax[1, 0].plot([], [], color=color_p)
+    (line_tauxz_bot,) = ax[1, 1].plot([], [], color=color_t)
+    (line_tauxz_top,) = ax[1, 2].plot([], [], color=color_t)
     if bDef:
-        ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h)
+        (line_h,) = ax[0, 3].plot([], [], color=color_h)
+        (line_def,) = ax[1, 3].plot([], [], color=color_h)
         ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
                       linestyle='--', label='Initial')
         ax[0, 3].legend(loc='upper center')
-        ax[1, 3].plot(x, topo_nc[0, 3, 0, 1:-1, ny // 2], color=color_h)
-        set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2])
-        set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2])
+
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    if bDef:
+        set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
 
     set_axes_labels(ax, bDef)
 
-    ani = animation.FuncAnimation(fig,
-                                  update_lines,
-                                  frames=nt,
-                                  fargs=(q_nc, p_nc, tau_nc, topo_nc),
-                                  interval=100,
-                                  repeat=True,
-                                  blit=False)
+    def init():
+        line_rho.set_data([], [])
+        line_jx.set_data([], [])
+        line_jy.set_data([], [])
+        line_p.set_data([], [])
+        line_tauxz_bot.set_data([], [])
+        line_tauxz_top.set_data([], [])
+        if bDef:
+            line_h.set_data([], [])
+            line_def.set_data([], [])
+        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                line_tauxz_top, line_h, line_def)
+
+    def update(i):
+        line_rho.set_data(x, q_nc[i, 0, 0, 1:-1, ny // 2])
+        line_jx.set_data(x, q_nc[i, 1, 0, 1:-1, ny // 2])
+        line_jy.set_data(x, q_nc[i, 2, 0, 1:-1, ny // 2])
+        line_p.set_data(x, p_nc[i, 1:-1, ny // 2])
+        line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, 1:-1, ny // 2])
+        line_tauxz_top.set_data(x, tau_nc[i, 10, 0, 1:-1, ny // 2])
+        if bDef:
+            line_h.set_data(x, topo_nc[i, 0, 0, 1:-1, ny // 2])
+            line_def.set_data(x, topo_nc[i, 3, 0, 1:-1, ny // 2])
+        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                line_tauxz_top, line_h, line_def)
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=nt,
+        init_func=init,
+        blit=True,
+        interval=100,
+        repeat=True
+    )
 
     if save:
         Writer = animation.writers['ffmpeg']
@@ -410,7 +426,8 @@ def animate_1d(filename_sol: str,
         print(f"Saved animation to {outfile}")
 
     elif show_notebook:
+        plt.close(fig)
         return HTML(ani.to_jshtml())
-    
+
     else:
         plt.show()
