@@ -39,7 +39,7 @@ from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
 from GaPFlow.viz.plotting import plot_height_1d
-
+from GaPFlow.viz.animations import animate_1d
 
 class Problem:
     """
@@ -345,6 +345,10 @@ class Problem:
 
         if self.step % self.options['write_freq'] != 0 and not self.options['silent']:
             self.write()
+
+        self.file.close() # need to be closed to be readable when animating from problem
+        if self.prop['elastic']['enabled']:
+            self.topofile.close()
 
         speed = self.step / walltime.total_seconds()
 
@@ -657,11 +661,47 @@ class Problem:
                 u = self.topo.deformation
                 h0 = self.topo.h_undeformed
                 p = self.pressure.pressure
-                plot_height_1d(h, h0=h0, u=u, p=p)
+                plot_height_1d(h, h0, u, p)
             else:
                 plot_height_1d(h)
         else:
-            pass  # 2D plotting not implemented yet
+            print("2D height plotting not yet implemented.")
+
+    def animate(self,
+                save: bool = False,
+                show_notebook: bool = False,
+                seconds: float = 10.0
+                ) -> None:
+        """Wrapper for animating the solution in viz/animations.py
+        Checks if simulation has run already. Detects 1D vs 2D.
+        Includes height and deformation if elastic deformation is enabled.
+        - Option 1: Default. Showing in a matplotlib window.
+        - Option 2: Showing in Jupyter notebook (show_notebook=True).
+        - Option 3: Saving as .mp4 file (save=True).
+
+        Parameters
+        ----------
+        save : bool, optional
+            Whether to save the animation as an .mp4 file, by default False
+        show_notebook : bool, optional
+            Whether to display the animation inline in a Jupyter notebook, by default False
+        seconds : float, optional
+            Duration of the animation in seconds, by default 10.0
+        """
+        if not getattr(self, "step", 0) > 0:
+            raise RuntimeError("Cannot animate before running the simulation.")
+        
+        filename_sol = os.path.join(self.outdir, 'sol.nc')
+        filename_topo = os.path.join(self.outdir, 'topo.nc')
+        if self.grid['Ny'] == 1:
+            animate_1d(filename_sol,
+                       filename_topo,
+                       seconds=seconds,
+                       save=save,
+                       show_notebook=show_notebook)
+        else:
+            print("2D animation not yet implemented.")
+
 
 # ---------------------------
 # Helper functions

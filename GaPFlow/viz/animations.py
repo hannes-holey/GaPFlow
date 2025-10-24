@@ -21,10 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from cmath import tau
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from IPython.display import HTML, Video
 import netCDF4
 
 from GaPFlow.topography import create_midpoint_grid
@@ -293,3 +295,122 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
         ani.save(outfile, writer=writer, dpi=600)
 
     plt.show()
+
+def animate_1d(filename_sol: str,
+               filename_topo: str,
+               seconds: float = 10.,
+               save: bool = False,
+               show_notebook: bool = False
+               ) -> None:
+    """Animation of solution process for 1D simulations.
+    - Option 1: Default. Showing in a matplotlib window.
+    - Option 2: Showing in Jupyter notebook (show_notebook=True).
+    - Option 3: Saving as mp4 file (save=True).
+
+    Parameters
+    ----------
+    filename_sol : str
+        Relative path to the solution NetCDF file.
+    filename_topo : str
+        Relative path to the topography NetCDF file.
+    seconds : float, optional
+        Duration of the animation in seconds, by default 10.
+    save : bool, optional
+        Whether to save the animation as an mp4 file, by default False.
+    show_notebook : bool, optional
+        Whether to show the animation in a Jupyter notebook, by default False.
+    """
+    assert not (save and show_notebook), "Cannot both save and show in notebook."
+
+    def update_lines(i, q, p, tau, topo):
+
+        # Density & mass fluxes
+        ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, 1:-1, ny // 2])
+        ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, 1:-1, ny // 2])
+        ax[0, 2].get_lines()[0].set_ydata(q[i, 2, 0, 1:-1, ny // 2])
+
+        # Pressure & shear stress
+        ax[1, 0].get_lines()[0].set_ydata(p[i, 1:-1, ny // 2])
+        ax[1, 1].get_lines()[0].set_ydata(tau[i, 4, 0, 1:-1, ny // 2])
+        ax[1, 2].get_lines()[0].set_ydata(tau[i, 10, 0, 1:-1, ny // 2])
+
+        # Height & deformation
+        if bDef:
+            ax[0, 3].get_lines()[0].set_ydata(topo[i, 0, 0, 1:-1, ny // 2])
+            ax[1, 3].get_lines()[0].set_ydata(topo[i, 3, 0, 1:-1, ny // 2])
+
+        title.set_text(f"Simulation frame {i + 1}/{nt}")
+
+    data_sol = netCDF4.Dataset(filename_sol)
+    q_nc = np.asarray(data_sol.variables['solution'])
+    p_nc = np.asarray(data_sol.variables['pressure'])
+    tau_nc = np.asarray(data_sol.variables['wall_stress_xz'])
+
+    data_topo = netCDF4.Dataset(filename_topo)
+    topo_nc = np.asarray(data_topo.variables['topography'])
+
+    nt, nc, _, nx, ny = q_nc.shape
+    x = np.arange(nx - 2) / (nx - 2)
+    x += x[1] / 2.
+    
+    # check if height has >1 time steps - yes: include height+deformation
+    bDef = True if topo_nc.shape[0] > 1 else False
+
+    fig, ax = plt.subplots(2, 3 + int(bDef), figsize=(10, 4))
+    title = fig.suptitle("Simulation frame 0", fontsize=14)
+    fig.canvas.manager.set_window_title("Simulation Progress 1D")
+
+    color_q, color_p, color_t, color_h = 'C0', 'C1', 'C2', 'C3'
+
+    ax[0, 0].plot(x, q_nc[0, 0, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 1].plot(x, q_nc[0, 1, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 2].plot(x, q_nc[0, 2, 0, 1:-1, ny // 2], color=color_q)
+
+    ax[1, 0].plot(x, p_nc[0, 1:-1, ny // 2], color=color_p)
+    ax[1, 1].plot(x, tau_nc[0, 4, 0, 1:-1, ny // 2], color=color_t)
+    ax[1, 2].plot(x, tau_nc[0, 10, 0, 1:-1, ny // 2], color=color_t)
+
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2])
+
+    set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2])
+    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2])
+
+    if bDef:
+        ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h)
+        ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
+                      linestyle='--', label='Initial')
+        ax[0, 3].legend(loc='upper center')
+        ax[1, 3].plot(x, topo_nc[0, 3, 0, 1:-1, ny // 2], color=color_h)
+        set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2])
+        set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2])
+
+    set_axes_labels(ax, bDef)
+
+    ani = animation.FuncAnimation(fig,
+                                  update_lines,
+                                  frames=nt,
+                                  fargs=(q_nc, p_nc, tau_nc, topo_nc),
+                                  interval=100,
+                                  repeat=True,
+                                  blit=False)
+
+    if save:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=max(1, int(nt / seconds)),
+                        codec='libx264',
+                        extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
+
+        outfile = os.path.join(os.path.dirname(filename_sol),
+                                os.path.dirname(filename_sol).split(os.sep)[-1]) + ".mp4"
+
+        ani.save(outfile, writer=writer, dpi=150)
+        print(f"Saved animation to {outfile}")
+
+    elif show_notebook:
+        return HTML(ani.to_jshtml())
+    
+    else:
+        plt.show()

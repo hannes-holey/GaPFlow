@@ -79,7 +79,7 @@ def _get_centerline_coords(nx, ny, disc=None):
     return x, y
 
 
-def set_axes_labels(ax):
+def set_axes_labels(ax, bDef=False):
 
     ax[1, 0].set_xlabel(r"$x$")
     ax[1, 1].set_xlabel(r"$x$")
@@ -92,6 +92,10 @@ def set_axes_labels(ax):
     ax[1, 0].set_ylabel(r"Pressure $p$")
     ax[1, 1].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{bot}$")
     ax[1, 2].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{top}$")
+
+    if bDef:
+        ax[0, 3].set_ylabel(r"Height $h$ in m")
+        ax[1, 3].set_ylabel(r"Deformation $u$ in m")
 
 
 def set_axes_limits(ax, q, tol=None):
