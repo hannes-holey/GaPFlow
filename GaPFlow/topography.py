@@ -23,8 +23,12 @@
 #
 import ContactMechanics as CM
 import numpy as np
+import copy
+
 import numpy.typing as npt
 from typing import Tuple
+
+import warnings
 
 NDArray = npt.NDArray[np.floating]
 
@@ -212,7 +216,8 @@ class Topography:
                 E=prop['elastic']['E'],
                 v=prop['elastic']['v'],
                 alpha_underrelax=prop['elastic']['alpha_underrelax'],
-                grid=grid
+                grid=grid,
+                n_images=prop['elastic']['n_images']
             )
         else:
             self.elastic = False
@@ -294,18 +299,36 @@ class ElasticDeformation:
                  E: float,
                  v: float,
                  alpha_underrelax: float,
-                 grid: dict
+                 grid: dict,
+                 n_images: int
     ) -> None:
         
         self.area_per_cell = grid['dx'] * grid['dy']
         Nx, Ny = grid['Nx']+2, grid['Ny']+2
         self.u_prev = np.zeros((Nx, Ny))
         self.alpha_underrelax = alpha_underrelax
+        n_images = n_images
 
         perX = grid['bc_xE_P'][0]
         perY = grid['bc_yS_P'][0]
 
         young_effective = E / (1 - v**2)
+
+        # check for semi-periodic 1D cases where direction with N=1 is marked as periodic
+        if (perX != perY) and ((perY and grid['Ny'] == 1) or (perX and grid['Nx'] == 1)):
+                warnings.warn(
+                    "You specified a semi-periodic 1D problem.\n"
+                    "For the calculation of elastic deformation, we assume a line contact with "
+                    "non-periodic boundary conditions in both directions.\n"
+                    "For the calculation of the effective force F=p*A per cell, "
+                    "we assume a unit length of {} = 1 m."
+                    .format("Ly" if perY else "Lx"))
+            grid = copy.deepcopy(grid)  # do not modify original grid
+            if perY:
+                grid['Ly'] = 1.0
+            else:
+                grid['Lx'] = 1.0
+            n_images = 0  # make it effectively non-periodic
 
         if perX and perY:
             self.periodicity = 'full'
@@ -319,7 +342,8 @@ class ElasticDeformation:
             self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
                                                             young=young_effective,
                                                             physical_sizes=(grid['Lx'], grid['Ly']),
-                                                            periodicity=(perX, perY)
+                                                            periodicity=(perX, perY),
+                                                            n_images=n_images
                                                             )
         else:
             self.periodicity = 'none'
