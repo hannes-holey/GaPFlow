@@ -27,7 +27,7 @@ import numpy as np
 import polars as pl
 
 from GaPFlow.topography import create_midpoint_grid
-from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp
+from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp, mpl_style_context
 
 import numpy.typing as npt
 NDArray = npt.NDArray[np.floating]
@@ -74,7 +74,6 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     return fig, ax
 
-
 def plot_height(filename, grid=None):
     """Wrapper function for plotting from topo.nc file.
     Detects whether 1D or 2D.
@@ -104,8 +103,9 @@ def plot_height(filename, grid=None):
     else:
         _plot_height_2d(topo[0], grid)
 
+@mpl_style_context
 def plot_height_1d(h: NDArray, 
-                   h0: NDArray | None = None, 
+                   h0: NDArray | None = None,
                    u: NDArray | None = None, 
                    p: NDArray | None = None
                    ) -> None:

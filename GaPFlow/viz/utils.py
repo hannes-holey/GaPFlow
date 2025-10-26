@@ -25,6 +25,8 @@ import os
 import time
 import numpy as np
 from typing import Tuple
+import matplotlib.pyplot as plt
+from functools import wraps
 
 from GaPFlow.topography import create_midpoint_grid
 
@@ -144,3 +146,22 @@ def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
     if tol is not None:
         ax.plot(x, mean + 1.96 * tol, '--', color=color)
         ax.plot(x, mean - 1.96 * tol, '--', color=color)
+
+def mpl_style_context(func):
+    """Central wrapper for applying different mpl styles for
+    plotting and animation functions.
+    
+    Using the context manager to prevent persistently changing 
+    global matplotlib settings.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try: # nicer looking plots with tueplots if available
+            from tueplots import bundles
+            rcparams = bundles.beamer_moml()
+        except ImportError:
+            rcparams = plt.rcParams.copy()
+
+        with plt.rc_context(rcparams):
+            return func(*args, **kwargs)
+    return wrapper

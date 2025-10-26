@@ -30,7 +30,7 @@ from IPython.display import HTML, Video
 import netCDF4
 
 from GaPFlow.topography import create_midpoint_grid
-from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp
+from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context
 
 
 def animate(filename, seconds=10, save=False, show=True, disc=None):
@@ -296,20 +296,8 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
 
     plt.show()
 
-def animate_1d(*args, **kwargs) -> None:
-    """Wrapper for applying mpl style context manager.
-    Prevents persistently changing global matplotlib settings.
-    """
-    try: # nicer looking plots with tueplots if available
-        from tueplots import bundles
-        rcparams = bundles.beamer_moml()
-    except ImportError:
-        rcparams = plt.rcParams.copy()
-
-    with plt.rc_context(rcparams):
-        return animate_1d_inner(*args, **kwargs)
-
-def animate_1d_inner(filename_sol: str,
+@mpl_style_context
+def animate_1d(filename_sol: str,
                      filename_topo: str,
                      seconds: float = 10.,
                      save: bool = False,
