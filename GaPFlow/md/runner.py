@@ -346,8 +346,8 @@ class GoldAlkane(MolecularDynamics):
         args["gap_height"] = float(X[3])
 
         if self.params['wall_rotation']:
-            dh_dz = float(X[4])
-            args["rotation"] = -np.arctan(dh_dz) / np.pi * 180.
+            dh_dx = float(X[4])
+            args["rotation"] = -np.arctan(dh_dx) / np.pi * 180.
 
         cwd = os.getcwd()
         os.chdir(proto_ds_datapath)
