@@ -212,6 +212,19 @@ class WallStress(GaussianProcessSurrogate):
         return X, flag
 
     @property
+    def _Ytrain(self) -> JAXArray:
+        """
+        Training outputs for GP corresponding to the lower and upper wall stress.
+
+        Returns
+        -------
+        jax.Array
+            Concatenated array of training outputs (lower then upper).
+        """
+        return jnp.concatenate([self.database._Ytrain[:self.last_fit_train_size, self._out_index + 1],
+                                self.database._Ytrain[:self.last_fit_train_size, self._out_index + 7]])
+
+    @property
     def Ytrain(self) -> JAXArray:
         """
         Training outputs for GP corresponding to the lower and upper wall stress.
@@ -221,8 +234,7 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Concatenated array of training outputs (lower then upper).
         """
-        return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, self._out_index + 1],
-                                self.database.Ytrain[:self.last_fit_train_size, self._out_index + 7]])
+        return self._Ytrain / self.Yscale
 
     @property
     def Yscale(self) -> JAXArray:
@@ -234,8 +246,10 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Scalar-like array representing the maximum of selected Y scales.
         """
-        return jnp.max(self.database.Y_scale[jnp.array([self._out_index + 1,
-                                                        self._out_index + 7], dtype=int)])
+        indices = jnp.array([self._out_index + 1,
+                             self._out_index + 7], dtype=int)
+
+        return jnp.max(self.database.Y_scale[indices])
 
     @property
     def Yerr(self) -> JAXArray:
@@ -248,10 +262,10 @@ class WallStress(GaussianProcessSurrogate):
             Observation noise standard deviation normalized by Yscale.
         """
 
-        Yerr_all = jnp.concatenate([self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
-                                    self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
+        Yerr_all = jnp.concatenate([self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
+                                    self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
 
-        return jnp.mean(Yerr_all)
+        return jnp.mean(Yerr_all / self.Yscale)
 
     @property
     def kernel_variance(self) -> JAXArray:
@@ -501,10 +515,16 @@ class Pressure(GaussianProcessSurrogate):
         return self.database.Xtrain[:, self.active_dims]
 
     @property
+    def _Ytrain(self) -> JAXArray:
+        """Training outputs for pressure GP (normalized)."""
+        # normalized
+        return self.database._Ytrain[:self.last_fit_train_size, 0]
+
+    @property
     def Ytrain(self) -> JAXArray:
         """Training outputs for pressure GP (normalized)."""
         # normalized
-        return self.database.Ytrain[:self.last_fit_train_size, 0]
+        return self._Ytrain / self.Yscale
 
     @property
     def Yscale(self) -> JAXArray:
