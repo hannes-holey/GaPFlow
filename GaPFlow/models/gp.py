@@ -27,6 +27,7 @@ import numpy as np
 from copy import deepcopy
 from datetime import datetime
 from typing import Tuple, List
+from functools import partial
 
 import jax
 import jax.numpy as jnp
@@ -137,6 +138,7 @@ class GaussianProcessSurrogate:
         self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
+            self.cache = None
             self.database = database
             self.last_fit_train_size = 0
 
@@ -313,6 +315,39 @@ class GaussianProcessSurrogate:
         if reason == 0:
             print('#' + 50 * '-')
 
+        self.cache = None
+
+    @partial(
+        jax.jit,
+        static_argnames=('self', 'return_var')
+    )
+    def _repredict(self, alpha, noise, Xtest, return_var=True):
+
+        k_star = self.gp.kernel(self.gp.X, Xtest)
+        mean = k_star.T @ alpha  # reuse previous alpha
+
+        if return_var:
+            v = self.gp.solver.solve_triangular(k_star)
+            K = self.gp.kernel(Xtest, Xtest) + noise
+            cov = K - v.T @ v
+            var = jnp.diag(cov)
+            return mean, var
+        else:
+            return mean
+
+    @partial(
+        jax.jit,
+        static_argnames=('self',)
+    )
+    def _predict(self, Ytrain, Xtest):
+        cond_gp = self.gp.condition(Ytrain, Xtest).gp
+        m = cond_gp.loc
+        v = cond_gp.variance
+        alpha = cond_gp.mean_function.alpha
+        noise = cond_gp.noise
+
+        return m, v, alpha, noise
+
     def _infer(self) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction on test data.
@@ -324,11 +359,26 @@ class GaussianProcessSurrogate:
         predictive_var : jax.Array
             Predicted variance field.
         """
-        m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
+
+        # TODO: runs w/o active learning enabled don't need to predict variances in every step
+        # (only when written to disk instead)
+        if self.cache is None:
+            m, v, alpha, noise = self._predict(self.Ytrain, self.Xtest)
+            # self.cache = (alpha, noise)
+            self.v = v
+        else:
+            m = self._repredict(*self.cache, self.Xtest, return_var=False)
+            # m, v = self._repredict(*self.cache, self.Xtest, return_var=True)
+            # self.v = v
+
+        # TODO: test
+        # m1, v1 = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
+        # print(jnp.max(jnp.abs(m1 - m)), jnp.max(jnp.abs(v1 - v)))
+
         _, nx, ny = self.solution.shape
 
         predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
-        predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
+        predictive_var = self.v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
 
         self.variance_tol = jnp.maximum(
             self.atol * self.Yerr * self.Yscale, self.rtol * self.Yscale
