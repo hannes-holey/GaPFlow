@@ -125,6 +125,7 @@ class GaussianProcessSurrogate:
     rtol: float
     atol: float
     max_steps: int
+    pause_steps: int
     params_init: dict
     noise: Tuple[float, float]
     prop: dict
@@ -139,6 +140,7 @@ class GaussianProcessSurrogate:
         if self.is_gp_model:
             self.database = database
             self.last_fit_train_size = 0
+            self.pause = 0
 
             # Initialize timers
             ref = datetime.now()
@@ -375,6 +377,7 @@ class GaussianProcessSurrogate:
         """
         if predictor:
             self.step += 1
+            self.pause = max(-1, self.pause - 1)
             if self.last_fit_train_size < self.database.size:
                 tic = datetime.now()
                 self._train(reason=0)
@@ -387,7 +390,7 @@ class GaussianProcessSurrogate:
         self.cumtime_infer += toc - tic
 
         # Active learning loop
-        if predictor:
+        if predictor and self.pause < 0:
             counter = 0
             before = deepcopy(self.maximum_variance / self.variance_tol)
             while not self.trusted and counter < self.max_steps:
@@ -408,6 +411,12 @@ class GaussianProcessSurrogate:
                 after = self.maximum_variance / self.variance_tol
                 print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
+
+            if counter == self.max_steps:
+                print("# Active learning loop missed uncertainty threshold")
+                print(f"# Pause for {self.pause_steps} steps...")
+                print('#' + 50 * '-')
+                self.pause = self.pause_steps
 
         return m, v
 
