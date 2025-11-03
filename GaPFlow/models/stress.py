@@ -92,6 +92,7 @@ class WallStress(GaussianProcessSurrogate):
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
+            self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
             self.build_gp = multi_in_multi_out
         else:
@@ -470,6 +471,7 @@ class Pressure(GaussianProcessSurrogate):
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
+            self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
             self.build_gp = multi_in_single_out
         else:

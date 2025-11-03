@@ -383,6 +383,18 @@ class Problem:
         return self.__field.p
 
     @property
+    def q_has_nan(self) -> bool:
+        return np.any(np.isnan(self.q))
+
+    @property
+    def q_has_negative_density(self) -> bool:
+        return np.any(self.q[0] < 0.)
+
+    @property
+    def q_is_valid(self) -> bool:
+        return ~self.q_has_nan and ~self.q_has_negative_density
+
+    @property
     def centerline_mass_density(self) -> npt.NDArray[np.floating]:
         """Centerline mass density w/o ghost buffers"""
         return self.__field.p[0, 1:-1, self.grid['Ny'] // 2]
@@ -489,6 +501,29 @@ class Problem:
         if self.numerics["adaptive"]:
             self.dt = self.numerics["CFL"] * self.dt_crit
 
+    def finalize(self, q0: npt.NDArray) -> None:
+        """Reset the solution field to the one of the ols time step and update stresses.
+        Sets the _stop flag to abort the simulation run.
+
+        Parameters
+        ----------
+        q0 : np.ndarray
+            Solution field
+        """
+        if self.q_has_nan:
+            print('NaN detected.', end=' ')
+        elif self.q_has_negative_density:
+            print('Negative density detected.', end=' ')
+
+        self.__field.p = q0
+        self.pressure.update(predictor=False)
+        self.wall_stress_xz.update(predictor=False)
+        self.wall_stress_yz.update(predictor=False)
+        self.bulk_stress.update()
+
+        print('Writing previous step and aborting simulation.')
+        self._stop = True
+
     def update(self) -> None:
         """
         Single update iteration performing predictor-corrector for each sweep
@@ -533,11 +568,15 @@ class Problem:
         # second-order temporal averaging (Crank-Nicolson-like)
         self.__field.p = (self.__field.p + q0) / 2.0
 
-        self.post_update()
+        if self.q_is_valid:
+            self.post_update()
+        else:
+            self.finalize(q0)
 
     # ---------------------------
     # Ghost cell handling
     # ---------------------------
+
     def _communicate_ghost_buffers(self) -> None:
         """
         Update ghost-cell values according to boundary conditions stored in

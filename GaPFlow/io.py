@@ -392,6 +392,7 @@ def sanitize_gp(d):
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
+            out[sk]['pause_steps'] = int(ds.get('pause_steps', 100))
 
             # For shear/2D: need to distinguish (x and y)
             if sk == 'press':
