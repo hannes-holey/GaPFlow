@@ -24,6 +24,7 @@
 import os
 import sys
 import abc
+import shutil
 import warnings
 import dtoolcore
 from mpi4py import MPI
@@ -353,6 +354,7 @@ class GoldAlkane(MolecularDynamics):
         os.chdir(proto_ds_datapath)
         self.num_worker = write_template(args)
         build_template(args)
+        shutil.rmtree('output_ttree')
         os.chdir(cwd)
 
     def read_output(self):

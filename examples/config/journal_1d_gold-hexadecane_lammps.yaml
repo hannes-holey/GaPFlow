@@ -52,6 +52,7 @@ db:
 md:
     system: mol
     rotation: False
+    wall_rotation: False
     ncpu: 6 
     wall: eam
     molecule: hexadecane
