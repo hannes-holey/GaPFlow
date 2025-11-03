@@ -38,12 +38,14 @@ gp:
         rtol: 0.
         obs_stddev: 2.e-2
         max_steps: 10
+        active_learning: True
     shear:
         fix_noise: True
         atol: 1.5
         rtol: 0.
         obs_stddev: 4.e-3
         max_steps: 10
+        active_learning: True
 db:
     # dtool_path: data/train  # defaults to options['output']/train   
     init_size: 5
