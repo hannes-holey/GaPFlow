@@ -325,12 +325,12 @@ class GaussianProcessSurrogate:
         static_argnames=('self', 'return_var')
     )
     def _repredict(self, alpha, noise, Xtest, return_var=False):
+        # FIXME
 
         k_star = self.gp.kernel(self.gp.X, Xtest)
         mean = k_star.T @ alpha  # reuse previous alpha
 
         if return_var:
-            # FIXME: this is currently slower than the GP's own predict method
             v = self.gp.solver.solve_triangular(k_star)
             K = self.gp.kernel(Xtest, Xtest) + noise
             cov = K - v.T @ v
@@ -356,16 +356,22 @@ class GaussianProcessSurrogate:
         if self.cache is None:
             m, v, alpha, noise = self._predict(self.Ytrain, self.Xtest)
             self.cache = (alpha, noise)
-            self._predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
         else:
-            m = self._repredict(*self.cache, self.Xtest, return_var=False)
+            # TODO: use cached GP here (self._repredict)
+            m = self.gp.predict(self.Ytrain, self.Xtest, return_var=False)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
 
         return predictive_mean
 
     def _infer_mean_var(self) -> Tuple[JAXArray, JAXArray]:
-        m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
+        if self.cache is None:
+            m, v, alpha, noise = self._predict(self.Ytrain, self.Xtest)
+            self.cache = (alpha, noise)
+        else:
+            # TODO: use cached GP here (self._repredict)
+            m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
+
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
 
