@@ -319,7 +319,6 @@ class Problem:
         self._tic = datetime.now()
         while not self.converged and self.step < self.max_it and not self._stop:
             self.update()
-            self.topo.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
@@ -549,6 +548,8 @@ class Problem:
 
         # second-order temporal averaging (Crank-Nicolson-like)
         self.__field.p = (self.__field.p + q0) / 2.0
+
+        self.topo.update()
 
         self.post_update()
 
