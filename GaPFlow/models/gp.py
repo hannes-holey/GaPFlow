@@ -27,7 +27,6 @@ import numpy as np
 from copy import deepcopy
 from datetime import datetime
 from typing import Tuple, List
-from functools import partial
 
 import jax
 import jax.numpy as jnp
@@ -325,7 +324,7 @@ class GaussianProcessSurrogate:
         if self.cond_gp is None:
             m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
         else:
-            m = _repredict(self.gp, self.cond_gp, self.Xtest, return_var=False)
+            m = _repredict_mean(self.gp, self.cond_gp, self.Xtest)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
 
@@ -336,7 +335,7 @@ class GaussianProcessSurrogate:
         if self.cond_gp is None:
             m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
         else:
-            m, v = _repredict(self.gp, self.cond_gp, self.Xtest, return_var=True)
+            m, v = _repredict_mean_var(self.gp, self.cond_gp, self.Xtest)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
@@ -476,26 +475,29 @@ class GaussianProcessSurrogate:
         ]).reshape(self.database.num_features, -1).T
 
 
-@partial(
-    jax.jit,
-    static_argnames=('return_var')
-)
-def _repredict(gp: GaussianProcess,
-               cond_gp: GaussianProcess,
-               Xtest: JAXArray,
-               return_var: bool = False) -> Tuple[JAXArray, JAXArray] | JAXArray:
+@jax.jit
+def _repredict_mean_var(gp: GaussianProcess,
+                        cond_gp: GaussianProcess,
+                        Xtest: JAXArray) -> Tuple[JAXArray, JAXArray]:
+
+    Ks = gp.kernel(gp.X, Xtest)
+    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+    v = gp.solver.solve_triangular(Ks)
+    Kss = gp.kernel(Xtest) + cond_gp.noise.diag
+    var = Kss - jnp.sum(v**2, axis=0)
+
+    return mean, var
+
+
+@jax.jit
+def _repredict_mean(gp: GaussianProcess,
+                    cond_gp: GaussianProcess,
+                    Xtest: JAXArray) -> Tuple[JAXArray, JAXArray] | JAXArray:
 
     Ks = gp.kernel(gp.X, Xtest)
     mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
 
-    if return_var:
-        v = gp.solver.solve_triangular(Ks)
-        Kss = gp.kernel(Xtest) + cond_gp.noise.diag
-        var = Kss - jnp.sum(v**2, axis=0)
-
-        return mean, var
-    else:
-        return mean
+    return mean
 
 
 @jax.jit
