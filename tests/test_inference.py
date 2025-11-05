@@ -1,9 +1,12 @@
 import pytest
-import numpy as np
+import jax.numpy as jnp
 from GaPFlow import Problem
 
 
-def test_predict(tmp_path):
+def test_predict_repredict(tmp_path):
+    # The choice of unctertainty tolerances should lead to both
+    # pressure and shear stress triggering one active learning step.
+
     sim = f"""
 options:
     output: {tmp_path}
@@ -41,21 +44,21 @@ properties:
 gp:
     press:
         fix_noise: True
-        atol: 1.5
+        atol: .7
         rtol: 0.
         obs_stddev: 2.e-2
         max_steps: 10
         active_learning: True
     shear:
         fix_noise: True
-        atol: 1.5
+        atol: .9
         rtol: 0.
         obs_stddev: 4.e-3
         max_steps: 10
         active_learning: True
 db:
     # dtool_path: data/train  # defaults to options['output']/train
-    init_size: 5
+    init_size: 3
     init_method: rand
     init_width: 0.01 # default (for density)
 """
@@ -63,28 +66,24 @@ db:
     testProblem = Problem.from_string(sim)
     testProblem.pre_run()
 
-    mean1, var1 = testProblem.pressure.predict(predictor=True,
-                                               compute_var=True)
+    for _ in range(3):
 
-    # Uses cached Cholesky factors and variance
-    mean2, var2 = testProblem.pressure.predict(predictor=True,
-                                               compute_var=False)
+        # Remove conditioned GPs for testing
+        testProblem.pressure.cond_gp = None
+        testProblem.wall_stress_xz.cond_gp = None
 
-    np.testing.assert_almost_equal(np.asarray(mean1),
-                                   np.asarray(mean2))
+        # Builds new conditioned GP (_predict)
+        p_mean1, p_var1 = testProblem.pressure._infer_mean_var()
+        s_mean1, s_var1 = testProblem.wall_stress_xz._infer_mean_var()
 
-    np.testing.assert_almost_equal(np.asarray(var1),
-                                   np.asarray(var2))
+        # Uses cached Cholesky factors (_repredict)
+        p_mean2, p_var2 = testProblem.pressure._infer_mean_var()
+        s_mean2, s_var2 = testProblem.wall_stress_xz._infer_mean_var()
 
-    mean3, var3 = testProblem.wall_stress_xz.predict(predictor=True,
-                                                     compute_var=True)
+        assert jnp.isclose(jnp.max(jnp.abs(p_mean1 - p_mean2)), 0.)
+        assert jnp.isclose(jnp.max(jnp.abs(p_var1 - p_var2)), 0.)
 
-    # Uses cached Cholesky factors and variance
-    mean4, var4 = testProblem.wall_stress_xz.predict(predictor=True,
-                                                     compute_var=False)
+        assert jnp.isclose(jnp.max(jnp.abs(s_mean1 - s_mean2)), 0.)
+        assert jnp.isclose(jnp.max(jnp.abs(s_var1 - s_var2)), 0.)
 
-    np.testing.assert_almost_equal(np.asarray(mean3),
-                                   np.asarray(mean4))
-
-    np.testing.assert_almost_equal(np.asarray(var3),
-                                   np.asarray(var4))
+        testProblem.update()
