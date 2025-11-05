@@ -18,7 +18,8 @@ requires-python = ">3.10"
 dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.95.0",
-	"tinygp==0.3.0",
+	"tinygp>=0.3.0",
+	"jax>=0.8.0",
 	"jaxopt==0.8.5",
 	"netCDF4>=1.7.2",
 	"dtoolcore>=3.19.0",

@@ -139,7 +139,7 @@ class GaussianProcessSurrogate:
         self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
-            self.cache = None
+            self.cond_gp = None
             self.database = database
             self.last_fit_train_size = 0
             self.pause = 0
@@ -318,54 +318,26 @@ class GaussianProcessSurrogate:
             print('#' + 50 * '-')
 
         # Delete cache to force inference step with new training data
-        self.cache = None
-
-    @partial(
-        jax.jit,
-        static_argnames=('self', 'return_var')
-    )
-    def _repredict(self, alpha, noise, Xtest, return_var=False):
-
-        k_star = self.gp.kernel(self.gp.X, Xtest)
-        mean = k_star.T @ alpha  # reuse previous alpha
-
-        if return_var:
-            # FIXME: this is currently slower than the GP's own predict method
-            v = self.gp.solver.solve_triangular(k_star)
-            K = self.gp.kernel(Xtest, Xtest) + noise
-            cov = K - v.T @ v
-            var = jnp.diag(cov)
-            return mean, var
-        else:
-            return mean
-
-    @partial(
-        jax.jit,
-        static_argnames=('self',)
-    )
-    def _predict(self, Ytrain, Xtest):
-        cond_gp = self.gp.condition(Ytrain, Xtest).gp
-        m = cond_gp.loc
-        v = cond_gp.variance
-        alpha = cond_gp.mean_function.alpha
-        noise = cond_gp.noise
-
-        return m, v, alpha, noise
+        self.cond_gp = None
 
     def _infer_mean(self) -> JAXArray:
-        if self.cache is None:
-            m, v, alpha, noise = self._predict(self.Ytrain, self.Xtest)
-            self.cache = (alpha, noise)
-            self._predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
+
+        if self.cond_gp is None:
+            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
         else:
-            m = self._repredict(*self.cache, self.Xtest, return_var=False)
+            m = _repredict(self.gp, self.cond_gp, self.Xtest, return_var=False)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
 
         return predictive_mean
 
     def _infer_mean_var(self) -> Tuple[JAXArray, JAXArray]:
-        m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
+
+        if self.cond_gp is None:
+            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
+        else:
+            m, v = _repredict(self.gp, self.cond_gp, self.Xtest, return_var=True)
+
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
 
@@ -386,7 +358,7 @@ class GaussianProcessSurrogate:
 
         if compute_var:
             predictive_mean, self._predictive_var = self._infer_mean_var()
-            self.maximum_variance = np.max(self._predictive_var)
+            self.maximum_variance = jnp.max(self._predictive_var)
             self.variance_tol = jnp.maximum(self.atol * self.Yerr * self.Yscale,
                                             self.rtol * self.Yscale)**2
         else:
@@ -502,6 +474,40 @@ class GaussianProcessSurrogate:
             self.topography,
             self.extra
         ]).reshape(self.database.num_features, -1).T
+
+
+@partial(
+    jax.jit,
+    static_argnames=('return_var')
+)
+def _repredict(gp: GaussianProcess,
+               cond_gp: GaussianProcess,
+               Xtest: JAXArray,
+               return_var: bool = False) -> Tuple[JAXArray, JAXArray] | JAXArray:
+
+    Ks = gp.kernel(gp.X, Xtest)
+    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+
+    if return_var:
+        v = gp.solver.solve_triangular(Ks)
+        Kss = gp.kernel(Xtest) + cond_gp.noise.diag
+        var = Kss - jnp.sum(v**2, axis=0)
+
+        return mean, var
+    else:
+        return mean
+
+
+@jax.jit
+def _predict(gp: GaussianProcess,
+             Ytrain: JAXArray,
+             Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
+
+    cond_gp = gp.condition(Ytrain, Xtest).gp
+    m = cond_gp.loc
+    v = cond_gp.variance
+
+    return m, v, cond_gp
 
 
 # ----------------------------------------------------------------------
