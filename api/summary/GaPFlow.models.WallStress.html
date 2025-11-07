@@ -1,0 +1,867 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html"><link rel="search" title="Search" href="../../search.html"><link rel="next" title="GaPFlow.md.MolecularDynamics" href="GaPFlow.md.MolecularDynamics.html"><link rel="prev" title="GaPFlow.models.BulkStress" href="GaPFlow.models.BulkStress.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
+        <title>GaPFlow.models.WallStress - GaPFlow documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">GaPFlow  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">GaPFlow  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.Problem.html">GaPFlow.Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.viz.plotting.html">GaPFlow.viz.plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.viz.utils.html">GaPFlow.viz.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/hannes-holey/hans">Github repository</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/api/summary/GaPFlow.models.WallStress.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="gapflow-models-wallstress">
+<h1>GaPFlow.models.WallStress<a class="headerlink" href="#gapflow-models-wallstress" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GaPFlow.models.</span></span><span class="sig-name descname"><span class="pre">WallStress</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.models.WallStress" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">GaussianProcessSurrogate</span></code></p>
+<p>Wall stress model (wall shear/stress in xz or yz direction).</p>
+<p>This class can operate in two modes:
+- Deterministic: compute wall/boundary stresses from viscous models.
+- GP-based surrogate: train/predict wall stress using GaussianProcessSurrogate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fc</strong> (<em>muGrid.GlobalFieldCollection</em>) – Field collection that provides access to ‘pressure’, ‘gap’, ‘x’, ‘y’, etc.</p></li>
+<li><p><strong>prop</strong> (<em>dict</em>) – Physical properties (e.g., ‘shear’, ‘bulk’, optionally ‘piezo’, ‘thinning’).</p></li>
+<li><p><strong>geo</strong> (<em>dict</em>) – Geometry and flow parameters (e.g., ‘U’, ‘V’).</p></li>
+<li><p><strong>direction</strong> (<em>{'x'</em><em>, </em><em>'y'}</em><em>, </em><em>optional</em>) – Direction of the wall stress (‘x’ -&gt; xz component, ‘y’ -&gt; yz component).</p></li>
+<li><p><strong>data</strong> (<a class="reference internal" href="GaPFlow.Database.html#GaPFlow.Database" title="GaPFlow.Database"><em>Database</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – Training database if using GP surrogates.</p></li>
+<li><p><strong>gp</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – GP configuration dictionary (if using GP surrogates).</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">direction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'x'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.__init__" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<p class="rubric">Methods</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.__init__" title="GaPFlow.models.WallStress.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(fc, prop, geo[, direction, data, gp])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.init" title="GaPFlow.models.WallStress.init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.init_database" title="GaPFlow.models.WallStress.init_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_database</span></code></a>(dim)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.predict" title="GaPFlow.models.WallStress.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>([predictor, compute_var])</p></td>
+<td><p>Perform GP prediction, optionally updating the model via active learning (only in predictor step of the predictor-corrector time integration scheme)</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.print_opt_summary" title="GaPFlow.models.WallStress.print_opt_summary"><code class="xref py py-obj docutils literal notranslate"><span class="pre">print_opt_summary</span></code></a>(obj)</p></td>
+<td><p>Print summary of optimization results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.update" title="GaPFlow.models.WallStress.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>([predictor, compute_var])</p></td>
+<td><p>Update wall stress: compute deterministic stresses and, if enabled, perform GP prediction and place predicted mean and variance into the appropriate field entries.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.write" title="GaPFlow.models.WallStress.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<td><p>Log current GP hyperparameters and diagnostics.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Attributes</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.Xtest" title="GaPFlow.models.WallStress.Xtest"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Xtest</span></code></a></p></td>
+<td><p>Test inputs for GP prediction.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.Xtrain" title="GaPFlow.models.WallStress.Xtrain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Xtrain</span></code></a></p></td>
+<td><p>Training inputs for GP (duplicated to account for two outputs).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.Yerr" title="GaPFlow.models.WallStress.Yerr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Yerr</span></code></a></p></td>
+<td><p>Observational error (normalized by Yscale).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.Yscale" title="GaPFlow.models.WallStress.Yscale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Yscale</span></code></a></p></td>
+<td><p>Output scaling factor used for normalization.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.Ytrain" title="GaPFlow.models.WallStress.Ytrain"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Ytrain</span></code></a></p></td>
+<td><p>Training outputs for GP corresponding to the lower and upper wall stress.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.dh_dx" title="GaPFlow.models.WallStress.dh_dx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dh_dx</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.dh_dy" title="GaPFlow.models.WallStress.dh_dy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dh_dy</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.dp_dx" title="GaPFlow.models.WallStress.dp_dx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dp_dx</span></code></a></p></td>
+<td><p>Partial derivative of pressure with respect to x (∂p/∂x).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.dp_dy" title="GaPFlow.models.WallStress.dp_dy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dp_dy</span></code></a></p></td>
+<td><p>Partial derivative of pressure with respect to y (∂p/∂y).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.extra" title="GaPFlow.models.WallStress.extra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extra</span></code></a></p></td>
+<td><p>Return extra constant field, which can be used as input.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.full" title="GaPFlow.models.WallStress.full"><code class="xref py py-obj docutils literal notranslate"><span class="pre">full</span></code></a></p></td>
+<td><p>Full wall stress field including upper and lower components.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.height" title="GaPFlow.models.WallStress.height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.kernel_lengthscale" title="GaPFlow.models.WallStress.kernel_lengthscale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_lengthscale</span></code></a></p></td>
+<td><p>Return kernel lengthscale(s).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.kernel_variance" title="GaPFlow.models.WallStress.kernel_variance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_variance</span></code></a></p></td>
+<td><p>Return kernel variance (JAX scalar or array).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.lower" title="GaPFlow.models.WallStress.lower"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lower</span></code></a></p></td>
+<td><p>Lower-wall stress slice.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.obs_stddev" title="GaPFlow.models.WallStress.obs_stddev"><code class="xref py py-obj docutils literal notranslate"><span class="pre">obs_stddev</span></code></a></p></td>
+<td><p>Observation standard deviation (normalized).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.pressure" title="GaPFlow.models.WallStress.pressure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pressure</span></code></a></p></td>
+<td><p>Local pressure field.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.solution" title="GaPFlow.models.WallStress.solution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solution</span></code></a></p></td>
+<td><p>Return full solution field.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.topography" title="GaPFlow.models.WallStress.topography"><code class="xref py py-obj docutils literal notranslate"><span class="pre">topography</span></code></a></p></td>
+<td><p>Return the topography (height and gradients).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.trusted" title="GaPFlow.models.WallStress.trusted"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trusted</span></code></a></p></td>
+<td><p>Return True if model predictive variance is below tolerance.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.upper" title="GaPFlow.models.WallStress.upper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upper</span></code></a></p></td>
+<td><p>Upper-wall stress slice.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.name" title="GaPFlow.models.WallStress.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.is_gp_model" title="GaPFlow.models.WallStress.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.active_dims" title="GaPFlow.models.WallStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.build_gp" title="GaPFlow.models.WallStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.rtol" title="GaPFlow.models.WallStress.rtol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rtol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.atol" title="GaPFlow.models.WallStress.atol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">atol</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.max_steps" title="GaPFlow.models.WallStress.max_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_steps</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.pause_steps" title="GaPFlow.models.WallStress.pause_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pause_steps</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.params_init" title="GaPFlow.models.WallStress.params_init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params_init</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.noise" title="GaPFlow.models.WallStress.noise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">noise</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.prop" title="GaPFlow.models.WallStress.prop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prop</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.geo" title="GaPFlow.models.WallStress.geo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geo</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.Xtest">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Xtest</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.Xtest" title="Link to this definition">¶</a></dt>
+<dd><p>Test inputs for GP prediction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(X, flag) where X contains duplicated and scaled features and flag
+indicates which output (lower/upper) the sample corresponds to.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple of jax.Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.Xtrain">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Xtrain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.Xtrain" title="Link to this definition">¶</a></dt>
+<dd><p>Training inputs for GP (duplicated to account for two outputs).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>(X, flag) where X contains duplicated input rows and flag labels.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple of jax.Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.Yerr">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Yerr</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.Yerr" title="Link to this definition">¶</a></dt>
+<dd><p>Observational error (normalized by Yscale).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Observation noise standard deviation normalized by Yscale.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>jax.Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.Yscale">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Yscale</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.Yscale" title="Link to this definition">¶</a></dt>
+<dd><p>Output scaling factor used for normalization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Scalar-like array representing the maximum of selected Y scales.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>jax.Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.Ytrain">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Ytrain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.Ytrain" title="Link to this definition">¶</a></dt>
+<dd><p>Training outputs for GP corresponding to the lower and upper wall stress.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Concatenated array of training outputs (lower then upper).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>jax.Array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.active_dims">
+<span class="sig-name descname"><span class="pre">active_dims</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.active_dims" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.atol">
+<span class="sig-name descname"><span class="pre">atol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.atol" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.build_gp">
+<span class="sig-name descname"><span class="pre">build_gp</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">callable</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.build_gp" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.dh_dx">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dh_dx</span></span><a class="headerlink" href="#GaPFlow.models.WallStress.dh_dx" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.dh_dy">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dh_dy</span></span><a class="headerlink" href="#GaPFlow.models.WallStress.dh_dy" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.dp_dx">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dp_dx</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.dp_dx" title="Link to this definition">¶</a></dt>
+<dd><p>Partial derivative of pressure with respect to x (∂p/∂x).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Gradient along x computed with jnp.gradient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarra</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.dp_dy">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dp_dy</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.dp_dy" title="Link to this definition">¶</a></dt>
+<dd><p>Partial derivative of pressure with respect to y (∂p/∂y).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Gradient along y computed with jnp.gradient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.extra">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">extra</span></span><a class="headerlink" href="#GaPFlow.models.WallStress.extra" title="Link to this definition">¶</a></dt>
+<dd><p>Return extra constant field, which can be used as input.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.full">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">full</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.full" title="Link to this definition">¶</a></dt>
+<dd><p>Full wall stress field including upper and lower components.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Array holding 12 components for wall stress (6 lower + 6 upper).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.geo">
+<span class="sig-name descname"><span class="pre">geo</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.geo" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.height">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">height</span></span><a class="headerlink" href="#GaPFlow.models.WallStress.height" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.init">
+<span class="sig-name descname"><span class="pre">init</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.models.WallStress.init" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.init_database">
+<span class="sig-name descname"><span class="pre">init_database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dim</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.models.WallStress.init_database" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.is_gp_model">
+<span class="sig-name descname"><span class="pre">is_gp_model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.is_gp_model" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.kernel_lengthscale">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kernel_lengthscale</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.kernel_lengthscale" title="Link to this definition">¶</a></dt>
+<dd><p>Return kernel lengthscale(s).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.kernel_variance">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kernel_variance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.kernel_variance" title="Link to this definition">¶</a></dt>
+<dd><p>Return kernel variance (JAX scalar or array).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.lower">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">lower</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.lower" title="Link to this definition">¶</a></dt>
+<dd><p>Lower-wall stress slice.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Lower half of the wall stress components (6 entries).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.max_steps">
+<span class="sig-name descname"><span class="pre">max_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.max_steps" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.name" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.noise">
+<span class="sig-name descname"><span class="pre">noise</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.noise" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.obs_stddev">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">obs_stddev</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.obs_stddev" title="Link to this definition">¶</a></dt>
+<dd><p>Observation standard deviation (normalized).</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.params_init">
+<span class="sig-name descname"><span class="pre">params_init</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.params_init" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.pause_steps">
+<span class="sig-name descname"><span class="pre">pause_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.pause_steps" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.predict">
+<span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute_var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Array</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.predict" title="Link to this definition">¶</a></dt>
+<dd><p>Perform GP prediction, optionally updating the model via active learning
+(only in predictor step of the predictor-corrector time integration scheme)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>predictor</strong> (<em>bool</em><em>, </em><em>default=True</em>) – Whether to perform active learning updates.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>m</strong> (<em>jax.Array</em>) – Predictive mean.</p></li>
+<li><p><strong>v</strong> (<em>jax.Array</em>) – Predictive variance.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.pressure">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">pressure</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.pressure" title="Link to this definition">¶</a></dt>
+<dd><p>Local pressure field.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Pressure field from the field collection.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.print_opt_summary">
+<span class="sig-name descname"><span class="pre">print_opt_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obj</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.print_opt_summary" title="Link to this definition">¶</a></dt>
+<dd><p>Print summary of optimization results.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.prop">
+<span class="sig-name descname"><span class="pre">prop</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.prop" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.rtol">
+<span class="sig-name descname"><span class="pre">rtol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.rtol" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.solution">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">solution</span></span><a class="headerlink" href="#GaPFlow.models.WallStress.solution" title="Link to this definition">¶</a></dt>
+<dd><p>Return full solution field.</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.topography">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">topography</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.topography" title="Link to this definition">¶</a></dt>
+<dd><p>Return the topography (height and gradients).</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.trusted">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">trusted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.trusted" title="Link to this definition">¶</a></dt>
+<dd><p>Return True if model predictive variance is below tolerance.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.update">
+<span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">predictor</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">compute_var</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.update" title="Link to this definition">¶</a></dt>
+<dd><p>Update wall stress: compute deterministic stresses and, if enabled,
+perform GP prediction and place predicted mean and variance into the
+appropriate field entries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>predictor</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether this update is part of the predictor stage.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.upper">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">upper</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.upper" title="Link to this definition">¶</a></dt>
+<dd><p>Upper-wall stress slice.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Upper half of the wall stress components (6 entries).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.write" title="Link to this definition">¶</a></dt>
+<dd><p>Log current GP hyperparameters and diagnostics.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="GaPFlow.md.MolecularDynamics.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">GaPFlow.md.MolecularDynamics</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="GaPFlow.models.BulkStress.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">GaPFlow.models.BulkStress</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Hannes Holey
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">GaPFlow.models.WallStress</a><ul>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress"><code class="docutils literal notranslate"><span class="pre">WallStress</span></code></a><ul>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.__init__"><code class="docutils literal notranslate"><span class="pre">WallStress.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.Xtest"><code class="docutils literal notranslate"><span class="pre">WallStress.Xtest</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.Xtrain"><code class="docutils literal notranslate"><span class="pre">WallStress.Xtrain</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.Yerr"><code class="docutils literal notranslate"><span class="pre">WallStress.Yerr</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.Yscale"><code class="docutils literal notranslate"><span class="pre">WallStress.Yscale</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.Ytrain"><code class="docutils literal notranslate"><span class="pre">WallStress.Ytrain</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.active_dims"><code class="docutils literal notranslate"><span class="pre">WallStress.active_dims</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.atol"><code class="docutils literal notranslate"><span class="pre">WallStress.atol</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.build_gp"><code class="docutils literal notranslate"><span class="pre">WallStress.build_gp</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.dh_dx"><code class="docutils literal notranslate"><span class="pre">WallStress.dh_dx</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.dh_dy"><code class="docutils literal notranslate"><span class="pre">WallStress.dh_dy</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.dp_dx"><code class="docutils literal notranslate"><span class="pre">WallStress.dp_dx</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.dp_dy"><code class="docutils literal notranslate"><span class="pre">WallStress.dp_dy</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.extra"><code class="docutils literal notranslate"><span class="pre">WallStress.extra</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.full"><code class="docutils literal notranslate"><span class="pre">WallStress.full</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.geo"><code class="docutils literal notranslate"><span class="pre">WallStress.geo</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.height"><code class="docutils literal notranslate"><span class="pre">WallStress.height</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.init"><code class="docutils literal notranslate"><span class="pre">WallStress.init()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.init_database"><code class="docutils literal notranslate"><span class="pre">WallStress.init_database()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.is_gp_model"><code class="docutils literal notranslate"><span class="pre">WallStress.is_gp_model</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.kernel_lengthscale"><code class="docutils literal notranslate"><span class="pre">WallStress.kernel_lengthscale</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.kernel_variance"><code class="docutils literal notranslate"><span class="pre">WallStress.kernel_variance</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.lower"><code class="docutils literal notranslate"><span class="pre">WallStress.lower</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.max_steps"><code class="docutils literal notranslate"><span class="pre">WallStress.max_steps</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.name"><code class="docutils literal notranslate"><span class="pre">WallStress.name</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.noise"><code class="docutils literal notranslate"><span class="pre">WallStress.noise</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.obs_stddev"><code class="docutils literal notranslate"><span class="pre">WallStress.obs_stddev</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.params_init"><code class="docutils literal notranslate"><span class="pre">WallStress.params_init</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.pause_steps"><code class="docutils literal notranslate"><span class="pre">WallStress.pause_steps</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.predict"><code class="docutils literal notranslate"><span class="pre">WallStress.predict()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.pressure"><code class="docutils literal notranslate"><span class="pre">WallStress.pressure</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.print_opt_summary"><code class="docutils literal notranslate"><span class="pre">WallStress.print_opt_summary()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.prop"><code class="docutils literal notranslate"><span class="pre">WallStress.prop</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.rtol"><code class="docutils literal notranslate"><span class="pre">WallStress.rtol</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.solution"><code class="docutils literal notranslate"><span class="pre">WallStress.solution</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.topography"><code class="docutils literal notranslate"><span class="pre">WallStress.topography</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.trusted"><code class="docutils literal notranslate"><span class="pre">WallStress.trusted</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.update"><code class="docutils literal notranslate"><span class="pre">WallStress.update()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.upper"><code class="docutils literal notranslate"><span class="pre">WallStress.upper</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.write"><code class="docutils literal notranslate"><span class="pre">WallStress.write()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

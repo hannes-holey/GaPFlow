@@ -1,0 +1,43 @@
+﻿GaPFlow.md.MolecularDynamics
+============================
+
+.. currentmodule:: GaPFlow.md
+
+.. autoclass:: MolecularDynamics
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MolecularDynamics.__init__
+      ~MolecularDynamics.add_metadata_to_readme
+      ~MolecularDynamics.build_input_files
+      ~MolecularDynamics.create_dtool_dataset
+      ~MolecularDynamics.pretty_print
+      ~MolecularDynamics.read_output
+      ~MolecularDynamics.run
+      ~MolecularDynamics.write_dtool_readme
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~MolecularDynamics.ascii_art
+      ~MolecularDynamics.dtool_basepath
+      ~MolecularDynamics.input_names
+      ~MolecularDynamics.readme_template
+      ~MolecularDynamics.params
+      ~MolecularDynamics.main_file
+      ~MolecularDynamics.num_worker
+      ~MolecularDynamics.path
+      ~MolecularDynamics.is_mock
+   
+   

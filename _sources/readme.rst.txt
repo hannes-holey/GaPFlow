@@ -1,64 +1,137 @@
-HANS
-====
+GaPFlow
+=======
 
-|PyPI version| |CI| |Coverage|
+*Gap-averaged flow simulations with Gaussian Process regression.*
 
-This code implements the Height-Averaged Navier-Stokes (HANS) scheme for
-two-dimensional lubrication problems as described in the following
-paper:
+This code implements the solution of time-dependent lubrication problems
+as described in:
 
-`Holey, H. et al. (2022) Tribology Letters, 70(2),
-p. 36. <https://doi.org/10.1007/s11249-022-01576-5>`__
+`Holey, H. et al., Tribology Letters 70 (2022) <https://doi.org/10.1007/s11249-022-01576-5>`__
+
+The extension to atomistic-continuum multiscale simulations with
+Gaussian process (GP) surrogate models has been described in:
+
+`Holey, H. et al., Science Advances 11, eadx4546 (2025) <https://doi.org/10.1126/sciadv.adx4546>`__
+
+The code uses `µGrid <https://muspectre.github.io/muGrid/>`__ for
+handling macroscale fields and
+`tinygp <https://tinygp.readthedocs.io/en/stable/index.html>`__ as GP
+library. Molecular dynamics (MD) simulations run with
+`LAMMPS <https://docs.lammps.org>`__ through its `Python
+interface <https://docs.lammps.org/Python_head.html>`__.
 
 Installation
 ------------
 
-Packaged versions can be installed via
+Install
+`µGrid <https://muspectre.github.io/muGrid/GettingStarted.html>`__\ ’s
+Python bindings
 
 ::
 
-   pip install hans
+   pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
 
-Multiscale simulations require a working installation of
-`LAMMPS <https://www.lammps.org/#gsc.tab=0>`__. New molecular dynamics
-runs are triggered using the Python interface of LAMMPS. Therefore
-LAMMPS has to be build as a shared library. Please follow the
-installation instructions of
-`LAMMPS <https://docs.lammps.org/Python_install.html>`__.
-
-Examples
---------
-
-Run from the command line with
+and make sure MPI and PnetCDF get detected. For manual installations of
+PnetCDF (recommended), you may need to tell ``pkg_config`` where to find
+it, e.g.
 
 ::
 
-   mpirun -n <NP> python3 -m hans -i <input_file> [-p] [-r <restart_file>]
+   export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
 
-where ``NP`` is the number of MPI processes. The plot option (``-p``,
-``--plot``) is only available for serial execution. Example input files
-as well as jupyter-notebooks can be found in the
-`examples <examples/>`__ directory.
+for instalations under ``$HOME/.local/``.
 
-The command line interface contains some scripts for plotting and
-creating animations. For instance, 1D profiles of converged solutions
-can be displayed with
+After that run
 
 ::
 
-   plot1D_last.py
+   pip install -e .[test]
 
-Tests
------
+for an editable installation with optional dependecies for testing
+(using ``pytest``).
 
-Run all tests from the main source directory with
+Minimal example
+---------------
 
-::
+Simulation inputs are commonly provided in YAML files. A typical input
+file might look like this:
 
-   pytest
+.. code:: yaml
 
-or append the path to the test definition file (located in
-`tests <tests>`__) to run selected tests only.
+   # examples/journal.yaml
+   options:
+       output: data/journal
+       write_freq: 10
+   grid:
+       dx: 1.e-5
+       dy: 1.
+       Nx: 100
+       Ny: 1
+       xE: ['D', 'N', 'N']
+       xW: ['D', 'N', 'N']
+       yS: ['P', 'P', 'P']
+       yN: ['P', 'P', 'P']
+       xE_D: 877.7007
+       xW_D: 877.7007
+   geometry:
+       type: journal
+       CR: 1.e-2
+       eps: 0.7
+       U: 0.1
+       V: 0.
+   numerics:
+       tol: 1e-9
+       dt: 1e-10
+       max_it: 200
+   properties:
+       shear: 0.0794
+       bulk: 0.
+       EOS: DH
+       P0: 101325
+       rho0: 877.7007
+       T0: 323.15
+       C1: 3.5e10
+       C2: 1.23
+
+Note that this example uses fixed-form constitutive laws without GP
+surrogate models or MD data. More example input files can be found in
+the examples directory.
+
+The input files can be used to start a simulation from the command line
+
+.. code:: bash
+
+   python -m GaPFlow -i my_input_file.yaml
+
+or from a Python script
+
+.. code:: python
+
+   from GaPFlow.problem import Problem
+
+   myProblem = Problem.from_yaml('my_input_file.yaml')
+   myProblem.run()
+
+Simulation output is stored under the location specified in the input
+file. After successful completion, you should find the following files.
+- ``config.yml``: A sanitized version of your simulation input. -
+``gap.nc``: NetCDF file containing the gap height and gradients. -
+``sol.nc``: NetCDF file containing the solution and stress fields. -
+``history.csv``: Contains the time series of scalar quantities (step,
+Ekin, residual, …) - ``gp_[xz,yz,zz].csv`` (Optional): Contains the time
+series of GP hyperparameters, database size, etc. - ``Xtrain.npy``
+(Optional): Training data inputs - ``Ytrain.npy`` (Optional): Training
+data observations - ``Ytrain_err.npy`` (Optional): Training data
+observation error
+
+The code comes with a few handy command line tools for visualizations 
+like this one
+
+.. figure:: assets/journal.gif
+   :alt: Journal bearing simulation
+
+which shows the transient solution of a 1D journal bearing with active
+learning of the constitutive behavior.
 
 Documentation
 -------------
@@ -68,18 +141,12 @@ A Sphinx-generated documentation can be built locally with
 ::
 
    cd doc
-   sphinx-apidoc -o . ../hans
+   sphinx-apidoc -o . ../GaPFlow
    make html
 
 Funding
 -------
 
-This work is funded by the German Research Foundation (DFG) through GRK
-2450.
-
-.. |PyPI version| image:: https://badge.fury.io/py/hans.svg
-   :target: https://badge.fury.io/py/hans
-.. |CI| image:: https://github.com/hannes-holey/hans/actions/workflows/ci.yaml/badge.svg?branch=main
-   :target: https://github.com/hannes-holey/hans/actions/workflows/ci.yaml
-.. |Coverage| image:: https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg
-   :target: https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg
+This work received funding from the German Research Foundation (DFG)
+through GRK 2450 and from the Alexander von Humboldt Foundation through
+a Feodor Lynen Fellowship.

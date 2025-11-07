@@ -1,0 +1,66 @@
+﻿GaPFlow.models.WallStress
+=========================
+
+.. currentmodule:: GaPFlow.models
+
+.. autoclass:: WallStress
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~WallStress.__init__
+      ~WallStress.init
+      ~WallStress.init_database
+      ~WallStress.predict
+      ~WallStress.print_opt_summary
+      ~WallStress.update
+      ~WallStress.write
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~WallStress.Xtest
+      ~WallStress.Xtrain
+      ~WallStress.Yerr
+      ~WallStress.Yscale
+      ~WallStress.Ytrain
+      ~WallStress.dh_dx
+      ~WallStress.dh_dy
+      ~WallStress.dp_dx
+      ~WallStress.dp_dy
+      ~WallStress.extra
+      ~WallStress.full
+      ~WallStress.height
+      ~WallStress.kernel_lengthscale
+      ~WallStress.kernel_variance
+      ~WallStress.lower
+      ~WallStress.obs_stddev
+      ~WallStress.pressure
+      ~WallStress.solution
+      ~WallStress.topography
+      ~WallStress.trusted
+      ~WallStress.upper
+      ~WallStress.name
+      ~WallStress.is_gp_model
+      ~WallStress.active_dims
+      ~WallStress.build_gp
+      ~WallStress.rtol
+      ~WallStress.atol
+      ~WallStress.max_steps
+      ~WallStress.pause_steps
+      ~WallStress.params_init
+      ~WallStress.noise
+      ~WallStress.prop
+      ~WallStress.geo
+   
+   

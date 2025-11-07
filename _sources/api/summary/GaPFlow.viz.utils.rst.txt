@@ -1,0 +1,14 @@
+﻿GaPFlow.viz.utils
+=================
+
+.. automodule:: GaPFlow.viz.utils
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_pipeline
+      set_axes_labels
+      set_axes_limits
+   

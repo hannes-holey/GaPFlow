@@ -1,25 +1,19 @@
-.. hans documentation master file, created by
+.. GaPFlow documentation master file, created by
    sphinx-quickstart on Mon Apr 14 10:10:40 2025.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-hans
-====
-
+.. include:: readme.rst
 
 .. toctree::
-   :maxdepth: 4
-   :caption: Notes
+   :maxdepth: 2
+   :caption: Table of Contents
+   :hidden:
 
-   readme
-   ./theory/index
-
-
-.. toctree::
-   :maxdepth: 4
-   :caption: Package reference
-
-   modules
+   self
+   ./tutorials/index
+   ./api/index
+   Github repository <https://github.com/hannes-holey/hans>
 
 
 Indices and tables

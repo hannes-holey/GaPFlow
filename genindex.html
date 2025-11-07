@@ -1,1113 +1,1167 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><link rel="index" title="Index" href="#"><link rel="search" title="Search" href="search.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 --><title>Index - GaPFlow documentation</title>
+<link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
 
 
-<!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; hans  documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
-      <link rel="stylesheet" type="text/css" href="_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
-
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=5929fcd5"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="_static/js/theme.js"></script>
-    <link rel="index" title="Index" href="#" />
-    <link rel="search" title="Search" href="search.html" /> 
-</head>
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
 
-<body class="wy-body-for-nav"> 
-  <div class="wy-grid-for-nav">
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
 
-          
-          
-          <a href="index.html" class="icon icon-home">
-            hans
-          </a>
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption" role="heading"><span class="caption-text">Notes</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="readme.html">HANS</a></li>
-<li class="toctree-l1"><a class="reference internal" href="theory/index.html">Theory</a></li>
-</ul>
-<p class="caption" role="heading"><span class="caption-text">Package reference</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="modules.html">hans</a></li>
-</ul>
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
 
-        </div>
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">GaPFlow  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
       </div>
-    </nav>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <span class="sidebar-brand-text">GaPFlow  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">GaPFlow</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/01_macro_equations.html">Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.viz.plotting.html">GaPFlow.viz.plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.viz.utils.html">GaPFlow.viz.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/hannes-holey/hans">Github repository</a></li>
+</ul>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">hans</a>
-      </nav>
-
-      <div class="wy-nav-content">
-        <div class="rst-content">
-          <div role="navigation" aria-label="Page navigation">
-  <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Index</li>
-      <li class="wy-breadcrumbs-aside">
-      </li>
-  </ul>
-  <hr/>
 </div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
-             
-
-<h1 id="index">Index</h1>
-
-<div class="genindex-jumpbox">
- <a href="#A"><strong>A</strong></a>
- | <a href="#B"><strong>B</strong></a>
- | <a href="#C"><strong>C</strong></a>
- | <a href="#D"><strong>D</strong></a>
- | <a href="#E"><strong>E</strong></a>
- | <a href="#F"><strong>F</strong></a>
- | <a href="#G"><strong>G</strong></a>
- | <a href="#H"><strong>H</strong></a>
- | <a href="#I"><strong>I</strong></a>
- | <a href="#L"><strong>L</strong></a>
- | <a href="#M"><strong>M</strong></a>
- | <a href="#N"><strong>N</strong></a>
- | <a href="#P"><strong>P</strong></a>
- | <a href="#R"><strong>R</strong></a>
- | <a href="#S"><strong>S</strong></a>
- | <a href="#T"><strong>T</strong></a>
- | <a href="#U"><strong>U</strong></a>
- | <a href="#V"><strong>V</strong></a>
- | <a href="#W"><strong>W</strong></a>
- | <a href="#Z"><strong>Z</strong></a>
- 
 </div>
-<h2 id="A">A</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.tools.abort">abort() (in module hans.tools)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.adaptiveLimits">adaptiveLimits() (in module hans.plottools)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.GapHeight.add_roughness">add_roughness() (hans.geometry.GapHeight method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.geometry.GapHeight.add_roughness_from_file">add_roughness_from_file() (hans.geometry.GapHeight method)</a>
-</li>
-      <li><a href="hans.html#hans.problem.Problem.animate1D">animate1D() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.approximate_zmax">approximate_zmax() (in module hans.models.viscous_stress_powerlaw)</a>
-</li>
-  </ul></td>
-</tr></table>
 
-<h2 id="B">B</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.viscosity.barus_piezo">barus_piezo() (in module hans.models.viscosity)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.density.bayada_chupin">bayada_chupin() (in module hans.models.density)</a>
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          
+<section class="genindex-section">
+  <h1 id="index">Index</h1>
+  <div class="genindex-jumpbox"><a href="#_"><strong>_</strong></a> | <a href="#A"><strong>A</strong></a> | <a href="#B"><strong>B</strong></a> | <a href="#C"><strong>C</strong></a> | <a href="#D"><strong>D</strong></a> | <a href="#E"><strong>E</strong></a> | <a href="#F"><strong>F</strong></a> | <a href="#G"><strong>G</strong></a> | <a href="#H"><strong>H</strong></a> | <a href="#I"><strong>I</strong></a> | <a href="#K"><strong>K</strong></a> | <a href="#L"><strong>L</strong></a> | <a href="#M"><strong>M</strong></a> | <a href="#N"><strong>N</strong></a> | <a href="#O"><strong>O</strong></a> | <a href="#P"><strong>P</strong></a> | <a href="#Q"><strong>Q</strong></a> | <a href="#R"><strong>R</strong></a> | <a href="#S"><strong>S</strong></a> | <a href="#T"><strong>T</strong></a> | <a href="#U"><strong>U</strong></a> | <a href="#V"><strong>V</strong></a> | <a href="#W"><strong>W</strong></a> | <a href="#X"><strong>X</strong></a> | <a href="#Y"><strong>Y</strong></a></div>
+</section>
+<section id="_" class="genindex-section">
+  <h2>_</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.__init__">__init__() (GaPFlow.Database method)</a>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.pressure.bayada_chupin">(in module hans.models.pressure)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.__init__">(GaPFlow.md.GoldAlkane method)</a>
 </li>
-        <li><a href="hans.models.html#hans.models.sound_speed.bayada_chupin">(in module hans.models.sound_speed)</a>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.__init__">(GaPFlow.md.LennardJones method)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.tools.bordered_text">bordered_text() (in module hans.tools)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.__init__">(GaPFlow.md.Mock method)</a>
 </li>
-      <li><a href="hans.models.html#hans.models.pressure.bwr">bwr() (in module hans.models.pressure)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.__init__">(GaPFlow.md.MolecularDynamics method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.__init__">(GaPFlow.models.BulkStress method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.__init__">(GaPFlow.models.Pressure method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.__init__">(GaPFlow.models.WallStress method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.__init__">(GaPFlow.Problem method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.sound_speed.bwr">(in module hans.models.sound_speed)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
+<section id="A" class="genindex-section">
+  <h2>A</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.active_dims">active_dims (GaPFlow.models.BulkStress attribute)</a>
 
-<h2 id="C">C</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.viscosity.carreau_shear">carreau_shear() (in module hans.models.viscosity)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.active_dims">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.centerline_x">centerline_x (hans.field.Field property)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.active_dims">(GaPFlow.models.WallStress attribute)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.centerline_y">centerline_y (hans.field.Field property)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.add_data">add_data() (GaPFlow.Database method)</a>
 </li>
-      <li><a href="hans.html#hans.integrate.ConservedField.cfl">cfl (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.html#hans.input.check_input">check_input() (in module hans.input)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.check_p_reset">check_p_reset() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.check_tau_reset">check_tau_reset() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField">ConservedField (class in hans.integrate)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.pressure.cubic">cubic() (in module hans.models.pressure)</a>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.add_metadata_to_readme">add_metadata_to_readme() (GaPFlow.md.GoldAlkane method)</a>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.sound_speed.cubic">(in module hans.models.sound_speed)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.add_metadata_to_readme">(GaPFlow.md.LennardJones method)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.html#hans.integrate.ConservedField.cubicInterpolation">cubicInterpolation() (hans.integrate.ConservedField method)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.add_metadata_to_readme">(GaPFlow.md.Mock method)</a>
 </li>
-  </ul></td>
-</tr></table>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.add_metadata_to_readme">(GaPFlow.md.MolecularDynamics method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.viz.animations.html#GaPFlow.viz.animations.animate">animate() (in module GaPFlow.viz.animations)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.viz.animations.html#GaPFlow.viz.animations.animate2d">animate2d() (in module GaPFlow.viz.animations)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.viz.animations.html#GaPFlow.viz.animations.animate_gp">animate_gp() (in module GaPFlow.viz.animations)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.ascii_art">ascii_art (GaPFlow.md.GoldAlkane attribute)</a>
 
-<h2 id="D">D</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.multiscale.html#hans.multiscale.db.Database">Database (class in hans.multiscale.db)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.ascii_art">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector">DatasetSelector (class in hans.plottools)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.ascii_art">(GaPFlow.md.Mock attribute)</a>
 </li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.dbsize">dbsize (hans.multiscale.gp.GaussianProcess property)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.ascii_art">(GaPFlow.md.MolecularDynamics attribute)</a>
 </li>
-      <li><a href="hans.html#hans.stress.WallStressField3D.del_gp">del_gp() (hans.stress.WallStressField3D method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.diffusiveCD">diffusiveCD() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.diffusiveFlux">diffusiveFlux() (hans.integrate.ConservedField method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.field.DoubleTensorField">DoubleTensorField (class in hans.field)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.density.dowson_higginson">dowson_higginson() (in module hans.models.density)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.atol">atol (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.pressure.dowson_higginson">(in module hans.models.pressure)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.atol">(GaPFlow.models.Pressure attribute)</a>
 </li>
-        <li><a href="hans.models.html#hans.models.sound_speed.dowson_higginson">(in module hans.models.sound_speed)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.atol">(GaPFlow.models.WallStress attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.html#hans.integrate.ConservedField.dt_crit">dt_crit (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscosity.dukler_mixture">dukler_mixture() (in module hans.models.viscosity)</a>
-</li>
-  </ul></td>
-</tr></table>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-<h2 id="E">E</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.field.Field.edgeE">edgeE (hans.field.Field property)</a>
-</li>
-      <li><a href="hans.html#hans.field.Field.edgeN">edgeN (hans.field.Field property)</a>
-</li>
-      <li><a href="hans.html#hans.field.Field.edgeS">edgeS (hans.field.Field property)</a>
-</li>
-      <li><a href="hans.html#hans.field.Field.edgeW">edgeW (hans.field.Field property)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.ekin">ekin (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.html#hans.material.Material.eos_density">eos_density() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.html#hans.material.Material.eos_pressure">eos_pressure() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.html#hans.material.Material.eos_sound_speed">eos_sound_speed() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscosity.eyring_shear">eyring_shear() (in module hans.models.viscosity)</a>
-</li>
-  </ul></td>
-</tr></table>
+<section id="B" class="genindex-section">
+  <h2>B</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.build_gp">build_gp (GaPFlow.models.BulkStress attribute)</a>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.field.Field">Field (class in hans.field)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.build_gp">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      <li><a href="hans.html#hans.geometry.SlipLength.fill">fill() (hans.geometry.SlipLength method)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.build_gp">(GaPFlow.models.WallStress attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.fill_ghost_buffer">fill_ghost_buffer() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.special.html#hans.special.flux_limiter.flux_limiter_function">flux_limiter_function() (in module hans.special.flux_limiter)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.fourier_synthesis">fourier_synthesis() (in module hans.geometry)</a>
-</li>
-  </ul></td>
-</tr></table>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.build_input_files">build_input_files() (GaPFlow.md.GoldAlkane method)</a>
 
-<h2 id="G">G</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.geometry.GapHeight">GapHeight (class in hans.geometry)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.build_input_files">(GaPFlow.md.LennardJones method)</a>
 </li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess">GaussianProcess (class in hans.multiscale.gp)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.build_input_files">(GaPFlow.md.Mock method)</a>
 </li>
-      <li><a href="hans.html#hans.stress.SymStressField2D.get">get() (hans.stress.SymStressField2D method)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.build_input_files">(GaPFlow.md.MolecularDynamics method)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.get_2d_cart_comm">get_2d_cart_comm() (hans.field.Field method)</a>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress">BulkStress (class in GaPFlow.models)</a>
 </li>
-      <li><a href="hans.html#hans.stress.SymStressField3D.get_bot">get_bot() (hans.stress.SymStressField3D method)</a>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.get_bot">(hans.stress.WallStressField3D method)</a>
+<section id="C" class="genindex-section">
+  <h2>C</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.centerline_mass_density">centerline_mass_density (GaPFlow.Problem property)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_centerline">get_centerline() (hans.plottools.DatasetSelector method)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.cfl">cfl (GaPFlow.Problem property)</a>
 </li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_centerline_height">get_centerline_height() (hans.plottools.DatasetSelector method)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.converged">converged (GaPFlow.Problem property)</a>
 </li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_centerlines">get_centerlines() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.db.Database.get_constant">get_constant() (hans.multiscale.db.Database method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_field">get_field() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_fields">get_fields() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_filenames">get_filenames() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_files">get_files() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.db.Database.get_gap_height">get_gap_height() (hans.multiscale.db.Database method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.get_ghost_cell_values">get_ghost_cell_values() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_height">get_height() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.problem.Problem.get_initial_conditions">get_initial_conditions() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_metadata">get_metadata() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.field.Field.get_neighbors">get_neighbors() (hans.field.Field method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_NetCDF_Datasets">get_NetCDF_Datasets() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.cli.html#hans.cli.animate1D.get_parser">get_parser() (in module hans.cli.animate1D)</a>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.create_dtool_dataset">create_dtool_dataset() (GaPFlow.md.GoldAlkane method)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#hans.cli.animate2D.get_parser">(in module hans.cli.animate2D)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.create_dtool_dataset">(GaPFlow.md.LennardJones method)</a>
 </li>
-        <li><a href="hans.cli.html#hans.cli.generate_roughness.get_parser">(in module hans.cli.generate_roughness)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.create_dtool_dataset">(GaPFlow.md.Mock method)</a>
 </li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_evolution.get_parser">(in module hans.cli.plot1D_evolution)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.create_dtool_dataset">(GaPFlow.md.MolecularDynamics method)</a>
 </li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_height.get_parser">(in module hans.cli.plot1D_height)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_last.get_parser">(in module hans.cli.plot1D_last)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot2D_height.get_parser">(in module hans.cli.plot2D_height)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot2D_last.get_parser">(in module hans.cli.plot2D_last)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot_scalar.get_parser">(in module hans.cli.plot_scalar)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.read_config.get_parser">(in module hans.cli.read_config)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.material.Material.get_pressure">get_pressure() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.html#hans.plottools.DatasetSelector.get_scalar">get_scalar() (hans.plottools.DatasetSelector method)</a>
-</li>
-      <li><a href="hans.html#hans.material.Material.get_sound_speed">get_sound_speed() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.get_source">get_source() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.stress.SymStressField3D.get_top">get_top() (hans.stress.SymStressField3D method)</a>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.get_top">(hans.stress.WallStressField3D method)</a>
+<section id="D" class="genindex-section">
+  <h2>D</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database">Database (class in GaPFlow)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.models.html#hans.models.velocity_profile.get_velocity_profiles">get_velocity_profiles() (in module hans.models.velocity_profile)</a>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.db_init_width">db_init_width (GaPFlow.Database attribute)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.getProblem">getProblem() (hans.input.Input method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure">GP_pressure (class in hans.multiscale.gp)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure2D">GP_pressure2D (class in hans.multiscale.gp)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.gp_print">gp_print() (hans.multiscale.gp.GaussianProcess method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress">GP_stress (class in hans.multiscale.gp)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_xz">GP_stress2D_xz (class in hans.multiscale.gp)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_yz">GP_stress2D_yz (class in hans.multiscale.gp)</a>
-</li>
-      <li><a href="hans.html#hans.stress.WallStressField3D.gp_wall_stress">gp_wall_stress() (hans.stress.WallStressField3D method)</a>
-</li>
-  </ul></td>
-</tr></table>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.dh_dx">dh_dx (GaPFlow.models.BulkStress property)</a>
 
-<h2 id="H">H</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.tools.handle_signals">handle_signals() (in module hans.tools)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.dh_dx">(GaPFlow.models.Pressure property)</a>
 </li>
-      <li>
-    hans
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.dh_dx">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.dh_dy">dh_dy (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.html#module-hans">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.dh_dy">(GaPFlow.models.Pressure property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.dh_dy">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.dp_dx">dp_dx (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.dp_dx">(GaPFlow.models.WallStress property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.animate1D
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.dp_dy">dp_dy (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.animate1D">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.dp_dy">(GaPFlow.models.WallStress property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.animate2D
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.dt_crit">dt_crit (GaPFlow.Problem property)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.dtool_basepath">dtool_basepath (GaPFlow.md.GoldAlkane property)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.animate2D">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.dtool_basepath">(GaPFlow.md.LennardJones property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.generate_roughness
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.dtool_basepath">(GaPFlow.md.Mock property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.dtool_basepath">(GaPFlow.md.MolecularDynamics property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.generate_roughness">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.cli.plot1D_evolution
+<section id="E" class="genindex-section">
+  <h2>E</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.extra">extra (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_evolution">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.extra">(GaPFlow.models.Pressure property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.plot1D_height
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.extra">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_height">module</a>
+<section id="F" class="genindex-section">
+  <h2>F</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.finalize">finalize() (GaPFlow.Problem method)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.plot1D_last
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.from_dict">from_dict() (GaPFlow.Problem class method)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.from_string">from_string() (GaPFlow.Problem class method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.from_yaml">from_yaml() (GaPFlow.Problem class method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.full">full (GaPFlow.models.WallStress property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_last">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.cli.plot2D_height
+<section id="G" class="genindex-section">
+  <h2>G</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li>
+    GaPFlow.viz.animations
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot2D_height">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.viz.animations.html#module-GaPFlow.viz.animations">module</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.plot2D_last
+        </ul></li>
+        <li>
+    GaPFlow.viz.plotting
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot2D_last">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.viz.plotting.html#module-GaPFlow.viz.plotting">module</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.plot_scalar
+        </ul></li>
+        <li>
+    GaPFlow.viz.utils
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.plot_scalar">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.viz.utils.html#module-GaPFlow.viz.utils">module</a>
 </li>
-      </ul></li>
-      <li>
-    hans.cli.read_config
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.geo">geo (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.cli.html#module-hans.cli.read_config">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.geo">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.field
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.geo">(GaPFlow.models.WallStress attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.viz.utils.html#GaPFlow.viz.utils.get_pipeline">get_pipeline() (in module GaPFlow.viz.utils)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.get_readme_list_local">get_readme_list_local() (GaPFlow.Database method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.get_readme_list_remote">get_readme_list_remote() (GaPFlow.Database method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane">GoldAlkane (class in GaPFlow.md)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.html#module-hans.field">module</a>
+<section id="H" class="genindex-section">
+  <h2>H</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.has_mock_md">has_mock_md (GaPFlow.Database property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.geometry
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.height">height (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.html#module-hans.geometry">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.height">(GaPFlow.models.Pressure property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.input
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.height">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.html#module-hans.input">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.integrate
+<section id="I" class="genindex-section">
+  <h2>I</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.init">init() (GaPFlow.models.Pressure method)</a>
 
-      <ul>
-        <li><a href="hans.html#module-hans.integrate">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.init">(GaPFlow.models.WallStress method)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.material
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.init_database">init_database() (GaPFlow.models.BulkStress method)</a>
 
-      <ul>
-        <li><a href="hans.html#module-hans.material">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.init_database">(GaPFlow.models.Pressure method)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.init_database">(GaPFlow.models.WallStress method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.initialize">initialize() (GaPFlow.Database method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.input_names">input_names (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.input_names">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li>
-    hans.models.density
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.input_names">(GaPFlow.md.Mock attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.input_names">(GaPFlow.md.MolecularDynamics attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.is_gp_model">is_gp_model (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.density">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.is_gp_model">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models.pressure
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.is_gp_model">(GaPFlow.models.WallStress attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.is_mock">is_mock (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.pressure">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.is_mock">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models.sound_speed
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.is_mock">(GaPFlow.md.Mock attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.is_mock">(GaPFlow.md.MolecularDynamics attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.sound_speed">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.models.velocity_profile
+<section id="K" class="genindex-section">
+  <h2>K</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.kernel_lengthscale">kernel_lengthscale (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.velocity_profile">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.kernel_lengthscale">(GaPFlow.models.Pressure property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models.viscosity
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.kernel_lengthscale">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.kernel_variance">kernel_variance (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.viscosity">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.kernel_variance">(GaPFlow.models.Pressure property)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models.viscous_stress_newton
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.kernel_variance">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.kinetic_energy">kinetic_energy (GaPFlow.Problem property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.viscous_stress_newton">module</a>
+<section id="L" class="genindex-section">
+  <h2>L</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones">LennardJones (class in GaPFlow.md)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.models.viscous_stress_powerlaw
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.lower">lower (GaPFlow.models.WallStress property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#module-hans.models.viscous_stress_powerlaw">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.multiscale
+<section id="M" class="genindex-section">
+  <h2>M</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.main_file">main_file (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#module-hans.multiscale">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.main_file">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.multiscale.db
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.main_file">(GaPFlow.md.Mock attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.main_file">(GaPFlow.md.MolecularDynamics attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.mass">mass (GaPFlow.Problem property)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.max_steps">max_steps (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.db">module</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.max_steps">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.multiscale.gp
-
-      <ul>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.gp">module</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.max_steps">(GaPFlow.models.WallStress attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.multiscale.md
-
-      <ul>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.md">module</a>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.minimum_size">minimum_size (GaPFlow.Database attribute)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.plottools
-
-      <ul>
-        <li><a href="hans.html#module-hans.plottools">module</a>
+        <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock">Mock (class in GaPFlow.md)</a>
 </li>
-      </ul></li>
-      <li>
-    hans.problem
-
-      <ul>
-        <li><a href="hans.html#module-hans.problem">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.special
-
-      <ul>
-        <li><a href="hans.special.html#module-hans.special">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.special.flux_limiter
-
-      <ul>
-        <li><a href="hans.special.html#module-hans.special.flux_limiter">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.stress
-
-      <ul>
-        <li><a href="hans.html#module-hans.stress">module</a>
-</li>
-      </ul></li>
-      <li>
-    hans.tools
-
-      <ul>
-        <li><a href="hans.html#module-hans.tools">module</a>
-</li>
-      </ul></li>
-      <li><a href="hans.html#hans.integrate.ConservedField.hyperbolicCD">hyperbolicCD() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.hyperbolicFlux">hyperbolicFlux() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.hyperbolicTVD">hyperbolicTVD() (hans.integrate.ConservedField method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="I">I</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.field.Field.id_grid">id_grid (hans.field.Field property)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.increment">increment() (hans.multiscale.gp.GaussianProcess method)</a>
-
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.increment">(hans.stress.WallStressField3D method)</a>
-</li>
-      </ul></li>
-      <li><a href="hans.html#hans.material.Material.init_gp">init_gp() (hans.material.Material method)</a>
-
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.init_gp">(hans.stress.WallStressField3D method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.problem.Problem.init_netcdf">init_netcdf() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.initialize">initialize() (hans.integrate.ConservedField method)</a>
-
-      <ul>
-        <li><a href="hans.multiscale.html#hans.multiscale.db.Database.initialize">(hans.multiscale.db.Database method)</a>
-</li>
-      </ul></li>
-      <li><a href="hans.html#hans.field.Field.inner">inner (hans.field.Field property)</a>
-</li>
-      <li><a href="hans.html#hans.input.Input">Input (class in hans.input)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.isnan">isnan (hans.integrate.ConservedField property)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="L">L</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.lax_step">lax_step() (hans.integrate.ConservedField method)</a>
-</li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.leap_frog">leap_frog() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.stress.WallStressField3D.lower">lower (hans.stress.WallStressField3D property)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="M">M</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.mac_cormack">mac_cormack() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.cli.html#hans.cli.animate1D.main">main() (in module hans.cli.animate1D)</a>
-
-      <ul>
-        <li><a href="hans.cli.html#hans.cli.animate2D.main">(in module hans.cli.animate2D)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.generate_roughness.main">(in module hans.cli.generate_roughness)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_evolution.main">(in module hans.cli.plot1D_evolution)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_height.main">(in module hans.cli.plot1D_height)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot1D_last.main">(in module hans.cli.plot1D_last)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot2D_height.main">(in module hans.cli.plot2D_height)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot2D_last.main">(in module hans.cli.plot2D_last)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.plot_scalar.main">(in module hans.cli.plot_scalar)</a>
-</li>
-        <li><a href="hans.cli.html#hans.cli.read_config.main">(in module hans.cli.read_config)</a>
-</li>
-        <li><a href="hans.multiscale.html#hans.multiscale.md.main">(in module hans.multiscale.md)</a>
-</li>
-      </ul></li>
-      <li><a href="hans.html#hans.integrate.ConservedField.mass">mass (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.html#hans.material.Material">Material (class in hans.material)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.GapHeight.max_height">max_height (hans.geometry.GapHeight property)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscosity.mc_adams_mixture">mc_adams_mixture() (in module hans.models.viscosity)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.GapHeight.min_height">min_height (hans.geometry.GapHeight property)</a>
-</li>
-      <li>
+        <li>
     module
 
-      <ul>
-        <li><a href="hans.html#module-hans">hans</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.viz.animations.html#module-GaPFlow.viz.animations">GaPFlow.viz.animations</a>
 </li>
-        <li><a href="hans.cli.html#module-hans.cli">hans.cli</a>
+          <li><a href="api/summary/GaPFlow.viz.plotting.html#module-GaPFlow.viz.plotting">GaPFlow.viz.plotting</a>
 </li>
-        <li><a href="hans.cli.html#module-hans.cli.animate1D">hans.cli.animate1D</a>
+          <li><a href="api/summary/GaPFlow.viz.utils.html#module-GaPFlow.viz.utils">GaPFlow.viz.utils</a>
 </li>
-        <li><a href="hans.cli.html#module-hans.cli.animate2D">hans.cli.animate2D</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics">MolecularDynamics (class in GaPFlow.md)</a>
 </li>
-        <li><a href="hans.cli.html#module-hans.cli.generate_roughness">hans.cli.generate_roughness</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_evolution">hans.cli.plot1D_evolution</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_height">hans.cli.plot1D_height</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot1D_last">hans.cli.plot1D_last</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot2D_height">hans.cli.plot2D_height</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot2D_last">hans.cli.plot2D_last</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.plot_scalar">hans.cli.plot_scalar</a>
-</li>
-        <li><a href="hans.cli.html#module-hans.cli.read_config">hans.cli.read_config</a>
-</li>
-        <li><a href="hans.html#module-hans.field">hans.field</a>
-</li>
-        <li><a href="hans.html#module-hans.geometry">hans.geometry</a>
-</li>
-        <li><a href="hans.html#module-hans.input">hans.input</a>
-</li>
-        <li><a href="hans.html#module-hans.integrate">hans.integrate</a>
-</li>
-        <li><a href="hans.html#module-hans.material">hans.material</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models">hans.models</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.density">hans.models.density</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.pressure">hans.models.pressure</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.sound_speed">hans.models.sound_speed</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.velocity_profile">hans.models.velocity_profile</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.viscosity">hans.models.viscosity</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.viscous_stress_newton">hans.models.viscous_stress_newton</a>
-</li>
-        <li><a href="hans.models.html#module-hans.models.viscous_stress_powerlaw">hans.models.viscous_stress_powerlaw</a>
-</li>
-        <li><a href="hans.multiscale.html#module-hans.multiscale">hans.multiscale</a>
-</li>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.db">hans.multiscale.db</a>
-</li>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.gp">hans.multiscale.gp</a>
-</li>
-        <li><a href="hans.multiscale.html#module-hans.multiscale.md">hans.multiscale.md</a>
-</li>
-        <li><a href="hans.html#module-hans.plottools">hans.plottools</a>
-</li>
-        <li><a href="hans.html#module-hans.problem">hans.problem</a>
-</li>
-        <li><a href="hans.special.html#module-hans.special">hans.special</a>
-</li>
-        <li><a href="hans.special.html#module-hans.special.flux_limiter">hans.special.flux_limiter</a>
-</li>
-        <li><a href="hans.html#module-hans.stress">hans.stress</a>
-</li>
-        <li><a href="hans.html#module-hans.tools">hans.tools</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.multiscale.html#hans.multiscale.md.mpirun">mpirun() (in module hans.multiscale.md)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.density.murnaghan_tait">murnaghan_tait() (in module hans.models.density)</a>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.pressure.murnaghan_tait">(in module hans.models.pressure)</a>
-</li>
-        <li><a href="hans.models.html#hans.models.sound_speed.murnaghan_tait">(in module hans.models.sound_speed)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
+<section id="N" class="genindex-section">
+  <h2>N</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.name">name (GaPFlow.md.GoldAlkane attribute)</a>
 
-<h2 id="N">N</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.name">name (hans.multiscale.gp.GaussianProcess attribute)</a>, <a href="hans.multiscale.html#id0">[1]</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.name">(GaPFlow.md.LennardJones attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.name">(GaPFlow.md.Mock attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.name">(GaPFlow.md.MolecularDynamics attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.name">(GaPFlow.models.BulkStress attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.name">(GaPFlow.models.Pressure attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.name">(GaPFlow.models.WallStress attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.noise">noise (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure.name">(hans.multiscale.gp.GP_pressure attribute)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.noise">(GaPFlow.models.Pressure attribute)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure2D.name">(hans.multiscale.gp.GP_pressure2D attribute)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.noise">(GaPFlow.models.WallStress attribute)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress.name">(hans.multiscale.gp.GP_stress attribute)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.normalizer">normalizer() (GaPFlow.Database method)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_xz.name">(hans.multiscale.gp.GP_stress2D_xz attribute)</a>
-</li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_yz.name">(hans.multiscale.gp.GP_stress2D_yz attribute)</a>
-</li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.ndim">ndim (hans.multiscale.gp.GaussianProcess attribute)</a>, <a href="hans.multiscale.html#id1">[1]</a>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.num_worker">num_worker (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure.ndim">(hans.multiscale.gp.GP_pressure attribute)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.num_worker">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_pressure2D.ndim">(hans.multiscale.gp.GP_pressure2D attribute)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.num_worker">(GaPFlow.md.Mock attribute)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress.ndim">(hans.multiscale.gp.GP_stress attribute)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.num_worker">(GaPFlow.md.MolecularDynamics attribute)</a>
 </li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_xz.ndim">(hans.multiscale.gp.GP_stress2D_xz attribute)</a>
-</li>
-        <li><a href="hans.multiscale.html#hans.multiscale.gp.GP_stress2D_yz.ndim">(hans.multiscale.gp.GP_stress2D_yz attribute)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-<h2 id="P">P</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.problem.Problem.plot">plot() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.cli.html#hans.cli.generate_roughness.plot_surface">plot_surface() (in module hans.cli.generate_roughness)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.post_integrate">post_integrate() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.tools.power">power() (in module hans.tools)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.density.power_law">power_law() (in module hans.models.density)</a>
+<section id="O" class="genindex-section">
+  <h2>O</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.obs_stddev">obs_stddev (GaPFlow.models.BulkStress property)</a>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.pressure.power_law">(in module hans.models.pressure)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.obs_stddev">(GaPFlow.models.Pressure property)</a>
 </li>
-        <li><a href="hans.models.html#hans.models.sound_speed.power_law">(in module hans.models.sound_speed)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.obs_stddev">(GaPFlow.models.WallStress property)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.viscosity.power_law_shear">power_law_shear() (in module hans.models.viscosity)</a>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.outdir">outdir (GaPFlow.Database attribute)</a>
 </li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.predict">predict() (hans.multiscale.gp.GaussianProcess method)</a>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.output_path">output_path (GaPFlow.Database property)</a>
 </li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.predict_gradient">predict_gradient() (hans.multiscale.gp.GaussianProcess method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.predictor_corrector">predictor_corrector() (hans.integrate.ConservedField method)</a>
-</li>
-      <li><a href="hans.html#hans.problem.Problem">Problem (class in hans.problem)</a>
-</li>
-      <li><a href="hans.html#hans.tools.progressbar">progressbar() (in module hans.tools)</a>
-</li>
-  </ul></td>
-</tr></table>
+    </ul></td>
+  </tr></table>
+</section>
 
-<h2 id="R">R</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.problem.Problem.read_last_frame">read_last_frame() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.html#hans.problem.Problem.receive_signal">receive_signal() (hans.problem.Problem method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.reset">reset (hans.multiscale.gp.GaussianProcess property)</a>
+<section id="P" class="genindex-section">
+  <h2>P</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.params">params (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.reset">(hans.stress.WallStressField3D property)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.params">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.reset_reset">reset_reset() (hans.multiscale.gp.GaussianProcess method)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.params">(GaPFlow.md.Mock attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.params">(GaPFlow.md.MolecularDynamics attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.params_init">params_init (GaPFlow.models.BulkStress attribute)</a>
 
-      <ul>
-        <li><a href="hans.html#hans.stress.WallStressField3D.reset_reset">(hans.stress.WallStressField3D method)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.params_init">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.richtmyer">richtmyer() (hans.integrate.ConservedField method)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.params_init">(GaPFlow.models.WallStress attribute)</a>
 </li>
-      <li><a href="hans.html#hans.geometry.GapHeight.roughness_pbc">roughness_pbc() (hans.geometry.GapHeight method)</a>
-</li>
-      <li><a href="hans.html#hans.problem.Problem.run">run() (hans.problem.Problem method)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.path">path (GaPFlow.md.GoldAlkane attribute)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#hans.multiscale.md.run">(in module hans.multiscale.md)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.path">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.multiscale.html#hans.multiscale.md.run_slab">run_slab() (in module hans.multiscale.md)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.path">(GaPFlow.md.Mock attribute)</a>
 </li>
-      <li><a href="hans.html#hans.integrate.ConservedField.runge_kutta3">runge_kutta3() (hans.integrate.ConservedField method)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.path">(GaPFlow.md.MolecularDynamics attribute)</a>
 </li>
-  </ul></td>
-</tr></table>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.pause_steps">pause_steps (GaPFlow.models.BulkStress attribute)</a>
 
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.input.Input.sanitize_BC">sanitize_BC() (hans.input.Input method)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.pause_steps">(GaPFlow.models.Pressure attribute)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_disc">sanitize_disc() (hans.input.Input method)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.pause_steps">(GaPFlow.models.WallStress attribute)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_geometry">sanitize_geometry() (hans.input.Input method)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_evolution">plot_evolution() (in module GaPFlow.viz.plotting)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_gp">sanitize_gp() (hans.input.Input method)</a>
+        <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_height">plot_height() (in module GaPFlow.viz.plotting)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_IC">sanitize_IC() (hans.input.Input method)</a>
+        <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_history">plot_history() (in module GaPFlow.viz.plotting)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_material">sanitize_material() (hans.input.Input method)</a>
+        <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_single_frame">plot_single_frame() (in module GaPFlow.viz.plotting)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_md">sanitize_md() (hans.input.Input method)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.post_run">post_run() (GaPFlow.Problem method)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_numerics">sanitize_numerics() (hans.input.Input method)</a>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.post_update">post_update() (GaPFlow.Problem method)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_options">sanitize_options() (hans.input.Input method)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.pre_run">pre_run() (GaPFlow.Problem method)</a>
 </li>
-      <li><a href="hans.html#hans.input.Input.sanitize_roughness">sanitize_roughness() (hans.input.Input method)</a>
-</li>
-      <li><a href="hans.html#hans.input.Input.sanitize_surface">sanitize_surface() (hans.input.Input method)</a>
-</li>
-      <li><a href="hans.html#hans.field.ScalarField">ScalarField (class in hans.field)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.self_affine_prefactor">self_affine_prefactor() (in module hans.geometry)</a>
-</li>
-      <li><a href="hans.html#hans.stress.SymStressField2D.set">set() (hans.stress.SymStressField2D method)</a>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.predict">predict() (GaPFlow.models.BulkStress method)</a>
 
-      <ul>
-        <li><a href="hans.html#hans.stress.SymStressField3D.set">(hans.stress.SymStressField3D method)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.predict">(GaPFlow.models.Pressure method)</a>
 </li>
-        <li><a href="hans.html#hans.stress.WallStressField3D.set">(hans.stress.WallStressField3D method)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.predict">(GaPFlow.models.WallStress method)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.geometry.GapHeight.set_gradients">set_gradients() (hans.geometry.GapHeight method)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure">Pressure (class in GaPFlow.models)</a>
 </li>
-      <li><a href="hans.html#hans.stress.SymStressField3D.set_Newton">set_Newton() (hans.stress.SymStressField3D method)</a>
-</li>
-      <li><a href="hans.html#hans.stress.SymStressField3D.set_PowerLaw">set_PowerLaw() (hans.stress.SymStressField3D method)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.GapHeight.set_profile">set_profile() (hans.geometry.GapHeight method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.setup">setup() (hans.multiscale.gp.GaussianProcess method)</a>
-</li>
-      <li><a href="hans.multiscale.html#hans.multiscale.db.Database.size">size (hans.multiscale.db.Database property)</a>
-</li>
-      <li><a href="hans.html#hans.geometry.SlipLength">SlipLength (class in hans.geometry)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.solve_zmax">solve_zmax() (in module hans.models.viscous_stress_powerlaw)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_newton.stress_avg">stress_avg() (in module hans.models.viscous_stress_newton)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_newton.stress_bottom">stress_bottom() (in module hans.models.viscous_stress_newton)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.stress_powerlaw_bottom">stress_powerlaw_bottom() (in module hans.models.viscous_stress_powerlaw)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.stress_powerlaw_top">stress_powerlaw_top() (in module hans.models.viscous_stress_powerlaw)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscous_stress_newton.stress_top">stress_top() (in module hans.models.viscous_stress_newton)</a>
-</li>
-      <li><a href="hans.html#hans.stress.SymStressField2D">SymStressField2D (class in hans.stress)</a>
-</li>
-      <li><a href="hans.html#hans.stress.SymStressField3D">SymStressField3D (class in hans.stress)</a>
-</li>
-  </ul></td>
-</tr></table>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.pressure">pressure (GaPFlow.models.BulkStress property)</a>
 
-<h2 id="T">T</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.field.TensorField">TensorField (class in hans.field)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.pressure">(GaPFlow.models.Pressure property)</a>
 </li>
-      <li><a href="hans.multiscale.html#hans.multiscale.gp.GaussianProcess.trusted">trusted (hans.multiscale.gp.GaussianProcess property)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.pressure">(GaPFlow.models.WallStress property)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.tv">tv (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.special.html#hans.special.flux_limiter.TVD_MC_correction">TVD_MC_correction() (in module hans.special.flux_limiter)</a>
-</li>
-  </ul></td>
-</tr></table>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.pretty_print">pretty_print() (GaPFlow.md.GoldAlkane method)</a>
 
-<h2 id="U">U</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.integrate.ConservedField.update">update() (hans.integrate.ConservedField method)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.pretty_print">(GaPFlow.md.LennardJones method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.pretty_print">(GaPFlow.md.Mock method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.pretty_print">(GaPFlow.md.MolecularDynamics method)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.print_opt_summary">print_opt_summary() (GaPFlow.models.BulkStress method)</a>
 
-      <ul>
-        <li><a href="hans.multiscale.html#hans.multiscale.db.Database.update">(hans.multiscale.db.Database method)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.print_opt_summary">(GaPFlow.models.Pressure method)</a>
 </li>
-      </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.cli.html#hans.cli.animate2D.update_grids">update_grids() (in module hans.cli.animate2D)</a>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.print_opt_summary">(GaPFlow.models.WallStress method)</a>
 </li>
-      <li><a href="hans.cli.html#hans.cli.animate1D.update_lines">update_lines() (in module hans.cli.animate1D)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem">Problem (class in GaPFlow)</a>
 </li>
-      <li><a href="hans.html#hans.stress.WallStressField3D.upper">upper (hans.stress.WallStressField3D property)</a>
-</li>
-  </ul></td>
-</tr></table>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.prop">prop (GaPFlow.models.BulkStress attribute)</a>
 
-<h2 id="V">V</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.pressure.van_der_waals">van_der_waals() (in module hans.models.pressure)</a>
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.prop">(GaPFlow.models.Pressure attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.prop">(GaPFlow.models.WallStress attribute)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
 
-      <ul>
-        <li><a href="hans.models.html#hans.models.sound_speed.van_der_waals">(in module hans.models.sound_speed)</a>
+<section id="Q" class="genindex-section">
+  <h2>Q</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.q">q (GaPFlow.Problem property)</a>
 </li>
-      </ul></li>
-      <li><a href="hans.html#hans.field.VectorField">VectorField (class in hans.field)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.q_has_nan">q_has_nan (GaPFlow.Problem property)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.verticeNE">verticeNE (hans.field.Field property)</a>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.q_has_negative_density">q_has_negative_density (GaPFlow.Problem property)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.verticeSW">verticeSW (hans.field.Field property)</a>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.q_is_valid">q_is_valid (GaPFlow.Problem property)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.material.Material.viscosity">viscosity() (hans.material.Material method)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.vmax">vmax (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.models.html#hans.models.viscosity.vogel_piezo">vogel_piezo() (in module hans.models.viscosity)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.vSound">vSound (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.vx_max">vx_max (hans.integrate.ConservedField property)</a>
-</li>
-      <li><a href="hans.html#hans.integrate.ConservedField.vy_max">vy_max (hans.integrate.ConservedField property)</a>
-</li>
-  </ul></td>
-</tr></table>
+    </ul></td>
+  </tr></table>
+</section>
 
-<h2 id="W">W</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.html#hans.stress.WallStressField3D">WallStressField3D (class in hans.stress)</a>
+<section id="R" class="genindex-section">
+  <h2>R</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.read_output">read_output() (GaPFlow.md.GoldAlkane method)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.read_output">(GaPFlow.md.LennardJones method)</a>
 </li>
-      <li><a href="hans.html#hans.field.Field.without_ghost">without_ghost (hans.field.Field property)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.read_output">(GaPFlow.md.Mock method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.multiscale.html#hans.multiscale.db.Database.write_readme">write_readme() (hans.multiscale.db.Database method)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.read_output">(GaPFlow.md.MolecularDynamics method)</a>
 </li>
-      <li><a href="hans.html#hans.problem.Problem.write_to_netcdf">write_to_netcdf() (hans.problem.Problem method)</a>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.readme_template">readme_template (GaPFlow.md.GoldAlkane attribute)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.readme_template">(GaPFlow.md.LennardJones attribute)</a>
 </li>
-      <li><a href="hans.html#hans.problem.Problem.write_to_stdout">write_to_stdout() (hans.problem.Problem method)</a>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.readme_template">(GaPFlow.md.Mock attribute)</a>
 </li>
-  </ul></td>
-</tr></table>
-
-<h2 id="Z">Z</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.zmax_nleq_case1">zmax_nleq_case1() (in module hans.models.viscous_stress_powerlaw)</a>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.readme_template">(GaPFlow.md.MolecularDynamics attribute)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="hans.models.html#hans.models.viscous_stress_powerlaw.zmax_nleq_case2">zmax_nleq_case2() (in module hans.models.viscous_stress_powerlaw)</a>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.receive_signal">receive_signal() (GaPFlow.Problem method)</a>
 </li>
-  </ul></td>
-</tr></table>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.rtol">rtol (GaPFlow.models.BulkStress attribute)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.rtol">(GaPFlow.models.Pressure attribute)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.rtol">(GaPFlow.models.WallStress attribute)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.run">run() (GaPFlow.md.GoldAlkane method)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.run">(GaPFlow.md.LennardJones method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.run">(GaPFlow.md.Mock method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.run">(GaPFlow.md.MolecularDynamics method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.run">(GaPFlow.Problem method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="S" class="genindex-section">
+  <h2>S</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.viz.utils.html#GaPFlow.viz.utils.set_axes_labels">set_axes_labels() (in module GaPFlow.viz.utils)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.viz.utils.html#GaPFlow.viz.utils.set_axes_limits">set_axes_limits() (in module GaPFlow.viz.utils)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.set_training_path">set_training_path() (GaPFlow.Database method)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.size">size (GaPFlow.Database property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.solution">solution (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.solution">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.solution">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.stress">stress (GaPFlow.models.BulkStress property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="T" class="genindex-section">
+  <h2>T</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.topography">topography (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.topography">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.topography">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.training_path">training_path (GaPFlow.Database property)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.trusted">trusted (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.trusted">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.trusted">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="U" class="genindex-section">
+  <h2>U</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.update">update() (GaPFlow.models.BulkStress method)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.update">(GaPFlow.models.Pressure method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.update">(GaPFlow.models.WallStress method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.update">(GaPFlow.Problem method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.upper">upper (GaPFlow.models.WallStress property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="V" class="genindex-section">
+  <h2>V</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.v_max">v_max (GaPFlow.Problem property)</a>
+</li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.v_sound">v_sound (GaPFlow.models.Pressure property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="W" class="genindex-section">
+  <h2>W</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress">WallStress (class in GaPFlow.models)</a>
+</li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.write">write() (GaPFlow.Database method)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.write">(GaPFlow.models.BulkStress method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.write">(GaPFlow.models.Pressure method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.write">(GaPFlow.models.WallStress method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.write">(GaPFlow.Problem method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.md.GoldAlkane.html#GaPFlow.md.GoldAlkane.write_dtool_readme">write_dtool_readme() (GaPFlow.md.GoldAlkane method)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.md.LennardJones.html#GaPFlow.md.LennardJones.write_dtool_readme">(GaPFlow.md.LennardJones method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock.write_dtool_readme">(GaPFlow.md.Mock method)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.write_dtool_readme">(GaPFlow.md.MolecularDynamics method)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="X" class="genindex-section">
+  <h2>X</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.Xtest">Xtest (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.Xtest">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.Xtest">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.Xtrain">Xtrain (GaPFlow.Database property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.Xtrain">(GaPFlow.models.BulkStress property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.Xtrain">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.Xtrain">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+  </tr></table>
+</section>
+
+<section id="Y" class="genindex-section">
+  <h2>Y</h2>
+  <table style="width: 100%" class="indextable genindextable"><tr>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.Yerr">Yerr (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.Yerr">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.Yerr">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.Yscale">Yscale (GaPFlow.models.BulkStress property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.Yscale">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.Yscale">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+    </ul></td>
+    <td style="width: 33%; vertical-align: top;"><ul>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.Ytrain">Ytrain (GaPFlow.Database property)</a>
+
+        <ul>
+          <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.Ytrain">(GaPFlow.models.BulkStress property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.Ytrain">(GaPFlow.models.Pressure property)</a>
+</li>
+          <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.Ytrain">(GaPFlow.models.WallStress property)</a>
+</li>
+        </ul></li>
+        <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.Ytrain_err">Ytrain_err (GaPFlow.Database property)</a>
+</li>
+    </ul></td>
+  </tr></table>
+</section>
 
 
-
-           </div>
-          </div>
-          <footer>
-
-  <hr/>
-
-  <div role="contentinfo">
-    <p>&#169; Copyright 2025, Hannes Holey.</p>
-  </div>
-
-  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    provided by <a href="https://readthedocs.org">Read the Docs</a>.
-   
-
-</footer>
-        </div>
+        </article>
       </div>
-    </section>
+      <footer>
+        
+        <div class="related-pages">
+          
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Hannes Holey
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
   </div>
-  <script>
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script> 
-
-</body>
+</div><script src="_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
 </html>

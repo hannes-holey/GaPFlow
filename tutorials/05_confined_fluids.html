@@ -1,0 +1,1154 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Confined fluids: wall-driven flows" href="06_lubrication.html"><link rel="prev" title="Viscosity models for non-Newtonian fluids" href="04_viscosity.html">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
+        <title>Dynamics of highly confined fluids - GaPFlow documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">GaPFlow  documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">GaPFlow  documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_eos.html">Equation of state for isothermal compressible fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.plotting.html">GaPFlow.viz.plotting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.utils.html">GaPFlow.viz.utils</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/hannes-holey/hans">Github repository</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/tutorials/05_confined_fluids.ipynb.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section class="tex2jax_ignore mathjax_ignore" id="dynamics-of-highly-confined-fluids">
+<h1>Dynamics of highly confined fluids<a class="headerlink" href="#dynamics-of-highly-confined-fluids" title="Link to this heading">¶</a></h1>
+<p>We consider a fluid confined between two parallel walls without relative movement.
+One can derive an analytic solution for the linearized equations, that describe viscous dissipation and transport in these systems (see <a class="reference external" href="https://doi.org/10.1103/PhysRevFluids.9.014203">Holey et al., 2024</a>).</p>
+<p>In Fourier space, the time evolution of hydrodynamic modes follows</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\rho(k, t) = \rho(k, 0) e^{-t/\tau_\parallel(k)}\left[\cos(s(k)kt) + \frac{1}{s(k)k\tau_\parallel(k)}\sin(s(k)kt)\right],\]</div>
+</div>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[j_\parallel(k, t) = j_\parallel(k, 0) e^{-t/\tau_\parallel(k)}\left[\cos(s(k)kt) - \frac{1}{s(k)k\tau_\parallel(k)}\sin(s(k)kt)\right],\]</div>
+</div>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[j_\perp(k, t) = j_\perp(k, 0) e^{-t/\tau_\perp(k)},\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(\rho(k, t)\)</span>, <span class="math notranslate nohighlight">\(j_\parallel(k, t)\)</span>, and <span class="math notranslate nohighlight">\(j_\perp(k, t)\)</span> are the coefficients for density, longitudinal momentum (<span class="math notranslate nohighlight">\(\vec{j}\parallel\vec{k}\)</span>), and transverse momentum(<span class="math notranslate nohighlight">\(\vec{j}\perp\vec{k}\)</span>), respectively, with 2D wavevector <span class="math notranslate nohighlight">\(\vec{k}\)</span>. Here we consider only one-dimensional periodic channels of length <span class="math notranslate nohighlight">\(L\)</span> with <span class="math notranslate nohighlight">\(\vec{k}\cdot\vec{e}_x=0\)</span>, such that <span class="math notranslate nohighlight">\(k\in k_n \equiv2\pi n/L\)</span> for <span class="math notranslate nohighlight">\(n\in\mathbb{N}\)</span>. <span class="math notranslate nohighlight">\(s\)</span> denotes the effective sound speed in the channels, and is given by the dispersion relation</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[s(k) = \sqrt{c^2 - (\tau_\parallel(k) k)^{-2}}\]</div>
+</div>
+<p>with group velocity <span class="math notranslate nohighlight">\(c=\sqrt{dp/d\rho}\)</span> and characteristic relaxation times</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\tau_\parallel(k) = (\nu_\text{L} k^2 + 6\nu/h^2)^{-1},\]</div>
+</div>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\tau_\perp(k) = (\nu k^2 + 12\nu/h^2)^{-1}\]</div>
+</div>
+<p>in longitudinal and transverse direction, respectively. Thus, the dissipation depends on the gap height <span class="math notranslate nohighlight">\(h\)</span> and the fluid properties, i.e. the kinematic shear viscosity <span class="math notranslate nohighlight">\(\nu=\eta/\rho\)</span> and kinematic longitudinal viscosity <span class="math notranslate nohighlight">\(\nu_\text{L}=(4\eta/3 + \zeta)/\rho\)</span> with shear and bulk viscosity <span class="math notranslate nohighlight">\(\eta\)</span> and <span class="math notranslate nohighlight">\(\zeta\)</span>, respectively. Note that in the limit of very small aspect ratios <span class="math notranslate nohighlight">\(hk\ll 1\)</span>, <span class="math notranslate nohighlight">\(s\)</span> will become complex and the density and longitudinal momentum modes become overdamped, i.e. sound propagation is suppressed. This happens at the critical wavenumber <span class="math notranslate nohighlight">\(k_\text{crit}=6\nu/h^2c\)</span> (<a class="reference external" href="https://doi.org/10.1103/PhysRevLett.131.084001">Holey et al., 2023</a>).</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="k">def</span> <span class="nf">density_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">density_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">i_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sinh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">momentum_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">momentum_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+    <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">i_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sinh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Let’s define some properties…</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GaPFlow.models.sound</span> <span class="kn">import</span> <span class="n">eos_sound_velocity</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">properties:</span>
+<span class="sd">    EOS: cubic</span>
+<span class="sd">    shear: 3.92293e-05    # N s/m^2</span>
+<span class="sd">    bulk: 0.              # N s/m^2</span>
+<span class="sd">    rho0: 762.8617        # kg/m^3</span>
+<span class="sd">    a: 1.33030e-1</span>
+<span class="sd">    b: -1.41778e2</span>
+<span class="sd">    c: 8.35134e4</span>
+<span class="sd">    d: -2.86532e6</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="n">h</span> <span class="o">=</span> <span class="mf">5e-9</span> 
+<span class="n">L</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="n">h</span>
+<span class="n">shear</span> <span class="o">=</span> <span class="mf">3.92293e-05</span>    <span class="c1"># N s/m^2</span>
+<span class="n">bulk</span> <span class="o">=</span> <span class="mf">0.</span>              <span class="c1"># N s/m^2</span>
+<span class="n">rho0</span> <span class="o">=</span>  <span class="mf">762.8617</span>        <span class="c1"># kg/m^3</span>
+
+<span class="n">eos</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;cubic&#39;</span><span class="p">,</span>
+       <span class="s1">&#39;a&#39;</span><span class="p">:</span> <span class="mf">1.33030e-1</span><span class="p">,</span>
+       <span class="s1">&#39;b&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">1.41778e2</span><span class="p">,</span>
+       <span class="s1">&#39;c&#39;</span><span class="p">:</span> <span class="mf">8.35134e4</span><span class="p">,</span>
+       <span class="s1">&#39;d&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">2.86532e6</span><span class="p">}</span>
+
+<span class="n">nuL</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.</span> <span class="o">/</span> <span class="mf">3.</span> <span class="o">*</span> <span class="n">shear</span> <span class="o">+</span> <span class="n">bulk</span><span class="p">)</span> <span class="o">/</span> <span class="n">rho0</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="n">shear</span> <span class="o">/</span> <span class="n">rho0</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">eos_sound_velocity</span><span class="p">(</span><span class="n">rho0</span><span class="p">,</span> <span class="n">eos</span><span class="p">)</span>
+<span class="n">k_crit</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span> 
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/usr/local/lib/python3.12/dist-packages/GaPFlow/md/runner.py:42: UserWarning: Failed to import lammps. Only Mock MD object available.
+  warnings.warn(&#39;Failed to import lammps. Only Mock MD object available.&#39;)
+</pre></div>
+</div>
+</div>
+</div>
+<p>.. and plot</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">GaPFlow.viz</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib.cm</span> <span class="kn">import</span> <span class="n">ScalarMappable</span>
+<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">CenteredNorm</span>
+
+<span class="n">sx</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">1.75</span><span class="o">*</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span>
+
+<span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5e-10</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+
+<span class="n">ns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="n">kns</span> <span class="o">=</span> <span class="n">ns</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">L</span>
+
+<span class="k">for</span> <span class="n">kn</span> <span class="ow">in</span> <span class="n">kns</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">kn</span> <span class="o">&lt;</span> <span class="n">k_crit</span><span class="p">:</span>
+        <span class="n">rho_kt</span> <span class="o">=</span> <span class="n">density_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="n">j_long_kt</span> <span class="o">=</span> <span class="n">momentum_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">rho_kt</span> <span class="o">=</span> <span class="n">density_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="n">j_long_kt</span> <span class="o">=</span> <span class="n">momentum_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+
+    <span class="n">tau_trans</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nu</span> <span class="o">*</span> <span class="n">kn</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">12.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">j_trans_kt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau_trans</span><span class="p">)</span>
+
+    
+    
+    <span class="n">color</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">coolwarm</span><span class="p">((</span><span class="n">kn</span> <span class="o">-</span> <span class="n">k_crit</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_crit</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rho_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">j_long_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">j_trans_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\rho(k, t)$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_\parallel(k, t)$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_\perp(k, t)$&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+
+<span class="n">k_scale</span> <span class="o">=</span> <span class="p">(</span><span class="n">kns</span> <span class="o">-</span> <span class="n">k_crit</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_crit</span>
+<span class="n">sm</span> <span class="o">=</span> <span class="n">ScalarMappable</span><span class="p">(</span><span class="n">CenteredNorm</span><span class="p">(</span><span class="n">vcenter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">halfrange</span><span class="o">=</span><span class="n">k_scale</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">coolwarm</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sm</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[:],</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$(k-k_\mathsf</span><span class="si">{crit}</span><span class="s1">)/k_\mathsf</span><span class="si">{crit}</span><span class="s1">$&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;cursive&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;cursive&#39; not found because none of the following families were found: Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, Comic Neue, Comic Sans MS, cursive
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/6b1d858a63dc4fd8f6a8d3097fbf72676ed20198ffd7a6bf7c114ea0d1d99aa1.png" src="../_images/6b1d858a63dc4fd8f6a8d3097fbf72676ed20198ffd7a6bf7c114ea0d1d99aa1.png" />
+</div>
+</div>
+<p>Here, the line color illustrates the distance from the critical wave number, going from overdamped (in blue) to underdamped (in red) behavior. The shear relaxation is independent of the wave number under these conditions. Note that density and longitudinal momentum behave similar in the underdamped case (with slightly different damping), their behavior diverges at the transition to overdamped dynamics.</p>
+<p>Let’s see how this changes with the gap height (while the length stays constant):</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">plot_relaxation</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mf">5e-9</span><span class="p">):</span>
+    <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">1.75</span><span class="o">*</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span>
+    
+    <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">5e-10</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+
+    <span class="n">k_crit</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span> 
+    
+    <span class="n">ns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+    <span class="n">kns</span> <span class="o">=</span> <span class="n">ns</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">L</span>
+    
+    <span class="k">for</span> <span class="n">kn</span> <span class="ow">in</span> <span class="n">kns</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">kn</span> <span class="o">&lt;</span> <span class="n">k_crit</span><span class="p">:</span>
+            <span class="n">rho_kt</span> <span class="o">=</span> <span class="n">density_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+            <span class="n">j_long_kt</span> <span class="o">=</span> <span class="n">momentum_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">rho_kt</span> <span class="o">=</span> <span class="n">density_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+            <span class="n">j_long_kt</span> <span class="o">=</span> <span class="n">momentum_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+    
+        <span class="n">tau_trans</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nu</span> <span class="o">*</span> <span class="n">kn</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">12.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">j_trans_kt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau_trans</span><span class="p">)</span>
+    
+        <span class="n">color</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">coolwarm</span><span class="p">((</span><span class="n">kn</span> <span class="o">-</span> <span class="n">k_crit</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_crit</span><span class="p">)</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">coolwarm</span><span class="p">((</span><span class="n">kn</span> <span class="o">-</span> <span class="n">k_crit</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_crit</span><span class="p">)</span>
+        <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">rho_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">j_long_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+        <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">j_trans_kt</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span>
+
+    <span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="sa">rf</span><span class="s1">&#39;$h = </span><span class="si">{</span><span class="n">h</span><span class="o">*</span><span class="mf">1e9</span><span class="si">:</span><span class="s1">.0f</span><span class="si">}</span><span class="s1">$ nm&#39;</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$\rho(k, t)$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_\parallel(k, t)$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_\perp(k, t)$&#39;</span><span class="p">)</span>
+    
+    <span class="n">ax</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$t$&#39;</span><span class="p">)</span>
+    
+    <span class="n">k_scale</span> <span class="o">=</span> <span class="p">(</span><span class="n">kns</span> <span class="o">-</span> <span class="n">k_crit</span><span class="p">)</span> <span class="o">/</span> <span class="n">k_crit</span>
+    <span class="n">sm</span> <span class="o">=</span> <span class="n">ScalarMappable</span><span class="p">(</span><span class="n">CenteredNorm</span><span class="p">(</span><span class="n">vcenter</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">halfrange</span><span class="o">=</span><span class="n">k_scale</span><span class="o">.</span><span class="n">max</span><span class="p">()),</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">coolwarm</span><span class="p">)</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sm</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">[:],</span> <span class="n">label</span><span class="o">=</span><span class="sa">r</span><span class="s1">&#39;$(k-k_\mathsf</span><span class="si">{crit}</span><span class="s1">)/k_\mathsf</span><span class="si">{crit}</span><span class="s1">$&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">6e-9</span><span class="p">,</span> <span class="mf">5e-9</span><span class="p">,</span> <span class="mf">4e-9</span><span class="p">,</span> <span class="mf">3e-9</span><span class="p">]:</span>
+    <span class="n">plot_relaxation</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="n">h</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/46682f64ca1e6b099ab0e60a87f86efbfba2fc5d95ded8cd8e383d320e6ae496.png" src="../_images/46682f64ca1e6b099ab0e60a87f86efbfba2fc5d95ded8cd8e383d320e6ae496.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/96364372f7012f370dcaab56afbe9ba16fdf2e2ad06d4b2e5dd3eef979803157.png" src="../_images/96364372f7012f370dcaab56afbe9ba16fdf2e2ad06d4b2e5dd3eef979803157.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/dc4017bb396989d2dace9e57fc7c7c9d75117eaca92984dcfa34ab2e38836045.png" src="../_images/dc4017bb396989d2dace9e57fc7c7c9d75117eaca92984dcfa34ab2e38836045.png" />
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/dcbf36c3d939e6085169842b89916cf41be256739dcf374aa6cbbcdbc4f63249.png" src="../_images/dcbf36c3d939e6085169842b89916cf41be256739dcf374aa6cbbcdbc4f63249.png" />
+</div>
+</div>
+<p>For the smallest gap (<span class="math notranslate nohighlight">\(h=3\,\mathrm{nm}\)</span>) the modes with the ten largest wavelengths are all overdamped, while only two modes remain overdamped when doubling the gap height. The plot below shows the overdamped region can be reached in high aspect ratio channels, with critical gap heights reaching up to 200 nm for <span class="math notranslate nohighlight">\(L/h=1000\)</span>.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="n">sy</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span>
+
+<span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e-9</span>
+<span class="n">k_crit</span> <span class="o">=</span> <span class="mi">6</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="n">c</span> 
+
+<span class="n">ax</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">k_crit</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">2e-9</span><span class="p">,</span> <span class="mf">1e-1</span><span class="p">,</span> <span class="s1">&#39;overdamped&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">10</span><span class="o">*</span><span class="n">h</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">100</span><span class="o">*</span><span class="n">h</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">h</span><span class="p">,</span> <span class="mi">1000</span><span class="o">*</span><span class="n">h</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1.5e-3</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$L/h=1000$&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mf">22.5</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1.5e-4</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$L/h=100$&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mf">22.5</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="mf">1.5e-5</span><span class="p">,</span> <span class="sa">r</span><span class="s1">&#39;$L/h=10$&#39;</span><span class="p">,</span> <span class="n">rotation</span><span class="o">=</span><span class="mf">22.5</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;bottom&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;C1&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">,</span> <span class="mf">1e0</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mf">1e-9</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_box_aspect</span><span class="p">(</span><span class="mf">1.</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Gap height (m)&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Wavelength (m)&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/30979889a28cd3c49f0e1f8eaec2b6b24a169508acc136902e68ff3437ea147f.png" src="../_images/30979889a28cd3c49f0e1f8eaec2b6b24a169508acc136902e68ff3437ea147f.png" />
+</div>
+</div>
+<p>We can use the analytical solution to validate our simulations. Thus let’s create a <code class="docutils literal notranslate"><span class="pre">GaPFlow.problem</span></code> instance with the following properties:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GaPFlow.problem</span> <span class="kn">import</span> <span class="n">Problem</span>
+
+<span class="n">sim</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">options:</span>
+<span class="s2">    output: data/decay</span>
+<span class="s2">    write_freq: 100</span>
+<span class="s2">    use_tstamp: False</span>
+<span class="s2">    silent: True</span>
+<span class="s2">grid:</span>
+<span class="s2">    Lx: 3.2e-7</span>
+<span class="s2">    Ly: 1</span>
+<span class="s2">    Nx: 256</span>
+<span class="s2">    Ny: 1</span>
+<span class="s2">    xE: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    xW: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    yS: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    yN: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">geometry:</span>
+<span class="s2">    type: inclined</span>
+<span class="s2">    hmin: 5e-9</span>
+<span class="s2">    hmax: 5e-9</span>
+<span class="s2">    U: 0.</span>
+<span class="s2">    V: 0.</span>
+<span class="s2">numerics:</span>
+<span class="s2">    adaptive: 0</span>
+<span class="s2">    CFL: 0.5</span>
+<span class="s2">    dt: 1e-13</span>
+<span class="s2">    max_it: 5_000</span>
+<span class="s2">properties:</span>
+<span class="s2">    EOS: cubic</span>
+<span class="s2">    shear: 3.92293e-05    # N s/m^2</span>
+<span class="s2">    bulk: 0.              # N s/m^2</span>
+<span class="s2">    rho0: 762.8617        # kg/m^3</span>
+<span class="s2">    a: 1.33030e-1</span>
+<span class="s2">    b: -1.41778e2</span>
+<span class="s2">    c: 8.35134e4</span>
+<span class="s2">    d: -2.86532e6</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we manually initialize the system with a shear wave as an initial condition, i.e. we set</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[j_y(x, 0) = \sin(k_n x)\]</div>
+</div>
+<p>and follow the decay. Since know that the amplitude of <span class="math notranslate nohighlight">\(j_y\)</span> exponentially decays with a rate of <span class="math notranslate nohighlight">\(1/\tau_\perp(k)\)</span>, we can verify our numerical calculation.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">myProblem</span> <span class="o">=</span> <span class="n">Problem</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">sim</span><span class="p">)</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">pre_run</span><span class="p">()</span>
+
+<span class="n">h</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">geo</span><span class="p">[</span><span class="s1">&#39;hmin&#39;</span><span class="p">]</span>
+<span class="n">kin_visc</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;shear&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;rho0&#39;</span><span class="p">]</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="s1">&#39;Lx&#39;</span><span class="p">]</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">kn</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">Lx</span>
+<span class="n">tau</span> <span class="o">=</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">12</span> <span class="o">*</span> <span class="n">kin_visc</span><span class="p">)</span>
+<span class="n">cT</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">v_sound</span>
+<span class="n">k_crit</span> <span class="o">=</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">kin_visc</span> <span class="o">/</span> <span class="p">(</span><span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cT</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">topo</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+<span class="c1"># Let&#39;s initialize the system with a shear wave</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">kn</span> <span class="o">*</span> <span class="n">x</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+<span class="c1"># Manually set initial knietic energy to avoid zero division</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">kinetic_energy_old</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">kinetic_energy</span>
+
+<span class="c1"># Now we evolove for a couple of steps</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+    <span class="n">myProblem</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">jy_ana</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">kn</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">myProblem</span><span class="o">.</span><span class="n">simtime</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span>
+        <span class="n">jy_num</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">q</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">jy_num</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s1">3d</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">jy_ana</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.0&#39;</span><span class="p">)</span>
+
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.0&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Analytical&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;$x$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_y$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">ncol</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">ncol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>*************************************************************
+*                       PROBLEM SETUP                       *
+*************************************************************
+- options:
+  - output                   : data/decay
+  - write_freq               : 100
+  - use_tstamp               : False
+  - silent                   : True
+- grid:
+  - Nx                       : 256
+  - Lx                       : 3.2e-07
+  - dx                       : 1.25e-09
+  - Ny                       : 1
+  - Ly                       : 1.0
+  - dy                       : 1.0
+  - dim                      : 1
+  - bc_xE_P                  : [True, True, True]
+  - bc_xE_D                  : [False, False, False]
+  - bc_xE_N                  : [False, False, False]
+  - bc_xW_P                  : [True, True, True]
+  - bc_xW_D                  : [False, False, False]
+  - bc_xW_N                  : [False, False, False]
+  - bc_yS_P                  : [True, True, True]
+  - bc_yS_D                  : [False, False, False]
+  - bc_yS_N                  : [False, False, False]
+  - bc_yN_P                  : [True, True, True]
+  - bc_yN_D                  : [False, False, False]
+  - bc_yN_N                  : [False, False, False]
+- geometry:
+  - U                        : 0.0
+  - V                        : 0.0
+  - type                     : inclined
+  - flip                     : False
+  - hmax                     : 5e-09
+  - hmin                     : 5e-09
+- numerics:
+  - tol                      : 1e-06
+  - max_it                   : 5000
+  - dt                       : 1e-13
+  - adaptive                 : False
+  - CFL                      : 0.5
+  - MC_order                 : 1
+- properties:
+  - shear                    : 3.92293e-05
+  - bulk                     : 0.0
+  - EOS                      : cubic
+  - a                        : 0.13303
+  - b                        : -141.778
+  - c                        : 83513.4
+  - d                        : -2865320.0
+  - rho0                     : 762.8617
+- gp:
+- db:
+- md:
+*************************************************************
+*                  PROBLEM SETUP COMPLETED                  *
+*************************************************************
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/7468cc8a8e9d14082d3721ff39a839838b3e8882d7d52b40fdc52d31a9e4cfe0.png" src="../_images/7468cc8a8e9d14082d3721ff39a839838b3e8882d7d52b40fdc52d31a9e4cfe0.png" />
+</div>
+</div>
+<p>This looks good. Let’s also check for longitudinal momentum:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">myProblem</span> <span class="o">=</span> <span class="n">Problem</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">sim</span><span class="p">)</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">pre_run</span><span class="p">()</span>
+
+<span class="n">h</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">geo</span><span class="p">[</span><span class="s1">&#39;hmin&#39;</span><span class="p">]</span>
+<span class="n">nu</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;shear&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;rho0&#39;</span><span class="p">]</span>
+<span class="n">nuL</span> <span class="o">=</span> <span class="p">(</span><span class="mf">4.</span> <span class="o">/</span> <span class="mf">3.</span> <span class="o">*</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;shear&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;bulk&#39;</span><span class="p">])</span> <span class="o">/</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;rho0&#39;</span><span class="p">]</span>
+<span class="n">Lx</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="s1">&#39;Lx&#39;</span><span class="p">]</span>
+
+<span class="n">n</span> <span class="o">=</span> <span class="mi">4</span> <span class="c1"># we look at shorter wavelengths to be sure to be in the underdamped regime</span>
+<span class="n">kn</span> <span class="o">=</span> <span class="n">n</span> <span class="o">*</span> <span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">Lx</span>
+<span class="n">tau</span> <span class="o">=</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="mi">12</span> <span class="o">*</span> <span class="n">kin_visc</span><span class="p">)</span>
+<span class="n">cT</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">v_sound</span>
+<span class="n">k_crit</span> <span class="o">=</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">kin_visc</span> <span class="o">/</span> <span class="p">(</span><span class="n">h</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">cT</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">topo</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+<span class="c1"># Let&#39;s initialize the system with a shear wave</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">kn</span> <span class="o">*</span> <span class="n">x</span><span class="p">)[:,</span> <span class="kc">None</span><span class="p">]</span>
+
+<span class="c1"># Manually set initial kinetic energy to avoid zero division</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">kinetic_energy_old</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">kinetic_energy</span>
+
+<span class="c1"># Now we evolove for a couple of steps</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+    <span class="n">myProblem</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">jx_ana</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">kn</span> <span class="o">*</span> <span class="n">x</span><span class="p">)</span> <span class="o">*</span> <span class="n">momentum_decay_underdamped</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">simtime</span><span class="p">,</span> <span class="n">kn</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span>
+        <span class="n">jx_num</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">q</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">jx_num</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">i</span><span class="si">:</span><span class="s1">3d</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">jx_ana</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.0&#39;</span><span class="p">)</span>
+
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">([],</span> <span class="p">[],</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.0&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Analytical&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;$x$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;$j_x$&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">ncol</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">),</span> <span class="n">loc</span><span class="o">=</span><span class="mi">2</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>*************************************************************
+*                       PROBLEM SETUP                       *
+*************************************************************
+- options:
+  - output                   : data/decay
+  - write_freq               : 100
+  - use_tstamp               : False
+  - silent                   : True
+- grid:
+  - Nx                       : 256
+  - Lx                       : 3.2e-07
+  - dx                       : 1.25e-09
+  - Ny                       : 1
+  - Ly                       : 1.0
+  - dy                       : 1.0
+  - dim                      : 1
+  - bc_xE_P                  : [True, True, True]
+  - bc_xE_D                  : [False, False, False]
+  - bc_xE_N                  : [False, False, False]
+  - bc_xW_P                  : [True, True, True]
+  - bc_xW_D                  : [False, False, False]
+  - bc_xW_N                  : [False, False, False]
+  - bc_yS_P                  : [True, True, True]
+  - bc_yS_D                  : [False, False, False]
+  - bc_yS_N                  : [False, False, False]
+  - bc_yN_P                  : [True, True, True]
+  - bc_yN_D                  : [False, False, False]
+  - bc_yN_N                  : [False, False, False]
+- geometry:
+  - U                        : 0.0
+  - V                        : 0.0
+  - type                     : inclined
+  - flip                     : False
+  - hmax                     : 5e-09
+  - hmin                     : 5e-09
+- numerics:
+  - tol                      : 1e-06
+  - max_it                   : 5000
+  - dt                       : 1e-13
+  - adaptive                 : False
+  - CFL                      : 0.5
+  - MC_order                 : 1
+- properties:
+  - shear                    : 3.92293e-05
+  - bulk                     : 0.0
+  - EOS                      : cubic
+  - a                        : 0.13303
+  - b                        : -141.778
+  - c                        : 83513.4
+  - d                        : -2865320.0
+  - rho0                     : 762.8617
+- gp:
+- db:
+- md:
+*************************************************************
+*                  PROBLEM SETUP COMPLETED                  *
+*************************************************************
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
+</pre></div>
+</div>
+<img alt="../_images/fd60047566ed3d7b26765db03338f2d79431d980721fe5e2c10ad16b1d428739.png" src="../_images/fd60047566ed3d7b26765db03338f2d79431d980721fe5e2c10ad16b1d428739.png" />
+</div>
+</div>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="06_lubrication.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Confined fluids: wall-driven flows</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="04_viscosity.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Viscosity models for non-Newtonian fluids</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2025, Hannes Holey
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

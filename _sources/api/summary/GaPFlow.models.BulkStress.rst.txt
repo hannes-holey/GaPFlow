@@ -1,0 +1,63 @@
+﻿GaPFlow.models.BulkStress
+=========================
+
+.. currentmodule:: GaPFlow.models
+
+.. autoclass:: BulkStress
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~BulkStress.__init__
+      ~BulkStress.init_database
+      ~BulkStress.predict
+      ~BulkStress.print_opt_summary
+      ~BulkStress.update
+      ~BulkStress.write
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~BulkStress.Xtest
+      ~BulkStress.Xtrain
+      ~BulkStress.Yerr
+      ~BulkStress.Yscale
+      ~BulkStress.Ytrain
+      ~BulkStress.dh_dx
+      ~BulkStress.dh_dy
+      ~BulkStress.dp_dx
+      ~BulkStress.dp_dy
+      ~BulkStress.extra
+      ~BulkStress.height
+      ~BulkStress.kernel_lengthscale
+      ~BulkStress.kernel_variance
+      ~BulkStress.name
+      ~BulkStress.obs_stddev
+      ~BulkStress.pressure
+      ~BulkStress.solution
+      ~BulkStress.stress
+      ~BulkStress.topography
+      ~BulkStress.trusted
+      ~BulkStress.is_gp_model
+      ~BulkStress.active_dims
+      ~BulkStress.build_gp
+      ~BulkStress.rtol
+      ~BulkStress.atol
+      ~BulkStress.max_steps
+      ~BulkStress.pause_steps
+      ~BulkStress.params_init
+      ~BulkStress.noise
+      ~BulkStress.prop
+      ~BulkStress.geo
+   
+   
