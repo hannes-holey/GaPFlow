@@ -21,12 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from cmath import tau
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from IPython.display import HTML, Video
+from IPython.display import HTML
 import netCDF4
 
 from GaPFlow.topography import create_midpoint_grid
