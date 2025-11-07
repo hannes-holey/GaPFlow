@@ -125,6 +125,7 @@ class GaussianProcessSurrogate:
     rtol: float
     atol: float
     max_steps: int
+    pause_steps: int
     params_init: dict
     noise: Tuple[float, float]
     prop: dict
@@ -137,8 +138,10 @@ class GaussianProcessSurrogate:
         self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
+            self.cond_gp = None
             self.database = database
             self.last_fit_train_size = 0
+            self.pause = 0
 
             # Initialize timers
             ref = datetime.now()
@@ -304,7 +307,7 @@ class GaussianProcessSurrogate:
         self.params = soln.params
         self.gp = self.build_gp(self.params, self.Xtrain, self.Yerr)
 
-        obj = self.gp.log_probability(self.Ytrain)
+        obj = -self.gp.log_probability(self.Ytrain)
         self.print_opt_summary(obj)
 
         if self.step > 0:
@@ -313,7 +316,34 @@ class GaussianProcessSurrogate:
         if reason == 0:
             print('#' + 50 * '-')
 
-    def _infer(self) -> Tuple[JAXArray, JAXArray]:
+        # Delete cache to force inference step with new training data
+        self.cond_gp = None
+
+    def _infer_mean(self) -> JAXArray:
+
+        if self.cond_gp is None:
+            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
+        else:
+            m = _repredict_mean(self.gp, self.cond_gp, self.Xtest)
+
+        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
+
+        return predictive_mean
+
+    def _infer_mean_var(self) -> Tuple[JAXArray, JAXArray]:
+
+        if self.cond_gp is None:
+            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
+        else:
+            m, v = _repredict_mean_var(self.gp, self.cond_gp, self.Xtest)
+
+        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
+        predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
+
+        return predictive_mean, predictive_var
+
+    def _infer(self,
+               compute_var: bool = True) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction on test data.
 
@@ -324,18 +354,16 @@ class GaussianProcessSurrogate:
         predictive_var : jax.Array
             Predicted variance field.
         """
-        m, v = self.gp.predict(self.Ytrain, self.Xtest, return_var=True)
-        _, nx, ny = self.solution.shape
 
-        predictive_mean = m.reshape(-1, nx, ny).squeeze() * self.Yscale
-        predictive_var = v.reshape(-1, nx, ny).squeeze() * self.Yscale**2
+        if compute_var:
+            predictive_mean, self._predictive_var = self._infer_mean_var()
+            self.maximum_variance = jnp.max(self._predictive_var)
+            self.variance_tol = jnp.maximum(self.atol * self.Yerr * self.Yscale,
+                                            self.rtol * self.Yscale)**2
+        else:
+            predictive_mean = self._infer_mean()
 
-        self.variance_tol = jnp.maximum(
-            self.atol * self.Yerr * self.Yscale, self.rtol * self.Yscale
-        ) ** 2
-        self.maximum_variance = np.max(predictive_var)
-
-        return predictive_mean, predictive_var
+        return predictive_mean, self._predictive_var
 
     # ------------------------------------------------------------------
     # Active Learning
@@ -356,7 +384,9 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
     # ------------------------------------------------------------------
-    def predict(self, predictor: bool = True) -> Tuple[JAXArray, JAXArray]:
+    def predict(self,
+                predictor: bool = True,
+                compute_var: bool = True) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction, optionally updating the model via active learning
         (only in predictor step of the predictor-corrector time integration scheme)
@@ -373,8 +403,11 @@ class GaussianProcessSurrogate:
         v : jax.Array
             Predictive variance.
         """
+
+        # Update hyperparameters
         if predictor:
             self.step += 1
+            self.pause = max(-1, self.pause - 1)
             if self.last_fit_train_size < self.database.size:
                 tic = datetime.now()
                 self._train(reason=0)
@@ -382,14 +415,18 @@ class GaussianProcessSurrogate:
                 self.cumtime_train += toc - tic
 
         tic = datetime.now()
-        m, v = self._infer()
+        m, v = self._infer(compute_var=compute_var and predictor)
         toc = datetime.now()
         self.cumtime_infer += toc - tic
 
-        # Active learning loop
-        if predictor:
+        if self.use_active_learning \
+                and predictor \
+                and self.pause < 0:
+
             counter = 0
             before = deepcopy(self.maximum_variance / self.variance_tol)
+
+            # Active learning loop
             while not self.trusted and counter < self.max_steps:
                 counter += 1
                 self._active_learning(v)
@@ -401,13 +438,20 @@ class GaussianProcessSurrogate:
                 self.cumtime_train += toc - tic
 
                 # predict again
-                m, v = self._infer()
                 tic = datetime.now()
+                m, v = self._infer(compute_var=True)
+                toc = datetime.now()
                 self.cumtime_infer += tic - toc
 
                 after = self.maximum_variance / self.variance_tol
                 print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
+
+            if counter == self.max_steps:
+                print("# Active learning loop missed uncertainty threshold")
+                print(f"# Pause for {self.pause_steps} steps...")
+                print('#' + 50 * '-')
+                self.pause = self.pause_steps
 
         return m, v
 
@@ -429,6 +473,43 @@ class GaussianProcessSurrogate:
             self.topography,
             self.extra
         ]).reshape(self.database.num_features, -1).T
+
+
+@jax.jit
+def _repredict_mean_var(gp: GaussianProcess,
+                        cond_gp: GaussianProcess,
+                        Xtest: JAXArray) -> Tuple[JAXArray, JAXArray]:
+
+    Ks = gp.kernel(gp.X, Xtest)
+    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+    v = gp.solver.solve_triangular(Ks)
+    Kss = gp.kernel(Xtest) + cond_gp.noise.diag
+    var = Kss - jnp.sum(v**2, axis=0)
+
+    return mean, var
+
+
+@jax.jit
+def _repredict_mean(gp: GaussianProcess,
+                    cond_gp: GaussianProcess,
+                    Xtest: JAXArray) -> Tuple[JAXArray, JAXArray] | JAXArray:
+
+    Ks = gp.kernel(gp.X, Xtest)
+    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+
+    return mean
+
+
+@jax.jit
+def _predict(gp: GaussianProcess,
+             Ytrain: JAXArray,
+             Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
+
+    cond_gp = gp.condition(Ytrain, Xtest).gp
+    m = cond_gp.loc
+    v = cond_gp.variance
+
+    return m, v, cond_gp
 
 
 # ----------------------------------------------------------------------

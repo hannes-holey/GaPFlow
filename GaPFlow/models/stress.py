@@ -92,10 +92,13 @@ class WallStress(GaussianProcessSurrogate):
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
+            self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
+            self.use_active_learning = gp['active_learning']
             self.build_gp = multi_in_multi_out
         else:
             self.is_gp_model = False
+            self.use_active_learning = False
 
         super().__init__(fc, data)
 
@@ -212,6 +215,19 @@ class WallStress(GaussianProcessSurrogate):
         return X, flag
 
     @property
+    def _Ytrain(self) -> JAXArray:
+        """
+        Training outputs for GP corresponding to the lower and upper wall stress.
+
+        Returns
+        -------
+        jax.Array
+            Concatenated array of training outputs (lower then upper).
+        """
+        return jnp.concatenate([self.database._Ytrain[:self.last_fit_train_size, self._out_index + 1],
+                                self.database._Ytrain[:self.last_fit_train_size, self._out_index + 7]])
+
+    @property
     def Ytrain(self) -> JAXArray:
         """
         Training outputs for GP corresponding to the lower and upper wall stress.
@@ -221,8 +237,7 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Concatenated array of training outputs (lower then upper).
         """
-        return jnp.concatenate([self.database.Ytrain[:self.last_fit_train_size, self._out_index + 1],
-                                self.database.Ytrain[:self.last_fit_train_size, self._out_index + 7]])
+        return self._Ytrain / self.Yscale
 
     @property
     def Yscale(self) -> JAXArray:
@@ -234,8 +249,10 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Scalar-like array representing the maximum of selected Y scales.
         """
-        return jnp.max(self.database.Y_scale[jnp.array([self._out_index + 1,
-                                                        self._out_index + 7], dtype=int)])
+        indices = jnp.array([self._out_index + 1,
+                             self._out_index + 7], dtype=int)
+
+        return jnp.max(self.database.Y_scale[indices])
 
     @property
     def Yerr(self) -> JAXArray:
@@ -248,10 +265,10 @@ class WallStress(GaussianProcessSurrogate):
             Observation noise standard deviation normalized by Yscale.
         """
 
-        Yerr_all = jnp.concatenate([self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
-                                    self.database.Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
+        Yerr_all = jnp.concatenate([self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
+                                    self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
 
-        return jnp.mean(Yerr_all)
+        return jnp.mean(Yerr_all / self.Yscale)
 
     @property
     def kernel_variance(self) -> JAXArray:
@@ -281,7 +298,9 @@ class WallStress(GaussianProcessSurrogate):
             self._train()
             self._infer()
 
-    def update(self, predictor: bool = False) -> None:
+    def update(self,
+               predictor: bool = False,
+               compute_var: bool = False) -> None:
         """
         Update wall stress: compute deterministic stresses and, if enabled,
         perform GP prediction and place predicted mean and variance into the
@@ -339,7 +358,9 @@ class WallStress(GaussianProcessSurrogate):
         self.__field.p[11] = s_top[-1] / 2.
 
         if self.is_gp_model:
-            mean, var = self.predict(predictor)
+            mean, var = self.predict(predictor=predictor,
+                                     compute_var=self.use_active_learning or compute_var)
+
             self.__field.p[self._out_index] = mean[0, :, :]
             self.__field.p[self._out_index + 6] = mean[1, :, :]
             self.__field_variance.p = var[0, :, :]
@@ -456,10 +477,13 @@ class Pressure(GaussianProcessSurrogate):
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
+            self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
+            self.use_active_learning = gp['active_learning']
             self.build_gp = multi_in_single_out
         else:
             self.is_gp_model = False
+            self.use_active_learning = False
 
         super().__init__(fc, data)
 
@@ -481,7 +505,6 @@ class Pressure(GaussianProcessSurrogate):
         """
         if self.is_gp_model:
             eos_grad = vmap(grad(self.eos))
-            # FIXME: density dimension hard-coded
             vsound_squared = eos_grad(self.Xtest)[:, 0].max() * self.Yscale / self.database.X_scale[0]
             vsound = jnp.sqrt(vsound_squared)
             return vsound
@@ -501,10 +524,16 @@ class Pressure(GaussianProcessSurrogate):
         return self.database.Xtrain[:, self.active_dims]
 
     @property
+    def _Ytrain(self) -> JAXArray:
+        """Training outputs for pressure GP (normalized)."""
+        # normalized
+        return self.database._Ytrain[:self.last_fit_train_size, 0]
+
+    @property
     def Ytrain(self) -> JAXArray:
         """Training outputs for pressure GP (normalized)."""
         # normalized
-        return self.database.Ytrain[:self.last_fit_train_size, 0]
+        return self._Ytrain / self.Yscale
 
     @property
     def Yscale(self) -> JAXArray:
@@ -544,13 +573,16 @@ class Pressure(GaussianProcessSurrogate):
             self._train()
             self._infer()
 
-    def update(self, predictor: bool = False) -> None:
+    def update(self,
+               predictor: bool = False,
+               compute_var: bool = False) -> None:
         """
         Update the pressure field: perform GP inference if enabled or
         compute analytic pressure via eos_pressure.
         """
         if self.is_gp_model:
-            mean, var = self.predict(predictor)
+            mean, var = self.predict(predictor=predictor,
+                                     compute_var=self.use_active_learning or compute_var)
             self.__field.p = mean
             self.__field_variance.p = var
         else:

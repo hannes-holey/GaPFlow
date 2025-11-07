@@ -115,7 +115,10 @@ class Problem:
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
             if database is not None:
-                database.set_training_path(os.path.join(self.outdir, 'train'))
+                # Set training path inside output path
+                if database.overwrite_training_path:
+                    database.set_training_path(os.path.join(self.outdir, 'train'))
+
                 database.output_path = self.outdir
                 options['output'] = self.outdir
 
@@ -126,10 +129,7 @@ class Problem:
                             [options, grid, numerics, geo, prop]):
                 full_dict[k] = v
 
-            # Set training path inside output path
             if database is not None:
-                database.output_path = self.outdir
-                database.set_training_path(os.path.join(self.outdir, 'train'))
                 full_dict['gp'] = gp
                 full_dict['db'] = database.db
                 full_dict['md'] = database.md.params
@@ -396,6 +396,18 @@ class Problem:
         return self.__field.p
 
     @property
+    def q_has_nan(self) -> bool:
+        return np.any(np.isnan(self.q))
+
+    @property
+    def q_has_negative_density(self) -> bool:
+        return np.any(self.q[0] < 0.)
+
+    @property
+    def q_is_valid(self) -> bool:
+        return ~self.q_has_nan and ~self.q_has_negative_density
+
+    @property
     def centerline_mass_density(self) -> npt.NDArray[np.floating]:
         """Centerline mass density w/o ghost buffers"""
         return self.__field.p[0, 1:-1, self.grid['Ny'] // 2]
@@ -505,6 +517,29 @@ class Problem:
         if self.numerics["adaptive"]:
             self.dt = self.numerics["CFL"] * self.dt_crit
 
+    def finalize(self, q0: npt.NDArray) -> None:
+        """Reset the solution field to the one of the ols time step and update stresses.
+        Sets the _stop flag to abort the simulation run.
+
+        Parameters
+        ----------
+        q0 : np.ndarray
+            Solution field
+        """
+        if self.q_has_nan:
+            print('NaN detected.', end=' ')
+        elif self.q_has_negative_density:
+            print('Negative density detected.', end=' ')
+
+        self.__field.p = q0
+        self.pressure.update(predictor=False, compute_var=True)
+        self.wall_stress_xz.update(predictor=False, compute_var=True)
+        self.wall_stress_yz.update(predictor=False, compute_var=True)
+        self.bulk_stress.update()
+
+        print('Writing previous step and aborting simulation.')
+        self._stop = True
+
     def update(self) -> None:
         """
         Single update iteration performing predictor-corrector for each sweep
@@ -519,11 +554,16 @@ class Problem:
 
         q0 = self.__field.p.copy()
 
+        one_step_before_output = (self.step + 1) % self.options['write_freq'] == 0
+
         for i, d in enumerate(directions):
             # update surrogates / constitutive models (predictor on first pass)
-            self.pressure.update(predictor=i == 0)
-            self.wall_stress_xz.update(predictor=i == 0)
-            self.wall_stress_yz.update(predictor=i == 0)
+            self.pressure.update(predictor=i == 0,
+                                 compute_var=one_step_before_output)
+            self.wall_stress_xz.update(predictor=i == 0,
+                                       compute_var=one_step_before_output)
+            self.wall_stress_yz.update(predictor=i == 0,
+                                       compute_var=one_step_before_output)
             self.bulk_stress.update()
 
             # fluxes and source terms
@@ -549,13 +589,16 @@ class Problem:
         # second-order temporal averaging (Crank-Nicolson-like)
         self.__field.p = (self.__field.p + q0) / 2.0
 
-        self.topo.update()
-
-        self.post_update()
+        if self.q_is_valid:
+            self.topo.update()
+            self.post_update()
+        else:
+            self.finalize(q0)
 
     # ---------------------------
     # Ghost cell handling
     # ---------------------------
+
     def _communicate_ghost_buffers(self) -> None:
         """
         Update ghost-cell values according to boundary conditions stored in

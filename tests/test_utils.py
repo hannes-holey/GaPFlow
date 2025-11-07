@@ -1,5 +1,5 @@
 #
-# Copyright 2024-2025 Hannes Holey
+# Copyright 2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -21,24 +21,41 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import pytest
+
+import os
 import numpy as np
+import jax.numpy as jnp
+from ruamel.yaml import YAML
 
-from GaPFlow.models.velocity_profile import get_velocity_profiles
+from GaPFlow.utils import make_dumpable
 
 
-@pytest.mark.parametrize('slip', ['both', 'top', 'bottom', 'none'])
-def test_flow_rate(slip):
+yaml = YAML()
+yaml.explicit_start = True
+yaml.indent(mapping=4, sequence=4, offset=2)
 
-    Nz = 10_000
-    hmax = 2.
 
-    z = np.linspace(0., hmax, Nz)
-    q = np.array([1., 2., 1.])
+def test_make_dumpable(tmp_path):
 
-    Ls = 0.5
+    Aj = jnp.array([1., 3.5, 5.])
+    Bn = np.random.randint(10, size=10).astype(float)
 
-    u, v = get_velocity_profiles(z, q, Ls=Ls, U=1., V=1., slip=slip)
+    output_dict = {'A': Aj,
+                   'B': Bn,
+                   'b': np.mean(Bn),
+                   's': 'test_value'}
 
-    assert np.isclose(np.trapezoid(u, z) / hmax, q[1])
-    assert np.isclose(np.trapezoid(v, z) / hmax, q[2])
+    formatted_dict = make_dumpable(output_dict)
+
+    fname = os.path.join(tmp_path, 'file.yaml')
+
+    with open(fname, 'w') as outfile:
+        yaml.dump(formatted_dict, outfile)
+
+    with open(fname, 'r') as infile:
+        input_dict = yaml.load(infile)
+
+    assert np.all([np.isclose(i, Aji) for i, Aji in zip(input_dict['A'], Aj)])
+    assert np.all([np.isclose(i, Bni) for i, Bni in zip(input_dict['B'], Bn)])
+    assert np.isclose(input_dict['b'], np.mean(Bn))
+    assert input_dict['s'] == 'test_value'

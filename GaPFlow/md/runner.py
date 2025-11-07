@@ -24,6 +24,7 @@
 import os
 import sys
 import abc
+import shutil
 import warnings
 import dtoolcore
 from mpi4py import MPI
@@ -33,6 +34,7 @@ from ruamel.yaml import YAML
 from getpass import getuser
 from socket import gethostname
 import scipy.constants as sci
+from copy import deepcopy
 
 try:
     from lammps import lammps
@@ -47,7 +49,7 @@ from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.models.viscous import stress_bottom, stress_top
 from GaPFlow.md.moltemplate import write_template, build_template
 from GaPFlow.md.utils import read_output_files
-from GaPFlow.utils import bordered_text
+from GaPFlow.utils import bordered_text, make_dumpable
 
 yaml = YAML()
 yaml.explicit_start = True
@@ -152,15 +154,11 @@ class MolecularDynamics:
 
         out_fname = os.path.join(dataset_path, 'README.yml')
 
-        X = [float(item) for item in np.asarray(Xnew)]
-        Y = [float(item) for item in np.asarray(Ynew)]
-        Yerr = [float(item) for item in np.asarray(Yerrnew)]
+        metadata.update({'parameters': make_dumpable(self.params)})
 
-        metadata.update({'parameters': self.params})
-
-        metadata['X'] = X
-        metadata['Y'] = Y
-        metadata['Yerr'] = Yerr
+        metadata['X'] = make_dumpable(Xnew)
+        metadata['Y'] = make_dumpable(Ynew)
+        metadata['Yerr'] = make_dumpable(Yerrnew)
 
         with open(out_fname, 'w') as outfile:
             yaml.dump(metadata, outfile)
@@ -342,16 +340,21 @@ class GoldAlkane(MolecularDynamics):
                              os.path.join("static", f))
 
         # TODO: separate section of metadata
-        args = self.params
+        args = deepcopy(self.params)
         args["density"] = float(X[0])
         args["fluxX"] = float(X[1])
         args["fluxY"] = float(X[2])
         args["gap_height"] = float(X[3])
 
+        if self.params['wall_rotation']:
+            dh_dx = float(X[4])
+            args["rotation"] = -np.arctan(dh_dx) / np.pi * 180.
+
         cwd = os.getcwd()
         os.chdir(proto_ds_datapath)
         self.num_worker = write_template(args)
         build_template(args)
+        shutil.rmtree('output_ttree')
         os.chdir(cwd)
 
     def read_output(self):
