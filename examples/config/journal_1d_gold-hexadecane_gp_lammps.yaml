@@ -1,0 +1,68 @@
+options:
+    output: data/cosine_mol
+    write_freq: 100
+    use_tstamp: True
+grid:
+    Lx: 1918.
+    Ly: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 0.51
+    xW_D: 0.51
+geometry:
+    type: journal
+    hmin: 30.
+    hmax: 60.
+    U: 20.e-5
+    V: 0.
+numerics:
+    CFL: 0.5
+    adaptive: 1
+    tol: 1e-7
+    dt: 1.
+    maxIt: 10_000
+properties:
+    shear: 2.15
+    bulk: 0.
+    EOS: BWR
+    T: 1.0
+    rho0: 0.51
+gp:
+    press:
+        fix_noise: True
+        atol: 1.5
+        rtol: 0.
+        obs_stddev: 2.e-2
+        max_steps: 10
+    shear:
+        fix_noise: True
+        atol: 1.5
+        rtol: 0.
+        obs_stddev: 4.e-3
+        max_steps: 10
+db:
+    dtool: True
+    dtool_path: data/train_mol
+    init_size: 5
+    init_method: rand
+md:
+    system: mol
+    rotation: False
+    wall_rotation: False
+    ncpu: 6 
+    wall: eam
+    molecule: hexadecane
+    fftemplate: lmp/mol/moltemplate_files/trappe1998.lt
+    topo: lmp/mol/moltemplate_files/hexadecane.lt
+    staticFiles: lmp/mol/static
+    nx: 30
+    nz: 3
+    vWall: 20.  # in m/s
+    temperature: 400.
+    Ninit: 25_000
+    Nsteady: 10_000
+    Nsample: 10_000

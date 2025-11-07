@@ -1,0 +1,29 @@
+change_box      all boundary p p s
+
+dump            1 all custom ${dumpfreq} traj.equil.dump type id mol x y z vx vy vz
+
+variable        scale equal 1.
+variable		shift equal bound(surfU,zmin)-bound(surfL,zmax)-(v_hmin+v_offset)
+
+variable        vZ equal -${shift}/${dt}/${Ninit}
+
+velocity        TraPPE create $(2*v_input_temp) 726403 dist gaussian mom yes
+
+# relax
+fix             1 TraPPE nve/limit 0.1
+fix             2 TraPPE temp/berendsen ${input_temp} ${input_temp} $(500*dt)
+run             $(floor(v_Ninit/2))
+unfix           1
+unfix           2
+
+# move
+fix             1 TraPPE nve
+fix             2 TraPPE temp/berendsen ${input_temp} ${input_temp} $(500*dt)
+fix             3 surfU move linear 0. 0. $(v_vZ/v_scale) units box
+run             $(v_Ninit*v_scale)
+unfix           3
+
+# relax
+run             $(floor(v_Ninit/2))
+unfix           1
+unfix           2

@@ -1,0 +1,19 @@
+neigh_modify 	exclude group solid TraPPE
+
+thermo 			10
+
+dump            1 all custom 10 traj.min.dump type id mol x y z vx vy vz
+fix             1 TraPPE setforce 0. 0. 0.
+fix             2 freezeL setforce 0. 0. 0.
+fix             3 freezeU setforce 0. 0. 0.
+minimize        1.0e-9 0. 1000 10000 
+unfix           1
+unfix           2
+unfix           3
+undump          1
+
+neigh_modify	exclude none
+neigh_modify	exclude group frozen frozen
+
+thermo 			100
+reset_timestep  0

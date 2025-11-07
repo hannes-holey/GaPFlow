@@ -3,54 +3,67 @@ requires = ["flit_core>=3.2"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "hans"
-description = "Height-Averaged Navier-Stokes (HANS) solver for 2D lubrication problems"
+name = "GaPFlow"
+description = "Gap-averaged flow simulations with Gaussian Process regression."
 readme = "README.md"
 authors = [
-    { name = "Hannes Holey", email = "hannes.holey@kit.edu" },
+    { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License"
 ]
 
-requires-python = ">=3.9, <3.13"
+requires-python = ">3.10"
 dynamic = ["version"]
 dependencies = [
-	"matplotlib>=3.2.0",
-	"numpy>=1.22.4, <2.0.0",
-	"netCDF4>=1.5.3",
-	"PyYAML>=5.3",
-	"mpi4py>=3.0",
-	"scipy>=1.12",
-	"GPy==1.13.2",
-	"dtool",
-	"dtool-lookup-api==0.5.1"
-]
+	"muGrid>=0.95.0",
+	"tinygp>=0.3.0",
+	"jax>=0.8.0",
+	"jaxopt==0.8.5",
+	"netCDF4>=1.7.2",
+	"dtoolcore>=3.19.0",
+	"dtool-lookup-api>=0.10.2",
+	"matplotlib",
+	"polars",
+	"ruamel.yaml",
+	"ase", 
+	"mpi4py",
+	"moltemplate"]
 
 [project.optional-dependencies]
-multiscale  = ['lammps']
-test = ['pytest', 'coverage>=5.0.3']
-doc = ['sphinx', 'sphinx_rtd_theme', 'myst-nb', 'jupytext', 'sympy']
+test = ['pytest',
+		'coverage']
 
-[project.urls]
-Source = "https://github.com/hannes-holey/hans"
+doc = ['sphinx',
+	   'furo',
+	   'myst-nb',
+	   'jupytext',
+	   'sympy']
 
 [project.scripts]
-animate1D="hans.cli:animate1D.main"
-animate2D="hans.cli:animate2D.main"
-generate_roughness="hans.cli:generate_roughness.main"
-plot1D_evolution="hans.cli:plot1D_evolution.main"
-plot1D_height = "hans.cli:plot1D_height.main"
-plot1D_last = "hans.cli:plot1D_last.main"
-plot2D_height = "hans.cli:plot2D_height.main"
-plot2D_last = "hans.cli:plot2D_last.main"
-plot_scalar = "hans.cli:plot_scalar.main"
-read_config = "hans.cli:read_config.main"
+gpf_plot_height="GaPFlow.cli:plot_height.main"
+gpf_plot_history="GaPFlow.cli:plot_history.main"
+gpf_plot_frame="GaPFlow.cli:plot_frame.main"
+gpf_plot_frames="GaPFlow.cli:plot_frames.main"
+gpf_animate1d="GaPFlow.cli:animate1d.main"
+gpf_animate2d="GaPFlow.cli:animate2d.main"
+
+[project.urls]
+Source = "https://github.com/hannes-holey/gapflow"
+
+[tool.flit.sdist]
+include = ["GaPFlow/resources/*"]
 
 [tool.pytest.ini_options]
-addopts = "-v -m 'not long'"
+addopts = "-v"
 testpaths = ["tests"]
-markers = [
-    "long: long tests (deselect with '-m \"not long\"')",
-]
+filterwarnings = "ignore::DeprecationWarning"
+
+[tool.coverage.run]
+source = ["GaPFlow"]
+omit = ["GaPFlow/viz/*"]
+command_line = "-m pytest"
+
+
+

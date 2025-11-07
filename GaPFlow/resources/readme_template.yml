@@ -1,0 +1,20 @@
+project: Multiscale Simulation of Lubrication
+description: Automatically generated MD run of confined fluid for multiscale simulations
+owners:
+  - name: Hannes Holey
+    email: hannes.holey@unimi.it
+    username: hannes
+    orcid: 0000-0002-4547-8791
+funders:
+  - organization: Deutsche Forschungsgemeinschaft (DFG)
+    program: Graduiertenkolleg
+    code: GRK 2450
+  - organization: Alexander von Humboldt foundation
+    program: Feodor Lynen fellowship
+creation_date: {DATE}
+expiration_date: {EXPIRATION_DATE}
+software_packages:
+  - name: LAMMPS
+    version: {version}
+    website: https://lammps.sandia.gov/
+    repository: https://github.com/lammps/lammps

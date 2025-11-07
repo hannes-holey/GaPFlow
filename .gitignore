@@ -9,8 +9,12 @@ dist
 *.egg-info
 .eggs
 .coverage
+.pytest_cache
+.idea
+
 
 # Doc
 _templates/
 _static/
 _build/
+doc/api/summary

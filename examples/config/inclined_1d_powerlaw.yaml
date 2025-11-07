@@ -1,0 +1,34 @@
+options:
+    output: data/inclined
+    write_freq: 1000
+    silent: False
+grid:
+    Lx: 0.1
+    Ly: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 1.1853
+    xW_D: 1.1853
+geometry:
+    type: inclined
+    hmax: 6.6e-5
+    hmin: 1e-5
+    U: 50.
+    V: 0.
+numerics:
+    CFL: 0.4
+    adaptive: True
+    tol: 1e-6
+    dt: 1e-8
+    max_it: 20_000
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 1.1853
+    alpha: 0.
