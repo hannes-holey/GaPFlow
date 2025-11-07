@@ -44,7 +44,7 @@ html_static_path = ['_static']
 # (due to code error, timeout, etc.)
 nb_execution_raise_on_error = True
 nb_execution_show_tb = True
-nb_execution_timeout = 90
+nb_execution_timeout = 180
 
 myst_enable_extensions = [
     "dollarmath",
