@@ -32,6 +32,7 @@ import warnings
 
 NDArray = npt.NDArray[np.floating]
 
+
 def create_midpoint_grid(disc):
     Lx = disc['Lx']
     Ly = disc['Ly']
@@ -225,16 +226,16 @@ class Topography:
         self.__field.p[0] = h
         self.__field.p[ix] = dh_dx
         self.__field.p[iy] = dh_dy
-        self.__field.p[3] = np.zeros_like(h) # inital deformation set to zero
+        self.__field.p[3] = np.zeros_like(h)  # inital deformation set to zero
 
     def update(self) -> None:
         """Updates the topography field in case of enabled deformation.
         """
         if self.elastic:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
-                p = self.__pressure.p - self.__pressure.p[0,0] # reference pressure
+                p = self.__pressure.p - self.__pressure.p[0, 0]  # reference pressure
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
-                deformation = deformation - deformation[0,0] # reference deformation
+                deformation = deformation - deformation[0, 0]  # reference deformation
             else:
                 p = self.__pressure.p
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
@@ -301,10 +302,10 @@ class ElasticDeformation:
                  alpha_underrelax: float,
                  grid: dict,
                  n_images: int
-    ) -> None:
-        
+                 ) -> None:
+
         self.area_per_cell = grid['dx'] * grid['dy']
-        Nx, Ny = grid['Nx']+2, grid['Ny']+2
+        Nx, Ny = grid['Nx'] + 2, grid['Ny'] + 2
         self.u_prev = np.zeros((Nx, Ny))
         self.alpha_underrelax = alpha_underrelax
         n_images = n_images
@@ -323,7 +324,7 @@ class ElasticDeformation:
                 "For the calculation of the effective force F=p*A per cell, "
                 "we assume a unit length of {} = 1 m."
                 .format("Ly" if perY else "Lx"))
-            grid = copy.deepcopy(grid) # do not modify original grid
+            grid = copy.deepcopy(grid)  # do not modify original grid
             if perY:
                 grid['Ly'] = 1.0
             else:
@@ -370,7 +371,7 @@ class ElasticDeformation:
         disp = -self.ElDef.evaluate_disp(forces)
 
         return disp
-    
+
     def get_deformation_underrelax(self, p: NDArray) -> NDArray:
         """Updates elastic deformation using underrelaxation
 
@@ -385,7 +386,7 @@ class ElasticDeformation:
             Updated, underrelaxed deformation field.
         """
         u_computed = self.get_deformation(p)
-        u_relaxed = (1-self.alpha_underrelax)*self.u_prev + self.alpha_underrelax*u_computed
+        u_relaxed = (1 - self.alpha_underrelax) * self.u_prev + self.alpha_underrelax * u_computed
         self.u_prev = u_relaxed.copy()
 
         return u_relaxed
@@ -400,7 +401,6 @@ class ElasticDeformation:
             Green's function array in real space.
         """
         return self.ElDef.get_G_real()
-    
 
     def get_G_real_slices(self) -> Tuple[NDArray, NDArray]:
         """For analysis and illustration purposes.
