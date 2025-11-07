@@ -345,9 +345,10 @@ class Problem:
         if self.step % self.options['write_freq'] != 0 and not self.options['silent']:
             self.write()
 
-        self.file.close() # need to be closed to be readable when animating from problem
-        if self.prop['elastic']['enabled']:
-            self.topofile.close()
+        if not self.options['silent']:
+            self.file.close() # need to be closed to be readable when animating from problem
+            if self.prop['elastic']['enabled']:
+                self.topofile.close()
 
         speed = self.step / walltime.total_seconds()
 
