@@ -30,7 +30,8 @@ dependencies = [
 	"ase", 
 	"mpi4py",
 	"moltemplate",
-	"ContactMechanics @ git+https://github.com/ContactEngineering/ContactMechanics.git@c318fe2"]
+	"ContactMechanics @ git+https://github.com/ContactEngineering/ContactMechanics.git@c318fe2",
+	"IPython"]
 
 [project.optional-dependencies]
 test = ['pytest',
