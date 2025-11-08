@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Governing equations - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -253,13 +254,239 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section class="tex2jax_ignore mathjax_ignore" id="governing-equations">
 <h1>Governing equations<a class="headerlink" href="#governing-equations" title="Link to this heading">¶</a></h1>
+<p>For a detailed derivation and description of the following overview, see
+<a class="reference external" href="https://doi.org/10.1007/s11249-022-01576-5">Holey, H. et al., Tribology Letters 70 (2022)</a></p>
+<section id="splitting-approach">
+<h2>Splitting Approach<a class="headerlink" href="#splitting-approach" title="Link to this heading">¶</a></h2>
+<p>The local mass and momentum balances are given by the partial differential equation:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \mathbf{q}}{\partial t} = - \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q})
+\]</div>
+</div>
+<p>where</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\mathbf{q} =
+\begin{pmatrix}
+\rho \\
+\rho u \\
+\rho v \\
+\rho w
+\end{pmatrix},
+\quad
+\mathbb{F}(\mathbf{q}) =
+\begin{pmatrix}
+\rho u &amp; \rho v &amp; \rho w \\
+\rho u^2 + p - \tau_{\mathrm{11}}(\mathbf{q}) &amp;
+\rho u v - \tau_{\mathrm{12}}(\mathbf{q}) &amp;
+\rho u w - \tau_{\mathrm{13}}(\mathbf{q}) \\
+\rho v u - \tau_{\mathrm{21}}(\mathbf{q}) &amp;
+\rho v^2 + p - \tau_{\mathrm{22}}(\mathbf{q}) &amp;
+\rho v w - \tau_{\mathrm{23}}(\mathbf{q}) \\
+\rho w u - \tau_{\mathrm{31}}(\mathbf{q}) &amp;
+\rho w v - \tau_{\mathrm{32}}(\mathbf{q}) &amp;
+\rho w^2 + p - \tau_{\mathrm{33}}(\mathbf{q})
+\end{pmatrix}
+\end{split}\]</div>
+</div>
+<p>The divergence operates on the rows such that the continuum equation states (similarly for the momentum equations):</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \rho}{\partial t}
+= - \frac{\partial (\rho u)}{\partial x}
+- \frac{\partial (\rho v)}{\partial y}
+- \frac{\partial (\rho w)}{\partial z}
+\]</div>
+</div>
+<p>We now assume that the problem can be divided into a time-dependent macro problem that uses the height-average of the conserved quantities <span class="math notranslate nohighlight">\(\overline{\mathbf{q}}(x,y,t)\)</span> and a steady-state micro problem that resolves the values of the conserved quantities across the film thickness <span class="math notranslate nohighlight">\(\delta \mathbf{q}(z)\)</span>.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{q}(x,y,z,t) = \overline{\mathbf{q}}(x,y,t) + \delta \mathbf{q}(z)\]</div>
+</div>
+</section>
+<section id="macro-problem">
+<h2>Macro Problem<a class="headerlink" href="#macro-problem" title="Link to this heading">¶</a></h2>
+<section id="derivation">
+<h3>Derivation<a class="headerlink" href="#derivation" title="Link to this heading">¶</a></h3>
+<p>To establish the macro problem, we eliminate the <span class="math notranslate nohighlight">\(z\)</span>-direction dependency by integrating the balances across the film thickness.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \left( \frac{\partial \mathbf{q}}{\partial t} = - \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q}) \right) \, dz
+\]</div>
+</div>
+<p>Let’s look at what we obtain by integrating the individual terms:</p>
+<hr class="docutils" />
+<p><strong>Integral of the time derivative</strong> term on the left side:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{q}}{\partial t} \, dz
+= h \frac{\partial \overline{\mathbf{q}}}{\partial t} 
++ \left( \overline{\mathbf{q}} - \mathbf{q} \big|_{h_{\mathrm{2}}} \right) \frac{d h_{\mathrm{2}}}{d t} 
+- \left( \overline{\mathbf{q}} - \mathbf{q} \big|_{h_{\mathrm{1}}} \right) \frac{d h_{\mathrm{1}}}{d t}
+\]</div>
+</div>
+<p>Here, we obtain the time derivative of the height averaged conserved quantities <span class="math notranslate nohighlight">\(\frac{\partial \overline{\mathbf{q}}}{\partial t}\)</span> multiplied by <span class="math notranslate nohighlight">\(h\)</span> as well as some source terms.</p>
+<hr class="docutils" />
+<p><strong>Integral of the flux divergence</strong> on the right side (with <span class="math notranslate nohighlight">\(\mathbf{f}_x\)</span>, <span class="math notranslate nohighlight">\(\mathbf{f}_y\)</span>, <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> denoting the columns of <span class="math notranslate nohighlight">\(\mathbb{F}\)</span> from left to right).</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \left( \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q}) \right) \, dz
+= \int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_x}{\partial x} \, dz
++ \int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_y}{\partial y} \, dz
++ \int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_z}{\partial z} \, dz
+\]</div>
+</div>
+<p>For <span class="math notranslate nohighlight">\(x\)</span> (and similarly for <span class="math notranslate nohighlight">\(y\)</span>) we obtain the following terms. Note that we obtain a height-averaged <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_x}\)</span> (and similarly <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_y}\)</span>).</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_x}{\partial x} \, dz
+= h \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
++ \left( \overline{\mathbf{f}_x} - \mathbf{f}_x \big|_{h_{\mathrm{2}}} \right) \frac{d h_{\mathrm{2}}}{d t} 
+- \left( \overline{\mathbf{f}_x} - \mathbf{f}_x \big|_{h_{\mathrm{1}}} \right) \frac{d h_{\mathrm{1}}}{d t}
+\]</div>
+</div>
+<p>Here, we obtain the spatial derivative of the height averaged fluxes <span class="math notranslate nohighlight">\(\frac{\partial \overline{\mathbf{f}_x}}{\partial x}\)</span> and <span class="math notranslate nohighlight">\(\frac{\partial \overline{\mathbf{f}_y}}{\partial y}\)</span> as well as - again - some source terms.</p>
+<p>In contrast, for the <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> term, the integration direction is similar to the derivative. The term can be expressed by evaluating the function values of <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> at the bottom and top:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_z}{\partial z} \, dz
+= \mathbf{f}_z \big|_{h_{\mathrm{2}}} - \mathbf{f}_z \big|_{h_{\mathrm{1}}}
+\]</div>
+</div>
+<p>These are only source terms.</p>
+<p><a id="macro-equation"></a></p>
+<hr class="docutils" />
+<p>Overall we obtain the following equation with all the source terms occuring in the previous equations collected in <span class="math notranslate nohighlight">\(\mathbf{s}\)</span>. Note that we have <strong>reduced the problem from three to two dimensions</strong>.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \overline{\mathbf{q}}}{\partial t} 
+= - \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
+- \frac{\partial \overline{\mathbf{f}_y}}{\partial y} 
+- \mathbf{s}
+\]</div>
+</div>
+<p>with four variables <span class="math notranslate nohighlight">\(\overline{\rho}(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{\rho u}(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{\rho v}(x,y,t)\)</span>, and <span class="math notranslate nohighlight">\(\overline{\rho w}(x,y,t)\)</span> and four equations, which define the macro problem to be solved.</p>
+<p>Further unknowns (within <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_x}\)</span>, <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_y}\)</span>, <span class="math notranslate nohighlight">\(\mathbf{s}\)</span>) are <span class="math notranslate nohighlight">\(\tau(\mathbf{q})\)</span>, <span class="math notranslate nohighlight">\(p(\rho)\)</span>, and the <span class="math notranslate nohighlight">\(\mathbf{q}\)</span> and <span class="math notranslate nohighlight">\(\mathbf{f}\)</span> values at the bottom and top boundaries. As you might guess, this is the task for the micro proplem.</p>
+</section>
+<section id="numerical-solution-of-the-macro-problem">
+<h3>Numerical Solution of the Macro Problem<a class="headerlink" href="#numerical-solution-of-the-macro-problem" title="Link to this heading">¶</a></h3>
+<p>For numerical solution, we use the <strong>MacCormack scheme</strong>. It is a two-step explicit predictor–corrector method for solving hyperbolic conservation laws and provides second-order accuracy in space and time even when including source terms as we need to do.</p>
+<p>For illustration, let’s assume this simplified 1D problem:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \mathbf{q}}{\partial t} + \frac{\partial \mathbf{f}(\mathbf{q})}{\partial x} = 0
+\]</div>
+</div>
+<p>where:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(\mathbf{q}\)</span> — vector of conserved variables</p></li>
+<li><p><span class="math notranslate nohighlight">\(\mathbf{f}(\mathbf{q})\)</span> — flux vector</p></li>
+</ul>
+<p>In a first (predictor) step, we calculate an intermediate solution by forward difference</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\mathbf{q}_i^* = \mathbf{q}_i^n - \frac{\Delta t}{\Delta x} 
+\left[ \mathbf{f}(\mathbf{q}_{i+1}^n) - \mathbf{f}(\mathbf{q}_i^n) \right]
+\]</div>
+</div>
+<p>followed by the corrector step, where we compute the backward difference based on the intermediate solution.</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\mathbf{q}_i^{n+1} = \frac{1}{2} \left[
+\mathbf{q}_i^n + \mathbf{q}_i^* - 
+\frac{\Delta t}{\Delta x} \left(
+\mathbf{f}(\mathbf{q}_i^*) - \mathbf{f}(\mathbf{q}_{i-1}^*)
+\right)
+\right]
+\]</div>
+</div>
+<p>Note that it is possible to switch the order of forward- and backward-difference between each timestep,
+obtaining a more symmetric solution scheme.</p>
+<p>An important concept that comes with explicit schemes is the <strong>CFL (Courant–Friedrichs–Lewy)</strong> number, which
+determines the stability of the numerical method. The CFL number is defined as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\text{CFL} = \frac{\max(|u|)\, \Delta t}{\Delta x}
+\]</div>
+</div>
+<p>and represents the ratio of the physical wave propagation speed to the numerical propagation speed. For stability in explicit schemes, the CFL condition must be satisfied:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\text{CFL} \le 1
+\]</div>
+</div>
+<p>Note that depending on the problem you might want to select a lower CFL number for improved convergence.</p>
+</section>
+</section>
+<section id="micro-problem">
+<h2>Micro Problem<a class="headerlink" href="#micro-problem" title="Link to this heading">¶</a></h2>
+<p>Remember the general mass and momentum balances and the splitting approach:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \mathbf{q}}{\partial t} = - \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q})
+\]</div>
+</div>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\mathbf{q}(x,y,z,t) = \overline{\mathbf{q}}(x,y,t) + \delta \mathbf{q}(z)\]</div>
+</div>
+<p>Now if we put the splitting approach into the general balance we get:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \overline{\mathbf{q}}}{\partial t} = 
+- \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
+- \frac{\partial \overline{\mathbf{f}_y}}{\partial y}
+-  \frac{\partial \mathbf{f}_z}{\partial \delta \mathbf{q}}
+\frac{\partial \delta \mathbf{q}}{\partial z}
+\]</div>
+</div>
+<p>Comparing this to the resulting <a class="reference internal" href="#macro-equation"><span class="xref myst">equation of the macro problem</span></a>, we see that</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[
+\frac{\partial \mathbf{f}_z}{\partial \delta \mathbf{q}}
+\frac{\partial \delta \mathbf{q}}{\partial z} = \mathbf{s}
+\]</div>
+</div>
+<p>meaning that this expression is a constant source term at a given <span class="math notranslate nohighlight">\((x,y,t)\)</span>. We can evaluate and simplify the above equation to:</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\begin{split}
+\frac{\partial}{\partial z}
+\begin{pmatrix}
+\tau_{\text{xz}} \\
+\tau_{\text{yz}} \\
+p + \tau_{\text{zz}} \\
+\end{pmatrix}
+= \text{const}
+\end{split}\]</div>
+</div>
+<p>This information now allows us to determine the profile of the conserved quantities across the film and is the basis for the <strong>solution of the micro problem</strong>. In the following tutorial, we will determine the velocity profile across the film using these conditions (remember that <span class="math notranslate nohighlight">\(\tau_{\text{xz}} \propto \frac{\partial u}{\partial z}\)</span> and <span class="math notranslate nohighlight">\(\tau_{\text{yz}} \propto \frac{\partial v}{\partial z}\)</span>).</p>
+</section>
 </section>
 
         </article>
@@ -305,8 +532,33 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Governing equations</a><ul>
+<li><a class="reference internal" href="#splitting-approach">Splitting Approach</a></li>
+<li><a class="reference internal" href="#macro-problem">Macro Problem</a><ul>
+<li><a class="reference internal" href="#derivation">Derivation</a></li>
+<li><a class="reference internal" href="#numerical-solution-of-the-macro-problem">Numerical Solution of the Macro Problem</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#micro-problem">Micro Problem</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
@@ -315,5 +567,7 @@
     <script src="../_static/doctools.js?v=9bcbadda"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>

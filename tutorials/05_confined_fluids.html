@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Dynamics of highly confined fluids - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -292,27 +293,27 @@ One can derive an analytic solution for the linearized equations, that describe 
 <p>in longitudinal and transverse direction, respectively. Thus, the dissipation depends on the gap height <span class="math notranslate nohighlight">\(h\)</span> and the fluid properties, i.e. the kinematic shear viscosity <span class="math notranslate nohighlight">\(\nu=\eta/\rho\)</span> and kinematic longitudinal viscosity <span class="math notranslate nohighlight">\(\nu_\text{L}=(4\eta/3 + \zeta)/\rho\)</span> with shear and bulk viscosity <span class="math notranslate nohighlight">\(\eta\)</span> and <span class="math notranslate nohighlight">\(\zeta\)</span>, respectively. Note that in the limit of very small aspect ratios <span class="math notranslate nohighlight">\(hk\ll 1\)</span>, <span class="math notranslate nohighlight">\(s\)</span> will become complex and the density and longitudinal momentum modes become overdamped, i.e. sound propagation is suppressed. This happens at the critical wavenumber <span class="math notranslate nohighlight">\(k_\text{crit}=6\nu/h^2c\)</span> (<a class="reference external" href="https://doi.org/10.1103/PhysRevLett.131.084001">Holey et al., 2023</a>).</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="k">def</span> <span class="nf">density_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">density_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
 
 
-<span class="k">def</span> <span class="nf">density_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">density_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">i_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sinh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
 
 
-<span class="k">def</span> <span class="nf">momentum_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">momentum_decay_underdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">c</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
 
 
-<span class="k">def</span> <span class="nf">momentum_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">momentum_decay_overdamped</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">nuL</span><span class="p">,</span> <span class="n">nu</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
     <span class="n">tau</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">nuL</span> <span class="o">*</span> <span class="n">k</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">nu</span> <span class="o">/</span> <span class="n">h</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="n">i_s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">tau</span> <span class="o">*</span> <span class="n">k</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">-</span> <span class="n">c</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">t</span> <span class="o">/</span> <span class="n">tau</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cosh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sinh</span><span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">t</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">i_s</span> <span class="o">*</span> <span class="n">k</span> <span class="o">*</span> <span class="n">tau</span><span class="p">))</span>
@@ -323,7 +324,7 @@ One can derive an analytic solution for the linearized equations, that describe 
 <p>Let’s define some properties…</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GaPFlow.models.sound</span> <span class="kn">import</span> <span class="n">eos_sound_velocity</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.sound</span><span class="w"> </span><span class="kn">import</span> <span class="n">eos_sound_velocity</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">properties:</span>
@@ -366,10 +367,10 @@ One can derive an analytic solution for the linearized equations, that describe 
 <p>.. and plot</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">GaPFlow.viz</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">from</span> <span class="nn">matplotlib.cm</span> <span class="kn">import</span> <span class="n">ScalarMappable</span>
-<span class="kn">from</span> <span class="nn">matplotlib.colors</span> <span class="kn">import</span> <span class="n">CenteredNorm</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">GaPFlow.viz</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.cm</span><span class="w"> </span><span class="kn">import</span> <span class="n">ScalarMappable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="kn">import</span> <span class="n">CenteredNorm</span>
 
 <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">1.75</span><span class="o">*</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span>
@@ -412,48 +413,6 @@ One can derive an analytic solution for the linearized equations, that describe 
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;cursive&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;cursive&#39; not found because none of the following families were found: Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, Comic Neue, Comic Sans MS, cursive
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/6b1d858a63dc4fd8f6a8d3097fbf72676ed20198ffd7a6bf7c114ea0d1d99aa1.png" src="../_images/6b1d858a63dc4fd8f6a8d3097fbf72676ed20198ffd7a6bf7c114ea0d1d99aa1.png" />
 </div>
 </div>
@@ -461,7 +420,7 @@ One can derive an analytic solution for the linearized equations, that describe 
 <p>Let’s see how this changes with the gap height (while the length stays constant):</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">plot_relaxation</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mf">5e-9</span><span class="p">):</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">plot_relaxation</span><span class="p">(</span><span class="n">h</span><span class="o">=</span><span class="mf">5e-9</span><span class="p">):</span>
     <span class="n">sx</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
     <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mf">1.75</span><span class="o">*</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">))</span>
     
@@ -514,63 +473,9 @@ One can derive an analytic solution for the linearized equations, that describe 
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/46682f64ca1e6b099ab0e60a87f86efbfba2fc5d95ded8cd8e383d320e6ae496.png" src="../_images/46682f64ca1e6b099ab0e60a87f86efbfba2fc5d95ded8cd8e383d320e6ae496.png" />
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/96364372f7012f370dcaab56afbe9ba16fdf2e2ad06d4b2e5dd3eef979803157.png" src="../_images/96364372f7012f370dcaab56afbe9ba16fdf2e2ad06d4b2e5dd3eef979803157.png" />
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/dc4017bb396989d2dace9e57fc7c7c9d75117eaca92984dcfa34ab2e38836045.png" src="../_images/dc4017bb396989d2dace9e57fc7c7c9d75117eaca92984dcfa34ab2e38836045.png" />
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/dcbf36c3d939e6085169842b89916cf41be256739dcf374aa6cbbcdbc4f63249.png" src="../_images/dcbf36c3d939e6085169842b89916cf41be256739dcf374aa6cbbcdbc4f63249.png" />
 </div>
 </div>
@@ -607,67 +512,13 @@ One can derive an analytic solution for the linearized equations, that describe 
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/30979889a28cd3c49f0e1f8eaec2b6b24a169508acc136902e68ff3437ea147f.png" src="../_images/30979889a28cd3c49f0e1f8eaec2b6b24a169508acc136902e68ff3437ea147f.png" />
 </div>
 </div>
 <p>We can use the analytical solution to validate our simulations. Thus let’s create a <code class="docutils literal notranslate"><span class="pre">GaPFlow.problem</span></code> instance with the following properties:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GaPFlow.problem</span> <span class="kn">import</span> <span class="n">Problem</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
 
 <span class="n">sim</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">options:</span>
@@ -808,96 +659,14 @@ One can derive an analytic solution for the linearized equations, that describe 
   - c                        : 83513.4
   - d                        : -2865320.0
   - rho0                     : 762.8617
+  - elastic:
+    - enabled                : False
 - gp:
 - db:
 - md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
 </pre></div>
 </div>
 <img alt="../_images/7468cc8a8e9d14082d3721ff39a839838b3e8882d7d52b40fdc52d31a9e4cfe0.png" src="../_images/7468cc8a8e9d14082d3721ff39a839838b3e8882d7d52b40fdc52d31a9e4cfe0.png" />
@@ -998,96 +767,14 @@ One can derive an analytic solution for the linearized equations, that describe 
   - c                        : 83513.4
   - d                        : -2865320.0
   - rho0                     : 762.8617
+  - elastic:
+    - enabled                : False
 - gp:
 - db:
 - md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
 </pre></div>
 </div>
 <img alt="../_images/fd60047566ed3d7b26765db03338f2d79431d980721fe5e2c10ad16b1d428739.png" src="../_images/fd60047566ed3d7b26765db03338f2d79431d980721fe5e2c10ad16b1d428739.png" />

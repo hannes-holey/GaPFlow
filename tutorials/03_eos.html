@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Equation of state for isothermal compressible fluids - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -262,16 +263,16 @@
 <h1>Equation of state for isothermal compressible fluids<a class="headerlink" href="#equation-of-state-for-isothermal-compressible-fluids" title="Link to this heading">¶</a></h1>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">importlib</span> <span class="kn">import</span> <span class="n">resources</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">importlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">resources</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
 
-<span class="kn">from</span> <span class="nn">GaPFlow.models.pressure</span> <span class="kn">import</span> <span class="n">eos_pressure</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.pressure</span><span class="w"> </span><span class="kn">import</span> <span class="n">eos_pressure</span>
 
 <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;GaPFlow.resources&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;gapflow.mplstyle&quot;</span><span class="p">))</span>
 
 
-<span class="k">def</span> <span class="nf">plot_bwr</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_bwr</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;BWR&#39;</span><span class="p">}</span>
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
 
@@ -287,7 +288,7 @@
     <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;BWR (LJ)&#39;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">plot_dh</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_dh</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
 
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;DH&#39;</span><span class="p">}</span>
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">870.</span><span class="p">,</span> <span class="mf">1050.</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
@@ -300,7 +301,7 @@
     <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;DH&#39;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">plot_mt</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_mt</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
 
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;MT&#39;</span><span class="p">}</span>
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">700.</span><span class="p">,</span> <span class="mf">1200.</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
@@ -313,7 +314,7 @@
     <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;MT&#39;</span><span class="p">)</span>
 
 
-<span class="k">def</span> <span class="nf">plot_pl</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_pl</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;PL&#39;</span><span class="p">}</span>
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">2.</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
 
@@ -328,7 +329,7 @@
     <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">plot_vdW</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_vdW</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;vdW&#39;</span><span class="p">}</span>
 
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1000.</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
@@ -343,7 +344,7 @@
     <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
 
 
-<span class="k">def</span> <span class="nf">plot_cubic</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_cubic</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;cubic&#39;</span><span class="p">}</span>
     <span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
 

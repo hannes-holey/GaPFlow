@@ -9,6 +9,7 @@
    .. autosummary::
    
       get_pipeline
+      mpl_style_context
       set_axes_labels
       set_axes_limits
    

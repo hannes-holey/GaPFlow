@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>GaPFlow.Problem - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -287,17 +288,23 @@ and optionally <code class="docutils literal notranslate"><span class="pre">gp</
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.__init__" title="GaPFlow.Problem.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(options, grid, numerics, prop, geo)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.finalize" title="GaPFlow.Problem.finalize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">finalize</span></code></a>(q0)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.animate" title="GaPFlow.Problem.animate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate</span></code></a>([save, show_notebook, seconds])</p></td>
+<td><p>Wrapper for animating the solution in viz/animations.py Checks if simulation has run already.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.finalize" title="GaPFlow.Problem.finalize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">finalize</span></code></a>(q0)</p></td>
 <td><p>Reset the solution field to the one of the ols time step and update stresses.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_dict" title="GaPFlow.Problem.from_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dict</span></code></a>(input_dict)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_dict" title="GaPFlow.Problem.from_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_dict</span></code></a>(input_dict)</p></td>
 <td><p>Create a Problem instance from a YAML string.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_string" title="GaPFlow.Problem.from_string"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_string</span></code></a>(ymlstring)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_string" title="GaPFlow.Problem.from_string"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_string</span></code></a>(ymlstring)</p></td>
 <td><p>Create a Problem instance from a YAML string.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_yaml" title="GaPFlow.Problem.from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_yaml</span></code></a>(fname)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_yaml" title="GaPFlow.Problem.from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_yaml</span></code></a>(fname)</p></td>
 <td><p>Create a Problem instance from a YAML file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot_height" title="GaPFlow.Problem.plot_height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height</span></code></a>()</p></td>
+<td><p>Wrapper for plot_height in viz/plotting.py - Detects 1D vs 2D - Detects if elastic deformation is enabled - Detects if initial or final simulation state</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.post_run" title="GaPFlow.Problem.post_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">post_run</span></code></a>()</p></td>
 <td><p>Finalize run: write history, print timing and GP timing info.</p></td>
@@ -363,6 +370,26 @@ and optionally <code class="docutils literal notranslate"><span class="pre">gp</
 </tbody>
 </table>
 </div>
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.Problem.animate">
+<span class="sig-name descname"><span class="pre">animate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_notebook</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.animate" title="Link to this definition">¶</a></dt>
+<dd><p>Wrapper for animating the solution in viz/animations.py
+Checks if simulation has run already. Detects 1D vs 2D.
+Includes height and deformation if elastic deformation is enabled.
+- Option 1: Default. Showing in a matplotlib window.
+- Option 2: Showing in Jupyter notebook (show_notebook=True).
+- Option 3: Saving as .mp4 file (save=True).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>save</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to save the animation as an .mp4 file, by default False</p></li>
+<li><p><strong>show_notebook</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to display the animation inline in a Jupyter notebook, by default False</p></li>
+<li><p><strong>seconds</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration of the animation in seconds, by default 10.0</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Problem.centerline_mass_density">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">centerline_mass_density</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Problem.centerline_mass_density" title="Link to this definition">¶</a></dt>
@@ -460,6 +487,15 @@ Sets the _stop flag to abort the simulation run.</p>
 <dt class="sig sig-object py" id="GaPFlow.Problem.mass">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mass</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">floating</span></em><a class="headerlink" href="#GaPFlow.Problem.mass" title="Link to this definition">¶</a></dt>
 <dd><p>Total mass integrated over domain (scalar).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.Problem.plot_height">
+<span class="sig-name descname"><span class="pre">plot_height</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.plot_height" title="Link to this definition">¶</a></dt>
+<dd><p>Wrapper for plot_height in viz/plotting.py
+- Detects 1D vs 2D
+- Detects if elastic deformation is enabled
+- Detects if initial or final simulation state</p>
 </dd></dl>
 
 <dl class="py method">
@@ -595,6 +631,7 @@ direction and updating constitutive models (pressure, wall/bulk stress).</p>
 <li><a class="reference internal" href="#">GaPFlow.Problem</a><ul>
 <li><a class="reference internal" href="#GaPFlow.Problem"><code class="docutils literal notranslate"><span class="pre">Problem</span></code></a><ul>
 <li><a class="reference internal" href="#GaPFlow.Problem.__init__"><code class="docutils literal notranslate"><span class="pre">Problem.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.Problem.animate"><code class="docutils literal notranslate"><span class="pre">Problem.animate()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.centerline_mass_density"><code class="docutils literal notranslate"><span class="pre">Problem.centerline_mass_density</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.cfl"><code class="docutils literal notranslate"><span class="pre">Problem.cfl</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.converged"><code class="docutils literal notranslate"><span class="pre">Problem.converged</span></code></a></li>
@@ -605,6 +642,7 @@ direction and updating constitutive models (pressure, wall/bulk stress).</p>
 <li><a class="reference internal" href="#GaPFlow.Problem.from_yaml"><code class="docutils literal notranslate"><span class="pre">Problem.from_yaml()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.kinetic_energy"><code class="docutils literal notranslate"><span class="pre">Problem.kinetic_energy</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.mass"><code class="docutils literal notranslate"><span class="pre">Problem.mass</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.Problem.plot_height"><code class="docutils literal notranslate"><span class="pre">Problem.plot_height()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.post_run"><code class="docutils literal notranslate"><span class="pre">Problem.post_run()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.post_update"><code class="docutils literal notranslate"><span class="pre">Problem.post_update()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.pre_run"><code class="docutils literal notranslate"><span class="pre">Problem.pre_run()</span></code></a></li>

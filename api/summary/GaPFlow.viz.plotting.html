@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>GaPFlow.viz.plotting - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -268,12 +269,15 @@
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height" title="GaPFlow.viz.plotting.plot_height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height</span></code></a>(filename[, grid])</p></td>
+<td><p>Wrapper function for plotting from topo.nc file.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height_1d" title="GaPFlow.viz.plotting.plot_height_1d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height_1d</span></code></a>(h[, h0, u, p])</p></td>
+<td><p>Plotting height profile in 1D.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_history" title="GaPFlow.viz.plotting.plot_history"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_history</span></code></a>(file_list[, gp_files_0, ...])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_history" title="GaPFlow.viz.plotting.plot_history"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_history</span></code></a>(file_list[, gp_files_0, ...])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_single_frame" title="GaPFlow.viz.plotting.plot_single_frame"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_single_frame</span></code></a>(file_list, dim[, frame, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_single_frame" title="GaPFlow.viz.plotting.plot_single_frame"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_single_frame</span></code></a>(file_list, dim[, frame, ...])</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -287,7 +291,37 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_height">
 <span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_height" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Wrapper function for plotting from topo.nc file.
+Detects whether 1D or 2D.
+Detects whether deformation was included.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename</strong> (<em>str</em>) – Path to the NetCDF file.</p></li>
+<li><p><strong>grid</strong> (<em>dict</em><em>, </em><em>optional</em>) – Grid information, by default None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_height_1d">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_height_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_height_1d" title="Link to this definition">¶</a></dt>
+<dd><p>Plotting height profile in 1D.
+Option 1: Only height h.
+Option 2: Height h, initial height h0, deformation u.
+Option 3: Height h, initial height h0, deformation u, pressure p.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>h</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em>) – Height profile.</p></li>
+<li><p><strong>h0</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Initial height profile, by default None</p></li>
+<li><p><strong>u</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Deformation profile, by default None</p></li>
+<li><p><strong>p</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Pressure profile, by default None</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_history">
@@ -359,6 +393,7 @@
 <li><a class="reference internal" href="#">GaPFlow.viz.plotting</a><ul>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_evolution"><code class="docutils literal notranslate"><span class="pre">plot_evolution()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height"><code class="docutils literal notranslate"><span class="pre">plot_height()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height_1d"><code class="docutils literal notranslate"><span class="pre">plot_height_1d()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_history"><code class="docutils literal notranslate"><span class="pre">plot_history()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_single_frame"><code class="docutils literal notranslate"><span class="pre">plot_single_frame()</span></code></a></li>
 </ul>

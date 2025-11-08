@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>GaPFlow.viz.utils - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -267,10 +268,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.get_pipeline" title="GaPFlow.viz.utils.get_pipeline"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pipeline</span></code></a>([path, silent, mode, name])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_labels" title="GaPFlow.viz.utils.set_axes_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_axes_labels</span></code></a>(ax)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.mpl_style_context" title="GaPFlow.viz.utils.mpl_style_context"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mpl_style_context</span></code></a>(func)</p></td>
+<td><p>Central wrapper for applying different mpl styles for plotting and animation functions.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_labels" title="GaPFlow.viz.utils.set_axes_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_axes_labels</span></code></a>(ax[, bDef])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_limits" title="GaPFlow.viz.utils.set_axes_limits"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_axes_limits</span></code></a>(ax, q[, tol])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_limits" title="GaPFlow.viz.utils.set_axes_limits"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_axes_limits</span></code></a>(ax, q[, tol, x, rel_tol])</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -282,13 +286,22 @@
 <dd></dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="GaPFlow.viz.utils.mpl_style_context">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.utils.</span></span><span class="sig-name descname"><span class="pre">mpl_style_context</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">func</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.utils.mpl_style_context" title="Link to this definition">¶</a></dt>
+<dd><p>Central wrapper for applying different mpl styles for
+plotting and animation functions.</p>
+<p>Using the context manager to prevent persistently changing
+global matplotlib settings.</p>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.utils.set_axes_labels">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.utils.</span></span><span class="sig-name descname"><span class="pre">set_axes_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.utils.set_axes_labels" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.utils.</span></span><span class="sig-name descname"><span class="pre">set_axes_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bDef</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.utils.set_axes_labels" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.utils.set_axes_limits">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.utils.</span></span><span class="sig-name descname"><span class="pre">set_axes_limits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.utils.set_axes_limits" title="Link to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.utils.</span></span><span class="sig-name descname"><span class="pre">set_axes_limits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rel_tol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.utils.set_axes_limits" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
 
 </section>
@@ -342,6 +355,7 @@
             <ul>
 <li><a class="reference internal" href="#">GaPFlow.viz.utils</a><ul>
 <li><a class="reference internal" href="#GaPFlow.viz.utils.get_pipeline"><code class="docutils literal notranslate"><span class="pre">get_pipeline()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.viz.utils.mpl_style_context"><code class="docutils literal notranslate"><span class="pre">mpl_style_context()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_labels"><code class="docutils literal notranslate"><span class="pre">set_axes_labels()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.utils.set_axes_limits"><code class="docutils literal notranslate"><span class="pre">set_axes_limits()</span></code></a></li>
 </ul>

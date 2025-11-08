@@ -10,5 +10,6 @@
    
       animate
       animate2d
+      animate_1d
       animate_gp
    

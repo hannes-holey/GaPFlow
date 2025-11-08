@@ -10,6 +10,7 @@
    
       plot_evolution
       plot_height
+      plot_height_1d
       plot_history
       plot_single_frame
    

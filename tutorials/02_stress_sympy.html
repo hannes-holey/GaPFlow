@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Viscous stress tensor calculation with wall slip - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -273,12 +274,12 @@ We use <a class="reference external" href="https://sympy.org">Sympy</a> to deriv
 <p>for <span class="math notranslate nohighlight">\(z \in [0, h]\)</span>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">deepcopy</span>
-<span class="kn">import</span> <span class="nn">sympy</span> <span class="k">as</span> <span class="nn">sp</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sympy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
 
-<span class="kn">import</span> <span class="nn">GaPFlow.viz</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">GaPFlow.viz</span>
 
 <span class="c1"># Define Cartesian coordinates</span>
 <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;x y z&quot;</span><span class="p">)</span>
@@ -495,11 +496,11 @@ into the expressions for the velocity profiles using <code class="docutils liter
 <p>The following functions can be used to generate the Python code:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">write_velocity_profiles</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">write_velocity_profiles</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;u = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">u_final</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;v = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">v_final</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
 
-<span class="k">def</span> <span class="nf">write_stress_profiles</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_stress_profiles</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xx = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txx</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yy = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyy</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_zz = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tzz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
@@ -507,7 +508,7 @@ into the expressions for the velocity profiles using <code class="docutils liter
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xz = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yz = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)))</span>
 
-<span class="k">def</span> <span class="nf">write_stress_bottom</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_stress_bottom</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xx(z=0) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txx</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yy(z=0) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyy</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_zz(z=0) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tzz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
@@ -515,7 +516,7 @@ into the expressions for the velocity profiles using <code class="docutils liter
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xz(z=0) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yz(z=0) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
 
-<span class="k">def</span> <span class="nf">write_stress_top</span><span class="p">(</span><span class="n">replacement</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_stress_top</span><span class="p">(</span><span class="n">replacement</span><span class="p">,</span> <span class="n">H</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xx(z=h) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txx</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">H</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yy(z=h) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyy</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">H</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_zz(z=h) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tzz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">H</span><span class="p">)))</span>
@@ -523,7 +524,7 @@ into the expressions for the velocity profiles using <code class="docutils liter
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_xz(z=h) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">H</span><span class="p">)))</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;tau_yz(z=h) = &quot;</span><span class="p">,</span> <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Tyz</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">H</span><span class="p">)))</span>
 
-<span class="k">def</span> <span class="nf">write_stress_avg</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">write_stress_avg</span><span class="p">(</span><span class="n">replacement</span><span class="p">):</span>
     <span class="c1"># Average stress</span>
     <span class="n">Txx_avg</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">integrate</span><span class="p">(</span>
         <span class="n">sp</span><span class="o">.</span><span class="n">simplify</span><span class="p">(</span><span class="n">Txx</span><span class="o">.</span><span class="n">subs</span><span class="p">(</span><span class="n">replacement</span><span class="p">)),</span> <span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">h</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span>
@@ -568,8 +569,8 @@ into the expressions for the velocity profiles using <code class="docutils liter
 <p>Here, we directly import these expression from <code class="xref py py-mod docutils literal notranslate"><span class="pre">GaPFlow.models.profiles</span></code> to use them for visualization.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">GaPFlow.models.profiles</span> <span class="kn">import</span> <span class="n">get_velocity_profiles</span><span class="p">,</span> <span class="n">get_stress_profiles</span> 
-<span class="kn">from</span> <span class="nn">GaPFlow.models.viscous</span> <span class="kn">import</span> <span class="n">stress_top</span><span class="p">,</span> <span class="n">stress_bottom</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.profiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_velocity_profiles</span><span class="p">,</span> <span class="n">get_stress_profiles</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.viscous</span><span class="w"> </span><span class="kn">import</span> <span class="n">stress_top</span><span class="p">,</span> <span class="n">stress_bottom</span>
 </pre></div>
 </div>
 </div>
@@ -659,102 +660,6 @@ into the expressions for the velocity profiles using <code class="docutils liter
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;cursive&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;cursive&#39; not found because none of the following families were found: Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, Comic Neue, Comic Sans MS, cursive
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Font family [&#39;sans-serif&#39;] not found. Falling back to DejaVu Sans.
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>findfont: Generic family &#39;sans-serif&#39; not found because none of the following families were found: Helvetica
-</pre></div>
-</div>
 <img alt="../_images/63e6488d7c273d0ce520ec4636756b297a4ca0330e51897d005883572bbdaa84.png" src="../_images/63e6488d7c273d0ce520ec4636756b297a4ca0330e51897d005883572bbdaa84.png" />
 </div>
 </div>

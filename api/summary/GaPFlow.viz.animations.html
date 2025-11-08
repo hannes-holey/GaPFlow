@@ -7,7 +7,7 @@
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>GaPFlow.viz.animations - GaPFlow documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=580074bf" />
     <link rel="stylesheet" type="text/css" href="../../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
@@ -202,6 +202,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -270,7 +271,10 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.animations.animate2d" title="GaPFlow.viz.animations.animate2d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate2d</span></code></a>(filename[, seconds, save, show, disc])</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.animations.animate_gp" title="GaPFlow.viz.animations.animate_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate_gp</span></code></a>(filename[, seconds, save, show, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.animations.animate_1d" title="GaPFlow.viz.animations.animate_1d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate_1d</span></code></a>(filename_sol, filename_topo[, ...])</p></td>
+<td><p>Animation of solution process for 1D simulations.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.animations.animate_gp" title="GaPFlow.viz.animations.animate_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate_gp</span></code></a>(filename[, seconds, save, show, ...])</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -285,6 +289,26 @@
 <dt class="sig sig-object py" id="GaPFlow.viz.animations.animate2d">
 <span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.animations.</span></span><span class="sig-name descname"><span class="pre">animate2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.animations.animate2d" title="Link to this definition">¶</a></dt>
 <dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GaPFlow.viz.animations.animate_1d">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.animations.</span></span><span class="sig-name descname"><span class="pre">animate_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename_sol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filename_topo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_notebook</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.viz.animations.animate_1d" title="Link to this definition">¶</a></dt>
+<dd><p>Animation of solution process for 1D simulations.
+- Option 1: Default. Showing in a matplotlib window.
+- Option 2: Showing in Jupyter notebook (show_notebook=True).
+- Option 3: Saving as mp4 file (save=True).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filename_sol</strong> (<em>str</em>) – Relative path to the solution NetCDF file.</p></li>
+<li><p><strong>filename_topo</strong> (<em>str</em>) – Relative path to the topography NetCDF file.</p></li>
+<li><p><strong>seconds</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration of the animation in seconds, by default 10.</p></li>
+<li><p><strong>save</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to save the animation as an mp4 file, by default False.</p></li>
+<li><p><strong>show_notebook</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to show the animation in a Jupyter notebook, by default False.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.animations.animate_gp">
@@ -351,6 +375,7 @@
 <li><a class="reference internal" href="#">GaPFlow.viz.animations</a><ul>
 <li><a class="reference internal" href="#GaPFlow.viz.animations.animate"><code class="docutils literal notranslate"><span class="pre">animate()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.animations.animate2d"><code class="docutils literal notranslate"><span class="pre">animate2d()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.viz.animations.animate_1d"><code class="docutils literal notranslate"><span class="pre">animate_1d()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.animations.animate_gp"><code class="docutils literal notranslate"><span class="pre">animate_gp()</span></code></a></li>
 </ul>
 </li>

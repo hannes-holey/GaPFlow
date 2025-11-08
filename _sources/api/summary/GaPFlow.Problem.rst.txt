@@ -14,10 +14,12 @@
    .. autosummary::
    
       ~Problem.__init__
+      ~Problem.animate
       ~Problem.finalize
       ~Problem.from_dict
       ~Problem.from_string
       ~Problem.from_yaml
+      ~Problem.plot_height
       ~Problem.post_run
       ~Problem.post_update
       ~Problem.pre_run
