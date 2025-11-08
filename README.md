@@ -7,7 +7,7 @@ This code implements the solution of time-dependent lubrication problems as desc
 The extension to atomistic-continuum multiscale simulations with Gaussian process (GP) surrogate models has been described in:
 - [Holey, H. et al., Science Advances 11, eadx4546 (2025)](https://doi.org/10.1126/sciadv.adx4546)
 
-The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html).
+The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macroscale fields and [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) as GP library. Molecular dynamics (MD) simulations run with [LAMMPS](https://docs.lammps.org) through its [Python interface](https://docs.lammps.org/Python_head.html). Elastic deformation is computed using [ContactMechanics](https://contactengineering.github.io/ContactMechanics/).
 
 ## Installation
 

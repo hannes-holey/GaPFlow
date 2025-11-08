@@ -163,6 +163,8 @@ class GaussianProcessSurrogate:
 
     def init_database(self, dim):
         if self.is_gp_model:
+            print(self._Xtest)
+
             self.database.initialize(self._Xtest, dim)
 
     # ------------------------------------------------------------------
@@ -470,7 +472,7 @@ class GaussianProcessSurrogate:
         """
         return jnp.vstack([
             self.solution,
-            self.topography,
+            self.topography[:3],
             self.extra
         ]).reshape(self.database.num_features, -1).T
 

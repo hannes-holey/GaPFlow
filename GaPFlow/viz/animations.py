@@ -25,10 +25,11 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from IPython.display import HTML
 import netCDF4
 
 from GaPFlow.topography import create_midpoint_grid
-from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp
+from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context
 
 
 def animate(filename, seconds=10, save=False, show=True, disc=None):
@@ -293,3 +294,127 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
         ani.save(outfile, writer=writer, dpi=600)
 
     plt.show()
+
+@mpl_style_context
+def animate_1d(filename_sol: str,
+                     filename_topo: str,
+                     seconds: float = 10.,
+                     save: bool = False,
+                     show_notebook: bool = False
+                     ) -> None:
+    """Animation of solution process for 1D simulations.
+    - Option 1: Default. Showing in a matplotlib window.
+    - Option 2: Showing in Jupyter notebook (show_notebook=True).
+    - Option 3: Saving as mp4 file (save=True).
+
+    Parameters
+    ----------
+    filename_sol : str
+        Relative path to the solution NetCDF file.
+    filename_topo : str
+        Relative path to the topography NetCDF file.
+    seconds : float, optional
+        Duration of the animation in seconds, by default 10.
+    save : bool, optional
+        Whether to save the animation as an mp4 file, by default False.
+    show_notebook : bool, optional
+        Whether to show the animation in a Jupyter notebook, by default False.
+    """
+    assert not (save and show_notebook), "Cannot both save and show in notebook."
+
+    data_sol = netCDF4.Dataset(filename_sol)
+    q_nc = np.asarray(data_sol.variables['solution'])
+    p_nc = np.asarray(data_sol.variables['pressure'])
+    tau_nc = np.asarray(data_sol.variables['wall_stress_xz'])
+
+    data_topo = netCDF4.Dataset(filename_topo)
+    topo_nc = np.asarray(data_topo.variables['topography'])
+
+    nt, nc, _, nx, ny = q_nc.shape
+    x = np.linspace(0, 1, nx-2)
+
+    bDef = True if topo_nc.shape[0] > 1 else False
+    fig, ax = plt.subplots(2, 3 + int(bDef), figsize=(10, 4))
+    title = fig.suptitle("Simulation Animation 1D", fontsize=12)
+
+    color_q, color_p, color_t, color_h = 'C0', 'C1', 'C2', 'C3'
+
+    (line_rho,) = ax[0, 0].plot([], [], color=color_q)
+    (line_jx,) = ax[0, 1].plot([], [], color=color_q)
+    (line_jy,) = ax[0, 2].plot([], [], color=color_q)
+    (line_p,) = ax[1, 0].plot([], [], color=color_p)
+    (line_tauxz_bot,) = ax[1, 1].plot([], [], color=color_t)
+    (line_tauxz_top,) = ax[1, 2].plot([], [], color=color_t)
+    if bDef:
+        (line_h,) = ax[0, 3].plot([], [], color=color_h)
+        (line_def,) = ax[1, 3].plot([], [], color=color_h)
+        ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
+                      linestyle='--', label='Initial')
+        ax[0, 3].legend(loc='upper center')
+
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    if bDef:
+        set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+
+    set_axes_labels(ax, bDef)
+
+    def init():
+        line_rho.set_data([], [])
+        line_jx.set_data([], [])
+        line_jy.set_data([], [])
+        line_p.set_data([], [])
+        line_tauxz_bot.set_data([], [])
+        line_tauxz_top.set_data([], [])
+        if bDef:
+            line_h.set_data([], [])
+            line_def.set_data([], [])
+        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                line_tauxz_top, line_h, line_def)
+
+    def update(i):
+        line_rho.set_data(x, q_nc[i, 0, 0, 1:-1, ny // 2])
+        line_jx.set_data(x, q_nc[i, 1, 0, 1:-1, ny // 2])
+        line_jy.set_data(x, q_nc[i, 2, 0, 1:-1, ny // 2])
+        line_p.set_data(x, p_nc[i, 1:-1, ny // 2])
+        line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, 1:-1, ny // 2])
+        line_tauxz_top.set_data(x, tau_nc[i, 10, 0, 1:-1, ny // 2])
+        if bDef:
+            line_h.set_data(x, topo_nc[i, 0, 0, 1:-1, ny // 2])
+            line_def.set_data(x, topo_nc[i, 3, 0, 1:-1, ny // 2])
+        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                line_tauxz_top, line_h, line_def)
+
+    ani = animation.FuncAnimation(
+        fig,
+        update,
+        frames=nt,
+        init_func=init,
+        blit=True,
+        interval=100,
+        repeat=True
+    )
+
+    if save:
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=max(1, int(nt / seconds)),
+                        codec='libx264',
+                        extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
+
+        outfile = os.path.join(os.path.dirname(filename_sol),
+                                os.path.dirname(filename_sol).split(os.sep)[-1]) + ".mp4"
+
+        ani.save(outfile, writer=writer, dpi=150)
+        print(f"Saved animation to {outfile}")
+
+    elif show_notebook:
+        plt.close(fig)
+        return HTML(ani.to_jshtml())
+
+    else:
+        plt.show()

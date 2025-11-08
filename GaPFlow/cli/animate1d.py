@@ -27,7 +27,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.animations import animate, animate_gp
+from GaPFlow.viz.animations import animate_1d, animate_gp
 
 
 def get_parser():
@@ -42,10 +42,11 @@ def main():
 
     args = get_parser().parse_args()
 
-    file = get_pipeline(name='sol.nc', mode='single')
+    file_sol = get_pipeline(name='sol.nc', mode='single')
+    file_topo = file_sol.replace('sol.nc', 'topo.nc')
 
-    gp_p = os.path.join(os.path.dirname(file), 'gp_zz.csv')
-    gp_s = os.path.join(os.path.dirname(file), 'gp_xz.csv')
+    gp_p = os.path.join(os.path.dirname(file_sol), 'gp_zz.csv')
+    gp_s = os.path.join(os.path.dirname(file_sol), 'gp_xz.csv')
 
     try:
         df_p = pl.read_csv(gp_p)
@@ -61,6 +62,7 @@ def main():
 
     # TODO: should also work if not all are stress models
     if tol_s is None or tol_p is None:
-        animate(file, save=args.save)
+        animate_1d(file_sol, file_topo, save=args.save)
+
     else:
-        animate_gp(file, save=args.save, tol_p=tol_p, tol_s=tol_s)
+        animate_gp(file_sol, save=args.save, tol_p=tol_p, tol_s=tol_s)

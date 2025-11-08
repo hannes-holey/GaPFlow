@@ -14,7 +14,8 @@ axes.axisbelow: true
 axes.formatter.use_mathtext: True
 
 ### Fonts
-font.sans-serif: Helvetica
+font.sans-serif: Helvetica, Arial, DejaVu Sans, Liberation Sans, sans-serif
+font.cursive: DejaVu Sans, Comic Sans MS, Liberation Sans, sans-serif
 mathtext.fontset: custom
 font.size: 10
 

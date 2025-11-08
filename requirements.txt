@@ -10,3 +10,5 @@ ruamel.yaml
 ase
 mpi4py
 moltemplate
+git+https://github.com/ContactEngineering/ContactMechanics.git@c318fe2#egg=ContactMechanics
+IPython

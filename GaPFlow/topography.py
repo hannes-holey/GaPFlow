@@ -21,7 +21,16 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import ContactMechanics as CM
 import numpy as np
+import copy
+
+import numpy.typing as npt
+from typing import Tuple
+
+import warnings
+
+NDArray = npt.NDArray[np.floating]
 
 
 def create_midpoint_grid(disc):
@@ -161,16 +170,19 @@ def asperity(xx, yy, grid, geo):
 
 class Topography:
 
-    def __init__(self, fc, grid, geo):
+    def __init__(self, fc, grid, geo, prop) -> None:
 
         xx, yy = create_midpoint_grid(grid)
 
-        self.__field = fc.real_field('topography', (3,))
-        self._x = fc.real_field('x')
-        self._y = fc.real_field('y')
+        self.__field = fc.get_real_field('topography')
+        self._x = fc.get_real_field('x')
+        self._y = fc.get_real_field('y')
 
         self._x.p = xx
         self._y.p = yy
+
+        self.dx = grid['dx']
+        self.dy = grid['dy']
 
         # 1D profiles
         if geo['type'] == 'journal':
@@ -195,24 +207,79 @@ class Topography:
             ix = 2
             iy = 1
 
+        # elastic deformation
+        if prop['elastic']['enabled']:
+            self.elastic = True
+            self.h_undeformed = h.copy()
+            self.__pressure = fc.get_real_field('pressure')
+
+            self.ElasticDeformation = ElasticDeformation(
+                E=prop['elastic']['E'],
+                v=prop['elastic']['v'],
+                alpha_underrelax=prop['elastic']['alpha_underrelax'],
+                grid=grid,
+                n_images=prop['elastic']['n_images']
+            )
+        else:
+            self.elastic = False
+
         self.__field.p[0] = h
         self.__field.p[ix] = dh_dx
         self.__field.p[iy] = dh_dy
+        self.__field.p[3] = np.zeros_like(h)  # inital deformation set to zero
+
+    def update(self) -> None:
+        """Updates the topography field in case of enabled deformation.
+        """
+        if self.elastic:
+            if self.ElasticDeformation.periodicity in ['half', 'none']:
+                p = self.__pressure.p - self.__pressure.p[0, 0]  # reference pressure
+                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+                deformation = deformation - deformation[0, 0]  # reference deformation
+            else:
+                p = self.__pressure.p
+                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+            self.deformation = deformation
+            self.h = self.h_undeformed + deformation
+        else:
+            pass
+
+    def update_gradients(self) -> None:
+        """Updates gradient arrays using second-order central differences.
+        """
+        h = self.__field.p[0]
+        dh_dx = np.gradient(h, axis=0) / self.dx
+        dh_dy = np.gradient(h, axis=1) / self.dy
+        self.__field.p[1] = dh_dx
+        self.__field.p[2] = dh_dy
 
     @property
-    def height_and_slopes(self):
+    def height_and_slopes(self) -> Tuple[NDArray, NDArray, NDArray]:
         return self.__field.p
 
     @property
-    def h(self):
+    def h(self) -> NDArray:
         return self.__field.p[0]
 
+    @h.setter
+    def h(self, value: NDArray) -> None:
+        self.__field.p[0] = value
+        self.update_gradients()
+
     @property
-    def dh_dx(self):
+    def deformation(self) -> NDArray:
+        return self.__field.p[3]
+
+    @deformation.setter
+    def deformation(self, value: NDArray) -> None:
+        self.__field.p[3] = value
+
+    @property
+    def dh_dx(self) -> NDArray:
         return self.__field.p[1]
 
     @property
-    def dh_dy(self):
+    def dh_dy(self) -> NDArray:
         return self.__field.p[2]
 
     @property
@@ -222,3 +289,128 @@ class Topography:
     @property
     def y(self):
         return self._y.p
+
+
+class ElasticDeformation:
+    """Wrapper class around the FFTElasticHalfSpace classes from ContactMechanics.
+    Selects the appropriate Half-Space class based on the periodicity of the problem.
+    """
+
+    def __init__(self,
+                 E: float,
+                 v: float,
+                 alpha_underrelax: float,
+                 grid: dict,
+                 n_images: int
+                 ) -> None:
+
+        self.area_per_cell = grid['dx'] * grid['dy']
+        Nx, Ny = grid['Nx'] + 2, grid['Ny'] + 2
+        self.u_prev = np.zeros((Nx, Ny))
+        self.alpha_underrelax = alpha_underrelax
+        n_images = n_images
+
+        perX = grid['bc_xE_P'][0]
+        perY = grid['bc_yS_P'][0]
+
+        young_effective = E / (1 - v**2)
+
+        # check for semi-periodic 1D cases where direction with N=1 is marked as periodic
+        if (perX != perY) and ((perY and grid['Ny'] == 1) or (perX and grid['Nx'] == 1)):
+            warnings.warn(
+                "You specified a semi-periodic 1D problem.\n"
+                "For the calculation of elastic deformation, we assume a line contact with "
+                "non-periodic boundary conditions in both directions.\n"
+                "For the calculation of the effective force F=p*A per cell, "
+                "we assume a unit length of {} = 1 m."
+                .format("Ly" if perY else "Lx"))
+            grid = copy.deepcopy(grid)  # do not modify original grid
+            if perY:
+                grid['Ly'] = 1.0
+            else:
+                grid['Lx'] = 1.0
+            n_images = 0  # make it effectively non-periodic
+
+        if perX and perY:
+            self.periodicity = 'full'
+            self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
+                                                        young=young_effective,
+                                                        physical_sizes=(grid['Lx'], grid['Ly']),
+                                                        stiffness_q0=0.0
+                                                        )
+        elif (perX != perY):
+            self.periodicity = 'half'
+            self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
+                                                            young=young_effective,
+                                                            physical_sizes=(grid['Lx'], grid['Ly']),
+                                                            periodicity=(perX, perY),
+                                                            n_images=n_images
+                                                            )
+        else:
+            self.periodicity = 'none'
+            self.ElDef = CM.FreeFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
+                                                    young=young_effective,
+                                                    physical_sizes=(grid['Lx'], grid['Ly'])
+                                                    )
+
+    def get_deformation(self, p: NDArray) -> NDArray:
+        """Calculation of the elastic deformation due to given pressure field p.
+        Convention: positive displacement for positive pressure.
+
+        Parameters
+        ----------
+        p : ndarray
+            Pressure array [Pa]
+
+        Returns
+        -------
+        disp : ndarray
+            Array of resulting displacements [m].
+        """
+        forces = p * self.area_per_cell
+        disp = -self.ElDef.evaluate_disp(forces)
+
+        return disp
+
+    def get_deformation_underrelax(self, p: NDArray) -> NDArray:
+        """Updates elastic deformation using underrelaxation
+
+        Parameters
+        ----------
+        p : ndarray of shape (M, N)
+            Pressure field.
+
+        Returns
+        -------
+        u_relaxed : ndarray of shape (M, N)
+            Updated, underrelaxed deformation field.
+        """
+        u_computed = self.get_deformation(p)
+        u_relaxed = (1 - self.alpha_underrelax) * self.u_prev + self.alpha_underrelax * u_computed
+        self.u_prev = u_relaxed.copy()
+
+        return u_relaxed
+
+    def get_G_real(self) -> NDArray:
+        """For analysis and illustration purposes.
+        Returns the 'ordered' G_real numpy array with centered zero frequency component.
+
+        Returns
+        -------
+        G_real_ordered : ndarray
+            Green's function array in real space.
+        """
+        return self.ElDef.get_G_real()
+
+    def get_G_real_slices(self) -> Tuple[NDArray, NDArray]:
+        """For analysis and illustration purposes.
+        Returns two middle slices of the G_real array, in x- and y-direction
+
+        Returns
+        -------
+        x_slice : ndarray of shape (M,)
+            middle slice of G_real in x-direction
+        y_slice : ndarray of shape (N,)
+            middle slice of G_real in y-direction
+        """
+        return self.ElDef.get_G_real_slices()

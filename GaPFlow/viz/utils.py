@@ -24,7 +24,9 @@
 import os
 import time
 import numpy as np
-
+from typing import Tuple
+import matplotlib.pyplot as plt
+from functools import wraps
 
 from GaPFlow.topography import create_midpoint_grid
 
@@ -79,7 +81,7 @@ def _get_centerline_coords(nx, ny, disc=None):
     return x, y
 
 
-def set_axes_labels(ax):
+def set_axes_labels(ax, bDef=False):
 
     ax[1, 0].set_xlabel(r"$x$")
     ax[1, 1].set_xlabel(r"$x$")
@@ -93,9 +95,20 @@ def set_axes_labels(ax):
     ax[1, 1].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{bot}$")
     ax[1, 2].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{top}$")
 
+    if bDef:
+        ax[0, 3].set_ylabel(r"Height $h$ in m")
+        ax[1, 3].set_ylabel(r"Deformation $u$ in m")
 
-def set_axes_limits(ax, q, tol=None):
 
+def set_axes_limits(ax,
+                    q,
+                    tol=None, 
+                    x:Tuple[float,float]=None,
+                    rel_tol:float=None):
+
+    if x is not None:
+        ax.set_xlim(x[0], x[1])
+    
     q_min = q.min()
     q_max = q.max()
 
@@ -110,6 +123,11 @@ def set_axes_limits(ax, q, tol=None):
     if tol is not None:
         q_min -= tol
         q_max += tol
+
+    if rel_tol is not None:
+        delta = rel_tol * (q_max - q_min)
+        q_min -= delta
+        q_max += delta
 
     ax.set_ylim(q_min, q_max)
 
@@ -128,3 +146,22 @@ def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
     if tol is not None:
         ax.plot(x, mean + 1.96 * tol, '--', color=color)
         ax.plot(x, mean - 1.96 * tol, '--', color=color)
+
+def mpl_style_context(func):
+    """Central wrapper for applying different mpl styles for
+    plotting and animation functions.
+    
+    Using the context manager to prevent persistently changing 
+    global matplotlib settings.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try: # nicer looking plots with tueplots if available
+            from tueplots import bundles
+            rcparams = bundles.beamer_moml()
+        except ImportError:
+            rcparams = plt.rcParams.copy()
+
+        with plt.rc_context(rcparams):
+            return func(*args, **kwargs)
+    return wrapper
