@@ -157,7 +157,7 @@ def mpl_style_context(func):
     """Central wrapper for applying different mpl styles for
     plotting and animation functions.
 
-    Using the context manager to prevent persistently changing 
+    Using the context manager to prevent persistently changing
     global matplotlib settings.
     """
     @wraps(func)

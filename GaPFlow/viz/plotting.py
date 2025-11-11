@@ -33,6 +33,7 @@ from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp,
 import numpy.typing as npt
 NDArray = npt.NDArray[np.floating]
 
+
 def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     data = netCDF4.Dataset(filename)
@@ -75,6 +76,7 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     return fig, ax
 
+
 def plot_height(filename, grid=None):
     """Wrapper function for plotting from topo.nc file.
     Detects whether 1D or 2D.
@@ -99,15 +101,16 @@ def plot_height(filename, grid=None):
         u = topo[-1, 3, 0, :, :]
         if np.any(u != 0.):
             plot_height_1d(h, h0, u)
-        else: # no deformation
+        else:  # no deformation
             plot_height_1d(h)
     else:
         _plot_height_2d(topo[0], grid)
 
+
 @mpl_style_context
-def plot_height_1d(h: NDArray, 
+def plot_height_1d(h: NDArray,
                    h0: NDArray | None = None,
-                   u: NDArray | None = None, 
+                   u: NDArray | None = None,
                    p: NDArray | None = None
                    ) -> None:
     """Plotting height profile in 1D.
@@ -129,7 +132,7 @@ def plot_height_1d(h: NDArray,
     assert h.shape[1] == 3, "Height profile h must be 1D in x (shape (N,3))."
 
     iOption = 1 + int(h0 is not None) + int(p is not None)
-    fig, ax = plt.subplots(1, iOption, figsize=(4*iOption, 3), squeeze=False)
+    fig, ax = plt.subplots(1, iOption, figsize=(4 * iOption, 3), squeeze=False)
     ax = ax.ravel()
 
     h = h[1:-1, 1:-1].ravel()
@@ -139,9 +142,9 @@ def plot_height_1d(h: NDArray,
     # height profile
     ax[0].plot(x, h, color='C0', linestyle='-', label='Final deformed shape')
     ax[0].fill_between(x, h, np.ones_like(x) * 1.1 * h.max(),
-                    color='0.7', lw=0.)
+                       color='0.7', lw=0.)
     ax[0].fill_between(x, np.zeros_like(x), -np.ones_like(x) * 0.1 * h.max(),
-                    color='0.7', lw=0.)
+                       color='0.7', lw=0.)
     ax[0].plot(x, h, color='C0')
     ax[0].plot(x, np.zeros_like(h), color='C0')
     ax[0].set_ylabel('Gap height $h$ in m')
@@ -155,13 +158,14 @@ def plot_height_1d(h: NDArray,
 
         ax[1].plot(x, u, color='C1')
         ax[1].set_ylabel('Deformation $u$ in m')
-    
+
     # pressure
     if iOption > 2:
         ax[2].plot(x, p[1:-1, 1:-1].ravel(), color='C2')
         ax[2].set_ylabel('Pressure $p$ in Pa')
 
     plt.show()
+
 
 def _plot_height_2d(topography, grid):
 

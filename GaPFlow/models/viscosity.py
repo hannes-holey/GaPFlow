@@ -163,7 +163,7 @@ def roelands_piezo(p, mu0, mu_inf=1.e-3, p_ref=1.96e8, z=0.68, name='Roelands'):
     """
     Computes the pressure-dependent viscosity using Roeland's empirical piezoviscosity equation.
 
-    Roeland's equation models the increase of viscosity with pressure, commonly used 
+    Roeland's equation models the increase of viscosity with pressure, commonly used
     in elastohydrodynamic lubrication and high-pressure fluid applications.
 
     .. math::
@@ -258,7 +258,7 @@ def eyring_shear(shear_rate, mu0, tauE=5.e5, name='Eyring'):
     Computes shear-thinning viscosity using the Eyring model.
 
     .. math::
-        \\mu(\\dot{\\gamma}) = \\frac{\\tau_0}{\\dot{\\gamma}} 
+        \\mu(\\dot{\\gamma}) = \\frac{\\tau_0}{\\dot{\\gamma}}
         \\sinh^{-1}\\left(\\frac{\\mu_0 \\dot{\\gamma}}{\\tau_0}\\right)
 
     Parameters
@@ -284,7 +284,7 @@ def carreau_shear(shear_rate, mu0, mu_inf=1.e-3, lam=0.02, a=2, N=0.8, name='Car
     Computes shear-thinning viscosity using the Carreau model.
 
     .. math::
-        \\mu(\\dot{\\gamma}) = \\mu_\\infty + 
+        \\mu(\\dot{\\gamma}) = \\mu_\\infty +
         (\\mu_0 - \\mu_\\infty) \\left[1 + (\\lambda \\dot{\\gamma})^a \\right]^{(N - 1)/a}
 
     Parameters

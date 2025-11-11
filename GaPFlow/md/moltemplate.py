@@ -161,8 +161,8 @@ def write_solid_data(slabL,
 
         coords = slab.get_positions()
 
-        data.extend([f"$atom:au_{i+1+offset} $mol:. @atom:au " +
-                     f"0.0 {coord[0]:.6e} {coord[1]:.6e} {coord[2]:.6e}"
+        data.extend([f"$atom:au_{i + 1 + offset} $mol:. @atom:au "
+                     + f"0.0 {coord[0]:.6e} {coord[1]:.6e} {coord[2]:.6e}"  # noqa: W503
                      for i, coord in enumerate(coords)])
 
         offset = len(data)
@@ -201,9 +201,9 @@ def _create_fcc_wall_ase(size, symbol):
     # coords = slab.get_positions()
     # slab.positions += np.array([0., 0., az / 6.])
 
-    lx = ax * nx
-    ly = ay * ny
-    lz = az * nz
+    # lx = ax * nx
+    # ly = ay * ny
+    # lz = az * nz
 
     return slab
 
@@ -341,7 +341,7 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25.):
     density: float
         Target fluid density
     buffer: float
-        "Safety distance" between the outermost fluid layer and the wall 
+        "Safety distance" between the outermost fluid layer and the wall
 
     Returns
     -------
@@ -352,7 +352,7 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25.):
     int
         Number of fluid atoms
     float
-        Initial gap height 
+        Initial gap height
 
     Raises
     ------
@@ -678,7 +678,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     nx = args.get("nx", 21)
     ny = args.get("ny", None)
     nz = args.get("nz", None)
-    solid = args.get("solid", "Au")
+    # solid = args.get("solid", "Au")
 
     # top wall possibly rotated
     slab_top, nx = _create_fcc_wall_ase_rotate(nx=nx,
@@ -740,7 +740,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
 
 def build_template(args):
 
-    restart_file = args.get("restart_file", "run.in.restart")
+    # restart_file = args.get("restart_file", "run.in.restart")
 
     moltemplate_command = ["moltemplate.sh",
                            "-overlay-all",

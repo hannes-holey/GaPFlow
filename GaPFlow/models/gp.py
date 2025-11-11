@@ -74,7 +74,7 @@ class MultiOutputKernel(kernels.Kernel):
         Parameters
         ----------
         X1 : tuple
-            Tuple `(t1, idx1)` where `t1` is input array and `idx1` 
+            Tuple `(t1, idx1)` where `t1` is input array and `idx1`
             indexes the corresponding outputs.
         X2 : tuple
             Tuple `(t2, idx2)` analogous to `X1`.
@@ -95,7 +95,7 @@ class GaussianProcessSurrogate:
     Abstract base class for Gaussian Process (GP) surrogate models.
 
     Implements GP training, inference, and active learning routines.
-    Subclasses must define abstract properties that describe the kernel 
+    Subclasses must define abstract properties that describe the kernel
     hyperparameters, data arrays, and noise models.
 
     Parameters
