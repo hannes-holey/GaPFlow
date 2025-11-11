@@ -34,22 +34,23 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install --upgrade setuptools setuptools_scm coverage build pytest
 
-    - name: Install hans
+    - name: Install GaPFlow
       run: |
         pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
-        pip install .[tests]
+        pip install .[test]
 
     - name: Test with pytest
       run: |
-        pytest
+        coverage run
+        bash maintenance/update_coverage_badge.sh
 
-    # - name: Upload coverage badge
-    #   if: matrix.python-version == '3.12' && github.ref == 'refs/heads/main'
-    #   uses: exuanbo/actions-deploy-gist@v1
-    #   with:
-    #     token: ${{ secrets.GIST_SECRET }}
-    #     gist_id: fac7fa61e1899b1e74b3bab598fe6513
-    #     file_path: badge.svg
+    - name: Upload coverage badge
+      if: matrix.python-version == '3.12' && github.ref == 'refs/heads/main'
+      uses: exuanbo/actions-deploy-gist@v1
+      with:
+        token: ${{ secrets.GIST_SECRET }}
+        gist_id: fac7fa61e1899b1e74b3bab598fe6513
+        file_path: badge.svg
 
   # deploy:
   #   runs-on: ubuntu-latest
