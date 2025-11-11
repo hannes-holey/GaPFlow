@@ -27,7 +27,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.animations import animate_1d, animate_gp
+from GaPFlow.viz.animations import animate_1d, animate_1d_gp
 
 
 def get_parser():
@@ -67,9 +67,9 @@ def main(cli=True, path='.', save=False, mode='single'):
     except FileNotFoundError:
         tol_s = None
 
-    # TODO: should also work if not all are stress models
-    if tol_s is None or tol_p is None:
-        animate_1d(file_sol, file_topo, save=save)
+    has_gp_models = tol_s is not None and tol_p is not None
 
+    if has_gp_models:
+        animate_1d_gp(file_sol, save=save, tol_p=tol_p, tol_s=tol_s)
     else:
-        animate_gp(file_sol, save=save, tol_p=tol_p, tol_s=tol_s)
+        animate_1d(file_sol, file_topo, save=save)

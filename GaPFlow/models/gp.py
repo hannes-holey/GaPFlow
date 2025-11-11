@@ -163,8 +163,6 @@ class GaussianProcessSurrogate:
 
     def init_database(self, dim):
         if self.is_gp_model:
-            print(self._Xtest)
-
             self.database.initialize(self._Xtest, dim)
 
     # ------------------------------------------------------------------

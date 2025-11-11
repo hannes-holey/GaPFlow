@@ -39,7 +39,7 @@ from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
 from GaPFlow.viz.plotting import plot_height_1d
-from GaPFlow.viz.animations import animate_1d
+from GaPFlow.viz.animations import animate_1d, animate_2d
 
 
 class Problem:
@@ -278,6 +278,11 @@ class Problem:
         self.pressure.init()
         self.wall_stress_xz.init()
         self.wall_stress_yz.init()
+
+        if not self.options['silent']:
+            self.pressure.write()
+            self.wall_stress_xz.write()
+            self.wall_stress_yz.write()
 
         # Numerics
         self.step = 0
@@ -720,14 +725,11 @@ class Problem:
         """Wrapper for animating the solution in viz/animations.py
         Checks if simulation has run already. Detects 1D vs 2D.
         Includes height and deformation if elastic deformation is enabled.
-        - Option 1: Default. Showing in a matplotlib window.
-        - Option 2: Showing in Jupyter notebook (show_notebook=True).
-        - Option 3: Saving as .mp4 file (save=True).
 
         Parameters
         ----------
         save : bool, optional
-            Whether to save the animation as an .mp4 file, by default False
+            Whether to save the animation as an .mp4 file, by default False.
         seconds : float, optional
             Duration of the animation in seconds (if saved), by default 10.0
         """
@@ -747,8 +749,9 @@ class Problem:
                               save=save)
 
         else:
-            print("2D animation not yet implemented.")
-
+            return animate_2d(filename_sol,
+                              seconds=seconds,
+                              save=save)
 
 # ---------------------------
 # Helper functions
