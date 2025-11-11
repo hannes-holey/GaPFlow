@@ -21,7 +21,7 @@ jobs:
     - name: Install MPI & NetCDF
       run: |
         sudo apt-get update
-        sudo apt-get install -y openmpi-bin libopenmpi-dev libhdf5-mpi-dev libpnetcdf-dev libnetcdf-pnetcdf-dev
+        sudo apt-get install -y openmpi-bin libopenmpi-dev libhdf5-mpi-dev libpnetcdf-dev libnetcdf-pnetcdf-dev ffmpeg
 
     - name: Set up Python
       uses: actions/setup-python@v5

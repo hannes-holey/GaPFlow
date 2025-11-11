@@ -24,7 +24,7 @@ jobs:
       - name: install_package
         run: |
           sudo apt-get update
-          sudo apt-get install -y openmpi-bin libopenmpi-dev
+          sudo apt-get install -y openmpi-bin libopenmpi-dev ffmpeg
           sudo pip install --upgrade --ignore-installed .[doc]
 
       # Standard drop-in approach that should work for most people.
