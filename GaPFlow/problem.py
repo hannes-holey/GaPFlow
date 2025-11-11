@@ -41,6 +41,7 @@ from GaPFlow.md import Mock, LennardJones, GoldAlkane
 from GaPFlow.viz.plotting import plot_height_1d
 from GaPFlow.viz.animations import animate_1d
 
+
 class Problem:
     """
     Problem driver for GaPFlow simulations.
@@ -87,7 +88,7 @@ class Problem:
         # Solution field
         self.__field = fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
-        
+
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = fc.real_field('extra', (num_extra_features,))
@@ -346,7 +347,7 @@ class Problem:
             self.write()
 
         if not self.options['silent']:
-            self.file.close() # need to be closed to be readable when animating from problem
+            self.file.close()  # need to be closed to be readable when animating from problem
             if self.prop['elastic']['enabled']:
                 self.topofile.close()
 
@@ -714,7 +715,6 @@ class Problem:
 
     def animate(self,
                 save: bool = False,
-                show_notebook: bool = False,
                 seconds: float = 10.0
                 ) -> None:
         """Wrapper for animating the solution in viz/animations.py
@@ -728,25 +728,24 @@ class Problem:
         ----------
         save : bool, optional
             Whether to save the animation as an .mp4 file, by default False
-        show_notebook : bool, optional
-            Whether to display the animation inline in a Jupyter notebook, by default False
         seconds : float, optional
-            Duration of the animation in seconds, by default 10.0
+            Duration of the animation in seconds (if saved), by default 10.0
         """
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")
+
+        if self.options['silent']:
+            raise RuntimeError("Cannot animate in silent mode.")
 
         filename_sol = os.path.join(self.outdir, 'sol.nc')
         filename_topo = os.path.join(self.outdir, 'topo.nc')
 
         if self.grid['Ny'] == 1:
-            anim = animate_1d(filename_sol,
+            return animate_1d(filename_sol,
                               filename_topo,
                               seconds=seconds,
-                              save=save,
-                              show_notebook=show_notebook)
-            if show_notebook:
-                return anim
+                              save=save)
+
         else:
             print("2D animation not yet implemented.")
 

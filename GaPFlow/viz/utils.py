@@ -27,6 +27,7 @@ import numpy as np
 from typing import Tuple
 import matplotlib.pyplot as plt
 from functools import wraps
+from IPython import get_ipython
 
 from GaPFlow.topography import create_midpoint_grid
 
@@ -59,6 +60,9 @@ def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
 
     elif mode == "all":
         files = [os.path.join(folder, name) for folder in folders]
+
+    elif mode == "last":
+        files = [os.path.join(folder, name) for folder in folders][-1]
 
     elif mode == "single":
         inp = input("Enter key: ")
@@ -102,13 +106,13 @@ def set_axes_labels(ax, bDef=False):
 
 def set_axes_limits(ax,
                     q,
-                    tol=None, 
-                    x:Tuple[float,float]=None,
-                    rel_tol:float=None):
+                    tol=None,
+                    x: Tuple[float, float] = None,
+                    rel_tol: float = None):
 
     if x is not None:
         ax.set_xlim(x[0], x[1])
-    
+
     q_min = q.min()
     q_max = q.max()
 
@@ -147,16 +151,17 @@ def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
         ax.plot(x, mean + 1.96 * tol, '--', color=color)
         ax.plot(x, mean - 1.96 * tol, '--', color=color)
 
+
 def mpl_style_context(func):
     """Central wrapper for applying different mpl styles for
     plotting and animation functions.
-    
+
     Using the context manager to prevent persistently changing 
     global matplotlib settings.
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        try: # nicer looking plots with tueplots if available
+        try:  # nicer looking plots with tueplots if available
             from tueplots import bundles
             rcparams = bundles.beamer_moml()
         except ImportError:
@@ -165,3 +170,16 @@ def mpl_style_context(func):
         with plt.rc_context(rcparams):
             return func(*args, **kwargs)
     return wrapper
+
+
+def in_notebook():
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            return True   # Jupyter notebook or JupyterLab
+        elif shell == 'TerminalInteractiveShell':
+            return False  # Running in IPython terminal
+        else:
+            return False  # Other type (e.g., Google Colab’s variant)
+    except NameError:
+        return False      # get_ipython not defined → plain Python script

@@ -28,8 +28,9 @@ import matplotlib.animation as animation
 from IPython.display import HTML
 import netCDF4
 
+
 from GaPFlow.topography import create_midpoint_grid
-from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context
+from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context, in_notebook
 
 
 def animate(filename, seconds=10, save=False, show=True, disc=None):
@@ -295,17 +296,14 @@ def animate2d(filename, seconds=10, save=False, show=True, disc=None):
 
     plt.show()
 
+
 @mpl_style_context
 def animate_1d(filename_sol: str,
-                     filename_topo: str,
-                     seconds: float = 10.,
-                     save: bool = False,
-                     show_notebook: bool = False
-                     ) -> None:
-    """Animation of solution process for 1D simulations.
-    - Option 1: Default. Showing in a matplotlib window.
-    - Option 2: Showing in Jupyter notebook (show_notebook=True).
-    - Option 3: Saving as mp4 file (save=True).
+               filename_topo: str,
+               seconds: float = 10.,
+               save: bool = False):
+    """
+    Create animation for 1D simulations.
 
     Parameters
     ----------
@@ -313,14 +311,30 @@ def animate_1d(filename_sol: str,
         Relative path to the solution NetCDF file.
     filename_topo : str
         Relative path to the topography NetCDF file.
-    seconds : float, optional
-        Duration of the animation in seconds, by default 10.
-    save : bool, optional
-        Whether to save the animation as an mp4 file, by default False.
-    show_notebook : bool, optional
-        Whether to show the animation in a Jupyter notebook, by default False.
+    seconds : float
+        Length of the saved video in seconds, i.e. determines the frame rate.
+    save : bool
+        Whether the plot should be saved or not
     """
-    assert not (save and show_notebook), "Cannot both save and show in notebook."
+
+    ani = _create_animation_1d(filename_sol, filename_topo)
+
+    return _display_animation(ani, filename_sol, seconds, save)
+
+
+def _create_animation_1d(filename_sol: str,
+                         filename_topo: str,
+                         ) -> animation:
+    """Create matplotlib.animation object from stored data
+    for 1D problems.
+
+    Parameters
+    ----------
+    filename_sol : str
+        Relative path to the solution NetCDF file.
+    filename_topo : str
+        Relative path to the topography NetCDF file.
+    """
 
     data_sol = netCDF4.Dataset(filename_sol)
     q_nc = np.asarray(data_sol.variables['solution'])
@@ -331,11 +345,11 @@ def animate_1d(filename_sol: str,
     topo_nc = np.asarray(data_topo.variables['topography'])
 
     nt, nc, _, nx, ny = q_nc.shape
-    x = np.linspace(0, 1, nx-2)
+    x = np.linspace(0, 1, nx - 2)
 
-    bDef = True if topo_nc.shape[0] > 1 else False
-    fig, ax = plt.subplots(2, 3 + int(bDef), figsize=(10, 4))
-    title = fig.suptitle("Simulation Animation 1D", fontsize=12)
+    plot_topo = True if topo_nc.shape[0] > 1 else False
+
+    fig, ax = plt.subplots(2, 3 + int(plot_topo), figsize=(10, 4))
 
     color_q, color_p, color_t, color_h = 'C0', 'C1', 'C2', 'C3'
 
@@ -345,7 +359,8 @@ def animate_1d(filename_sol: str,
     (line_p,) = ax[1, 0].plot([], [], color=color_p)
     (line_tauxz_bot,) = ax[1, 1].plot([], [], color=color_t)
     (line_tauxz_top,) = ax[1, 2].plot([], [], color=color_t)
-    if bDef:
+
+    if plot_topo:
         (line_h,) = ax[0, 3].plot([], [], color=color_h)
         (line_def,) = ax[1, 3].plot([], [], color=color_h)
         ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
@@ -358,11 +373,12 @@ def animate_1d(filename_sol: str,
     set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
     set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
     set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    if bDef:
+
+    if plot_topo:
         set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
         set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
 
-    set_axes_labels(ax, bDef)
+    set_axes_labels(ax, plot_topo)
 
     def init():
         line_rho.set_data([], [])
@@ -371,11 +387,14 @@ def animate_1d(filename_sol: str,
         line_p.set_data([], [])
         line_tauxz_bot.set_data([], [])
         line_tauxz_top.set_data([], [])
-        if bDef:
+
+        if plot_topo:
             line_h.set_data([], [])
             line_def.set_data([], [])
-        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
-                line_tauxz_top, line_h, line_def)
+            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                    line_tauxz_top, line_h, line_def)
+        else:
+            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
 
     def update(i):
         line_rho.set_data(x, q_nc[i, 0, 0, 1:-1, ny // 2])
@@ -384,11 +403,14 @@ def animate_1d(filename_sol: str,
         line_p.set_data(x, p_nc[i, 1:-1, ny // 2])
         line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, 1:-1, ny // 2])
         line_tauxz_top.set_data(x, tau_nc[i, 10, 0, 1:-1, ny // 2])
-        if bDef:
+
+        if plot_topo:
             line_h.set_data(x, topo_nc[i, 0, 0, 1:-1, ny // 2])
             line_def.set_data(x, topo_nc[i, 3, 0, 1:-1, ny // 2])
-        return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
-                line_tauxz_top, line_h, line_def)
+            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
+                    line_tauxz_top, line_h, line_def)
+        else:
+            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
 
     ani = animation.FuncAnimation(
         fig,
@@ -400,21 +422,39 @@ def animate_1d(filename_sol: str,
         repeat=True
     )
 
+    return ani
+
+
+def _display_animation(ani, file_sol, seconds, save):
+    """Display or save an animation object.
+
+    Parameters
+    ----------
+    ani : matplotlib.animation
+        The animation object
+    file_sol : str
+        File name of the solution file, used to generate default location for saving the mp4.
+    seconds : float
+        Length of the saved video in seconds, i.e. determines the frame rate.
+    save : bool
+        Whether the plot should be saved or not
+    """
+
     if save:
+        fps = max(1, int(ani._save_count / seconds))
         Writer = animation.writers['ffmpeg']
-        writer = Writer(fps=max(1, int(nt / seconds)),
+        writer = Writer(fps=fps,
                         codec='libx264',
                         extra_args=['-pix_fmt', 'yuv420p', '-crf', '25'])
 
-        outfile = os.path.join(os.path.dirname(filename_sol),
-                                os.path.dirname(filename_sol).split(os.sep)[-1]) + ".mp4"
+        outfile = os.path.join(os.path.dirname(file_sol),
+                               os.path.dirname(file_sol).split(os.sep)[-1]) + ".mp4"
 
         ani.save(outfile, writer=writer, dpi=150)
         print(f"Saved animation to {outfile}")
 
-    elif show_notebook:
-        plt.close(fig)
+    if in_notebook():
+        plt.close(ani._fig)
         return HTML(ani.to_jshtml())
-
     else:
         plt.show()
