@@ -36,8 +36,9 @@ jobs:
 
     - name: Install GaPFlow
       run: |
+        python -m pip install mpi4py
         pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
-        pip install .[test]
+        pip install --upgrade-strategy only-if-needed .[test]
 
     - name: Test with pytest
       run: |
