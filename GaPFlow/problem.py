@@ -46,7 +46,7 @@ from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, his
 from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
-from GaPFlow.viz.plotting import plot_height_1d
+from GaPFlow.viz.plotting import plot_height
 from GaPFlow.viz.animations import animate_1d, animate_2d
 
 
@@ -708,38 +708,40 @@ class Problem:
 
         return Q
 
-    def plot_height(self) -> None:
-        """Wrapper for plot_height in viz/plotting.py
-        - Detects 1D vs 2D
-        - Detects if elastic deformation is enabled
-        - Detects if initial or final simulation state
+    def plot_topo(self, show_defo=False, show_pressure=False) -> None:
         """
-        if self.grid['Ny'] == 1:
-            h = self.topo.h
-            if self.prop['elastic']['enabled'] and getattr(self, "step", 0) > 0:
-                u = self.topo.deformation
-                h0 = self.topo.h_undeformed
-                p = self.pressure.pressure
-                plot_height_1d(h, h0, u, p)
-            else:
-                plot_height_1d(h)
-        else:
-            print("2D height plotting not yet implemented.")
+        Wrapper for plot_height in viz/plotting.py
+
+        Parameters
+        ----------
+        show_defo: bool
+            Flag for showing deformation, default is False
+        show_pressure: bool
+            Flag for showing pressure, default is False
+        """
+
+        dim = 1 if self.grid['Ny'] == 1 else 2
+        filename_topo = os.path.join(self.outdir, 'topo.nc')
+
+        plot_height(filename_topo,
+                    dim=dim,
+                    show_defo=show_defo,
+                    show_pressure=show_pressure)
 
     def animate(self,
                 save: bool = False,
                 seconds: float = 10.0
                 ) -> None:
-        """Wrapper for animating the solution in viz/animations.py
+        """Wrapper for animating the solution in viz / animations.py
         Checks if simulation has run already. Detects 1D vs 2D.
         Includes height and deformation if elastic deformation is enabled.
 
         Parameters
         ----------
-        save : bool, optional
+        save: bool, optional
             Whether to save the animation as an .mp4 file, by default False.
-        seconds : float, optional
-            Duration of the animation in seconds (if saved), by default 10.0
+        seconds: float, optional
+            Duration of the animation in seconds(if saved), by default 10.0
         """
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")

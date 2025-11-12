@@ -1,6 +1,6 @@
 #
-# Copyright 2025 Christoph Huber
-#           2025 Hannes Holey
+# Copyright 2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -22,6 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
 import matplotlib.pyplot as plt
 import netCDF4
 import numpy as np
@@ -34,6 +35,94 @@ import numpy.typing as npt
 NDArray = npt.NDArray[np.floating]
 
 
+#####################
+# All in one figure #
+#####################
+
+@mpl_style_context
+def plot_single_frame(file_list, dim, frame=-1, savefig=False, show=True, disc=None):
+
+    if dim == 1:
+        fig, ax = plt.subplots(2, 3, figsize=(12, 6))
+
+        for file in file_list:
+            _plot_single_frame(ax, file, frame, disc)
+
+    elif dim == 2:
+        fig, ax = plt.subplots(3, 3, figsize=(9, 9))
+
+        for file in file_list:
+            _plot_single_frame_2d(ax, file, frame, disc)
+
+    if savefig:
+        fig.savefig('out_nc_last.pdf')
+
+    if show:
+        plt.show()
+
+
+def plot_history(file_list,
+                 gp_files_0=[],
+                 gp_files_1=[],
+                 show=True,
+                 savefig=False):
+
+    ncol = 1
+    if len(gp_files_0) > 0:
+        ncol += 1
+
+    if len(gp_files_1) > 0:
+        ncol += 1
+
+    fig, ax = plt.subplots(3, ncol, figsize=(ncol * 4, 9), sharex='col')
+
+    for file in file_list:
+        _plot_history(ax[:, 0] if ncol > 1 else ax,
+                      file)
+
+    col = 1
+    for gp_file, k in gp_files_0:
+        _plot_gp_history(ax[:, col], gp_file, k)
+
+    col = 2 if len(gp_files_0) > 0 else 1
+    for gp_file, k in gp_files_1:
+        _plot_gp_history(ax[:, col], gp_file, k)
+
+    if savefig:
+        fig.savefig('out_csv.pdf')
+
+    if show:
+        plt.show()
+
+
+####################
+# Separate figures #
+####################
+
+@mpl_style_context
+def plot_height(file_list, dim=1, show_defo=False, show_pressure=False):
+    """Summary
+
+    Parameters
+    ----------
+    file_list : [type]
+        [description]
+    dim : number, optional
+        [description] (the default is 1, which [default_description])
+    """
+
+    if dim == 1:
+        for file in file_list:
+            _plot_height_1d(file, show_defo, show_pressure)
+
+    elif dim == 2:
+        for file in file_list:
+            _plot_height_2d(file)
+
+    plt.show()
+
+
+@mpl_style_context
 def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     data = netCDF4.Dataset(filename)
@@ -76,109 +165,111 @@ def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
 
     return fig, ax
 
+###########
+# Backend #
+###########
 
-def plot_height(filename, grid=None):
-    """Wrapper function for plotting from topo.nc file.
-    Detects whether 1D or 2D.
-    Detects whether deformation was included.
+
+def _plot_height_1d(filename: str,
+                    show_defo: bool,
+                    show_pressure: bool) -> None:
+    """Plotting centerline height profile from file.
 
     Parameters
     ----------
     filename : str
-        Path to the NetCDF file.
-    grid : dict, optional
-        Grid information, by default None
+        Filename of the topography file.
+    show_defo: bool
+        Show the displacement in a separate subfigure and the initial
+        gap height for reference
+    show_pressure: bool
+        Show the pressure profile in a separate subfigure.
     """
+
     data = netCDF4.Dataset(filename)
     topo = np.asarray(data.variables['topography'])
 
     nx, ny = topo.shape[-2:]
-    is_1d = (ny == 3)
+    centerline_index = max(1, (ny - 2) // 2)
 
-    if is_1d:
-        h0 = topo[0, 0, 0, :, :]
-        h = topo[-1, 0, 0, :, :]
-        u = topo[-1, 3, 0, :, :]
-        if np.any(u != 0.):
-            plot_height_1d(h, h0, u)
-        else:  # no deformation
-            plot_height_1d(h)
-    else:
-        _plot_height_2d(topo[0], grid)
+    x = np.linspace(0, 1, nx - 2)
+    h0 = topo[0, 0, 0, 1:-1, centerline_index]
+    h = topo[-1, 0, 0, 1:-1, centerline_index]
+    u = topo[-1, 3, 0, 1:-1:, centerline_index]
 
+    columns = 1
+    u_col = 0
+    p_col = 0
 
-@mpl_style_context
-def plot_height_1d(h: NDArray,
-                   h0: NDArray | None = None,
-                   u: NDArray | None = None,
-                   p: NDArray | None = None
-                   ) -> None:
-    """Plotting height profile in 1D.
-    Option 1: Only height h.
-    Option 2: Height h, initial height h0, deformation u.
-    Option 3: Height h, initial height h0, deformation u, pressure p.
+    if show_pressure:
+        fname_sol = os.path.join(os.path.dirname(filename), 'sol.nc')
+        data_sol = netCDF4.Dataset(fname_sol)
+        p = np.asarray(data_sol.variables['pressure'])[-1, 1:-1, centerline_index]
+        columns += 1
+        p_col = 1
 
-    Parameters
-    ----------
-    h : ndarray of shape (N,3)
-        Height profile.
-    h0 : ndarray of shape (N,3), optional
-        Initial height profile, by default None
-    u : ndarray of shape (N,3), optional
-        Deformation profile, by default None
-    p : ndarray of shape (N,3), optional
-        Pressure profile, by default None
-    """
-    assert h.shape[1] == 3, "Height profile h must be 1D in x (shape (N,3))."
+    if show_defo:
+        columns += 1
+        u_col = 1
+        p_col += 1
 
-    iOption = 1 + int(h0 is not None) + int(p is not None)
-    fig, ax = plt.subplots(1, iOption, figsize=(4 * iOption, 3), squeeze=False)
+    fig, ax = plt.subplots(1, columns, figsize=(4 * columns, 3), squeeze=False)
     ax = ax.ravel()
 
-    h = h[1:-1, 1:-1].ravel()
-    nx = h.shape[0]
-    x = np.linspace(0, 1, nx)
-
     # height profile
-    ax[0].plot(x, h, color='C0', linestyle='-', label='Final deformed shape')
+    ax[0].plot(x, h, color='C0', linestyle='-', label='Deformed shape')
     ax[0].fill_between(x, h, np.ones_like(x) * 1.1 * h.max(),
                        color='0.7', lw=0.)
     ax[0].fill_between(x, np.zeros_like(x), -np.ones_like(x) * 0.1 * h.max(),
                        color='0.7', lw=0.)
     ax[0].plot(x, h, color='C0')
     ax[0].plot(x, np.zeros_like(h), color='C0')
-    ax[0].set_ylabel('Gap height $h$ in m')
+
+    ax[0].set_xlabel('$x/L_x$')
+    ax[0].set_ylabel('Gap height $h$')
 
     # initial height and deformation
-    if iOption > 1:
-        h0 = h0[1:-1, 1:-1].ravel()
-        u = u[1:-1, 1:-1].ravel()
+    if show_defo:
         ax[0].plot(x, h0, color='C0', linestyle='--', label='Initial shape')
         ax[0].legend(loc='upper center')
 
-        ax[1].plot(x, u, color='C1')
-        ax[1].set_ylabel('Deformation $u$ in m')
+        ax[u_col].plot(x, u, color='C1')
+        ax[u_col].set_xlabel('$x/L_x$')
+        ax[u_col].set_ylabel('Deformation $u$')
 
     # pressure
-    if iOption > 2:
-        ax[2].plot(x, p[1:-1, 1:-1].ravel(), color='C2')
-        ax[2].set_ylabel('Pressure $p$ in Pa')
+    if show_pressure:
+        ax[p_col].plot(x, p, color='C2')
+        ax[p_col].set_xlabel('$x/L_x$')
+        ax[p_col].set_ylabel('Pressure $p$')
 
-    plt.show()
+    return fig, ax
 
 
-def _plot_height_2d(topography, grid):
+def _plot_height_2d(filename):
+    """Plot contour of height map and gradients.
+
+    TODO: elastic deformation similar to 1D
+
+    Parameters
+    ----------
+    filename : str
+        Filename of the topography file.
+    """
+
+    data = netCDF4.Dataset(filename)
+    topo = np.asarray(data.variables['topography'])
 
     fig, ax = plt.subplots(1, 3, figsize=(9, 3))
 
-    h = topography[0, 0, 1:-1, 1:-1]
-    dh_dx = topography[1, 0, 1:-1, 1:-1]
-    dh_dy = topography[2, 0, 1:-1, 1:-1]
+    h = topo[0, 0, 0, 1:-1, 1:-1].T
+    dh_dx = topo[0, 1, 0, 1:-1, 1:-1].T
+    dh_dy = topo[0, 2, 0, 1:-1, 1:-1].T
 
     imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
-    ax[0].imshow(h.T, **imshow_args)
-    ax[1].imshow(dh_dx.T, **imshow_args)
-    ax[2].imshow(dh_dy.T, **imshow_args)
+    ax[0].imshow(h, **imshow_args)
+    ax[1].imshow(dh_dx, **imshow_args)
+    ax[2].imshow(dh_dy, **imshow_args)
 
     titles = [r'$h$', r'$\partial h/ \partial x$', r'$\partial h/ \partial y$']
     for (a, title) in zip(ax.flat, titles):
@@ -186,28 +277,7 @@ def _plot_height_2d(topography, grid):
         a.set_ylabel(r'$y/L_y$')
         a.set_title(title)
 
-    plt.show()
-
-
-def plot_single_frame(file_list, dim, frame=-1, savefig=False, show=True, disc=None):
-
-    if dim == 1:
-        fig, ax = plt.subplots(2, 3, figsize=(12, 6))
-
-        for file in file_list:
-            _plot_single_frame(ax, file, frame, disc)
-
-    elif dim == 2:
-        fig, ax = plt.subplots(3, 3, figsize=(9, 9))
-
-        for file in file_list:
-            _plot_single_frame_2d(ax, file, frame, disc)
-
-    if savefig:
-        fig.savefig('out_nc_last.pdf')
-
-    if show:
-        plt.show()
+    return fig, ax
 
 
 def _plot_single_frame(ax, filename, frame=-1, disc=None):
@@ -292,40 +362,6 @@ def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
         a.set_xlabel(r'$x/L_x$')
         a.set_ylabel(r'$y/L_y$')
         a.set_title(title)
-
-
-def plot_history(file_list,
-                 gp_files_0=[],
-                 gp_files_1=[],
-                 show=True,
-                 savefig=False):
-
-    ncol = 1
-    if len(gp_files_0) > 0:
-        ncol += 1
-
-    if len(gp_files_1) > 0:
-        ncol += 1
-
-    fig, ax = plt.subplots(3, ncol, figsize=(ncol * 4, 9), sharex='col')
-
-    for file in file_list:
-        _plot_history(ax[:, 0] if ncol > 1 else ax,
-                      file)
-
-    col = 1
-    for gp_file, k in gp_files_0:
-        _plot_gp_history(ax[:, col], gp_file, k)
-
-    col = 2 if len(gp_files_0) > 0 else 1
-    for gp_file, k in gp_files_1:
-        _plot_gp_history(ax[:, col], gp_file, k)
-
-    if savefig:
-        fig.savefig('out_csv.pdf')
-
-    if show:
-        plt.show()
 
 
 def _plot_history(ax, filename='history.csv'):

@@ -44,7 +44,7 @@ def get_parser():
 def main(cli=True, path='.', save=False, mode='single'):
 
     if cli:
-        # Overwrite defaults with argparse
+        # overwrite defaults with cmdline args
         args = get_parser().parse_args()
         save = args.save
         path = args.path

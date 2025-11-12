@@ -21,11 +21,33 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from argparse import ArgumentParser
+
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.plotting import plot_height
 
 
-def main():
+def get_parser():
+
+    parser = ArgumentParser()
+    parser.add_argument('-d', '--dim', type=int, default=1)
+    parser.add_argument('--show-defo', action='store_true', default=False)
+    parser.add_argument('--show-pressure', action='store_true', default=False)
+
+    return parser
+
+
+def main(cli=True, dim=1, show_defo=False, show_pressure=False):
+
+    if cli:
+        # overwrite defaults with cmdline args
+        args = get_parser().parse_args()
+        dim = args.dim
+        show_defo = args.show_defo
+        show_pressure = args.show_pressure
+
     nc_files = get_pipeline(name='topo.nc')
-    for file in nc_files:
-        plot_height(file)
+    plot_height(nc_files,
+                dim=dim,
+                show_defo=show_defo,
+                show_pressure=show_pressure)
