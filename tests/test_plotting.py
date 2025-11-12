@@ -25,10 +25,10 @@
 import os
 
 from GaPFlow import Problem
-from GaPFlow.viz.plotting import _plot_height_1d, _plot_height_2d
+from GaPFlow.viz.plotting import _plot_height_1d, _plot_height_2d, _plot_multiple_frames_1d, plot_frame
 
 
-def test_height_1d(tmp_path):
+def test_plot_1d(tmp_path):
 
     sim = f"""
 options:
@@ -88,8 +88,21 @@ properties:
     fig, axes = _plot_height_1d(filename, show_defo=True, show_pressure=True)
     assert len(axes) == 3
 
+    filename = os.path.join(myProblem.outdir, 'sol.nc')
 
-def test_height_2d(tmp_path):
+    fig, axes = _plot_multiple_frames_1d(filename, every=1)
+    for ax in axes.flat:
+        assert len(ax.get_lines()) == 11
+
+    fig, axes = _plot_multiple_frames_1d(filename, every=2)
+    for ax in axes.flat:
+        assert len(ax.get_lines()) == 6
+
+    # Just check that plotting does not raise any error
+    plot_frame([filename, ], dim=1, show=False)
+
+
+def test_plot_2d(tmp_path):
     sim = f"""
 options:
     output: {tmp_path}
@@ -135,30 +148,6 @@ properties:
     fig, axes = _plot_height_2d(fname)
     assert len(axes) == 3
 
-
-def test_single_frame():
-    pass
-
-
-def test_single_frame_gp():
-    pass
-
-
-def test_single_frame_elastic():
-    pass
-
-
-def test_multiple_frames():
-    pass
-
-
-def test_multiple_frames_elastic():
-    pass
-
-
-def test_history():
-    pass
-
-
-def test_history_gp():
-    pass
+    # Just check that plotting does not raise any error
+    fname = os.path.join(myProblem.outdir, 'sol.nc')
+    plot_frame([fname, ], dim=2, show=False)

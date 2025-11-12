@@ -46,7 +46,7 @@ from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, his
 from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
-from GaPFlow.viz.plotting import plot_height
+from GaPFlow.viz.plotting import plot_height, _plot_height_1d_from_field
 from GaPFlow.viz.animations import animate_1d, animate_2d
 
 
@@ -721,12 +721,19 @@ class Problem:
         """
 
         dim = 1 if self.grid['Ny'] == 1 else 2
-        filename_topo = os.path.join(self.outdir, 'topo.nc')
 
-        plot_height(filename_topo,
-                    dim=dim,
-                    show_defo=show_defo,
-                    show_pressure=show_pressure)
+        if dim == 1:
+            _plot_height_1d_from_field(self.topo.height_and_slopes,
+                                       self.pressure.pressure,
+                                       show_defo=show_defo,
+                                       show_pressure=show_pressure)
+        elif dim == 2:
+            # 2D currently only from file
+            filename_topo = os.path.join(self.outdir, 'topo.nc')
+            plot_height([filename_topo, ],
+                        dim=2,
+                        show_defo=show_defo,
+                        show_pressure=show_pressure)
 
     def animate(self,
                 save: bool = False,

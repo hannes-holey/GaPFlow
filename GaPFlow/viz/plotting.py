@@ -28,7 +28,6 @@ import netCDF4
 import numpy as np
 import polars as pl
 
-from GaPFlow.topography import create_midpoint_grid
 from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp, mpl_style_context
 
 import numpy.typing as npt
@@ -40,32 +39,59 @@ NDArray = npt.NDArray[np.floating]
 #####################
 
 @mpl_style_context
-def plot_single_frame(file_list, dim, frame=-1, savefig=False, show=True, disc=None):
+def plot_frame(file_list, dim=1, frame=-1, show=True):
+    """Plot a single frame of the solution from a file.
+
+    Parameters
+    ----------
+    file_list : list
+        List of NetCDF files (names)
+    dim : int, optional
+        Dimension (the default is 1, for 2D problems this plots the solution
+        along the y-centerline)
+    frame : int, optional
+        Frame number (the default is -1, which is the last frame)
+    show : bool, optional
+        Flag for plt.show() (the default is True)
+    """
 
     if dim == 1:
         fig, ax = plt.subplots(2, 3, figsize=(12, 6))
 
         for file in file_list:
-            _plot_single_frame(ax, file, frame, disc)
+            _plot_single_frame_1d(ax, file, frame)
 
     elif dim == 2:
         fig, ax = plt.subplots(3, 3, figsize=(9, 9))
 
         for file in file_list:
-            _plot_single_frame_2d(ax, file, frame, disc)
-
-    if savefig:
-        fig.savefig('out_nc_last.pdf')
+            _plot_single_frame_2d(ax, file, frame)
 
     if show:
         plt.show()
 
 
+@mpl_style_context
 def plot_history(file_list,
                  gp_files_0=[],
                  gp_files_1=[],
-                 show=True,
-                 savefig=False):
+                 show=True):
+    """Plot the time evolution of scalar quantities, 
+    e.g. kinetic energy, mass, GP variance etc.
+
+    Parameters
+    ----------
+    file_list : list
+        List of CSV files
+    gp_files_0 : list, optional
+        List of gp history files plotted in a separate column of the figure
+        (the default is [], which means not a GP simulation)
+    gp_files_1 : list, optional
+        List of gp history files plotted in a separate column of the figure
+        (the default is [], which means not a GP simulation)
+    show : bool, optional
+        Flag for plt.show() (the default is True)
+    """
 
     ncol = 1
     if len(gp_files_0) > 0:
@@ -88,9 +114,6 @@ def plot_history(file_list,
     for gp_file, k in gp_files_1:
         _plot_gp_history(ax[:, col], gp_file, k)
 
-    if savefig:
-        fig.savefig('out_csv.pdf')
-
     if show:
         plt.show()
 
@@ -101,14 +124,20 @@ def plot_history(file_list,
 
 @mpl_style_context
 def plot_height(file_list, dim=1, show_defo=False, show_pressure=False):
-    """Summary
+    """Plot the height profile
 
     Parameters
     ----------
-    file_list : [type]
-        [description]
-    dim : number, optional
-        [description] (the default is 1, which [default_description])
+    file_list : list
+        List of NetCDF files
+    dim : int, optional
+        Dimension (the default is 1, for 2D problems this plots the solution
+        along the y-centerline)
+    show_defo: bool
+        Show the displacement in a separate subfigure and the initial (default is False)
+        gap height for reference
+    show_pressure: bool
+        Show the pressure profile in a separate subfigure (default is False)
     """
 
     if dim == 1:
@@ -123,47 +152,20 @@ def plot_height(file_list, dim=1, show_defo=False, show_pressure=False):
 
 
 @mpl_style_context
-def plot_evolution(filename, every=1, savefig=False, show=True, disc=None):
+def plot_frames(filename, every=1):
+    """Plot the time evolution of the centerline solution.
 
-    data = netCDF4.Dataset(filename)
+    Parameters
+    ----------
+    filename : str
+        NetCDF file name
+    every : int, optional
+        Plot the solution every this many times (the default is 1)
+    """
 
-    q_nc = np.asarray(data.variables['solution'])
-    p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress_xz'])
+    _plot_multiple_frames_1d(filename, every)
 
-    nt, nc, _, nx, ny = q_nc.shape
-
-    if disc is not None:
-        xx, yy = create_midpoint_grid(disc)
-        x = xx[1:-1, ny // 2]
-    else:
-        x = np.arange(nx - 2) / (nx - 2)
-        x += x[1] / 2.
-
-    fig, ax = plt.subplots(2, 3, figsize=(12, 6), sharex=True)
-
-    for i in range(nt)[::every]:
-        color_q = plt.cm.Blues(i / nt)
-        ax[0, 0].plot(x, q_nc[i, 0, 0, 1:-1, ny // 2], color=color_q)
-        ax[0, 1].plot(x, q_nc[i, 1, 0, 1:-1, ny // 2], color=color_q)
-        ax[0, 2].plot(x, q_nc[i, 2, 0, 1:-1, ny // 2], color=color_q)
-
-        color_p = plt.cm.Greens(i / nt)
-        color_t = plt.cm.Oranges(i / nt)
-
-        ax[1, 0].plot(x, p_nc[i, 1:-1, ny // 2], color=color_p)
-        ax[1, 1].plot(x, tau_nc[i, 4, 0, 1:-1, ny // 2], color=color_t)
-        ax[1, 2].plot(x, tau_nc[i, 10, 0, 1:-1, ny // 2], color=color_t)
-
-    set_axes_labels(ax)
-
-    if savefig:
-        fig.savefig(filename + '.pdf')
-
-    if show:
-        plt.show()
-
-    return fig, ax
+    plt.show()
 
 ###########
 # Backend #
@@ -246,16 +248,79 @@ def _plot_height_1d(filename: str,
     return fig, ax
 
 
-def _plot_height_2d(filename):
-    """Plot contour of height map and gradients.
-
-    TODO: elastic deformation similar to 1D
+def _plot_height_1d_from_field(topo,
+                               pressure,
+                               show_defo: bool,
+                               show_pressure: bool) -> None:
+    """Plotting centerline height profile from topography.
 
     Parameters
     ----------
     filename : str
         Filename of the topography file.
+    show_defo: bool
+        Show the displacement in a separate subfigure and the initial
+        gap height for reference
+    show_pressure: bool
+        Show the pressure profile in a separate subfigure.
     """
+
+    nx, ny = topo.shape[-2:]
+    centerline_index = max(1, (ny - 2) // 2)
+
+    x = np.linspace(0, 1, nx - 2)
+    h = topo[0, 1:-1, centerline_index]
+    u = topo[3, 1:-1:, centerline_index]
+    h0 = h - u
+
+    columns = 1
+    u_col = 0
+    p_col = 0
+
+    if show_pressure:
+        p = pressure[1:-1:, centerline_index]
+        columns += 1
+        p_col = 1
+
+    if show_defo:
+        columns += 1
+        u_col = 1
+        p_col += 1
+
+    fig, ax = plt.subplots(1, columns, figsize=(4 * columns, 3), squeeze=False)
+    ax = ax.ravel()
+
+    # height profile
+    ax[0].plot(x, h, color='C0', linestyle='-', label='Deformed shape')
+    ax[0].fill_between(x, h, np.ones_like(x) * 1.1 * h.max(),
+                       color='0.7', lw=0.)
+    ax[0].fill_between(x, np.zeros_like(x), -np.ones_like(x) * 0.1 * h.max(),
+                       color='0.7', lw=0.)
+    ax[0].plot(x, h, color='C0')
+    ax[0].plot(x, np.zeros_like(h), color='C0')
+
+    ax[0].set_xlabel('$x/L_x$')
+    ax[0].set_ylabel('Gap height $h$')
+
+    # initial height and deformation
+    if show_defo:
+        ax[0].plot(x, h0, color='C0', linestyle='--', label='Initial shape')
+        ax[0].legend(loc='upper center')
+
+        ax[u_col].plot(x, u, color='C1')
+        ax[u_col].set_xlabel('$x/L_x$')
+        ax[u_col].set_ylabel('Deformation $u$')
+
+    # pressure
+    if show_pressure:
+        ax[p_col].plot(x, p, color='C2')
+        ax[p_col].set_xlabel('$x/L_x$')
+        ax[p_col].set_ylabel('Pressure $p$')
+
+    return fig, ax
+
+
+def _plot_height_2d(filename):
 
     data = netCDF4.Dataset(filename)
     topo = np.asarray(data.variables['topography'])
@@ -280,7 +345,7 @@ def _plot_height_2d(filename):
     return fig, ax
 
 
-def _plot_single_frame(ax, filename, frame=-1, disc=None):
+def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
 
     data = netCDF4.Dataset(filename)
 
@@ -362,6 +427,39 @@ def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
         a.set_xlabel(r'$x/L_x$')
         a.set_ylabel(r'$y/L_y$')
         a.set_title(title)
+
+
+def _plot_multiple_frames_1d(filename, every=1):
+
+    data = netCDF4.Dataset(filename)
+
+    q_nc = np.asarray(data.variables['solution'])
+    p_nc = np.asarray(data.variables['pressure'])
+    tau_nc = np.asarray(data.variables['wall_stress_xz'])
+
+    nt, nc, _, nx, ny = q_nc.shape
+
+    x = np.arange(nx - 2) / (nx - 2)
+    x += x[1] / 2.
+
+    fig, ax = plt.subplots(2, 3, figsize=(12, 6), sharex=True)
+
+    for i in range(nt)[::every]:
+        color_q = plt.cm.Blues(i / nt)
+        ax[0, 0].plot(x, q_nc[i, 0, 0, 1:-1, ny // 2], color=color_q)
+        ax[0, 1].plot(x, q_nc[i, 1, 0, 1:-1, ny // 2], color=color_q)
+        ax[0, 2].plot(x, q_nc[i, 2, 0, 1:-1, ny // 2], color=color_q)
+
+        color_p = plt.cm.Greens(i / nt)
+        color_t = plt.cm.Oranges(i / nt)
+
+        ax[1, 0].plot(x, p_nc[i, 1:-1, ny // 2], color=color_p)
+        ax[1, 1].plot(x, tau_nc[i, 4, 0, 1:-1, ny // 2], color=color_t)
+        ax[1, 2].plot(x, tau_nc[i, 10, 0, 1:-1, ny // 2], color=color_t)
+
+    set_axes_labels(ax)
+
+    return fig, ax
 
 
 def _plot_history(ax, filename='history.csv'):

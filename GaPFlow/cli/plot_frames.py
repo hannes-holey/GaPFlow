@@ -24,7 +24,7 @@
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.plotting import plot_evolution
+from GaPFlow.viz.plotting import plot_frames
 
 
 def get_parser():
@@ -35,9 +35,12 @@ def get_parser():
     return parser
 
 
-def main():
+def main(cli=True, every=1):
 
-    args = get_parser().parse_args()
+    if cli:
+        # overwrite defaults with cmdline args
+        args = get_parser().parse_args()
+        every = args.every
 
     file = get_pipeline(name='sol.nc', mode='single')
-    plot_evolution(file, every=args.every)
+    plot_frames(file, every=every)
