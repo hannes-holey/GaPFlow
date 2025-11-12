@@ -26,12 +26,19 @@ import os
 import io
 import signal
 import numpy as np
-import numpy.typing as npt
-from typing import Self, Type
 from copy import deepcopy
 from datetime import datetime
 from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+
+from typing import Type
+import numpy.typing as npt
+try:
+    # Py>=3.11
+    from typing import Self
+except ImportError:
+    # Py<=3.10
+    from typing_extensions import Self
 
 from GaPFlow import Database
 from GaPFlow.topography import Topography
