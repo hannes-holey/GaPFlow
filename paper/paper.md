@@ -51,6 +51,17 @@ The following papers have used `GaPFlow` so far:
 
 ## Solver for gap-averaged balance laws
 
+Averaging the general form of a conservation law over the gap coordinate ($z$) with spatially and temporally varying integral bounds (the topographies of the lower ($h_0$) and upper wall $h_1$) leads to a balance law of the form
+
+$$
+\frac{\partial \bar{\mathbf{q}}}{\partial t} = - \frac{\partial \bar{\mathbf{f}}_x}{\partial x} - \frac{\partial \bar{\mathbf{f}}_y}{\partial y} - \mathbf{s},
+$$
+
+where $\bar{\mathbf{q}}\equiv\bar{\mathbf{q}}(x,y,t)=h^{-1}\int_{h_0}^{h_1}\mathbf{q}(x,y,z,t)dz$ collects the unknown densities of the conserved variables (e.g. $\mathbf{q}=(\rho, j_x, j_y)^\top$ for mass and in-plane momentum) and $\bar{\mathbf{f}}_i\equiv\bar{\mathbf{f}}_i(x,y,t)=h^{-1}\int_{h_0}^{h_1}\mathbf{f}_i(x,y,z,t)dz$ are the corresponding fluxes in direction $i\in[x,y]$ with $h=h_1 - h_0$. 
+The source term $\mathbf{s}$ accounts for fluxes across the bottom and top walls ($\mathbf{f}_z$). 
+The current implementation uses a finite volume discretization on a regular grid and the MacCormack explicit time-integration scheme [@maccormack2003_effect] to solve the transient lubrication problem. 
+We use [µGrid](https://muspectre.github.io/muGrid/) to collect the discretized density and flux fields into a single container, and to save the simulation output in the [NetCDF](https://www.unidata.ucar.edu/software/netcdf) file format.
+
 ## GP regression and active learning
 
 ## Automatic setup of MD runs
