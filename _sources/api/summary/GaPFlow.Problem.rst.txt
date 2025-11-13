@@ -19,7 +19,7 @@
       ~Problem.from_dict
       ~Problem.from_string
       ~Problem.from_yaml
-      ~Problem.plot_height
+      ~Problem.plot_topo
       ~Problem.post_run
       ~Problem.post_update
       ~Problem.pre_run

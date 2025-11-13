@@ -265,59 +265,65 @@
 <div class="table-wrapper autosummary longtable docutils container">
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_evolution" title="GaPFlow.viz.plotting.plot_evolution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_evolution</span></code></a>(filename[, every, savefig, ...])</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_frame" title="GaPFlow.viz.plotting.plot_frame"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_frame</span></code></a>(file_list[, dim, frame, show])</p></td>
+<td><p>Plot a single frame of the solution from a file.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height" title="GaPFlow.viz.plotting.plot_height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height</span></code></a>(filename[, grid])</p></td>
-<td><p>Wrapper function for plotting from topo.nc file.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_frames" title="GaPFlow.viz.plotting.plot_frames"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_frames</span></code></a>(filename[, every])</p></td>
+<td><p>Plot the time evolution of the centerline solution.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height_1d" title="GaPFlow.viz.plotting.plot_height_1d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height_1d</span></code></a>(h[, h0, u, p])</p></td>
-<td><p>Plotting height profile in 1D.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height" title="GaPFlow.viz.plotting.plot_height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_height</span></code></a>(file_list[, dim, show_defo, ...])</p></td>
+<td><p>Plot the height profile</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_history" title="GaPFlow.viz.plotting.plot_history"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_history</span></code></a>(file_list[, gp_files_0, ...])</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.plotting.plot_single_frame" title="GaPFlow.viz.plotting.plot_single_frame"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_single_frame</span></code></a>(file_list, dim[, frame, ...])</p></td>
-<td><p></p></td>
+<td><p>Plot the time evolution of scalar quantities, e.g. kinetic energy, mass, GP variance etc.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
 <dl class="py function">
-<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_evolution">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_evolution</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">every</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_evolution" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_height">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_height" title="Link to this definition">¶</a></dt>
-<dd><p>Wrapper function for plotting from topo.nc file.
-Detects whether 1D or 2D.
-Detects whether deformation was included.</p>
+<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_frame">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_frame" title="Link to this definition">¶</a></dt>
+<dd><p>Plot a single frame of the solution from a file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>filename</strong> (<em>str</em>) – Path to the NetCDF file.</p></li>
-<li><p><strong>grid</strong> (<em>dict</em><em>, </em><em>optional</em>) – Grid information, by default None</p></li>
+<li><p><strong>file_list</strong> (<em>list</em>) – List of NetCDF files (names)</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Dimension (the default is 1, for 2D problems this plots the solution
+along the y-centerline)</p></li>
+<li><p><strong>frame</strong> (<em>int</em><em>, </em><em>optional</em>) – Frame number (the default is -1, which is the last frame)</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Flag for plt.show() (the default is True)</p></li>
 </ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py function">
-<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_height_1d">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_height_1d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">h</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">h0</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">u</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_height_1d" title="Link to this definition">¶</a></dt>
-<dd><p>Plotting height profile in 1D.
-Option 1: Only height h.
-Option 2: Height h, initial height h0, deformation u.
-Option 3: Height h, initial height h0, deformation u, pressure p.</p>
+<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_frames">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_frames</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">every</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_frames" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the time evolution of the centerline solution.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>h</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em>) – Height profile.</p></li>
-<li><p><strong>h0</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Initial height profile, by default None</p></li>
-<li><p><strong>u</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Deformation profile, by default None</p></li>
-<li><p><strong>p</strong> (<em>ndarray</em><em> of </em><em>shape</em><em> (</em><em>N</em><em>,</em><em>3</em><em>)</em><em>, </em><em>optional</em>) – Pressure profile, by default None</p></li>
+<li><p><strong>filename</strong> (<em>str</em>) – NetCDF file name</p></li>
+<li><p><strong>every</strong> (<em>int</em><em>, </em><em>optional</em>) – Plot the solution every this many times (the default is 1)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_height">
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_height</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_defo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_pressure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_height" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the height profile</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_list</strong> (<em>list</em>) – List of NetCDF files</p></li>
+<li><p><strong>dim</strong> (<em>int</em><em>, </em><em>optional</em>) – Dimension (the default is 1, for 2D problems this plots the solution
+along the y-centerline)</p></li>
+<li><p><strong>show_defo</strong> (<em>bool</em>) – Show the displacement in a separate subfigure and the initial (default is False)
+gap height for reference</p></li>
+<li><p><strong>show_pressure</strong> (<em>bool</em>) – Show the pressure profile in a separate subfigure (default is False)</p></li>
 </ul>
 </dd>
 </dl>
@@ -325,13 +331,22 @@ Option 3: Height h, initial height h0, deformation u, pressure p.</p>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_history">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_files_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_files_1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_history" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="GaPFlow.viz.plotting.plot_single_frame">
-<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_single_frame</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frame</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">savefig</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">disc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_single_frame" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.plotting.</span></span><span class="sig-name descname"><span class="pre">plot_history</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_files_0</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp_files_1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.plotting.plot_history" title="Link to this definition">¶</a></dt>
+<dd><p>Plot the time evolution of scalar quantities,
+e.g. kinetic energy, mass, GP variance etc.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_list</strong> (<em>list</em>) – List of CSV files</p></li>
+<li><p><strong>gp_files_0</strong> (<em>list</em><em>, </em><em>optional</em>) – List of gp history files plotted in a separate column of the figure
+(the default is [], which means not a GP simulation)</p></li>
+<li><p><strong>gp_files_1</strong> (<em>list</em><em>, </em><em>optional</em>) – List of gp history files plotted in a separate column of the figure
+(the default is [], which means not a GP simulation)</p></li>
+<li><p><strong>show</strong> (<em>bool</em><em>, </em><em>optional</em>) – Flag for plt.show() (the default is True)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 </section>
 
@@ -391,11 +406,10 @@ Option 3: Height h, initial height h0, deformation u, pressure p.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">GaPFlow.viz.plotting</a><ul>
-<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_evolution"><code class="docutils literal notranslate"><span class="pre">plot_evolution()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_frame"><code class="docutils literal notranslate"><span class="pre">plot_frame()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_frames"><code class="docutils literal notranslate"><span class="pre">plot_frames()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height"><code class="docutils literal notranslate"><span class="pre">plot_height()</span></code></a></li>
-<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_height_1d"><code class="docutils literal notranslate"><span class="pre">plot_height_1d()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_history"><code class="docutils literal notranslate"><span class="pre">plot_history()</span></code></a></li>
-<li><a class="reference internal" href="#GaPFlow.viz.plotting.plot_single_frame"><code class="docutils literal notranslate"><span class="pre">plot_single_frame()</span></code></a></li>
 </ul>
 </li>
 </ul>

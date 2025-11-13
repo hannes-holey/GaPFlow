@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "id": "befa1f5d-42fc-4360-972f-69851c346a1b",
+   "id": "0",
    "metadata": {},
    "source": [
     "# Gaussian process regression and active learning"
@@ -11,7 +11,7 @@
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "aa03c880-eee1-4c46-8ba8-3fabd588f730",
+   "id": "1",
    "metadata": {},
    "outputs": [],
    "source": []

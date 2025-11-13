@@ -8,9 +8,8 @@
 
    .. autosummary::
    
-      plot_evolution
+      plot_frame
+      plot_frames
       plot_height
-      plot_height_1d
       plot_history
-      plot_single_frame
    

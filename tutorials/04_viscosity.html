@@ -360,9 +360,17 @@
 </div>
 </div>
 <div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/usr/local/lib/python3.12/dist-packages/GaPFlow/md/runner.py:42: UserWarning: Failed to import lammps. Only Mock MD object available.
+  warnings.warn(&#39;Failed to import lammps. Only Mock MD object available.&#39;)
+</pre></div>
+</div>
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>*************************************************************
 *                       PROBLEM SETUP                       *
 *************************************************************
+- options:
+- grid:
+- geometry:
+- numerics:
 - properties:
   - shear                    : 0.1
   - bulk                     : 0.0
@@ -374,12 +382,21 @@
   - thinning:
     - name                   : Eyring
     - tauE                   : 500000.0
+  - elastic:
+    - enabled                : False
+- gp:
+- db:
+- md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
 *************************************************************
 *                       PROBLEM SETUP                       *
 *************************************************************
+- options:
+- grid:
+- geometry:
+- numerics:
 - properties:
   - shear                    : 0.1
   - bulk                     : 0.0
@@ -394,12 +411,21 @@
     - lam                    : 1e-06
     - a                      : 2.0
     - N                      : 0.6
+  - elastic:
+    - enabled                : False
+- gp:
+- db:
+- md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
 *************************************************************
 *                       PROBLEM SETUP                       *
 *************************************************************
+- options:
+- grid:
+- geometry:
+- numerics:
 - properties:
   - shear                    : 0.1
   - bulk                     : 0.0
@@ -411,12 +437,21 @@
   - piezo:
     - name                   : Barus
     - aB                     : 2e-08
+  - elastic:
+    - enabled                : False
+- gp:
+- db:
+- md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
 *************************************************************
 *                       PROBLEM SETUP                       *
 *************************************************************
+- options:
+- grid:
+- geometry:
+- numerics:
 - properties:
   - shear                    : 0.1
   - bulk                     : 0.0
@@ -430,12 +465,17 @@
     - mu_inf                 : 0.001
     - p_ref                  : 196000000.0
     - z                      : 0.68
+  - elastic:
+    - enabled                : False
+- gp:
+- db:
+- md:
 *************************************************************
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
 </pre></div>
 </div>
-<img alt="../_images/7dfb6556a04528e258ede1a1fac25c9d097a69580446e323ad13ceb7bdee4e14.png" src="../_images/7dfb6556a04528e258ede1a1fac25c9d097a69580446e323ad13ceb7bdee4e14.png" />
+<img alt="../_images/c58f4ae48cf511fcd5b4731b23198aaab53c629147db112a1708c1ac5d594f57.png" src="../_images/c58f4ae48cf511fcd5b4731b23198aaab53c629147db112a1708c1ac5d594f57.png" />
 </div>
 </div>
 </section>

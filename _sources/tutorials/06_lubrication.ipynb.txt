@@ -2,7 +2,7 @@
  "cells": [
   {
    "cell_type": "markdown",
-   "id": "390e8276-1a82-47d4-b908-4fa724ca0dea",
+   "id": "0",
    "metadata": {},
    "source": [
     "# Confined fluids: wall-driven flows"
@@ -11,7 +11,7 @@
   {
    "cell_type": "code",
    "execution_count": null,
-   "id": "316e9867-cc72-4419-a6b0-87fc7ed00338",
+   "id": "1",
    "metadata": {},
    "outputs": [],
    "source": []

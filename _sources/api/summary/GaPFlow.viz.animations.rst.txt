@@ -8,8 +8,7 @@
 
    .. autosummary::
    
-      animate
-      animate2d
       animate_1d
-      animate_gp
+      animate_1d_gp
+      animate_2d
    

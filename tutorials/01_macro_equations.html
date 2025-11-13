@@ -296,17 +296,19 @@
 \rho w u - \tau_{\mathrm{31}}(\mathbf{q}) &amp;
 \rho w v - \tau_{\mathrm{32}}(\mathbf{q}) &amp;
 \rho w^2 + p - \tau_{\mathrm{33}}(\mathbf{q})
-\end{pmatrix}
+\end{pmatrix},
 \end{split}\]</div>
 </div>
+<p>where <span class="math notranslate nohighlight">\(\rho\)</span> denotes mass density, <span class="math notranslate nohighlight">\(u\)</span>, <span class="math notranslate nohighlight">\(v\)</span>, <span class="math notranslate nohighlight">\(w\)</span> are the Cartesian components of the velocity field <span class="math notranslate nohighlight">\(\vec{u}\)</span>, <span class="math notranslate nohighlight">\(\tau_{ij}\)</span> are components of the viscous stress tensor <span class="math notranslate nohighlight">\(\underline{\tau}\)</span>, and <span class="math notranslate nohighlight">\(p\)</span> denotes the fluid pressure.</p>
+<p>In the following we treat the mass fluxes <span class="math notranslate nohighlight">\(j_x\equiv\rho u\)</span>, <span class="math notranslate nohighlight">\(j_y\equiv\rho v\)</span>, and <span class="math notranslate nohighlight">\(j_z\equiv\rho w\)</span> as independent variables, i.e. we work with <em>conservative</em> instead of <em>primitive</em> variables.</p>
 <p>The divergence operates on the rows such that the continuum equation states (similarly for the momentum equations):</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[
 \frac{\partial \rho}{\partial t}
-= - \frac{\partial (\rho u)}{\partial x}
-- \frac{\partial (\rho v)}{\partial y}
-- \frac{\partial (\rho w)}{\partial z}
+= - \frac{\partial j_x}{\partial x}
+- \frac{\partial j_y}{\partial y}
+- \frac{\partial j_z}{\partial z}
 \]</div>
 </div>
 <p>We now assume that the problem can be divided into a time-dependent macro problem that uses the height-average of the conserved quantities <span class="math notranslate nohighlight">\(\overline{\mathbf{q}}(x,y,t)\)</span> and a steady-state micro problem that resolves the values of the conserved quantities across the film thickness <span class="math notranslate nohighlight">\(\delta \mathbf{q}(z)\)</span>.</p>
@@ -319,14 +321,14 @@
 <h2>Macro Problem<a class="headerlink" href="#macro-problem" title="Link to this heading">¶</a></h2>
 <section id="derivation">
 <h3>Derivation<a class="headerlink" href="#derivation" title="Link to this heading">¶</a></h3>
-<p>To establish the macro problem, we eliminate the <span class="math notranslate nohighlight">\(z\)</span>-direction dependency by integrating the balances across the film thickness.</p>
+<p>To establish the macro problem, we eliminate the <span class="math notranslate nohighlight">\(z\)</span>-direction dependency by integrating the balances across the film thickness</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[
-\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \left( \frac{\partial \mathbf{q}}{\partial t} = - \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q}) \right) \, dz
+\int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \left( \frac{\partial \mathbf{q}}{\partial t} - \mathbf{\nabla} \cdot \mathbb{F}(\mathbf{q}) \right) \, dz = 0.
 \]</div>
 </div>
-<p>Let’s look at what we obtain by integrating the individual terms:</p>
+<p>Here, <span class="math notranslate nohighlight">\(h_1\equiv h_1(x,y,t)\)</span> and <span class="math notranslate nohighlight">\(h_2\equiv h_2(x,y,t)\)</span> describe the topographies of the lower and upper wall, respectively. Their difference is denoted with <span class="math notranslate nohighlight">\(h \equiv h(x,y,t) = h_2(x,y,t) - h_1(x,y,t)\)</span>. We need to account for the spatial and temporal dependencies of the topography when evaluating the above integral. Let’s look at what we obtain by integrating the individual terms:</p>
 <hr class="docutils" />
 <p><strong>Integral of the time derivative</strong> term on the left side:</p>
 <div class="math-wrapper docutils container">
@@ -350,18 +352,18 @@
 + \int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_z}{\partial z} \, dz
 \]</div>
 </div>
-<p>For <span class="math notranslate nohighlight">\(x\)</span> (and similarly for <span class="math notranslate nohighlight">\(y\)</span>) we obtain the following terms. Note that we obtain a height-averaged <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_x}\)</span> (and similarly <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_y}\)</span>).</p>
+<p>For <span class="math notranslate nohighlight">\(x\)</span> (and similarly for <span class="math notranslate nohighlight">\(y\)</span>) we obtain the following terms. Note that we obtain a height-averaged <span class="math notranslate nohighlight">\(\overline{\mathbf{f}}_x\)</span> (and similarly <span class="math notranslate nohighlight">\(\overline{\mathbf{f}}_y\)</span>).</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[
 \int_{h_{\mathrm{1}}}^{h_{\mathrm{2}}} \frac{\partial \mathbf{f}_x}{\partial x} \, dz
-= h \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
-+ \left( \overline{\mathbf{f}_x} - \mathbf{f}_x \big|_{h_{\mathrm{2}}} \right) \frac{d h_{\mathrm{2}}}{d t} 
-- \left( \overline{\mathbf{f}_x} - \mathbf{f}_x \big|_{h_{\mathrm{1}}} \right) \frac{d h_{\mathrm{1}}}{d t}
+= h \frac{\partial \overline{\mathbf{f}}_x}{\partial x} 
++ \left( \overline{\mathbf{f}}_x - \mathbf{f}_x \big|_{h_{\mathrm{2}}} \right) \frac{d h_{\mathrm{2}}}{d t} 
+- \left( \overline{\mathbf{f}}_x - \mathbf{f}_x \big|_{h_{\mathrm{1}}} \right) \frac{d h_{\mathrm{1}}}{d t}
 \]</div>
 </div>
 <p>Here, we obtain the spatial derivative of the height averaged fluxes <span class="math notranslate nohighlight">\(\frac{\partial \overline{\mathbf{f}_x}}{\partial x}\)</span> and <span class="math notranslate nohighlight">\(\frac{\partial \overline{\mathbf{f}_y}}{\partial y}\)</span> as well as - again - some source terms.</p>
-<p>In contrast, for the <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> term, the integration direction is similar to the derivative. The term can be expressed by evaluating the function values of <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> at the bottom and top:</p>
+<p>In contrast, for the <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> term, the integration direction is the same as that of the derivative. The term can be expressed by evaluating the function values of <span class="math notranslate nohighlight">\(\mathbf{f}_z\)</span> at the bottom and top:</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[
@@ -377,13 +379,13 @@
 <div class="math notranslate nohighlight">
 \[
 \frac{\partial \overline{\mathbf{q}}}{\partial t} 
-= - \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
-- \frac{\partial \overline{\mathbf{f}_y}}{\partial y} 
+= - \frac{\partial \overline{\mathbf{f}}_x}{\partial x} 
+- \frac{\partial \overline{\mathbf{f}}_y}{\partial y} 
 - \mathbf{s}
 \]</div>
 </div>
-<p>with four variables <span class="math notranslate nohighlight">\(\overline{\rho}(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{\rho u}(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{\rho v}(x,y,t)\)</span>, and <span class="math notranslate nohighlight">\(\overline{\rho w}(x,y,t)\)</span> and four equations, which define the macro problem to be solved.</p>
-<p>Further unknowns (within <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_x}\)</span>, <span class="math notranslate nohighlight">\(\overline{\mathbf{f}_y}\)</span>, <span class="math notranslate nohighlight">\(\mathbf{s}\)</span>) are <span class="math notranslate nohighlight">\(\tau(\mathbf{q})\)</span>, <span class="math notranslate nohighlight">\(p(\rho)\)</span>, and the <span class="math notranslate nohighlight">\(\mathbf{q}\)</span> and <span class="math notranslate nohighlight">\(\mathbf{f}\)</span> values at the bottom and top boundaries. As you might guess, this is the task for the micro proplem.</p>
+<p>with four variables <span class="math notranslate nohighlight">\(\overline{\rho}(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{j}_x(x,y,t)\)</span>, <span class="math notranslate nohighlight">\(\overline{j}_y(x,y,t)\)</span>, and <span class="math notranslate nohighlight">\(\overline{j}_z(x,y,t)\)</span> and four equations, which define the macro problem to be solved.</p>
+<p>Further unknowns (within <span class="math notranslate nohighlight">\(\overline{\mathbf{f}}_x\)</span>, <span class="math notranslate nohighlight">\(\overline{\mathbf{f}}_y\)</span>, <span class="math notranslate nohighlight">\(\mathbf{s}\)</span>) are <span class="math notranslate nohighlight">\(\tau(\mathbf{q})\)</span>, <span class="math notranslate nohighlight">\(p(\rho)\)</span>, and the <span class="math notranslate nohighlight">\(\mathbf{q}\)</span> and <span class="math notranslate nohighlight">\(\mathbf{f}\)</span> values at the bottom and top boundaries. As you might guess, this is the task for the micro problem.</p>
 </section>
 <section id="numerical-solution-of-the-macro-problem">
 <h3>Numerical Solution of the Macro Problem<a class="headerlink" href="#numerical-solution-of-the-macro-problem" title="Link to this heading">¶</a></h3>
@@ -458,8 +460,8 @@ determines the stability of the numerical method. The CFL number is defined as</
 <div class="math notranslate nohighlight">
 \[
 \frac{\partial \overline{\mathbf{q}}}{\partial t} = 
-- \frac{\partial \overline{\mathbf{f}_x}}{\partial x} 
-- \frac{\partial \overline{\mathbf{f}_y}}{\partial y}
+- \frac{\partial \overline{\mathbf{f}}_x}{\partial x} 
+- \frac{\partial \overline{\mathbf{f}}_y}{\partial y}
 -  \frac{\partial \mathbf{f}_z}{\partial \delta \mathbf{q}}
 \frac{\partial \delta \mathbf{q}}{\partial z}
 \]</div>
