@@ -76,7 +76,7 @@ def plot_history(file_list,
                  gp_files_0=[],
                  gp_files_1=[],
                  show=True):
-    """Plot the time evolution of scalar quantities, 
+    """Plot the time evolution of scalar quantities,
     e.g. kinetic energy, mass, GP variance etc.
 
     Parameters
@@ -172,7 +172,7 @@ def plot_frames(filename, every=1):
 ###########
 
 
-def _plot_height_1d(filename: str,
+def _plot_height_1d(fname_topo: str,
                     show_defo: bool,
                     show_pressure: bool) -> None:
     """Plotting centerline height profile from file.
@@ -188,76 +188,28 @@ def _plot_height_1d(filename: str,
         Show the pressure profile in a separate subfigure.
     """
 
-    data = netCDF4.Dataset(filename)
-    topo = np.asarray(data.variables['topography'])
+    data_topo = netCDF4.Dataset(fname_topo)
+    fname_sol = os.path.join(os.path.dirname(fname_topo), 'sol.nc')
+    data_sol = netCDF4.Dataset(fname_sol)
 
-    nx, ny = topo.shape[-2:]
-    centerline_index = max(1, (ny - 2) // 2)
+    topo = np.asarray(data_topo.variables['topography'])
+    press = np.asarray(data_sol.variables['pressure'])
 
-    x = np.linspace(0, 1, nx - 2)
-    h0 = topo[0, 0, 0, 1:-1, centerline_index]
-    h = topo[-1, 0, 0, 1:-1, centerline_index]
-    u = topo[-1, 3, 0, 1:-1:, centerline_index]
-
-    columns = 1
-    u_col = 0
-    p_col = 0
-
-    if show_pressure:
-        fname_sol = os.path.join(os.path.dirname(filename), 'sol.nc')
-        data_sol = netCDF4.Dataset(fname_sol)
-        p = np.asarray(data_sol.variables['pressure'])[-1, 1:-1, centerline_index]
-        columns += 1
-        p_col = 1
-
-    if show_defo:
-        columns += 1
-        u_col = 1
-        p_col += 1
-
-    fig, ax = plt.subplots(1, columns, figsize=(4 * columns, 3), squeeze=False)
-    ax = ax.ravel()
-
-    # height profile
-    ax[0].plot(x, h, color='C0', linestyle='-', label='Deformed shape')
-    ax[0].fill_between(x, h, np.ones_like(x) * 1.1 * h.max(),
-                       color='0.7', lw=0.)
-    ax[0].fill_between(x, np.zeros_like(x), -np.ones_like(x) * 0.1 * h.max(),
-                       color='0.7', lw=0.)
-    ax[0].plot(x, h, color='C0')
-    ax[0].plot(x, np.zeros_like(h), color='C0')
-
-    ax[0].set_xlabel('$x/L_x$')
-    ax[0].set_ylabel('Gap height $h$')
-
-    # initial height and deformation
-    if show_defo:
-        ax[0].plot(x, h0, color='C0', linestyle='--', label='Initial shape')
-        ax[0].legend(loc='upper center')
-
-        ax[u_col].plot(x, u, color='C1')
-        ax[u_col].set_xlabel('$x/L_x$')
-        ax[u_col].set_ylabel('Deformation $u$')
-
-    # pressure
-    if show_pressure:
-        ax[p_col].plot(x, p, color='C2')
-        ax[p_col].set_xlabel('$x/L_x$')
-        ax[p_col].set_ylabel('Pressure $p$')
-
-    return fig, ax
+    return _plot_height_1d_from_field(topo, press, show_defo, show_pressure)
 
 
 def _plot_height_1d_from_field(topo,
                                pressure,
                                show_defo: bool,
                                show_pressure: bool) -> None:
-    """Plotting centerline height profile from topography.
+    """Plotting centerline height profile from fields.
 
     Parameters
     ----------
-    filename : str
-        Filename of the topography file.
+    topo : np.ndarray
+        Topography array
+    pressure : np.ndarray
+        Presure array
     show_defo: bool
         Show the displacement in a separate subfigure and the initial
         gap height for reference
@@ -269,16 +221,26 @@ def _plot_height_1d_from_field(topo,
     centerline_index = max(1, (ny - 2) // 2)
 
     x = np.linspace(0, 1, nx - 2)
-    h = topo[0, 1:-1, centerline_index]
-    u = topo[3, 1:-1:, centerline_index]
-    h0 = h - u
+
+    if len(topo.shape) == 5:
+        h0 = topo[0, 0, 0, 1:-1, centerline_index]
+        h = topo[-1, 0, 0, 1:-1, centerline_index]
+        u = topo[-1, 3, 0, 1:-1:, centerline_index]
+    elif len(topo.shape) == 3:
+        h = topo[0, 1:-1, centerline_index]
+        u = topo[3, 1:-1:, centerline_index]
+        h0 = h - u
+
+    if len(pressure.shape) == 3:
+        p = pressure[-1, 1:-1, centerline_index]
+    elif len(pressure.shape) == 2:
+        p = pressure[1:-1, centerline_index]
 
     columns = 1
     u_col = 0
     p_col = 0
 
     if show_pressure:
-        p = pressure[1:-1:, centerline_index]
         columns += 1
         p_col = 1
 
@@ -325,11 +287,21 @@ def _plot_height_2d(filename):
     data = netCDF4.Dataset(filename)
     topo = np.asarray(data.variables['topography'])
 
+    return _plot_height_2d_from_field(topo)
+
+
+def _plot_height_2d_from_field(topo):
+
     fig, ax = plt.subplots(1, 3, figsize=(9, 3))
 
-    h = topo[0, 0, 0, 1:-1, 1:-1].T
-    dh_dx = topo[0, 1, 0, 1:-1, 1:-1].T
-    dh_dy = topo[0, 2, 0, 1:-1, 1:-1].T
+    if len(topo.shape) == 5:
+        h = topo[0, 0, 0, 1:-1, 1:-1].T
+        dh_dx = topo[0, 1, 0, 1:-1, 1:-1].T
+        dh_dy = topo[0, 2, 0, 1:-1, 1:-1].T
+    elif len(topo.shape) == 3:
+        h = topo[0, 1:-1, 1:-1].T
+        dh_dx = topo[1, 1:-1, 1:-1].T
+        dh_dy = topo[2, 1:-1, 1:-1].T
 
     imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
     ax[0].imshow(h, **imshow_args)
