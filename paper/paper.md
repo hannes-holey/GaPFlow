@@ -27,7 +27,7 @@ When the characteristic length of the confining dimension approaches the nanomet
 This is particularly relevant for lubricated frictional contacts, where surface roughness can lead to local gap heights of only a few nanometers [@archard1962_lubrication;@glovnea2003_measurement].
 The constitutive laws that describe the fluid's response to extreme loading conditions (e.g. high shear rates) need to account for molecular effects, such as fluid layering [@gao1997_layering] and wall slip [@pit2000_direct;@zhu2001_ratedependent].
 
-Molecular dynamics (MD) simulations have become a standard tool for describing lubricant flow in nanometer-scale constrictions [@ewen2018_advances], and have been used to parameterize common constitutive laws for viscosity and wall slip [@martini2006_molecular;savio2015_multiscale;@codrignani2023_continuum].
+Molecular dynamics (MD) simulations have become a standard tool for describing lubricant flow in nanometer-scale constrictions [@ewen2018_advances], and have been used to parameterize common constitutive laws for viscosity and wall slip [@martini2006_molecular;@savio2015_multiscale;@codrignani2023_continuum].
 While such models can be readily incorporated into existing lubrication solvers, they lack the feedback mechanism from the macroscopic to the molecular scale.
 The rigidity of purely sequential coupling schemes suggests that they are not ideal for capturing the extreme and diverse environments typical for frictional contacts. 
 `GaPFlow` provides a simulation framework that enables concurrent multiscale simulations of nanofluidic flows relying on fixed-form, parametric constitutive fluid models.
