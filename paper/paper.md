@@ -22,6 +22,12 @@ bibliography: paper.bib
 
 # Summary
 
+`GaPFlow` is a numerical solver for fluid flows in confined geometries, such as the narrow gaps found in lubricated contacts.
+Most lubrication problems solve the Reynolds equation, a simplified form of the Navier-Stokes equation formulated as a single partial differential equation for the fluid pressure.
+`GaPFlow` solves the lubrication problem in the form proposed by [@holey2022_heightaveraged], which propagates gap-averaged conserved quantities, such as mass or momentum, in time.
+This formulation is agnostic to the constitutive behavior of the confined fluid, which makes it suitable for multiscale simulations, where the constitutive behavior is determined from molecular dynamics (MD) simulations.
+`GaPFlow` uses a surrogate model based on Gaussian process (GP) regression to interpolate between data obtained from MD, and to select new configurations to augment an exsiting MD database (active learning).
+
 # Statement of need
 
 # Acknowledgments
