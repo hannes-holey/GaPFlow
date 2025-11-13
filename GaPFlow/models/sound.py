@@ -317,7 +317,7 @@ def bayada_chupin(rho, rho_l, rho_v, c_l, c_v):
         mix = np.logical_and(alpha <= 1, alpha >= 0)
         c_squared = np.ones_like(rho) * c_v**2
         c_squared[alpha < 0] = c_l**2
-        c_squared[mix] = rho_v * rho_l * (c_v * c_l) ** 2 / (alpha[mix] * rho_l * c_l **
+        c_squared[mix] = rho_v * rho_l * (c_v * c_l) ** 2 / (alpha[mix] * rho_l * c_l **  # noqa: W504
                                                              2 + (1 - alpha[mix]) * rho_v * c_v**2) / rho[mix]
 
     return np.sqrt(c_squared)

@@ -1,5 +1,6 @@
 #
 # Copyright 2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -322,7 +323,7 @@ class ElasticDeformation:
                 "For the calculation of elastic deformation, we assume a line contact with "
                 "non-periodic boundary conditions in both directions.\n"
                 "For the calculation of the effective force F=p*A per cell, "
-                "we assume a unit length of {} = 1 m."
+                "we assume a unit length of {} = 1."
                 .format("Ly" if perY else "Lx"))
             grid = copy.deepcopy(grid)  # do not modify original grid
             if perY:

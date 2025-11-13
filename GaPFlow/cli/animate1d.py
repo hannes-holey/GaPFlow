@@ -1,5 +1,6 @@
 #
 # Copyright 2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -27,22 +28,29 @@ import numpy as np
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.animations import animate_1d, animate_gp
+from GaPFlow.viz.animations import animate_1d, animate_1d_gp
 
 
 def get_parser():
 
     parser = ArgumentParser()
     parser.add_argument('-s', '--save', action='store_true', default=False)
+    parser.add_argument('-p', '--path', type=str, default='.')
+    parser.add_argument('-m', '--mode', type=str, default='single')
 
     return parser
 
 
-def main():
+def main(cli=True, path='.', save=False, mode='single'):
 
-    args = get_parser().parse_args()
+    if cli:
+        # overwrite defaults with cmdline args
+        args = get_parser().parse_args()
+        save = args.save
+        path = args.path
+        mode = args.mode
 
-    file_sol = get_pipeline(name='sol.nc', mode='single')
+    file_sol = get_pipeline(path=path, name='sol.nc', mode=mode)
     file_topo = file_sol.replace('sol.nc', 'topo.nc')
 
     gp_p = os.path.join(os.path.dirname(file_sol), 'gp_zz.csv')
@@ -60,9 +68,9 @@ def main():
     except FileNotFoundError:
         tol_s = None
 
-    # TODO: should also work if not all are stress models
-    if tol_s is None or tol_p is None:
-        animate_1d(file_sol, file_topo, save=args.save)
+    has_gp_models = tol_s is not None and tol_p is not None
 
+    if has_gp_models:
+        animate_1d_gp(file_sol, save=save, tol_p=tol_p, tol_s=tol_s)
     else:
-        animate_gp(file_sol, save=args.save, tol_p=tol_p, tol_s=tol_s)
+        animate_1d(file_sol, file_topo, save=save)

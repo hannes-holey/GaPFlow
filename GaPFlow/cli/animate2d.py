@@ -26,7 +26,7 @@ import numpy as np
 import polars as pl
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.animations import animate2d
+from GaPFlow.viz.animations import animate_2d
 
 
 def main():
@@ -55,7 +55,7 @@ def main():
     except FileNotFoundError:
         tol_s_yz = None
 
-    animate2d(file)
+    animate_2d(file)
 
     # if tol_s_xz is None and tol_s_yz is None and tol_p is None:
     #     animate(file)

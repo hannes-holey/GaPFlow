@@ -14,12 +14,12 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 
-requires-python = ">3.10"
+requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.95.0",
 	"tinygp>=0.3.0",
-	"jax>=0.8.0",
+	"jax",
 	"jaxopt==0.8.5",
 	"netCDF4>=1.7.2",
 	"dtoolcore>=3.19.0",
@@ -64,7 +64,6 @@ filterwarnings = "ignore::DeprecationWarning"
 
 [tool.coverage.run]
 source = ["GaPFlow"]
-omit = ["GaPFlow/viz/*"]
 command_line = "-m pytest"
 
 

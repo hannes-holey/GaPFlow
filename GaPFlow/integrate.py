@@ -78,7 +78,7 @@ def source(
     """
     Compute the source term for the momentum equations.
 
-    Accounts for stress differences across upper and lower 
+    Accounts for stress differences across upper and lower
     boundaries.
 
     Parameters

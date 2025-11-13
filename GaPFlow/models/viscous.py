@@ -21,6 +21,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+# flake8: noqa: W503
+
 import numpy as np
 
 
@@ -83,23 +86,13 @@ def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
         tau[3] = (
             2
             * eta
-            * (
-                -6 * Ls * V * q[0]
-                + 6 * Ls * q[2]
-                - 2 * V * h[0] * q[0]
-                + 3 * h[0] * q[2]
-            )
+            * (-6 * Ls * V * q[0] + 6 * Ls * q[2] - 2 * V * h[0] * q[0] + 3 * h[0] * q[2])
             / (h[0] * q[0] * (4 * Ls + h[0]))
         )
         tau[4] = (
             2
             * eta
-            * (
-                -6 * Ls * U * q[0]
-                + 6 * Ls * q[1]
-                - 2 * U * h[0] * q[0]
-                + 3 * h[0] * q[1]
-            )
+            * (-6 * Ls * U * q[0] + 6 * Ls * q[1] - 2 * U * h[0] * q[0] + 3 * h[0] * q[1])
             / (h[0] * q[0] * (4 * Ls + h[0]))
         )
         tau[5] = 0
@@ -140,13 +133,7 @@ def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
         tau[1] = (
@@ -186,10 +173,7 @@ def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
                 q[0] ** 2
                 * (
                     144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
+                    + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4
                 )
             )
         )
@@ -229,35 +213,19 @@ def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
         tau[3] = (
             2
             * eta
-            * (
-                -6 * Ls * V * q[0]
-                + 6 * Ls * q[2]
-                - 2 * V * h[0] * q[0]
-                + 3 * h[0] * q[2]
-            )
+            * (-6 * Ls * V * q[0] + 6 * Ls * q[2] - 2 * V * h[0] * q[0] + 3 * h[0] * q[2])
             / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
         )
         tau[4] = (
             2
             * eta
-            * (
-                -6 * Ls * U * q[0]
-                + 6 * Ls * q[1]
-                - 2 * U * h[0] * q[0]
-                + 3 * h[0] * q[1]
-            )
+            * (-6 * Ls * U * q[0] + 6 * Ls * q[1] - 2 * U * h[0] * q[0] + 3 * h[0] * q[1])
             / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
         )
         tau[5] = (
@@ -296,13 +264,7 @@ def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
 
@@ -496,13 +458,7 @@ def stress_top(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
         tau[1] = (
@@ -543,13 +499,7 @@ def stress_top(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
         tau[2] = (
@@ -591,13 +541,7 @@ def stress_top(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
         tau[3] = (
@@ -651,13 +595,7 @@ def stress_top(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
             )
             / (
                 q[0] ** 2
-                * (
-                    144 * Ls**4
-                    + 192 * Ls**3 * h[0]
-                    + 88 * Ls**2 * h[0] ** 2
-                    + 16 * Ls * h[0] ** 3
-                    + h[0] ** 4
-                )
+                * (144 * Ls**4 + 192 * Ls**3 * h[0] + 88 * Ls**2 * h[0] ** 2 + 16 * Ls * h[0] ** 3 + h[0] ** 4)
             )
         )
 

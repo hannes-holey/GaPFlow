@@ -31,14 +31,19 @@ def get_parser():
 
     parser = ArgumentParser()
     parser.add_argument('-d', '--dim', type=int, default=1)
+    parser.add_argument('-f', '--frame', type=int, default=-1)
 
     return parser
 
 
-def main():
+def main(cli=True, dim=1):
 
-    args = get_parser().parse_args()
+    if cli:
+        # overwrite defaults with cmdline args
+        args = get_parser().parse_args()
+        dim = args.dim
+        frame = args.frame
 
     files = get_pipeline(name='sol.nc')
 
-    plot_single_frame(files, args.dim)
+    plot_single_frame(files, dim=dim, frame=frame)

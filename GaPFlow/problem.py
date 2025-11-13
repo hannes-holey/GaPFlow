@@ -1,5 +1,6 @@
 #
 # Copyright 2025 Hannes Holey
+#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -25,12 +26,19 @@ import os
 import io
 import signal
 import numpy as np
-import numpy.typing as npt
-from typing import Self, Type
 from copy import deepcopy
 from datetime import datetime
 from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+
+from typing import Type
+import numpy.typing as npt
+try:
+    # Py>=3.11
+    from typing import Self
+except ImportError:
+    # Py<=3.10
+    from typing_extensions import Self
 
 from GaPFlow import Database
 from GaPFlow.topography import Topography
@@ -38,8 +46,9 @@ from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, his
 from GaPFlow.models import WallStress, BulkStress, Pressure
 from GaPFlow.integrate import predictor_corrector, source
 from GaPFlow.md import Mock, LennardJones, GoldAlkane
-from GaPFlow.viz.plotting import plot_height_1d
-from GaPFlow.viz.animations import animate_1d
+from GaPFlow.viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
+from GaPFlow.viz.animations import animate_1d, animate_2d
+
 
 class Problem:
     """
@@ -87,7 +96,7 @@ class Problem:
         # Solution field
         self.__field = fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
-        
+
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = fc.real_field('extra', (num_extra_features,))
@@ -278,6 +287,11 @@ class Problem:
         self.wall_stress_xz.init()
         self.wall_stress_yz.init()
 
+        if not self.options['silent']:
+            self.pressure.write()
+            self.wall_stress_xz.write()
+            self.wall_stress_yz.write()
+
         # Numerics
         self.step = 0
         self.simtime = 0.
@@ -346,7 +360,7 @@ class Problem:
             self.write()
 
         if not self.options['silent']:
-            self.file.close() # need to be closed to be readable when animating from problem
+            self.file.close()  # need to be closed to be readable when animating from problem
             if self.prop['elastic']['enabled']:
                 self.topofile.close()
 
@@ -694,62 +708,63 @@ class Problem:
 
         return Q
 
-    def plot_height(self) -> None:
-        """Wrapper for plot_height in viz/plotting.py
-        - Detects 1D vs 2D
-        - Detects if elastic deformation is enabled
-        - Detects if initial or final simulation state
+    def plot_topo(self, show_defo=False, show_pressure=False) -> None:
         """
-        if self.grid['Ny'] == 1:
-            h = self.topo.h
-            if self.prop['elastic']['enabled'] and getattr(self, "step", 0) > 0:
-                u = self.topo.deformation
-                h0 = self.topo.h_undeformed
-                p = self.pressure.pressure
-                plot_height_1d(h, h0, u, p)
-            else:
-                plot_height_1d(h)
-        else:
-            print("2D height plotting not yet implemented.")
-
-    def animate(self,
-                save: bool = False,
-                show_notebook: bool = False,
-                seconds: float = 10.0
-                ) -> None:
-        """Wrapper for animating the solution in viz/animations.py
-        Checks if simulation has run already. Detects 1D vs 2D.
-        Includes height and deformation if elastic deformation is enabled.
-        - Option 1: Default. Showing in a matplotlib window.
-        - Option 2: Showing in Jupyter notebook (show_notebook=True).
-        - Option 3: Saving as .mp4 file (save=True).
+        Wrapper for plot_height in viz/plotting.py
 
         Parameters
         ----------
-        save : bool, optional
-            Whether to save the animation as an .mp4 file, by default False
-        show_notebook : bool, optional
-            Whether to display the animation inline in a Jupyter notebook, by default False
-        seconds : float, optional
-            Duration of the animation in seconds, by default 10.0
+        show_defo: bool
+            Flag for showing deformation, default is False
+        show_pressure: bool
+            Flag for showing pressure, default is False
+        """
+
+        dim = 1 if self.grid['Ny'] == 1 else 2
+
+        if dim == 1:
+            _plot_height_1d_from_field(self.topo.height_and_slopes,
+                                       self.pressure.pressure,
+                                       show_defo=show_defo,
+                                       show_pressure=show_pressure)
+        elif dim == 2:
+            # TODO: show defo in 2D
+            _plot_height_2d_from_field(self.topo.height_and_slopes)
+
+    def animate(self,
+                save: bool = False,
+                seconds: float = 10.0
+                ) -> None:
+        """Wrapper for animating the solution in viz / animations.py
+        Checks if simulation has run already. Detects 1D vs 2D.
+        Includes height and deformation if elastic deformation is enabled.
+
+        Parameters
+        ----------
+        save: bool, optional
+            Whether to save the animation as an .mp4 file, by default False.
+        seconds: float, optional
+            Duration of the animation in seconds(if saved), by default 10.0
         """
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")
+
+        if self.options['silent']:
+            raise RuntimeError("Cannot animate in silent mode.")
 
         filename_sol = os.path.join(self.outdir, 'sol.nc')
         filename_topo = os.path.join(self.outdir, 'topo.nc')
 
         if self.grid['Ny'] == 1:
-            anim = animate_1d(filename_sol,
+            return animate_1d(filename_sol,
                               filename_topo,
                               seconds=seconds,
-                              save=save,
-                              show_notebook=show_notebook)
-            if show_notebook:
-                return anim
-        else:
-            print("2D animation not yet implemented.")
+                              save=save)
 
+        else:
+            return animate_2d(filename_sol,
+                              seconds=seconds,
+                              save=save)
 
 # ---------------------------
 # Helper functions
