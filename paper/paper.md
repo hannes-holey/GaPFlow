@@ -49,10 +49,7 @@ The following papers have used `GaPFlow` so far:
 
 # Components and external dependencies
 
-`GaPFlow` serves as a *glue code* that integrates the various components required for multiscale simulations of confined fluid flows. It relies on a small set of external dependencies which are summarized below.
-
-## Solver for gap-averaged balance laws
-
+`GaPFlow`'s core functionality is the numerical solution of the gap-averaged balance equations as introduced by @holey_heightaveraged for lubrication problems.
 Averaging the general form of a conservation law over the gap coordinate ($z$) with spatially and temporally varying integral bounds, i.e. the topographies of the lower ($h_0$) and upper wall ($h_1$), leads to a balance law of the form
 
 $$
@@ -63,6 +60,9 @@ where $\bar{\mathbf{q}}\equiv\bar{\mathbf{q}}(x,y,t)=h^{-1}\int_{h_0}^{h_1}\math
 The source term $\mathbf{s}$ accounts for fluxes across the bottom and top walls ($\mathbf{f}_z$). 
 The current implementation uses a finite volume discretization on a regular grid and the MacCormack explicit time-integration scheme [@maccormack2003_effect] to solve the transient lubrication problem. 
 The [µGrid](https://muspectre.github.io/muGrid/) library is used to assemble the discretized density and flux fields into a unified container and to export the simulation results in the [NetCDF](https://www.unidata.ucar.edu/software/netcdf) file format.
+
+Next to the numerical inegration of the continuum equations, `GaPFlow` serves as a *glue code* that integrates the various components for multiscale or multiphysics simulations. 
+Therefore, it relies on a small set of external dependencies which are summarized below.
 
 ## GP regression
 
@@ -81,11 +81,21 @@ The correct and fully automated setup of MD runs is likely the most critical ste
 To facilitate this process, users can subclass the abstract base class `GaPFlow.md.MolecularDynamics` implementing only two methods: one for generating the input files and one for reading the output files.
 This design gives users complete control over the MD setup while maintaining a consistent interface with the main solver.
 `GaPFlow` provides two examples how this can be done: 1. A simple example that relies entirely on LAMMPS to set up a Lennard-Jones system (fluid and walls), and 2. A more advanced example that uses [ASE](https://ase-lib.org/) [@larsen2017_atomic] and [moltemplate](https://www.moltemplate.org/) [@jewett2021_moltemplate] to construct an alkane fluid confined between gold walls.
-Both MD setups use the Gaussian dynamics algorithm by @strong2017_dynamics as implemented in LAMMPS, to control the mass flux according to the continuum solution.
+Both MD setups use the Gaussian dynamics algorithm by @strong2017_dynamics to control the mass flux according to the continuum solution, as implemented in LAMMPS.
 
 ## Data management
 
+Running MD simulations is the computationally most expensive component of the multiscale framework.
+Although the active learning scheme ensures that the database grows only as needed, it is desirable to re-use this database across future simulations.
+Achieving this requires a dedicated data-management strategy, ideally following the FAIR principles [@wilkinson2016_fair].
+`GaPFlow` uses [`dtool`](https://www.dtool.dev/) [@olsson2019_lightweight] to package the inputs and outputs of individual MD runs into immutable datasets with unique persistent identifiers, together with automatically generated metadata.
+Users can operate on these datasets locally, but `GaPFlow` can also be readily integrated with a [`dserver`](https://www.dtool.dev/) [@hormann2024_dtool] instance, which indexes the metadata stored on a remote device.
+This makes it straightforward to discover previously computed configurations, or to share datasets with collaborators.
+
 ## Elastic deformations
+
+<!-- @Christoph: feel free to modify & extend -->
+`GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid.
 
 # Acknowledgments
 
