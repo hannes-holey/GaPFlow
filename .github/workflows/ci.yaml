@@ -23,7 +23,7 @@ jobs:
     - name: Install MPI & NetCDF
       run: |
         sudo apt-get update
-        sudo apt-get install -y openmpi-bin libopenmpi-dev libhdf5-mpi-dev libpnetcdf-dev libnetcdf-pnetcdf-dev ffmpeg python3-dev gcc
+        sudo apt-get install -y openmpi-bin libopenmpi-dev libhdf5-mpi-dev libpnetcdf-dev libnetcdf-pnetcdf-dev ffmpeg
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -38,7 +38,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        coverage run -m pytest
+        coverage run --timid -m pytest
         bash maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
