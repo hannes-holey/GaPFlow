@@ -32,17 +32,14 @@ jobs:
 
     - name: Install GaPFlow
       run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip cache purge
-        python3 -m pip install --upgrade pytest coverage setuptools wheel
+        python3 -m pip install --upgrade pip coverage pytest
         python3 -m pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
-        python3 -m pip install .[test]
+        python3 -m pip install .
 
     - name: Test with pytest
       run: |
-        pytest
-        # coverage run
-        # bash maintenance/update_coverage_badge.sh
+        coverage run
+        bash maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
       if: matrix.python-version == '3.12' && github.ref == 'refs/heads/main'
