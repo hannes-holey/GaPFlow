@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 from functools import wraps
 from IPython import get_ipython
 
-from GaPFlow.topography import create_midpoint_grid
+from ..topography import create_midpoint_grid
 
 
 def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):

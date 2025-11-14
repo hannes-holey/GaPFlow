@@ -29,12 +29,12 @@ from jax import vmap, grad
 from jax import Array
 from typing import Optional, Tuple, Any
 
-from GaPFlow.models.gp import GaussianProcessSurrogate
-from GaPFlow.models.gp import multi_in_single_out, multi_in_multi_out
-from GaPFlow.models.pressure import eos_pressure
-from GaPFlow.models.viscous import stress_bottom, stress_top, stress_avg
-from GaPFlow.models.sound import eos_sound_velocity
-from GaPFlow.models.viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
+from .gp import GaussianProcessSurrogate
+from .gp import multi_in_single_out, multi_in_multi_out
+from .pressure import eos_pressure
+from .viscous import stress_bottom, stress_top, stress_avg
+from .sound import eos_sound_velocity
+from .viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
 
 NDArray = npt.NDArray[np.floating]
 JAXArray = Array

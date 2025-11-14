@@ -241,7 +241,7 @@ def bwr(rho, T, gamma=3.0):
     float or np.ndarray
         Speed of sound.
     """
-    config = resources.files("GaPFlow.resources").joinpath("bwr_coeffs.txt")
+    config = resources.files().joinpath("bwr_coeffs.txt")
     x = np.loadtxt(config)
 
     exp_prefac = (

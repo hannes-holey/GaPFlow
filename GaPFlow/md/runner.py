@@ -45,11 +45,11 @@ import jax.random as jr
 import jax.numpy as jnp
 import numpy as np
 
-from GaPFlow.models.pressure import eos_pressure
-from GaPFlow.models.viscous import stress_bottom, stress_top
-from GaPFlow.md.moltemplate import write_template, build_template
-from GaPFlow.md.utils import read_output_files
-from GaPFlow.utils import bordered_text, make_dumpable
+from ..models.pressure import eos_pressure
+from ..models.viscous import stress_bottom, stress_top
+from .moltemplate import write_template, build_template
+from .utils import read_output_files
+from ..utils import bordered_text, make_dumpable
 
 yaml = YAML()
 yaml.explicit_start = True

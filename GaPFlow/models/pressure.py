@@ -244,7 +244,7 @@ def bwr(dens, T, gamma=3.):
         Computed pressure.
     """
 
-    config = resources.files("GaPFlow.resources").joinpath("bwr_coeffs.txt")
+    config = resources.files().joinpath("bwr_coeffs.txt")
     x = np.loadtxt(config)
 
     p = dens * T +\

@@ -21,11 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from GaPFlow.db import Database  # noqa: F401
-from GaPFlow.problem import Problem  # noqa: F401
+from DiscoverVersion import get_version
 
-
-from jax import config
+from jax import config  # noqa: F401
 config.update("jax_enable_x64", True)
 
-__version__ = "0.3.2"
+from .db import Database  # noqa: F401
+from .problem import Problem  # noqa: F401
+
+__version__ = get_version("GaPFlow", __file__)

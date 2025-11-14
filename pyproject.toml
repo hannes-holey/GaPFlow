@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core>=3.2"]
+requires = ["flit_core>=3.2", "DiscoverVersion"]
 build-backend = "flit_core.buildapi"
 
 [project]
@@ -17,6 +17,7 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+	"DiscoverVersion",
 	"muGrid>=0.95.0",
 	"tinygp>=0.3.0",
 	"jax",
@@ -53,9 +54,6 @@ gpf_animate2d="GaPFlow.cli:animate2d.main"
 
 [project.urls]
 Source = "https://github.com/hannes-holey/gapflow"
-
-[tool.flit.sdist]
-include = ["GaPFlow/resources/*"]
 
 [tool.pytest.ini_options]
 addopts = "-v"

@@ -28,7 +28,7 @@ import netCDF4
 import numpy as np
 import polars as pl
 
-from GaPFlow.viz.utils import set_axes_labels, _get_centerline_coords, _plot_gp, mpl_style_context
+from .utils import set_axes_labels, _get_centerline_coords, _plot_gp, mpl_style_context
 
 import numpy.typing as npt
 NDArray = npt.NDArray[np.floating]
