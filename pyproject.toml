@@ -63,7 +63,3 @@ filterwarnings = "ignore::DeprecationWarning"
 
 [tool.coverage.run]
 source = ["GaPFlow"]
-command_line = "-m pytest"
-
-
-

@@ -38,7 +38,7 @@ jobs:
 
     - name: Test with pytest
       run: |
-        coverage run
+        coverage run -m pytest
         bash maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
