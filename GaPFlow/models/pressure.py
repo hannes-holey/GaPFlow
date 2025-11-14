@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from importlib import resources
+import os
 import numpy as np
 from scipy.constants import gas_constant
 
@@ -244,7 +244,7 @@ def bwr(dens, T, gamma=3.):
         Computed pressure.
     """
 
-    config = resources.files().joinpath("bwr_coeffs.txt")
+    config = os.path.join(os.path.dirname(__file__), "bwr_coeffs.txt")
     x = np.loadtxt(config)
 
     p = dens * T +\

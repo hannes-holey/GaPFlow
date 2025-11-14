@@ -17,7 +17,6 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-	"importlib_resources >= 5.10",
 	"DiscoverVersion",
 	"muGrid>=0.95.0",
 	"tinygp>=0.3.0",
