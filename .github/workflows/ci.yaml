@@ -35,8 +35,8 @@ jobs:
         
         python3 -m pip install DiscoverVersion
 
-        ls -l
-        git -c safe.directory='*' describe --tags --dirty --always0
+        ls -la
+        git -c safe.directory='*' describe --tags --dirty --always
 
         python3 -c "from DiscoverVersion.Discovery import get_version; print(get_version('GaPFlow', 'GaPFlow.__init__.py'))"
 
