@@ -34,20 +34,14 @@ This approach allows the simulation to adapt to previously unseen local flow con
 # Statement of need
 
 `GaPFlow` is a numerical solver for fluid flows in confined geometries, such as the narrow gaps found in lubricated contacts.
-Traditional lubrication models solve the Reynolds equation, a simplified form of the Navier-Stokes equation expressed as a single partial differential equation for the fluid pressure.
+Traditional lubrication models solve the Reynolds equation [@reynolds1886_iv], a simplified form of the Navier-Stokes equation expressed as a single partial differential equation for the fluid pressure.
 MD simulations have been used to parameterize common constitutive laws for viscosity and wall slip [@martini2006_molecular;@savio2015_multiscale;@codrignani2023_continuum], which can be readily incorporated into existing lubrication solvers.
 However, they lack the feedback mechanism from the macroscopic to the molecular scale.
 The rigidity of purely sequential coupling schemes suggests that they are not ideal for capturing the extreme and diverse environments typical for frictional contacts.
 
 In contrast, `GaPFlow` solves the lubrication problem in the formulation proposed by @holey2022_heightaveraged, which evolves gap-averaged conserved quantities, such as mass or momentum, in time.
 This formulation is agnostic to the constitutive behavior of the confined fluid, making it suitable for multiscale simulations in which the fluid response is provided by molecular dynamics (MD) simulations.
-`GaPFlow` uses a surrogate model based on Gaussian process (GP) regression to interpolate between data obtained from MD, and to select new configurations based on the GP uncertainty to augment an existing MD database (a.k.a. active learning) [@holey2025_active].
-
-The following papers have used earlier versions of `GaPFlow` so far:
-
-- @holey2022_heightaveraged
-- @holey2024_sound
-- @holey2025_active
+`GaPFlow` uses a surrogate model based on Gaussian process (GP) regression to interpolate between data obtained from MD, and to select new configurations based on the GP uncertainty to augment an existing MD database (a.k.a. active learning) [@holey2025_active]. Earlier versions of `GaPFlow` have been used in three publications so far [@holey2022_heightaveraged;@holey2024_sound;@holey2025_active].
 
 # Components and external dependencies
 
