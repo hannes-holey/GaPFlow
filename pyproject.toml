@@ -8,6 +8,7 @@ description = "Gap-averaged flow simulations with Gaussian Process regression."
 readme = "README.md"
 authors = [
     { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
+    { name = "Christoph Huber", email = "christop.huber@kit.edu" }
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
