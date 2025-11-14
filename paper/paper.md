@@ -27,21 +27,23 @@ When the characteristic length of the confining dimension approaches the nanomet
 This is particularly relevant for lubricated frictional contacts, where surface roughness can lead to local gap heights of only a few nanometers [@archard1962_lubrication;@glovnea2003_measurement].
 The constitutive laws that describe the fluid's response to extreme loading conditions (e.g. high shear rates) need to account for molecular effects, such as fluid layering [@gao1997_layering] and wall slip [@pit2000_direct;@zhu2001_ratedependent].
 
-Molecular dynamics (MD) simulations have become a standard tool for describing lubricant flow in nanometer-scale constrictions [@ewen2018_advances], and have been used to parameterize common constitutive laws for viscosity and wall slip [@martini2006_molecular;@savio2015_multiscale;@codrignani2023_continuum].
-While such models can be readily incorporated into existing lubrication solvers, they lack the feedback mechanism from the macroscopic to the molecular scale.
-The rigidity of purely sequential coupling schemes suggests that they are not ideal for capturing the extreme and diverse environments typical for frictional contacts. 
-`GaPFlow` provides a simulation framework that enables concurrent multiscale simulations of nanofluidic flows relying on fixed-form, parametric constitutive fluid models.
-By employing nonparametric surrogate models from probabilistic machine learning, `GaPFlow` can adapt to previously unseen flow regimes through active learning and provides an uncertainty measure for the prediction of shear and normal stresses in lubricated frictional contacts.
+Molecular dynamics (MD) simulations have become a standard tool to provide insights into these nanoscale phenomena [@ewen2018_advances], but their direct use in macroscopic simulations is challenging.
+GaPFlow addresses this gap by enabling concurrent multiscale simulations of nanofluidic flows, in which MD data are incorporated on demand through nonparametric surrogate models based on probabilistic machine learning.
+This approach allows the simulation to adapt to previously unseen local flow conditions and provides uncertainty estimates for predicted shear and normal stresses in lubricated contacts.
 
 # Statement of need
 
 `GaPFlow` is a numerical solver for fluid flows in confined geometries, such as the narrow gaps found in lubricated contacts.
 Traditional lubrication models solve the Reynolds equation, a simplified form of the Navier-Stokes equation expressed as a single partial differential equation for the fluid pressure.
+MD simulations have been used to parameterize common constitutive laws for viscosity and wall slip [@martini2006_molecular;@savio2015_multiscale;@codrignani2023_continuum], which can be readily incorporated into existing lubrication solvers.
+However, they lack the feedback mechanism from the macroscopic to the molecular scale.
+The rigidity of purely sequential coupling schemes suggests that they are not ideal for capturing the extreme and diverse environments typical for frictional contacts.
+
 In contrast, `GaPFlow` solves the lubrication problem in the formulation proposed by @holey2022_heightaveraged, which evolves gap-averaged conserved quantities, such as mass or momentum, in time.
 This formulation is agnostic to the constitutive behavior of the confined fluid, making it suitable for multiscale simulations in which the fluid response is provided by molecular dynamics (MD) simulations.
 `GaPFlow` uses a surrogate model based on Gaussian process (GP) regression to interpolate between data obtained from MD, and to select new configurations based on the GP uncertainty to augment an existing MD database (a.k.a. active learning) [@holey2025_active].
 
-The following papers have used `GaPFlow` so far:
+The following papers have used earlier versions of `GaPFlow` so far:
 
 - @holey2022_heightaveraged
 - @holey2024_sound
@@ -49,7 +51,7 @@ The following papers have used `GaPFlow` so far:
 
 # Components and external dependencies
 
-`GaPFlow`'s core functionality is the numerical solution of the gap-averaged balance equations as introduced by @holey_heightaveraged for lubrication problems.
+`GaPFlow`'s core functionality is the numerical solution of the gap-averaged balance equations as introduced by @holey2022_heightaveraged for lubrication problems.
 Averaging the general form of a conservation law over the gap coordinate ($z$) with spatially and temporally varying integral bounds, i.e. the topographies of the lower ($h_0$) and upper wall ($h_1$), leads to a balance law of the form
 
 $$
@@ -66,7 +68,7 @@ Therefore, it relies on a small set of external dependencies which are summarize
 
 ## GP regression
 
-The fluxes required to close the macroscopic equations can either be obtained from deterministic constitutive laws or modeled using Gaussian process (GP) regression.
+The fluxes required to close the macroscopic equations can either be obtained from deterministic constitutive laws or modeled using GP regression [@rasmussen2006_gaussian].
 The GP models are trained on data generated by MD, or, for testing purposes, on sparsified datasets sampled from predefined constitutive laws. 
 `GaPFlow` employs the [tinygp](https://tinygp.readthedocs.io/en/stable/index.html) library for constructing and training GP models, taking advantage of its flexibility
 For example, it allows the implementation of custom kernels for the joint prediction of wall shear stresses at the top and bottom walls using a multi-output GP that shares a common noise process.
@@ -87,15 +89,15 @@ Both MD setups use the Gaussian dynamics algorithm by @strong2017_dynamics to co
 
 Running MD simulations is the computationally most expensive component of the multiscale framework.
 Although the active learning scheme ensures that the database grows only as needed, it is desirable to re-use this database across future simulations.
-Achieving this requires a dedicated data-management strategy, ideally following the FAIR principles [@wilkinson2016_fair].
+Achieving this requires a dedicated data management strategy, ideally following the FAIR principles [@wilkinson2016_fair].
 `GaPFlow` uses [`dtool`](https://www.dtool.dev/) [@olsson2019_lightweight] to package the inputs and outputs of individual MD runs into immutable datasets with unique persistent identifiers, together with automatically generated metadata.
-Users can operate on these datasets locally, but `GaPFlow` can also be readily integrated with a [`dserver`](https://www.dtool.dev/) [@hormann2024_dtool] instance, which indexes the metadata stored on a remote device.
+Users can operate on these datasets locally, but `GaPFlow` can also be readily integrated with a [`dserver`](https://www.dtool.dev/) instance [@hormann2024_dtool], which indexes the metadata stored on a remote device.
 This makes it straightforward to discover previously computed configurations, or to share datasets with collaborators.
 
 ## Elastic deformations
 
 <!-- @Christoph: feel free to modify & extend -->
-`GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid.
+`GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [@rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid.
 
 # Acknowledgments
 
