@@ -33,7 +33,11 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
         
-        python3 -m pip install DiscoverVersion      
+        python3 -m pip install DiscoverVersion
+
+        ls -l
+        git -c safe.directory='*' describe --tags --dirty --always0
+
         python3 -c "from DiscoverVersion.Discovery import get_version; print(get_version('GaPFlow', 'GaPFlow.__init__.py'))"
 
         python3 -m pip install .[test]
