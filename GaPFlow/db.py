@@ -32,7 +32,7 @@ from jaxtyping import Float
 from jax import Array
 from scipy.stats import qmc
 
-from GaPFlow.utils import progressbar
+from .utils import progressbar
 
 # ----------------------------------------------------------------------
 # Fixed-shape array type aliases

@@ -21,8 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from importlib import resources
+import os
 import matplotlib.pyplot as plt
 
-
-plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
+plt.style.use(os.path.join(os.path.dirname(__file__), "gapflow.mplstyle"))

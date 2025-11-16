@@ -9,8 +9,8 @@ NCORES=8
 export HDF5_VERSION=1.14.6
 export PNETCDF_VERSION=1.14.0
 export NETCDF4_VERSION=4.9.3
-export NETCDF4_PYTHON_VERSION=1.7.2
-export MPI4PY_VERSION=4.1.0
+export NETCDF4_PYTHON_VERSION=1.7.3
+export MPI4PY_VERSION=4.1.1
 
 # Install parallel version of the NetCDF library from the sources.
 # This is necessary because parallel compiles (if existing) are broken on most distributions.

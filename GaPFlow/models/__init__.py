@@ -21,6 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from GaPFlow.models.stress import Pressure  # noqa: F401
-from GaPFlow.models.stress import WallStress  # noqa: F401
-from GaPFlow.models.stress import BulkStress  # noqa: F401
+from .stress import Pressure  # noqa: F401
+from .stress import WallStress  # noqa: F401
+from .stress import BulkStress  # noqa: F401

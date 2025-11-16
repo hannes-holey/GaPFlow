@@ -40,14 +40,14 @@ except ImportError:
     # Py<=3.10
     from typing_extensions import Self
 
-from GaPFlow import Database
-from GaPFlow.topography import Topography
-from GaPFlow.io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
-from GaPFlow.models import WallStress, BulkStress, Pressure
-from GaPFlow.integrate import predictor_corrector, source
-from GaPFlow.md import Mock, LennardJones, GoldAlkane
-from GaPFlow.viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
-from GaPFlow.viz.animations import animate_1d, animate_2d
+from .db import Database
+from .topography import Topography
+from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
+from .models import WallStress, BulkStress, Pressure
+from .integrate import predictor_corrector, source
+from .md import Mock, LennardJones, GoldAlkane
+from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
+from .viz.animations import animate_1d, animate_2d
 
 
 class Problem:
