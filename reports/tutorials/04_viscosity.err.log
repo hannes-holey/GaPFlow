@@ -1,0 +1,170 @@
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/dist-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
+    executenb(
+  File "/usr/local/lib/python3.12/dist-packages/nbclient/client.py", line 1319, in execute
+    return NotebookClient(nb=nb, resources=resources, km=km, **kwargs).execute()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+    return loop.run_until_complete(inner)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/base_events.py", line 687, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/dist-packages/nbclient/client.py", line 709, in async_execute
+    await self.async_execute_cell(
+  File "/usr/local/lib/python3.12/dist-packages/nbclient/client.py", line 1062, in async_execute_cell
+    await self._check_raise_for_error(cell, cell_index, exec_reply)
+  File "/usr/local/lib/python3.12/dist-packages/nbclient/client.py", line 918, in _check_raise_for_error
+    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+------------------
+import io
+import numpy as np
+import matplotlib.pyplot as plt
+from importlib import resources
+
+from GaPFlow.io import read_yaml_input
+from GaPFlow.models.viscosity import shear_thinning_factor, piezoviscosity
+
+
+eyring = """
+properties:
+    shear: 0.1
+    bulk: 0.
+    EOS: DH
+    thinning:
+        name: Eyring
+"""
+
+carreau = """
+properties:
+    shear: 0.1
+    bulk: 0.
+    EOS: DH
+    thinning:
+        name: Carreau
+"""
+
+barus = """
+properties:
+    shear: 0.1
+    bulk: 0.
+    EOS: DH
+    piezo:
+        name: Barus
+"""
+
+roelands = """
+properties:
+    shear: 0.1
+    bulk: 0.
+    EOS: DH
+    piezo:
+        name: Roelands
+"""
+
+
+if __name__ == "__main__":
+
+    plt.style.use(resources.files("GaPFlow.resources").joinpath("gapflow.mplstyle"))
+
+    fig, ax = plt.subplots(1, 2)
+    fig.suptitle('Viscosity models (with default parameters)')
+
+    # Shear thinning
+
+    shear_rate = np.logspace(0, 11, 100)
+
+    for model in [eyring, carreau]:
+
+        with io.StringIO(model) as file:
+            inp = read_yaml_input(file)['properties']
+
+        mu0 = inp['shear']
+        name = inp['thinning']['name']
+
+        viscosity = mu0 * shear_thinning_factor(shear_rate, mu0, inp['thinning'])
+
+        ax[0].loglog(shear_rate, viscosity, label=name)
+
+    ax[0].set_xlabel('Shear rate')
+    ax[0].set_ylabel('Viscosity')
+    ax[0].legend()
+
+    # Piezoviscosity
+
+    pressure = np.linspace(1e6, 1e9, 100)
+
+    for model in [barus, roelands]:
+
+        with io.StringIO(model) as file:
+            inp = read_yaml_input(file)['properties']
+
+        mu0 = inp['shear']
+        name = inp['piezo']['name']
+        viscosity = mu0 * piezoviscosity(pressure, mu0, inp['piezo'])
+
+        ax[1].loglog(pressure, viscosity, label=name)
+
+    ax[1].set_xlabel('Pressure')
+    ax[1].set_ylabel('Viscosity')
+    ax[1].legend()
+
+    plt.show()
+------------------
+
+----- stderr -----
+/usr/local/lib/python3.12/dist-packages/GaPFlow/md/runner.py:42: UserWarning: Failed to import lammps. Only Mock MD object available.
+  warnings.warn('Failed to import lammps. Only Mock MD object available.')
+------------------
+
+[31m---------------------------------------------------------------------------[39m
+[31mModuleNotFoundError[39m                       Traceback (most recent call last)
+[36mCell[39m[36m [39m[32mIn[1][39m[32m, line 49[39m
+[32m     37[39m roelands = [33m"""[39m
+[32m     38[39m [33mproperties:[39m
+[32m     39[39m [33m    shear: 0.1[39m
+[32m   (...)[39m[32m     43[39m [33m        name: Roelands[39m
+[32m     44[39m [33m"""[39m
+[32m     47[39m [38;5;28;01mif[39;00m [34m__name__[39m == [33m"[39m[33m__main__[39m[33m"[39m:
+[32m---> [39m[32m49[39m     plt.style.use([43mresources[49m[43m.[49m[43mfiles[49m[43m([49m[33;43m"[39;49m[33;43mGaPFlow.resources[39;49m[33;43m"[39;49m[43m)[49m.joinpath([33m"[39m[33mgapflow.mplstyle[39m[33m"[39m))
+[32m     51[39m     fig, ax = plt.subplots([32m1[39m, [32m2[39m)
+[32m     52[39m     fig.suptitle([33m'[39m[33mViscosity models (with default parameters)[39m[33m'[39m)
+
+[36mFile [39m[32m/usr/lib/python3.12/importlib/resources/_common.py:46[39m, in [36mpackage_to_anchor.<locals>.wrapper[39m[34m(anchor, package)[39m
+[32m     44[39m [38;5;28;01melif[39;00m anchor [38;5;129;01mis[39;00m undefined:
+[32m     45[39m     [38;5;28;01mreturn[39;00m func()
+[32m---> [39m[32m46[39m [38;5;28;01mreturn[39;00m [43mfunc[49m[43m([49m[43manchor[49m[43m)[49m
+
+[36mFile [39m[32m/usr/lib/python3.12/importlib/resources/_common.py:56[39m, in [36mfiles[39m[34m(anchor)[39m
+[32m     51[39m [38;5;129m@package_to_anchor[39m
+[32m     52[39m [38;5;28;01mdef[39;00m[38;5;250m [39m[34mfiles[39m(anchor: Optional[Anchor] = [38;5;28;01mNone[39;00m) -> Traversable:
+[32m     53[39m [38;5;250m    [39m[33;03m"""[39;00m
+[32m     54[39m [33;03m    Get a Traversable resource for an anchor.[39;00m
+[32m     55[39m [33;03m    """[39;00m
+[32m---> [39m[32m56[39m     [38;5;28;01mreturn[39;00m from_package([43mresolve[49m[43m([49m[43manchor[49m[43m)[49m)
+
+[36mFile [39m[32m/usr/lib/python3.12/functools.py:909[39m, in [36msingledispatch.<locals>.wrapper[39m[34m(*args, **kw)[39m
+[32m    905[39m [38;5;28;01mif[39;00m [38;5;129;01mnot[39;00m args:
+[32m    906[39m     [38;5;28;01mraise[39;00m [38;5;167;01mTypeError[39;00m([33mf[39m[33m'[39m[38;5;132;01m{[39;00mfuncname[38;5;132;01m}[39;00m[33m requires at least [39m[33m'[39m
+[32m    907[39m                     [33m'[39m[33m1 positional argument[39m[33m'[39m)
+[32m--> [39m[32m909[39m [38;5;28;01mreturn[39;00m [43mdispatch[49m[43m([49m[43margs[49m[43m[[49m[32;43m0[39;49m[43m][49m[43m.[49m[34;43m__class__[39;49m[43m)[49m[43m([49m[43m*[49m[43margs[49m[43m,[49m[43m [49m[43m*[49m[43m*[49m[43mkw[49m[43m)[49m
+
+[36mFile [39m[32m/usr/lib/python3.12/importlib/resources/_common.py:82[39m, in [36m_[39m[34m(cand)[39m
+[32m     80[39m [38;5;129m@resolve[39m.register
+[32m     81[39m [38;5;28;01mdef[39;00m[38;5;250m [39m[34m_[39m(cand: [38;5;28mstr[39m) -> types.ModuleType:
+[32m---> [39m[32m82[39m     [38;5;28;01mreturn[39;00m [43mimportlib[49m[43m.[49m[43mimport_module[49m[43m([49m[43mcand[49m[43m)[49m
+
+[36mFile [39m[32m/usr/lib/python3.12/importlib/__init__.py:90[39m, in [36mimport_module[39m[34m(name, package)[39m
+[32m     88[39m             [38;5;28;01mbreak[39;00m
+[32m     89[39m         level += [32m1[39m
+[32m---> [39m[32m90[39m [38;5;28;01mreturn[39;00m [43m_bootstrap[49m[43m.[49m[43m_gcd_import[49m[43m([49m[43mname[49m[43m[[49m[43mlevel[49m[43m:[49m[43m][49m[43m,[49m[43m [49m[43mpackage[49m[43m,[49m[43m [49m[43mlevel[49m[43m)[49m
+
+[36mFile [39m[32m<frozen importlib._bootstrap>:1387[39m, in [36m_gcd_import[39m[34m(name, package, level)[39m
+
+[36mFile [39m[32m<frozen importlib._bootstrap>:1360[39m, in [36m_find_and_load[39m[34m(name, import_)[39m
+
+[36mFile [39m[32m<frozen importlib._bootstrap>:1324[39m, in [36m_find_and_load_unlocked[39m[34m(name, import_)[39m
+
+[31mModuleNotFoundError[39m: No module named 'GaPFlow.resources'
+

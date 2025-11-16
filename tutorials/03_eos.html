@@ -376,7 +376,53 @@
   warnings.warn(&#39;Failed to import lammps. Only Mock MD object available.&#39;)
 </pre></div>
 </div>
-<img alt="../_images/d5b94e9b4fc22f0c01b55fd30c39b80219287b97d657930a9429ed0f4488581a.png" src="../_images/d5b94e9b4fc22f0c01b55fd30c39b80219287b97d657930a9429ed0f4488581a.png" />
+<div class="output traceback highlight-ipythontb notranslate"><div class="highlight"><pre><span></span><span class="gt">---------------------------------------------------------------------------</span>
+<span class="ne">ModuleNotFoundError</span><span class="g g-Whitespace">                       </span>Traceback (most recent call last)
+<span class="n">Cell</span> <span class="n">In</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">line</span> <span class="mi">7</span>
+<span class="g g-Whitespace">      </span><span class="mi">3</span> <span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="g g-Whitespace">      </span><span class="mi">5</span> <span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.pressure</span><span class="w"> </span><span class="kn">import</span> <span class="n">eos_pressure</span>
+<span class="ne">----&gt; </span><span class="mi">7</span> <span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">&quot;GaPFlow.resources&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="s2">&quot;gapflow.mplstyle&quot;</span><span class="p">))</span>
+<span class="g g-Whitespace">     </span><span class="mi">10</span> <span class="k">def</span><span class="w"> </span><span class="nf">plot_bwr</span><span class="p">(</span><span class="n">ax</span><span class="p">):</span>
+<span class="g g-Whitespace">     </span><span class="mi">11</span>     <span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;BWR&#39;</span><span class="p">}</span>
+
+<span class="nn">File /usr/lib/python3.12/importlib/resources/_common.py:46,</span> in <span class="ni">package_to_anchor.&lt;locals&gt;.wrapper</span><span class="nt">(anchor, package)</span>
+<span class="g g-Whitespace">     </span><span class="mi">44</span> <span class="k">elif</span> <span class="n">anchor</span> <span class="ow">is</span> <span class="n">undefined</span><span class="p">:</span>
+<span class="g g-Whitespace">     </span><span class="mi">45</span>     <span class="k">return</span> <span class="n">func</span><span class="p">()</span>
+<span class="ne">---&gt; </span><span class="mi">46</span> <span class="k">return</span> <span class="n">func</span><span class="p">(</span><span class="n">anchor</span><span class="p">)</span>
+
+<span class="nn">File /usr/lib/python3.12/importlib/resources/_common.py:56,</span> in <span class="ni">files</span><span class="nt">(anchor)</span>
+<span class="g g-Whitespace">     </span><span class="mi">51</span> <span class="nd">@package_to_anchor</span>
+<span class="g g-Whitespace">     </span><span class="mi">52</span> <span class="k">def</span><span class="w"> </span><span class="nf">files</span><span class="p">(</span><span class="n">anchor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Anchor</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Traversable</span><span class="p">:</span>
+<span class="g g-Whitespace">     </span><span class="mi">53</span><span class="w">     </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="g g-Whitespace">     </span><span class="mi">54</span><span class="sd">     Get a Traversable resource for an anchor.</span>
+<span class="g g-Whitespace">     </span><span class="mi">55</span><span class="sd">     &quot;&quot;&quot;</span>
+<span class="ne">---&gt; </span><span class="mi">56</span>     <span class="k">return</span> <span class="n">from_package</span><span class="p">(</span><span class="n">resolve</span><span class="p">(</span><span class="n">anchor</span><span class="p">))</span>
+
+<span class="nn">File /usr/lib/python3.12/functools.py:909,</span> in <span class="ni">singledispatch.&lt;locals&gt;.wrapper</span><span class="nt">(*args, **kw)</span>
+<span class="g g-Whitespace">    </span><span class="mi">905</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">args</span><span class="p">:</span>
+<span class="g g-Whitespace">    </span><span class="mi">906</span>     <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">funcname</span><span class="si">}</span><span class="s1"> requires at least &#39;</span>
+<span class="g g-Whitespace">    </span><span class="mi">907</span>                     <span class="s1">&#39;1 positional argument&#39;</span><span class="p">)</span>
+<span class="ne">--&gt; </span><span class="mi">909</span> <span class="k">return</span> <span class="n">dispatch</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="vm">__class__</span><span class="p">)(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+<span class="nn">File /usr/lib/python3.12/importlib/resources/_common.py:82,</span> in <span class="ni">_</span><span class="nt">(cand)</span>
+<span class="g g-Whitespace">     </span><span class="mi">80</span> <span class="nd">@resolve</span><span class="o">.</span><span class="n">register</span>
+<span class="g g-Whitespace">     </span><span class="mi">81</span> <span class="k">def</span><span class="w"> </span><span class="nf">_</span><span class="p">(</span><span class="n">cand</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">types</span><span class="o">.</span><span class="n">ModuleType</span><span class="p">:</span>
+<span class="ne">---&gt; </span><span class="mi">82</span>     <span class="k">return</span> <span class="n">importlib</span><span class="o">.</span><span class="n">import_module</span><span class="p">(</span><span class="n">cand</span><span class="p">)</span>
+
+<span class="nn">File /usr/lib/python3.12/importlib/__init__.py:90,</span> in <span class="ni">import_module</span><span class="nt">(name, package)</span>
+<span class="g g-Whitespace">     </span><span class="mi">88</span>             <span class="k">break</span>
+<span class="g g-Whitespace">     </span><span class="mi">89</span>         <span class="n">level</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="ne">---&gt; </span><span class="mi">90</span> <span class="k">return</span> <span class="n">_bootstrap</span><span class="o">.</span><span class="n">_gcd_import</span><span class="p">(</span><span class="n">name</span><span class="p">[</span><span class="n">level</span><span class="p">:],</span> <span class="n">package</span><span class="p">,</span> <span class="n">level</span><span class="p">)</span>
+
+<span class="nn">File &lt;frozen importlib._bootstrap&gt;:1387,</span> in <span class="ni">_gcd_import</span><span class="nt">(name, package, level)</span>
+
+<span class="nn">File &lt;frozen importlib._bootstrap&gt;:1360,</span> in <span class="ni">_find_and_load</span><span class="nt">(name, import_)</span>
+
+<span class="nn">File &lt;frozen importlib._bootstrap&gt;:1324,</span> in <span class="ni">_find_and_load_unlocked</span><span class="nt">(name, import_)</span>
+
+<span class="ne">ModuleNotFoundError</span>: No module named &#39;GaPFlow.resources&#39;
+</pre></div>
+</div>
 </div>
 </div>
 </section>
