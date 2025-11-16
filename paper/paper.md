@@ -25,8 +25,7 @@ bibliography: paper.bib
 Fluid flow in confined geometries is common in both natural systems and many engineering applications.
 When the characteristic length of the confining dimension approaches the nanometer scale, the molecular nature of the fluid can no longer be neglected.
 This is particularly relevant for lubricated frictional contacts, where surface roughness can lead to local gap heights of only a few nanometers [@archard1962_lubrication;@glovnea2003_measurement].
-The constitutive laws that describe the fluid's response to extreme loading conditions (e.g. high shear rates) need to account for molecular effects, such as fluid layering [@gao1997_layering] and wall slip [@pit2000_direct;@zhu2001_ratedependent].
-<!-- when mentioning high shear rates, shear thinning comes to my mind, maybe also be an effect to list here? -->
+The constitutive laws that describe the fluid's response to extreme loading conditions (e.g. high shear rates) need to account for molecular effects, such as shear thinning [@jadhao2019_rheological], fluid layering [@gao1997_layering], or wall slip [@pit2000_direct;@zhu2001_ratedependent].
 
 Molecular dynamics (MD) simulations have become a standard tool to provide insights into these nanoscale phenomena [@ewen2018_advances], but their direct use in macroscopic simulations is challenging.
 GaPFlow addresses this gap by enabling concurrent multiscale simulations of nanofluidic flows, in which MD data are incorporated on demand through nonparametric surrogate models based on probabilistic machine learning.
@@ -54,13 +53,9 @@ $$
 $$
 
 where $\bar{\mathbf{q}}\equiv\bar{\mathbf{q}}(x,y,t)=h^{-1}\int_{h_0}^{h_1}\mathbf{q}(x,y,z,t)dz$ collects the densities of conserved variables (e.g. $\mathbf{q}=(\rho, j_x, j_y)^\top$ for mass and in-plane momentum) and $\bar{\mathbf{f}}_i\equiv\bar{\mathbf{f}}_i(x,y,t)=h^{-1}\int_{h_0}^{h_1}\mathbf{f}_i(x,y,z,t)dz$ are the corresponding fluxes in direction $i\in\{x,y\}$ with $h=h_1 - h_0$. 
-The source term $\mathbf{s}$ accounts for fluxes across the bottom and top walls ($\mathbf{f}_z$). 
+The source term $\mathbf{s}$ accounts for fluxes across the bottom and top walls ($\mathbf{f}_z$) as well as for changes in the conserved variable densities induced by flow within a spatially varying gap.
 The current implementation uses a finite volume discretization on a regular grid and the MacCormack explicit time-integration scheme [@maccormack2003_effect] to solve the transient lubrication problem. 
 The [µGrid](https://muspectre.github.io/muGrid/) library is used to assemble the discretized density and flux fields into a unified container and to export the simulation results in the [NetCDF](https://www.unidata.ucar.edu/software/netcdf) file format.
-<!-- regarding the sentence about source terms: from my understanding it is not only about fluxes across the walls but also the change of bulk density/flux density due to constriction/expansion.
-Suggestion:
-The source term $\mathbf{s}$ accounts for fluxes across the bottom and top walls ($\mathbf{f}_z$) as well as the change of conserved variable densities due to constriction and expansion in the height profile.
- -->
 
 Next to the numerical inegration of the continuum equations, `GaPFlow` serves as a *glue code* that integrates the various components for multiscale or multiphysics simulations. 
 Therefore, it relies on a small set of external dependencies which are summarized below.
@@ -95,7 +90,9 @@ This makes it straightforward to discover previously computed configurations, or
 
 ## Elastic deformations
 
-`GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [@rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid. Under the assumption of linear elastic and isotropic walls, the tool utilizes an efficient *Green's function* approach [@campana2006_green]. The elastic deformation is determined based on the fluid pressure field and automatically adapts to the boundary conditions of the fluid-flow problem.
+`GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [@rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid.
+Under the assumption of linear elastic and isotropic walls, the tool utilizes an efficient *Green's function* approach [@campana2006_practical].
+The elastic deformation is determined based on the fluid pressure field and automatically adapts to the boundary conditions of the fluid-flow problem.
 
 # Acknowledgments
 
