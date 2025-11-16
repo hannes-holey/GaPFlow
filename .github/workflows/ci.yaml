@@ -76,6 +76,8 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y openmpi-bin libopenmpi-dev libhdf5-mpi-dev libpnetcdf-dev libnetcdf-pnetcdf-dev
           python3 -m pip install --upgrade pip
           python3 -m pip install wheel twine build
 
