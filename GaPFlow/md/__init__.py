@@ -21,4 +21,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from GaPFlow.md.runner import MolecularDynamics, Mock, LennardJones, GoldAlkane  # noqa: F401
+from .runner import MolecularDynamics, Mock, LennardJones, GoldAlkane  # noqa: F401

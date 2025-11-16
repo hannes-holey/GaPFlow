@@ -1,5 +1,5 @@
 [build-system]
-requires = ["flit_core>=3.2"]
+requires = ["flit_core>=3.2", "DiscoverVersion"]
 build-backend = "flit_core.buildapi"
 
 [project]
@@ -8,6 +8,7 @@ description = "Gap-averaged flow simulations with Gaussian Process regression."
 readme = "README.md"
 authors = [
     { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
+    { name = "Christoph Huber", email = "christop.huber@kit.edu" }
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -17,6 +18,7 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
+	"DiscoverVersion",
 	"muGrid>=0.95.0",
 	"tinygp>=0.3.0",
 	"jax",
@@ -54,9 +56,6 @@ gpf_animate2d="GaPFlow.cli:animate2d.main"
 [project.urls]
 Source = "https://github.com/hannes-holey/gapflow"
 
-[tool.flit.sdist]
-include = ["GaPFlow/resources/*"]
-
 [tool.pytest.ini_options]
 addopts = "-v"
 testpaths = ["tests"]
@@ -64,7 +63,3 @@ filterwarnings = "ignore::DeprecationWarning"
 
 [tool.coverage.run]
 source = ["GaPFlow"]
-command_line = "-m pytest"
-
-
-

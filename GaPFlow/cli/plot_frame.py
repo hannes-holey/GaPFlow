@@ -24,7 +24,7 @@
 from argparse import ArgumentParser
 
 from GaPFlow.viz.utils import get_pipeline
-from GaPFlow.viz.plotting import plot_single_frame
+from GaPFlow.viz.plotting import plot_frame
 
 
 def get_parser():
@@ -46,4 +46,4 @@ def main(cli=True, dim=1):
 
     files = get_pipeline(name='sol.nc')
 
-    plot_single_frame(files, dim=dim, frame=frame)
+    plot_frame(files, dim=dim, frame=frame)

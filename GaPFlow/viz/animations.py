@@ -31,7 +31,7 @@ from IPython.display import HTML
 import netCDF4
 
 
-from GaPFlow.viz.utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context, in_notebook
+from .utils import set_axes_labels, set_axes_limits, _plot_gp, mpl_style_context, in_notebook
 
 
 @mpl_style_context
@@ -264,8 +264,6 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
         tol_t_max = 0.
 
     def update_lines(i, q, p, vp, tau, vt):
-
-        print(i)
 
         ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, 1:-1, ny // 2])
         ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, 1:-1, ny // 2])
