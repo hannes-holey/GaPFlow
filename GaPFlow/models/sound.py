@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from importlib import resources
+import os
 import numpy as np
 from scipy.constants import gas_constant
 
@@ -241,7 +241,7 @@ def bwr(rho, T, gamma=3.0):
     float or np.ndarray
         Speed of sound.
     """
-    config = resources.files("GaPFlow.resources").joinpath("bwr_coeffs.txt")
+    config = os.path.join(os.path.dirname(__file__), "bwr_coeffs.txt")
     x = np.loadtxt(config)
 
     exp_prefac = (
