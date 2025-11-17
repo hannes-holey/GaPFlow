@@ -1,3 +1,4 @@
+[![PyPI - Version](https://img.shields.io/pypi/v/GaPFlow)](https://img.shields.io/pypi/v/GaPFlow)
 [![Tests](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)
 [![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
 
