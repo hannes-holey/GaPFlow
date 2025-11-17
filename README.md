@@ -1,6 +1,6 @@
-[![PyPI - Version](https://img.shields.io/pypi/v/GaPFlow)](https://img.shields.io/pypi/v/GaPFlow)
-[![Tests](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)
-[![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
+[![PyPI - Version](https://img.shields.io/pypi/v/GaPFlow)](https://pypi.org/project/GaPFlow/)
+[![Tests](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml)
+[![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml)
 
 # GaPFlow
 *Gap-averaged flow simulations with Gaussian Process regression.*
@@ -15,9 +15,13 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 
 ## Installation
 
+A minimal version can be installed via
 ```
 pip install GaPFlow
 ```
+The published wheels are currently not built with LAMMPS.
+Thus, running multiscale simulations with molecular dynamics is not possible with this quick installation.
+For the full functionality it is required to build `GaPFlow` from source.
 
 ### Building from source
 
