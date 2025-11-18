@@ -23,6 +23,7 @@
 #
 
 import os
+import shutil
 import matplotlib
 import polars as pl
 import numpy as np
@@ -211,7 +212,8 @@ db:
     assert ani._save_count == 11
     assert len(ani._fig.axes) == 6
 
-    _display_animation(ani, fname_sol, seconds=2., save=True)
+    save = False if shutil.which('ffmpeg') is None else True
+    _display_animation(ani, fname_sol, seconds=2., save=save)
 
 
 def test_animation_2d(tmp_path):
@@ -264,4 +266,5 @@ properties:
     assert ani._save_count == 11
     assert len(ani._fig.axes) == 9  # 3x3
 
-    _display_animation(ani, fname, seconds=2., save=True)
+    save = False if shutil.which('ffmpeg') is None else True
+    _display_animation(ani, fname, seconds=2., save=save)
