@@ -11,6 +11,7 @@
    :hidden:
 
    self
+   quickstart
    ./tutorials/index
    ./api/index
    Github repository <https://github.com/hannes-holey/hans>

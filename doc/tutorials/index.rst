@@ -1,8 +1,6 @@
 Tutorials
 =========
 
-## Overview
-
 This section contains a series of tutorials that guide users through features and applications of the HANS framework. 
 Each tutorial is designed to provide hands-on experience with different aspects, going from basic concepts to 
 simulations that integrate all previously covered parts.

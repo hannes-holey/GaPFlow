@@ -111,6 +111,7 @@ or from a Python script
 from GaPFlow.problem import Problem
 
 myProblem = Problem.from_yaml('my_input_file.yaml')
+myProblem.pre_run()
 myProblem.run()
 ```
 Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
@@ -128,14 +129,6 @@ The code comes with a few handy [command line tools](GaPFlow/cli/) for visualiza
 ![journal](doc/assets/journal.gif)
 
 which shows the transient solution of a 1D journal bearing with active learning of the constitutive behavior. 
-
-## Documentation
-A Sphinx-generated documentation can be built locally with
-```
-cd doc
-sphinx-apidoc -o . ../GaPFlow
-make html
-```
 
 ## Funding
 This work received funding from the German Research Foundation (DFG) through GRK 2450 and from the Alexander von Humboldt Foundation through a Feodor Lynen Fellowship.
