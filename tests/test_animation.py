@@ -213,7 +213,7 @@ db:
     assert len(ani._fig.axes) == 6
 
     save = False if shutil.which('ffmpeg') is None else True
-    _display_animation(ani, fname_sol, seconds=2., save=save)
+    _display_animation(ani, fname_sol, seconds=2., save=save, show=False)
 
 
 def test_animation_2d(tmp_path):
@@ -267,4 +267,4 @@ properties:
     assert len(ani._fig.axes) == 9  # 3x3
 
     save = False if shutil.which('ffmpeg') is None else True
-    _display_animation(ani, fname, seconds=2., save=save)
+    _display_animation(ani, fname, seconds=2., save=save, show=False)
