@@ -110,7 +110,8 @@ def animate_2d(filename_sol: str,
 def _display_animation(ani: animation.FuncAnimation,
                        file_sol: str,
                        seconds: float,
-                       save: bool):
+                       save: bool = False,
+                       show: bool = True):
     """Display or save an animation object.
 
     Parameters
@@ -122,7 +123,9 @@ def _display_animation(ani: animation.FuncAnimation,
     seconds : float
         Length of the saved video in seconds, i.e. determines the frame rate.
     save : bool
-        Whether the plot should be saved or not
+        Whether the plot should be saved to mp4, default is False.
+    show : bool
+        Show plots, default is True.
     """
 
     if save:
@@ -138,7 +141,7 @@ def _display_animation(ani: animation.FuncAnimation,
         ani.save(outfile, writer=writer, dpi=150)
         print(f"Saved animation to {outfile}")
 
-    else:
+    if show:
         if in_notebook():
             plt.close(ani._fig)
             return HTML(ani.to_jshtml())
