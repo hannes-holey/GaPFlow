@@ -383,8 +383,8 @@ def _plot_sol_from_field_1d(q,
                  color=color_p)
 
     if var_tol_press is not None:
-        ax[1, 0].plot(x, pressure[*s] + 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
-        ax[1, 0].plot(x, pressure[*s] - 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
+        ax[1, 0].plot(x, pressure[(*s,)] + 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
+        ax[1, 0].plot(x, pressure[(*s,)] - 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
 
     # shear stress
     if var_shear is None:
