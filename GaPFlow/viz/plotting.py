@@ -367,18 +367,18 @@ def _plot_sol_from_field_1d(q,
     color_p = 'C1'
     color_t = 'C2'
 
-    ax[0, 0].plot(x, q[0, *s], color=color_q)
-    ax[0, 1].plot(x, q[1, *s], color=color_q)
-    ax[0, 2].plot(x, q[2, *s], color=color_q)
+    ax[0, 0].plot(x, q[(0, *s)], color=color_q)
+    ax[0, 1].plot(x, q[(1, *s)], color=color_q)
+    ax[0, 2].plot(x, q[(2, *s)], color=color_q)
 
     # pressure
     if var_press is None:
-        ax[1, 0].plot(x, pressure[*s], color=color_p)
+        ax[1, 0].plot(x, pressure[(*s,)], color=color_p)
     else:
         _plot_gp(ax[1, 0],
                  x,
-                 pressure[*s],
-                 var_press[*s],
+                 pressure[(*s,)],
+                 var_press[(*s,)],
                  tol=None,
                  color=color_p)
 
@@ -388,28 +388,28 @@ def _plot_sol_from_field_1d(q,
 
     # shear stress
     if var_shear is None:
-        ax[1, 1].plot(x, lower[*s], color=color_t)
-        ax[1, 2].plot(x, upper[*s], color=color_t)
+        ax[1, 1].plot(x, lower[(*s,)], color=color_t)
+        ax[1, 2].plot(x, upper[(*s,)], color=color_t)
     else:
         _plot_gp(ax[1, 1],
                  x,
-                 lower[*s],
-                 var_shear[*s],
+                 lower[(*s,)],
+                 var_shear[(*s,)],
                  tol=None,
                  color=color_t)
 
         _plot_gp(ax[1, 2],
                  x,
-                 upper[*s],
-                 var_shear[*s],
+                 upper[(*s,)],
+                 var_shear[(*s,)],
                  tol=None,
                  color=color_t)
 
     if var_tol_shear is not None:
-        ax[1, 1].plot(x, lower[*s] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
-        ax[1, 1].plot(x, lower[*s] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
-        ax[1, 2].plot(x, upper[*s] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
-        ax[1, 2].plot(x, upper[*s] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 1].plot(x, lower[(*s,)] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 1].plot(x, lower[(*s,)] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 2].plot(x, upper[(*s,)] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 2].plot(x, upper[(*s,)] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
 
     set_axes_labels(ax)
 
