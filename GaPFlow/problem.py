@@ -47,6 +47,7 @@ from .models import WallStress, BulkStress, Pressure
 from .integrate import predictor_corrector, source
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
+from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
 from .viz.animations import animate_1d, animate_2d
 
 
@@ -94,6 +95,7 @@ class Problem:
         fc = GlobalFieldCollection(nb_grid_pts)
 
         # Solution field
+        self.step = None
         self.__field = fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
@@ -306,12 +308,14 @@ class Problem:
         self.tol = self.numerics['tol']
         self.max_it = self.numerics['max_it']
 
-    def run(self) -> None:
+    def run(self,
+            keep_open: bool = False) -> None:
         """
         Run the time-stepping loop until convergence, maximum iterations,
         or until a termination signal is received.
         """
-        self.pre_run()
+        if self.step is None:
+            self.pre_run()
 
         self._stop = False
 
@@ -339,7 +343,8 @@ class Problem:
 
             _handle_signals(self.receive_signal)
 
-        self.post_run()
+        if not keep_open:
+            self.post_run()
 
     def receive_signal(self, signum, frame) -> None:
         """
@@ -708,6 +713,43 @@ class Problem:
 
         return Q
 
+    # ---------------------------
+    # Plotting and animations
+    # ---------------------------
+    def plot(self, ax=None) -> None:
+
+        if self.grid['dim'] == 1:
+
+            _plot_sol_from_field_1d(self.q,
+                                    self.pressure.pressure,
+                                    self.wall_stress_xz.lower[4],
+                                    self.wall_stress_xz.upper[4],
+                                    var_press=self.pressure.variance
+                                    if self.pressure.is_gp_model
+                                    else None,
+                                    var_shear=self.wall_stress_xz.variance
+                                    if self.wall_stress_xz.is_gp_model
+                                    else None,
+                                    var_tol_press=self.pressure.variance_tol
+                                    if self.pressure.is_gp_model and self.pressure.use_active_learning
+                                    else None,
+                                    var_tol_shear=self.wall_stress_xz.variance_tol
+                                    if self.wall_stress_xz.is_gp_model and self.wall_stress_xz.use_active_learning
+                                    else None,
+                                    ax=ax)
+
+        elif self.grid['dim'] == 2:
+            _plot_sol_from_field_2d(self.q,
+                                    self.pressure.pressure,
+                                    self.wall_stress_xz.lower[4],
+                                    self.wall_stress_xz.upper[4],
+                                    self.wall_stress_yz.lower[3],
+                                    self.wall_stress_yz.upper[3],
+                                    var_press=self.pressure.variance,
+                                    var_shear_xz=self.wall_stress_xz.variance,
+                                    var_shear_yz=self.wall_stress_xz.variance,
+                                    ax=ax)
+
     def plot_topo(self, show_defo=False, show_pressure=False) -> None:
         """
         Wrapper for plot_height in viz/plotting.py
@@ -720,14 +762,14 @@ class Problem:
             Flag for showing pressure, default is False
         """
 
-        dim = 1 if self.grid['Ny'] == 1 else 2
+        # dim = 1 if self.grid['Ny'] == 1 else 2
 
-        if dim == 1:
+        if self.grid['dim'] == 1:
             _plot_height_1d_from_field(self.topo.height_and_slopes,
                                        self.pressure.pressure,
                                        show_defo=show_defo,
                                        show_pressure=show_pressure)
-        elif dim == 2:
+        elif self.grid['dim'] == 2:
             # TODO: show defo in 2D
             _plot_height_2d_from_field(self.topo.height_and_slopes)
 

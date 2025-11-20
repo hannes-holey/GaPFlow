@@ -121,6 +121,7 @@ class GaussianProcessSurrogate:
     name: str
     is_gp_model: bool
     active_dims: list[int]
+    use_active_learning: bool
     build_gp: callable
     rtol: float
     atol: float

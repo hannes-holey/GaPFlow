@@ -143,6 +143,14 @@ class WallStress(GaussianProcessSurrogate):
         return self.__field.p[:6]
 
     @property
+    def variance(self) -> NDArray:
+        """
+        Variance of the shear stress field
+
+        """
+        return self.__field_variance.p
+
+    @property
     def pressure(self) -> NDArray:
         """
         Local pressure field.
@@ -492,6 +500,11 @@ class Pressure(GaussianProcessSurrogate):
     def pressure(self) -> NDArray:
         """Pressure field."""
         return self.__field.p
+
+    @property
+    def variance(self) -> NDArray:
+        """Variance of the pressure field."""
+        return self.__field_variance.p
 
     @property
     def v_sound(self) -> NDArray | JAXArray:

@@ -321,47 +321,95 @@ def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
 
     data = netCDF4.Dataset(filename)
 
-    q_nc = np.asarray(data.variables['solution'])
-    p_nc = np.asarray(data.variables['pressure'])
-    tau_nc = np.asarray(data.variables['wall_stress_xz'])
+    q_nc = np.asarray(data.variables['solution'])[frame]
+    p_nc = np.asarray(data.variables['pressure'])[frame]
+    shear_nc = np.asarray(data.variables['wall_stress_xz'])[frame]
 
-    nt, nc, _, nx, ny = q_nc.shape
-    x, _ = _get_centerline_coords(nx, ny, disc)
+    sol = q_nc[:, 0]
+    press = p_nc
+    lower = shear_nc[4, 0]
+    upper = shear_nc[4, 0]
+
+    if 'pressure_var' in data.variables.keys():
+        var_press = np.asarray(data.variables['pressure_var'])[frame]
+    else:
+        var_press = None
+
+    if 'wall_stress_xz_var' in data.variables.keys():
+        var_shear = np.asarray(data.variables['wall_stress_xz_var'])[frame]
+    else:
+        var_shear = None
+
+    _plot_sol_from_field_1d(sol, press, lower, upper, var_press, var_shear, ax=ax)
+
+
+def _plot_sol_from_field_1d(q,
+                            pressure,
+                            lower,
+                            upper,
+                            var_press=None,
+                            var_shear=None,
+                            var_tol_press=None,
+                            var_tol_shear=None,
+                            ax=None,
+                            ):
+
+    if ax is None:
+        fig, ax = plt.subplots(2, 3)
+
+    nx, ny = q.shape[-2:]
+    ci = max(1, (ny - 2) // 2)
+    s = [slice(1, -1), ci]
+
+    x = np.linspace(0., 1., nx - 2)
 
     color_q = 'C0'
     color_p = 'C1'
     color_t = 'C2'
 
-    ax[0, 0].plot(x, q_nc[frame, 0, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 1].plot(x, q_nc[frame, 1, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 2].plot(x, q_nc[frame, 2, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 0].plot(x, q[0, *s], color=color_q)
+    ax[0, 1].plot(x, q[1, *s], color=color_q)
+    ax[0, 2].plot(x, q[2, *s], color=color_q)
 
-    if 'pressure_var' in data.variables.keys():
-        pvar_nc = np.asarray(data.variables['pressure_var'])
-
+    # pressure
+    if var_press is None:
+        ax[1, 0].plot(x, pressure[*s], color=color_p)
+    else:
         _plot_gp(ax[1, 0],
-                 x, p_nc[frame, 1:-1, ny // 2],
-                 pvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 x,
+                 pressure[*s],
+                 var_press[*s],
+                 tol=None,
                  color=color_p)
 
+    if var_tol_press is not None:
+        ax[1, 0].plot(x, pressure[*s] + 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
+        ax[1, 0].plot(x, pressure[*s] - 1.96 * np.sqrt(var_tol_press), '--', color=color_p)
+
+    # shear stress
+    if var_shear is None:
+        ax[1, 1].plot(x, lower[*s], color=color_t)
+        ax[1, 2].plot(x, upper[*s], color=color_t)
     else:
-        ax[1, 0].plot(x, p_nc[frame, 1:-1, ny // 2], color=color_p)
-
-    if 'wall_stress_xz_var' in data.variables.keys():
-        tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
-
         _plot_gp(ax[1, 1],
-                 x, tau_nc[frame, 4, 0, 1:-1, ny // 2],
-                 tauvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 x,
+                 lower[*s],
+                 var_shear[*s],
+                 tol=None,
                  color=color_t)
 
         _plot_gp(ax[1, 2],
-                 x, tau_nc[frame, 10, 0, 1:-1, ny // 2],
-                 tauvar_nc[frame, 1:-1, ny // 2], tol=None,
+                 x,
+                 upper[*s],
+                 var_shear[*s],
+                 tol=None,
                  color=color_t)
-    else:
-        ax[1, 1].plot(x, tau_nc[frame, 4, 0, 1:-1, ny // 2], color=color_t)
-        ax[1, 2].plot(x, tau_nc[frame, 10, 0, 1:-1, ny // 2], color=color_t)
+
+    if var_tol_shear is not None:
+        ax[1, 1].plot(x, lower[*s] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 1].plot(x, lower[*s] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 2].plot(x, upper[*s] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
+        ax[1, 2].plot(x, upper[*s] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
 
     set_axes_labels(ax)
 
@@ -399,6 +447,19 @@ def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
         a.set_xlabel(r'$x/L_x$')
         a.set_ylabel(r'$y/L_y$')
         a.set_title(title)
+
+
+def _plot_sol_from_field_2d(q,
+                            pressure,
+                            lower_xz,
+                            upper_xz,
+                            lower_yz,
+                            upper_yz,
+                            var_press=None,
+                            var_shear_xz=None,
+                            var_shear_yz=None,
+                            ax=None,):
+    raise NotImplementedError
 
 
 def _plot_multiple_frames_1d(filename, every=1):
