@@ -116,7 +116,7 @@ myProblem.run()
 ```
 Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
 - `config.yml`: A sanitized version of your simulation input.
-- `gap.nc`: NetCDF file containing the gap height and gradients.
+- `topo.nc`: NetCDF file containing the gap height and gradients.
 - `sol.nc`: NetCDF file containing the solution and stress fields.
 - `history.csv`: Contains the time series of scalar quantities (step, Ekin, residual, ...)
 - `gp_[xz,yz,zz].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
