@@ -21,9 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import os
-import numpy as np
-import polars as pl
 
 from GaPFlow.viz.utils import get_pipeline
 from GaPFlow.viz.animations import animate_2d
@@ -32,32 +29,5 @@ from GaPFlow.viz.animations import animate_2d
 def main():
 
     file = get_pipeline(name='sol.nc', mode='single')
-
-    gp_p = os.path.join(os.path.dirname(file), 'gp_zz.csv')
-    gp_s_xz = os.path.join(os.path.dirname(file), 'gp_xz.csv')
-    gp_s_yz = os.path.join(os.path.dirname(file), 'gp_yz.csv')
-
-    try:
-        df_p = pl.read_csv(gp_p)
-        tol_p = np.array(df_p['variance_tol'])
-    except FileNotFoundError:
-        tol_p = None
-
-    try:
-        df_s_xz = pl.read_csv(gp_s_xz)
-        tol_s_xz = np.array(df_s_xz['variance_tol'])
-    except FileNotFoundError:
-        tol_s_xz = None
-
-    try:
-        df_s_yz = pl.read_csv(gp_s_yz)
-        tol_s_yz = np.array(df_s_yz['variance_tol'])
-    except FileNotFoundError:
-        tol_s_yz = None
-
+    # TODO: animations with GPs
     animate_2d(file)
-
-    # if tol_s_xz is None and tol_s_yz is None and tol_p is None:
-    #     animate(file)
-    # else:
-    #     animate_gp(file, tol_p=tol_p, tol_s=tol_s_xz, tol)

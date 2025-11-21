@@ -1,6 +1,6 @@
-[![PyPI - Version](https://img.shields.io/pypi/v/GaPFlow)](https://img.shields.io/pypi/v/GaPFlow)
-[![Tests](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)
-[![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)
+[![PyPI - Version](https://img.shields.io/pypi/v/GaPFlow)](https://pypi.org/project/GaPFlow/)
+[![Tests](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml)
+[![Coverage](https://gist.githubusercontent.com/hannes-holey/fac7fa61e1899b1e74b3bab598fe6513/raw/badge.svg)](https://github.com/hannes-holey/GaPFlow/actions/workflows/ci.yaml)
 
 # GaPFlow
 *Gap-averaged flow simulations with Gaussian Process regression.*
@@ -15,9 +15,13 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 
 ## Installation
 
+A minimal version can be installed via
 ```
 pip install GaPFlow
 ```
+The published wheels are currently not built with LAMMPS.
+Thus, running multiscale simulations with molecular dynamics is not possible with this quick installation.
+For the full functionality it is required to build `GaPFlow` from source.
 
 ### Building from source
 
@@ -107,11 +111,12 @@ or from a Python script
 from GaPFlow.problem import Problem
 
 myProblem = Problem.from_yaml('my_input_file.yaml')
+myProblem.pre_run()
 myProblem.run()
 ```
 Simulation output is stored under the location specified in the input file. After successful completion, you should find the following files.
 - `config.yml`: A sanitized version of your simulation input.
-- `gap.nc`: NetCDF file containing the gap height and gradients.
+- `topo.nc`: NetCDF file containing the gap height and gradients.
 - `sol.nc`: NetCDF file containing the solution and stress fields.
 - `history.csv`: Contains the time series of scalar quantities (step, Ekin, residual, ...)
 - `gp_[xz,yz,zz].csv` (Optional): Contains the time series of GP hyperparameters, database size, etc.
@@ -124,14 +129,6 @@ The code comes with a few handy [command line tools](GaPFlow/cli/) for visualiza
 ![journal](doc/assets/journal.gif)
 
 which shows the transient solution of a 1D journal bearing with active learning of the constitutive behavior. 
-
-## Documentation
-A Sphinx-generated documentation can be built locally with
-```
-cd doc
-sphinx-apidoc -o . ../GaPFlow
-make html
-```
 
 ## Funding
 This work received funding from the German Research Foundation (DFG) through GRK 2450 and from the Alexander von Humboldt Foundation through a Feodor Lynen Fellowship.

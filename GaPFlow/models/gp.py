@@ -121,6 +121,7 @@ class GaussianProcessSurrogate:
     name: str
     is_gp_model: bool
     active_dims: list[int]
+    use_active_learning: bool
     build_gp: callable
     rtol: float
     atol: float
@@ -138,7 +139,7 @@ class GaussianProcessSurrogate:
         self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
-            self.cond_gp = None
+            self._cache = None
             self.database = database
             self.last_fit_train_size = 0
             self.pause = 0
@@ -317,14 +318,15 @@ class GaussianProcessSurrogate:
             print('#' + 50 * '-')
 
         # Delete cache to force inference step with new training data
-        self.cond_gp = None
+        self._cache = None
 
     def _infer_mean(self) -> JAXArray:
 
-        if self.cond_gp is None:
-            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
+        if self._cache is None:
+            m, _, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
+            self._cache = (alpha, noise)
         else:
-            m = _repredict_mean(self.gp, self.cond_gp, self.Xtest)
+            m = _repredict_mean(self.gp, self._cache, self.Xtest)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
 
@@ -332,10 +334,11 @@ class GaussianProcessSurrogate:
 
     def _infer_mean_var(self) -> Tuple[JAXArray, JAXArray]:
 
-        if self.cond_gp is None:
-            m, v, self.cond_gp = _predict(self.gp, self.Ytrain, self.Xtest)
+        if self._cache is None:
+            m, v, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
+            self._cache = (alpha, noise)
         else:
-            m, v = _repredict_mean_var(self.gp, self.cond_gp, self.Xtest)
+            m, v = _repredict_mean_var(self.gp, self._cache, self.Xtest)
 
         predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
         predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
@@ -477,13 +480,15 @@ class GaussianProcessSurrogate:
 
 @jax.jit
 def _repredict_mean_var(gp: GaussianProcess,
-                        cond_gp: GaussianProcess,
+                        cache: tuple,
                         Xtest: JAXArray) -> Tuple[JAXArray, JAXArray]:
 
+    alpha, noise = cache
+
     Ks = gp.kernel(gp.X, Xtest)
-    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+    mean = Ks.T @ alpha  # cond_gp.mean_function.alpha  # reuse previous alpha
     v = gp.solver.solve_triangular(Ks)
-    Kss = gp.kernel(Xtest) + cond_gp.noise.diag
+    Kss = gp.kernel(Xtest) + noise  # cond_gp.noise.diag
     var = Kss - jnp.sum(v**2, axis=0)
 
     return mean, var
@@ -491,11 +496,13 @@ def _repredict_mean_var(gp: GaussianProcess,
 
 @jax.jit
 def _repredict_mean(gp: GaussianProcess,
-                    cond_gp: GaussianProcess,
+                    cache: tuple,
                     Xtest: JAXArray) -> Tuple[JAXArray, JAXArray] | JAXArray:
 
+    alpha, _ = cache
+
     Ks = gp.kernel(gp.X, Xtest)
-    mean = Ks.T @ cond_gp.mean_function.alpha  # reuse previous alpha
+    mean = Ks.T @ alpha
 
     return mean
 
@@ -506,10 +513,8 @@ def _predict(gp: GaussianProcess,
              Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
 
     cond_gp = gp.condition(Ytrain, Xtest).gp
-    m = cond_gp.loc
-    v = cond_gp.variance
 
-    return m, v, cond_gp
+    return cond_gp.loc, cond_gp.variance, cond_gp.mean_function.alpha, cond_gp.noise.diag
 
 
 # ----------------------------------------------------------------------

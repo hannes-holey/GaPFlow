@@ -22,11 +22,11 @@
 # SOFTWARE.
 #
 from DiscoverVersion import get_version
+from jax import config
 
-from jax import config  # noqa: F401
 config.update("jax_enable_x64", True)
 
-from .db import Database  # noqa: F401
-from .problem import Problem  # noqa: F401
-
 __version__ = get_version("GaPFlow", __file__)
+
+from .db import Database  # noqa: F401, E402
+from .problem import Problem  # noqa: F401, E402

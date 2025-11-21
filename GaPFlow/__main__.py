@@ -21,10 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from GaPFlow.problem import Problem
+from GaPFlow import Problem
 from argparse import ArgumentParser
-# from jaxtyping import install_import_hook
-# install_import_hook("GaPFlow", "beartype")
 
 
 def get_parser():
