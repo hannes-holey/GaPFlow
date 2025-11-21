@@ -315,6 +315,12 @@ class Problem:
         """
         Run the time-stepping loop until convergence, maximum iterations,
         or until a termination signal is received.
+
+        Parameters
+        ----------
+        keep_open : bool, optional
+            If True, keeps files open after run for following runs to be
+            written in the same files, by default False.
         """
         if self.step is None:
             self.pre_run()
