@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -381,13 +381,19 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.upper" title="GaPFlow.models.WallStress.upper"><code class="xref py py-obj docutils literal notranslate"><span class="pre">upper</span></code></a></p></td>
 <td><p>Upper-wall stress slice.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.name" title="GaPFlow.models.WallStress.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.variance" title="GaPFlow.models.WallStress.variance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">variance</span></code></a></p></td>
+<td><p>Variance of the shear stress field</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.name" title="GaPFlow.models.WallStress.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.is_gp_model" title="GaPFlow.models.WallStress.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.is_gp_model" title="GaPFlow.models.WallStress.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.active_dims" title="GaPFlow.models.WallStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.active_dims" title="GaPFlow.models.WallStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.use_active_learning" title="GaPFlow.models.WallStress.use_active_learning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">use_active_learning</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.WallStress.build_gp" title="GaPFlow.models.WallStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
@@ -740,6 +746,17 @@ appropriate field entries.</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.use_active_learning">
+<span class="sig-name descname"><span class="pre">use_active_learning</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.WallStress.use_active_learning" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.WallStress.variance">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.WallStress.variance" title="Link to this definition">¶</a></dt>
+<dd><p>Variance of the shear stress field</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.models.WallStress.write">
 <span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.WallStress.write" title="Link to this definition">¶</a></dt>
@@ -846,6 +863,8 @@ appropriate field entries.</p>
 <li><a class="reference internal" href="#GaPFlow.models.WallStress.trusted"><code class="docutils literal notranslate"><span class="pre">WallStress.trusted</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.WallStress.update"><code class="docutils literal notranslate"><span class="pre">WallStress.update()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.WallStress.upper"><code class="docutils literal notranslate"><span class="pre">WallStress.upper</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.use_active_learning"><code class="docutils literal notranslate"><span class="pre">WallStress.use_active_learning</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.WallStress.variance"><code class="docutils literal notranslate"><span class="pre">WallStress.variance</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.WallStress.write"><code class="docutils literal notranslate"><span class="pre">WallStress.write()</span></code></a></li>
 </ul>
 </li>

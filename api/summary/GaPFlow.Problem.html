@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -303,28 +303,31 @@ and optionally <code class="docutils literal notranslate"><span class="pre">gp</
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.from_yaml" title="GaPFlow.Problem.from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">from_yaml</span></code></a>(fname)</p></td>
 <td><p>Create a Problem instance from a YAML file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot_topo" title="GaPFlow.Problem.plot_topo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_topo</span></code></a>([show_defo, show_pressure])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot" title="GaPFlow.Problem.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>([ax])</p></td>
+<td><p>Plot a snaphsot of the solution and the current stress state.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot_topo" title="GaPFlow.Problem.plot_topo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_topo</span></code></a>([show_defo, show_pressure])</p></td>
 <td><p>Wrapper for plot_height in viz/plotting.py</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.post_run" title="GaPFlow.Problem.post_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">post_run</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.post_run" title="GaPFlow.Problem.post_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">post_run</span></code></a>()</p></td>
 <td><p>Finalize run: write history, print timing and GP timing info.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.post_update" title="GaPFlow.Problem.post_update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">post_update</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.post_update" title="GaPFlow.Problem.post_update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">post_update</span></code></a>()</p></td>
 <td><p>Operations executed after each timestep: ghost cell comms, residual update, time advance, and adaptive dt update if enabled.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.pre_run" title="GaPFlow.Problem.pre_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pre_run</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.pre_run" title="GaPFlow.Problem.pre_run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pre_run</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.receive_signal" title="GaPFlow.Problem.receive_signal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">receive_signal</span></code></a>(signum, frame)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.receive_signal" title="GaPFlow.Problem.receive_signal"><code class="xref py py-obj docutils literal notranslate"><span class="pre">receive_signal</span></code></a>(signum, frame)</p></td>
 <td><p>Signal handler: set the <cite>_stop</cite> flag on termination signals.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.run" title="GaPFlow.Problem.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.run" title="GaPFlow.Problem.run"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run</span></code></a>([keep_open])</p></td>
 <td><p>Run the time-stepping loop until convergence, maximum iterations, or until a termination signal is received.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.update" title="GaPFlow.Problem.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.update" title="GaPFlow.Problem.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
 <td><p>Single update iteration performing predictor-corrector for each sweep direction and updating constitutive models (pressure, wall/bulk stress).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.write" title="GaPFlow.Problem.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>([scalars, fields, params])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.write" title="GaPFlow.Problem.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>([scalars, fields, params])</p></td>
 <td><p>Write scalars, fields and hyperparameters to disk as configured.</p></td>
 </tr>
 </tbody>
@@ -486,6 +489,17 @@ Sets the _stop flag to abort the simulation run.</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="GaPFlow.Problem.plot">
+<span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.plot" title="Link to this definition">¶</a></dt>
+<dd><p>Plot a snaphsot of the solution and the current stress state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em><em>, </em><em>optional</em>) – An axis to plot into, if None or wrong shape a new axis is created</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.Problem.plot_topo">
 <span class="sig-name descname"><span class="pre">plot_topo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show_defo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_pressure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.plot_topo" title="Link to this definition">¶</a></dt>
 <dd><p>Wrapper for plot_height in viz/plotting.py</p>
@@ -546,9 +560,15 @@ update, time advance, and adaptive dt update if enabled.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.Problem.run">
-<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.run" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">run</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">keep_open</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.run" title="Link to this definition">¶</a></dt>
 <dd><p>Run the time-stepping loop until convergence, maximum iterations,
 or until a termination signal is received.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>keep_open</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, keeps files open after run for following runs to be
+written in the same files, by default False.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -643,6 +663,7 @@ direction and updating constitutive models (pressure, wall/bulk stress).</p>
 <li><a class="reference internal" href="#GaPFlow.Problem.from_yaml"><code class="docutils literal notranslate"><span class="pre">Problem.from_yaml()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.kinetic_energy"><code class="docutils literal notranslate"><span class="pre">Problem.kinetic_energy</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.mass"><code class="docutils literal notranslate"><span class="pre">Problem.mass</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.Problem.plot"><code class="docutils literal notranslate"><span class="pre">Problem.plot()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.plot_topo"><code class="docutils literal notranslate"><span class="pre">Problem.plot_topo()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.post_run"><code class="docutils literal notranslate"><span class="pre">Problem.post_run()</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.Problem.post_update"><code class="docutils literal notranslate"><span class="pre">Problem.post_update()</span></code></a></li>

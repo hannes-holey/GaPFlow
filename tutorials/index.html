@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Governing equations" href="01_macro_equations.html"><link rel="prev" title="GaPFlow" href="../index.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Governing equations" href="01_macro_equations.html"><link rel="prev" title="Quick start" href="../quickstart.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Tutorials - GaPFlow documentation</title>
@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Tutorials</a><input aria-label="Toggle navigation of Tutorials" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -261,14 +261,13 @@
         <article role="main" id="furo-main-content">
           <section id="tutorials">
 <h1>Tutorials<a class="headerlink" href="#tutorials" title="Link to this heading">¶</a></h1>
-<p>## Overview</p>
 <p>This section contains a series of tutorials that guide users through features and applications of the HANS framework.
 Each tutorial is designed to provide hands-on experience with different aspects, going from basic concepts to
 simulations that integrate all previously covered parts.</p>
 <p>The first tutorial introduces the mathematical foundation for the multiscale approach, splitting the problem into a micro- and
 macro-problem. Subsequent tutorials build upon this foundation, covering the constitutive equations for stress, equations of state,
-and viscosity. The pieces are brought together in tutorials 5 and 6, which focus on confined fluids and lubrication problems.
-Tutorial 7 introduces Gaussian Processes for surrogate modeling of the micro-problem with Molecular Dynamics,
+and viscosity. The pieces are brought together in tutorials 4 and 5, which focus on confined fluids and lubrication problems.
+Tutorial 6 introduces Gaussian Processes for surrogate modeling of the micro-problem,
 and the final tutorial introduces elastic deformation of the solid surfaces.</p>
 <div class="toctree-wrapper compound">
 <ul>
@@ -283,30 +282,36 @@ and the final tutorial introduces elastic deformation of the solid surfaces.</p>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l1"><a class="reference internal" href="03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l1"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l1"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l1"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html#theory">Theory</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="08_elastic_deformation.html#green-s-function-approach">Green’s Function Approach</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="08_elastic_deformation.html#periodic-solution">Periodic Solution</a></li>
-<li class="toctree-l4"><a class="reference internal" href="08_elastic_deformation.html#non-periodic-solution">Non-Periodic Solution</a></li>
-<li class="toctree-l4"><a class="reference internal" href="08_elastic_deformation.html#semi-periodic-solution">Semi-Periodic Solution</a></li>
-<li class="toctree-l4"><a class="reference internal" href="08_elastic_deformation.html#fourier-transform-trick">Fourier Transform Trick</a></li>
+<li class="toctree-l1"><a class="reference internal" href="03_constitutive_laws.html">Constitutive laws</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html#equation-of-state-for-isothermal-compressible-fluids">Equation of state for isothermal compressible fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html#viscosity-models-for-non-newtonian-fluids">Viscosity models for non-Newtonian fluids</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l1"><a class="reference internal" href="05_lubrication.html">Lubrication: wall-driven flows</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication.html#yaml-input">YAML Input</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="07_elastic_deformation.html">Elastic Deformation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html#theory">Theory</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="07_elastic_deformation.html#green-s-function-approach">Green’s Function Approach</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="07_elastic_deformation.html#periodic-solution">Periodic Solution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="07_elastic_deformation.html#non-periodic-solution">Non-Periodic Solution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="07_elastic_deformation.html#semi-periodic-solution">Semi-Periodic Solution</a></li>
+<li class="toctree-l4"><a class="reference internal" href="07_elastic_deformation.html#fourier-transform-trick">Fourier Transform Trick</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html#usage">Usage</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="08_elastic_deformation.html#yaml">YAML</a></li>
-<li class="toctree-l3"><a class="reference internal" href="08_elastic_deformation.html#implementation-notes">Implementation Notes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="07_elastic_deformation.html#yaml">YAML</a></li>
+<li class="toctree-l3"><a class="reference internal" href="07_elastic_deformation.html#implementation-notes">Implementation Notes</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html#examples">Examples</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="08_elastic_deformation.html#journal-slider-periodic">Journal Slider, Periodic</a></li>
-<li class="toctree-l3"><a class="reference internal" href="08_elastic_deformation.html#parabolic-slider-non-periodic">Parabolic Slider, Non-Periodic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="07_elastic_deformation.html#journal-slider-periodic">Journal Slider, Periodic</a></li>
+<li class="toctree-l3"><a class="reference internal" href="07_elastic_deformation.html#parabolic-slider-non-periodic">Parabolic Slider, Non-Periodic</a></li>
 </ul>
 </li>
 </ul>
@@ -329,14 +334,14 @@ and the final tutorial introduces elastic deformation of the solid surfaces.</p>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../index.html">
+          <a class="prev-page" href="../quickstart.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Home</div>
+                <div class="title">Quick start</div>
                 
               </div>
             </a>

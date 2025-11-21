@@ -50,6 +50,7 @@
       ~BulkStress.trusted
       ~BulkStress.is_gp_model
       ~BulkStress.active_dims
+      ~BulkStress.use_active_learning
       ~BulkStress.build_gp
       ~BulkStress.rtol
       ~BulkStress.atol

@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -358,10 +358,16 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.v_sound" title="GaPFlow.models.Pressure.v_sound"><code class="xref py py-obj docutils literal notranslate"><span class="pre">v_sound</span></code></a></p></td>
 <td><p>Effective sound speed computed from the GP-based eos (if available) or from the analytic eos_sound_velocity.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.is_gp_model" title="GaPFlow.models.Pressure.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.variance" title="GaPFlow.models.Pressure.variance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">variance</span></code></a></p></td>
+<td><p>Variance of the pressure field.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.is_gp_model" title="GaPFlow.models.Pressure.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.active_dims" title="GaPFlow.models.Pressure.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.active_dims" title="GaPFlow.models.Pressure.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.use_active_learning" title="GaPFlow.models.Pressure.use_active_learning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">use_active_learning</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.Pressure.build_gp" title="GaPFlow.models.Pressure.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
@@ -589,6 +595,11 @@
 compute analytic pressure via eos_pressure.</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.Pressure.use_active_learning">
+<span class="sig-name descname"><span class="pre">use_active_learning</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.Pressure.use_active_learning" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.Pressure.v_sound">
 <em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">v_sound</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.Pressure.v_sound" title="Link to this definition">¶</a></dt>
@@ -602,6 +613,12 @@ or from the analytic eos_sound_velocity.</p>
 <dd class="field-even"><p>jax.Array or scalar-like</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.Pressure.variance">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">variance</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.Pressure.variance" title="Link to this definition">¶</a></dt>
+<dd><p>Variance of the pressure field.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -705,7 +722,9 @@ or from the analytic eos_sound_velocity.</p>
 <li><a class="reference internal" href="#GaPFlow.models.Pressure.topography"><code class="docutils literal notranslate"><span class="pre">Pressure.topography</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.Pressure.trusted"><code class="docutils literal notranslate"><span class="pre">Pressure.trusted</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.Pressure.update"><code class="docutils literal notranslate"><span class="pre">Pressure.update()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.Pressure.use_active_learning"><code class="docutils literal notranslate"><span class="pre">Pressure.use_active_learning</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.Pressure.v_sound"><code class="docutils literal notranslate"><span class="pre">Pressure.v_sound</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.Pressure.variance"><code class="docutils literal notranslate"><span class="pre">Pressure.variance</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.Pressure.write"><code class="docutils literal notranslate"><span class="pre">Pressure.write()</span></code></a></li>
 </ul>
 </li>

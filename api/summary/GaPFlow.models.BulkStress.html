@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
@@ -367,31 +367,34 @@
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.active_dims" title="GaPFlow.models.BulkStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.build_gp" title="GaPFlow.models.BulkStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.use_active_learning" title="GaPFlow.models.BulkStress.use_active_learning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">use_active_learning</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.rtol" title="GaPFlow.models.BulkStress.rtol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rtol</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.build_gp" title="GaPFlow.models.BulkStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.atol" title="GaPFlow.models.BulkStress.atol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">atol</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.rtol" title="GaPFlow.models.BulkStress.rtol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rtol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.max_steps" title="GaPFlow.models.BulkStress.max_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_steps</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.atol" title="GaPFlow.models.BulkStress.atol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">atol</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.pause_steps" title="GaPFlow.models.BulkStress.pause_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pause_steps</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.max_steps" title="GaPFlow.models.BulkStress.max_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">max_steps</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.params_init" title="GaPFlow.models.BulkStress.params_init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params_init</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.pause_steps" title="GaPFlow.models.BulkStress.pause_steps"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pause_steps</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.noise" title="GaPFlow.models.BulkStress.noise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">noise</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.params_init" title="GaPFlow.models.BulkStress.params_init"><code class="xref py py-obj docutils literal notranslate"><span class="pre">params_init</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.prop" title="GaPFlow.models.BulkStress.prop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prop</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.noise" title="GaPFlow.models.BulkStress.noise"><code class="xref py py-obj docutils literal notranslate"><span class="pre">noise</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.geo" title="GaPFlow.models.BulkStress.geo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geo</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.prop" title="GaPFlow.models.BulkStress.prop"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prop</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.geo" title="GaPFlow.models.BulkStress.geo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">geo</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
@@ -604,6 +607,11 @@
 <dd><p>Compute and store bulk viscous stress using viscous model.</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="GaPFlow.models.BulkStress.use_active_learning">
+<span class="sig-name descname"><span class="pre">use_active_learning</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.use_active_learning" title="Link to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.write">
 <span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.write" title="Link to this definition">¶</a></dt>
@@ -707,6 +715,7 @@
 <li><a class="reference internal" href="#GaPFlow.models.BulkStress.topography"><code class="docutils literal notranslate"><span class="pre">BulkStress.topography</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.BulkStress.trusted"><code class="docutils literal notranslate"><span class="pre">BulkStress.trusted</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.BulkStress.update"><code class="docutils literal notranslate"><span class="pre">BulkStress.update()</span></code></a></li>
+<li><a class="reference internal" href="#GaPFlow.models.BulkStress.use_active_learning"><code class="docutils literal notranslate"><span class="pre">BulkStress.use_active_learning</span></code></a></li>
 <li><a class="reference internal" href="#GaPFlow.models.BulkStress.write"><code class="docutils literal notranslate"><span class="pre">BulkStress.write()</span></code></a></li>
 </ul>
 </li>

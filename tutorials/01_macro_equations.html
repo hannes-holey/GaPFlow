@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -262,7 +262,7 @@
           <section class="tex2jax_ignore mathjax_ignore" id="governing-equations">
 <h1>Governing equations<a class="headerlink" href="#governing-equations" title="Link to this heading">¶</a></h1>
 <p>For a detailed derivation and description of the following overview, see
-<a class="reference external" href="https://doi.org/10.1007/s11249-022-01576-5">Holey, H. et al., Tribology Letters 70 (2022)</a></p>
+<a class="reference external" href="https://doi.org/10.1007/s11249-022-01576-5">Holey, H. et al., Tribology Letters 70 (2022)</a>.</p>
 <section id="splitting-approach">
 <h2>Splitting Approach<a class="headerlink" href="#splitting-approach" title="Link to this heading">¶</a></h2>
 <p>The local mass and momentum balances are given by the partial differential equation:</p>
@@ -372,7 +372,7 @@
 \]</div>
 </div>
 <p>These are only source terms.</p>
-<p><a id="macro-equation"></a></p>
+<p><a id="eq-macro-equation"></a></p>
 <hr class="docutils" />
 <p>Overall we obtain the following equation with all the source terms occuring in the previous equations collected in <span class="math notranslate nohighlight">\(\mathbf{s}\)</span>. Note that we have <strong>reduced the problem from three to two dimensions</strong>.</p>
 <div class="math-wrapper docutils container">
@@ -466,7 +466,7 @@ determines the stability of the numerical method. The CFL number is defined as</
 \frac{\partial \delta \mathbf{q}}{\partial z}
 \]</div>
 </div>
-<p>Comparing this to the resulting <a class="reference internal" href="#macro-equation"><span class="xref myst">equation of the macro problem</span></a>, we see that</p>
+<p>Comparing this to the resulting <a class="reference internal" href="#eq-macro-equation"><span class="xref myst">equation of the macro problem</span></a>, we see that</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[
@@ -474,7 +474,7 @@ determines the stability of the numerical method. The CFL number is defined as</
 \frac{\partial \delta \mathbf{q}}{\partial z} = \mathbf{s}
 \]</div>
 </div>
-<p>meaning that this expression is a constant source term at a given <span class="math notranslate nohighlight">\((x,y,t)\)</span>. We can evaluate and simplify the above equation to:</p>
+<p>meaning that this expression has to be a constant source term at a given <span class="math notranslate nohighlight">\((x,y,t)\)</span>. We can evaluate and simplify the above equation to:</p>
 <div class="math-wrapper docutils container">
 <div class="math notranslate nohighlight">
 \[\begin{split}

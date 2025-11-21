@@ -14,7 +14,7 @@
    "metadata": {},
    "source": [
     "For a detailed derivation and description of the following overview, see\n",
-    "[Holey, H. et al., Tribology Letters 70 (2022)](<https://doi.org/10.1007/s11249-022-01576-5>)"
+    "[Holey, H. et al., Tribology Letters 70 (2022)](<https://doi.org/10.1007/s11249-022-01576-5>)."
    ]
   },
   {
@@ -194,7 +194,7 @@
    "id": "13",
    "metadata": {},
    "source": [
-    "<a id=\"macro-equation\"></a>\n",
+    "<a id=\"eq-macro-equation\"></a>\n",
     "\n",
     "---\n",
     "\n",
@@ -324,7 +324,7 @@
    "id": "20",
    "metadata": {},
    "source": [
-    "Comparing this to the resulting [equation of the macro problem](#macro-equation), we see that\n",
+    "Comparing this to the resulting [equation of the macro problem](#eq-macro-equation), we see that\n",
     "\n",
     "$$\n",
     "\\frac{\\partial \\mathbf{f}_z}{\\partial \\delta \\mathbf{q}}\n",
@@ -337,7 +337,7 @@
    "id": "21",
    "metadata": {},
    "source": [
-    "meaning that this expression is a constant source term at a given $(x,y,t)$. We can evaluate and simplify the above equation to:\n",
+    "meaning that this expression has to be a constant source term at a given $(x,y,t)$. We can evaluate and simplify the above equation to:\n",
     "\n",
     "$$\n",
     "\\frac{\\partial}{\\partial z}\n",

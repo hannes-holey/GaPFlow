@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Equation of state for isothermal compressible fluids" href="03_eos.html"><link rel="prev" title="Governing equations" href="01_macro_equations.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="next" title="Constitutive laws" href="03_constitutive_laws.html"><link rel="prev" title="Governing equations" href="01_macro_equations.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>Viscous stress tensor calculation with wall slip - GaPFlow documentation</title>
@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -268,8 +268,8 @@ Here, we seek an expression in terms of the gap-averaged densities of conserved
 variables <span class="math notranslate nohighlight">\(\rho(x, y)\)</span>, <span class="math notranslate nohighlight">\(j_x(x, y)\)</span>, and <span class="math notranslate nohighlight">\(j_y(x, y)\)</span>.
 We use <a class="reference external" href="https://sympy.org">Sympy</a> to derive the expressions for the stress tensor components.</p>
 <p>We start with a common ansatz for the velocity profiles</p>
-<p><span class="math notranslate nohighlight">\(u(z) = a z (h - z) + \frac{U_\rm{top} - U_\rm{bot}}{h} z + U_\rm{bot}\)</span>,</p>
-<p><span class="math notranslate nohighlight">\(v(z) = b z (h - z) + \frac{V_\rm{top} - V_\rm{bot}}{h} z + V_\rm{bot}\)</span>,</p>
+<p><span class="math notranslate nohighlight">\(u(z) = a z (h - z) + \frac{U_\mathrm{top} - U_\mathrm{bot}}{h} z + U_\mathrm{bot}\)</span>,</p>
+<p><span class="math notranslate nohighlight">\(v(z) = b z (h - z) + \frac{V_\mathrm{top} - V_\mathrm{bot}}{h} z + V_\mathrm{bot}\)</span>,</p>
 <p><span class="math notranslate nohighlight">\(w(z) = cz^2(h - z)^2\)</span>,</p>
 <p>for <span class="math notranslate nohighlight">\(z \in [0, h]\)</span>.</p>
 <div class="cell docutils container">
@@ -279,7 +279,7 @@ We use <a class="reference external" href="https://sympy.org">Sympy</a> to deriv
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">sympy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">GaPFlow.viz</span>
+<span class="c1"># import GaPFlow.viz</span>
 
 <span class="c1"># Define Cartesian coordinates</span>
 <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">symbols</span><span class="p">(</span><span class="s2">&quot;x y z&quot;</span><span class="p">)</span>
@@ -295,21 +295,16 @@ We use <a class="reference external" href="https://sympy.org">Sympy</a> to deriv
 </pre></div>
 </div>
 </div>
-<div class="cell_output docutils container">
-<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/usr/local/lib/python3.12/dist-packages/GaPFlow/md/runner.py:42: UserWarning: Failed to import lammps. Only Mock MD object available.
-  warnings.warn(&#39;Failed to import lammps. Only Mock MD object available.&#39;)
-</pre></div>
 </div>
-</div>
-</div>
-<p><span class="math notranslate nohighlight">\(U_\rm{bot}\)</span>, <span class="math notranslate nohighlight">\(U_\rm{top}\)</span>, <span class="math notranslate nohighlight">\(V_\rm{bot}\)</span>, <span class="math notranslate nohighlight">\(V_\rm{top}\)</span> are the velocity of the outermost fluid
+<p><span class="math notranslate nohighlight">\(U_\mathrm{bot}\)</span>, <span class="math notranslate nohighlight">\(U_\mathrm{top}\)</span>, <span class="math notranslate nohighlight">\(V_\mathrm{bot}\)</span>, <span class="math notranslate nohighlight">\(V_\mathrm{top}\)</span> are the velocity of the outermost fluid
 layers in contact with the the bottom and top wall, and in <span class="math notranslate nohighlight">\(x\)</span> and <span class="math notranslate nohighlight">\(y\)</span> direction, respectively.
-In the case of the no slip boundary condition, these velocities are identical
-with those of the wall. For the no slip boundary conditions, we have to account for the slip length <span class="math notranslate nohighlight">\(L_\rm{slip}\)</span></p>
-<p><span class="math notranslate nohighlight">\(U_\rm{bot} = U_\rm{bot,wall} + L_\rm{slip, bot}\left(\frac{\partial u}{\partial z}\right)_{z=0}\)</span>,</p>
-<p><span class="math notranslate nohighlight">\(U_\rm{top} = U_\rm{top,wall} - L_\rm{slip, top}\left(\frac{\partial u}{\partial z}\right)_{z=h}\)</span>,</p>
-<p><span class="math notranslate nohighlight">\(V_\rm{bot} = V_\rm{bot,wall} + L_\rm{slip, top}\left(\frac{\partial v}{\partial z}\right)_{z=0}\)</span>,</p>
-<p><span class="math notranslate nohighlight">\(V_\rm{top} = V_\rm{top,wall} - L_\rm{slip, top}\left(\frac{\partial v}{\partial z}\right)_{z=h}\)</span>.</p>
+In the case of the <em>no slip</em> boundary condition, these velocities are identical
+with those of the wall.</p>
+<p>If <em>slip</em> is considered, we have to account for the slip length <span class="math notranslate nohighlight">\(L_\mathrm{slip}\)</span>:</p>
+<p><span class="math notranslate nohighlight">\(U_\mathrm{bot} = U_\mathrm{bot,wall} + L_\mathrm{slip, bot}\left(\frac{\partial u}{\partial z}\right)_{z=0}\)</span>,</p>
+<p><span class="math notranslate nohighlight">\(U_\mathrm{top} = U_\mathrm{top,wall} - L_\mathrm{slip, top}\left(\frac{\partial u}{\partial z}\right)_{z=h}\)</span>,</p>
+<p><span class="math notranslate nohighlight">\(V_\mathrm{bot} = V_\mathrm{bot,wall} + L_\mathrm{slip, top}\left(\frac{\partial v}{\partial z}\right)_{z=0}\)</span>,</p>
+<p><span class="math notranslate nohighlight">\(V_\mathrm{top} = V_\mathrm{top,wall} - L_\mathrm{slip, top}\left(\frac{\partial v}{\partial z}\right)_{z=h}\)</span>.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define symbols</span>
@@ -385,7 +380,7 @@ gap-averaged fluxes, e.g.</p>
 </div>
 </div>
 </div>
-<p>It is important to realize that the solutions depend on the lateral coordinates.
+<p>It is important to realize that the solutions of <span class="math notranslate nohighlight">\(\tau_{xx}, \tau_{xy}, \tau_{yx}, \tau_{yy}\)</span> depend on the lateral coordinates (they depend on how velocities <span class="math notranslate nohighlight">\(u, v\)</span> change in <span class="math notranslate nohighlight">\(x, y\)</span> directions).
 Thus, before we differentiate, we need to substitute the solutions
 into the expressions for the velocity profiles using <code class="docutils literal notranslate"><span class="pre">subs</span></code>.</p>
 <div class="cell docutils container">
@@ -556,12 +551,8 @@ into the expressions for the velocity profiles using <code class="docutils liter
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tau[0] =  (2*Ls*U*h[1]*q[0]**2*v1 + 2*Ls*V*h[2]*q[0]**2*v2 - 4*Ls*dqx[0]*h[0]*q[1]*v1 + 4*Ls*dqx[1]*h[0]*q[0]*v1 - 4*Ls*dqy[0]*h[0]*q[2]*v2 + 4*Ls*dqy[2]*h[0]*q[0]*v2 - 2*Ls*h[1]*q[0]*q[1]*v1 - 2*Ls*h[2]*q[0]*q[2]*v2 - dqx[0]*h[0]**2*q[1]*v1 + dqx[1]*h[0]**2*q[0]*v1 - dqy[0]*h[0]**2*q[2]*v2 + dqy[2]*h[0]**2*q[0]*v2 + h[0]*h[1]*q[0]*q[1]*v1 + h[0]*h[2]*q[0]*q[2]*v2)/(h[0]*q[0]**2*(4*Ls + h[0]))
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tau[1] =  (2*Ls*U*h[1]*q[0]**2*v2 + 2*Ls*V*h[2]*q[0]**2*v1 - 4*Ls*dqx[0]*h[0]*q[1]*v2 + 4*Ls*dqx[1]*h[0]*q[0]*v2 - 4*Ls*dqy[0]*h[0]*q[2]*v1 + 4*Ls*dqy[2]*h[0]*q[0]*v1 - 2*Ls*h[1]*q[0]*q[1]*v2 - 2*Ls*h[2]*q[0]*q[2]*v1 - dqx[0]*h[0]**2*q[1]*v2 + dqx[1]*h[0]**2*q[0]*v2 - dqy[0]*h[0]**2*q[2]*v1 + dqy[2]*h[0]**2*q[0]*v1 + h[0]*h[1]*q[0]*q[1]*v2 + h[0]*h[2]*q[0]*q[2]*v1)/(h[0]*q[0]**2*(4*Ls + h[0]))
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>tau[2] =  eta*(2*Ls*U*h[2]*q[0]**2 + 2*Ls*V*h[1]*q[0]**2 - 4*Ls*dqx[0]*h[0]*q[2] + 4*Ls*dqx[2]*h[0]*q[0] - 4*Ls*dqy[0]*h[0]*q[1] + 4*Ls*dqy[1]*h[0]*q[0] - 2*Ls*h[1]*q[0]*q[2] - 2*Ls*h[2]*q[0]*q[1] - dqx[0]*h[0]**2*q[2] + dqx[2]*h[0]**2*q[0] - dqy[0]*h[0]**2*q[1] + dqy[1]*h[0]**2*q[0] + h[0]*h[1]*q[0]*q[2] + h[0]*h[2]*q[0]*q[1])/(h[0]*q[0]**2*(4*Ls + h[0]))
+tau[1] =  (2*Ls*U*h[1]*q[0]**2*v2 + 2*Ls*V*h[2]*q[0]**2*v1 - 4*Ls*dqx[0]*h[0]*q[1]*v2 + 4*Ls*dqx[1]*h[0]*q[0]*v2 - 4*Ls*dqy[0]*h[0]*q[2]*v1 + 4*Ls*dqy[2]*h[0]*q[0]*v1 - 2*Ls*h[1]*q[0]*q[1]*v2 - 2*Ls*h[2]*q[0]*q[2]*v1 - dqx[0]*h[0]**2*q[1]*v2 + dqx[1]*h[0]**2*q[0]*v2 - dqy[0]*h[0]**2*q[2]*v1 + dqy[2]*h[0]**2*q[0]*v1 + h[0]*h[1]*q[0]*q[1]*v2 + h[0]*h[2]*q[0]*q[2]*v1)/(h[0]*q[0]**2*(4*Ls + h[0]))
+tau[2] =  eta*(2*Ls*U*h[2]*q[0]**2 + 2*Ls*V*h[1]*q[0]**2 - 4*Ls*dqx[0]*h[0]*q[2] + 4*Ls*dqx[2]*h[0]*q[0] - 4*Ls*dqy[0]*h[0]*q[1] + 4*Ls*dqy[1]*h[0]*q[0] - 2*Ls*h[1]*q[0]*q[2] - 2*Ls*h[2]*q[0]*q[1] - dqx[0]*h[0]**2*q[2] + dqx[2]*h[0]**2*q[0] - dqy[0]*h[0]**2*q[1] + dqy[1]*h[0]**2*q[0] + h[0]*h[1]*q[0]*q[2] + h[0]*h[2]*q[0]*q[1])/(h[0]*q[0]**2*(4*Ls + h[0]))
 </pre></div>
 </div>
 </div>
@@ -571,6 +562,12 @@ into the expressions for the velocity profiles using <code class="docutils liter
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.profiles</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_velocity_profiles</span><span class="p">,</span> <span class="n">get_stress_profiles</span> 
 <span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.viscous</span><span class="w"> </span><span class="kn">import</span> <span class="n">stress_top</span><span class="p">,</span> <span class="n">stress_bottom</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stderr highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/usr/local/lib/python3.12/dist-packages/GaPFlow/md/runner.py:42: UserWarning: Failed to import lammps. Only Mock MD object available.
+  warnings.warn(&#39;Failed to import lammps. Only Mock MD object available.&#39;)
 </pre></div>
 </div>
 </div>
@@ -672,12 +669,12 @@ into the expressions for the velocity profiles using <code class="docutils liter
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="03_eos.html">
+          <a class="next-page" href="03_constitutive_laws.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Equation of state for isothermal compressible fluids</div>
+                <div class="title">Constitutive laws</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>

@@ -50,9 +50,11 @@
       ~WallStress.topography
       ~WallStress.trusted
       ~WallStress.upper
+      ~WallStress.variance
       ~WallStress.name
       ~WallStress.is_gp_model
       ~WallStress.active_dims
+      ~WallStress.use_active_learning
       ~WallStress.build_gp
       ~WallStress.rtol
       ~WallStress.atol

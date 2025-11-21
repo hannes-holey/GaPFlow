@@ -47,8 +47,10 @@
       ~Pressure.topography
       ~Pressure.trusted
       ~Pressure.v_sound
+      ~Pressure.variance
       ~Pressure.is_gp_model
       ~Pressure.active_dims
+      ~Pressure.use_active_learning
       ~Pressure.build_gp
       ~Pressure.rtol
       ~Pressure.atol

@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Tutorials" href="tutorials/index.html">
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Quick start" href="quickstart.html">
 
     <!-- Generated with Sphinx 8.2.3 and Furo 2025.09.25 -->
         <title>GaPFlow documentation</title>
@@ -194,15 +194,15 @@
   <p class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><input aria-label="Toggle navigation of Tutorials" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/01_macro_equations.html">Governing equations</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/03_eos.html">Equation of state for isothermal compressible fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/04_viscosity.html">Viscosity models for non-Newtonian fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/05_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/06_lubrication.html">Confined fluids: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/07_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/08_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><input aria-label="Toggle navigation of API Reference" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><span class="icon"><svg><use href="#svg-arrow-right"></use></svg></span></label><ul>
@@ -264,120 +264,22 @@
 <p><em>Gap-averaged flow simulations with Gaussian Process regression.</em></p>
 <p>This code implements the solution of time-dependent lubrication problems
 as described in:</p>
-<p><a class="reference external" href="https://doi.org/10.1007/s11249-022-01576-5">Holey, H. et al., Tribology Letters 70 (2022)</a></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://doi.org/10.1007/s11249-022-01576-5">Holey, H. et al., Tribology Letters 70 (2022)</a></p></li>
+</ul>
 <p>The extension to atomistic-continuum multiscale simulations with
 Gaussian process (GP) surrogate models has been described in:</p>
-<p><a class="reference external" href="https://doi.org/10.1126/sciadv.adx4546">Holey, H. et al., Science Advances 11, eadx4546 (2025)</a></p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://doi.org/10.1126/sciadv.adx4546">Holey, H. et al., Science Advances 11, eadx4546 (2025)</a></p></li>
+</ul>
 <p>The code uses <a class="reference external" href="https://muspectre.github.io/muGrid/">µGrid</a> for
 handling macroscale fields and
 <a class="reference external" href="https://tinygp.readthedocs.io/en/stable/index.html">tinygp</a> as GP
 library. Molecular dynamics (MD) simulations run with
 <a class="reference external" href="https://docs.lammps.org">LAMMPS</a> through its <a class="reference external" href="https://docs.lammps.org/Python_head.html">Python
-interface</a>.</p>
-<section id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
-<p>Install
-<a class="reference external" href="https://muspectre.github.io/muGrid/GettingStarted.html">µGrid</a>’s
-Python bindings</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">v</span> <span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">reinstall</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">cache</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">binary</span> <span class="n">muGrid</span> <span class="n">muGrid</span>
-</pre></div>
-</div>
-<p>and make sure MPI and PnetCDF get detected. For manual installations of
-PnetCDF (recommended), you may need to tell <code class="docutils literal notranslate"><span class="pre">pkg_config</span></code> where to find
-it, e.g.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
-</pre></div>
-</div>
-<p>for instalations under <code class="docutils literal notranslate"><span class="pre">$HOME/.local/</span></code>.</p>
-<p>After that run</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span><span class="p">[</span><span class="n">test</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>for an editable installation with optional dependecies for testing
-(using <code class="docutils literal notranslate"><span class="pre">pytest</span></code>).</p>
-</section>
-<section id="minimal-example">
-<h2>Minimal example<a class="headerlink" href="#minimal-example" title="Link to this heading">¶</a></h2>
-<p>Simulation inputs are commonly provided in YAML files. A typical input
-file might look like this:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># examples/journal.yaml</span>
-<span class="nt">options</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/journal</span>
-<span class="w">    </span><span class="nt">write_freq</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10</span>
-<span class="nt">grid</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">dx</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.e-5</span>
-<span class="w">    </span><span class="nt">dy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.</span>
-<span class="w">    </span><span class="nt">Nx</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span>
-<span class="w">    </span><span class="nt">Ny</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="w">    </span><span class="nt">xE</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;D&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;N&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;N&#39;</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">xW</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;D&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;N&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;N&#39;</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">yS</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">yN</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="nt">xE_D</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">877.7007</span>
-<span class="w">    </span><span class="nt">xW_D</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">877.7007</span>
-<span class="nt">geometry</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">journal</span>
-<span class="w">    </span><span class="nt">CR</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.e-2</span>
-<span class="w">    </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span>
-<span class="w">    </span><span class="nt">U</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span>
-<span class="w">    </span><span class="nt">V</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.</span>
-<span class="nt">numerics</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">tol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-9</span>
-<span class="w">    </span><span class="nt">dt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-10</span>
-<span class="w">    </span><span class="nt">max_it</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">200</span>
-<span class="nt">properties</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">shear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0794</span>
-<span class="w">    </span><span class="nt">bulk</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.</span>
-<span class="w">    </span><span class="nt">EOS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DH</span>
-<span class="w">    </span><span class="nt">P0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">101325</span>
-<span class="w">    </span><span class="nt">rho0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">877.7007</span>
-<span class="w">    </span><span class="nt">T0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">323.15</span>
-<span class="w">    </span><span class="nt">C1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3.5e10</span>
-<span class="w">    </span><span class="nt">C2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.23</span>
-</pre></div>
-</div>
-<p>Note that this example uses fixed-form constitutive laws without GP
-surrogate models or MD data. More example input files can be found in
-the examples directory.</p>
-<p>The input files can be used to start a simulation from the command line</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>GaPFlow<span class="w"> </span>-i<span class="w"> </span>my_input_file.yaml
-</pre></div>
-</div>
-<p>or from a Python script</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.problem</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
-
-<span class="n">myProblem</span> <span class="o">=</span> <span class="n">Problem</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="s1">&#39;my_input_file.yaml&#39;</span><span class="p">)</span>
-<span class="n">myProblem</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
-</pre></div>
-</div>
-<p>Simulation output is stored under the location specified in the input
-file. After successful completion, you should find the following files.
-- <code class="docutils literal notranslate"><span class="pre">config.yml</span></code>: A sanitized version of your simulation input. -
-<code class="docutils literal notranslate"><span class="pre">gap.nc</span></code>: NetCDF file containing the gap height and gradients. -
-<code class="docutils literal notranslate"><span class="pre">sol.nc</span></code>: NetCDF file containing the solution and stress fields. -
-<code class="docutils literal notranslate"><span class="pre">history.csv</span></code>: Contains the time series of scalar quantities (step,
-Ekin, residual, …) - <code class="docutils literal notranslate"><span class="pre">gp_[xz,yz,zz].csv</span></code> (Optional): Contains the time
-series of GP hyperparameters, database size, etc. - <code class="docutils literal notranslate"><span class="pre">Xtrain.npy</span></code>
-(Optional): Training data inputs - <code class="docutils literal notranslate"><span class="pre">Ytrain.npy</span></code> (Optional): Training
-data observations - <code class="docutils literal notranslate"><span class="pre">Ytrain_err.npy</span></code> (Optional): Training data
-observation error</p>
-<p>The code comes with a few handy command line tools for visualizations
-like this one</p>
-<figure class="align-default">
-<img alt="Journal bearing simulation" src="_images/journal.gif" />
-</figure>
-<p>which shows the transient solution of a 1D journal bearing with active
-learning of the constitutive behavior.</p>
-</section>
-<section id="documentation">
-<h2>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h2>
-<p>A Sphinx-generated documentation can be built locally with</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">doc</span>
-<span class="n">sphinx</span><span class="o">-</span><span class="n">apidoc</span> <span class="o">-</span><span class="n">o</span> <span class="o">.</span> <span class="o">../</span><span class="n">GaPFlow</span>
-<span class="n">make</span> <span class="n">html</span>
-</pre></div>
-</div>
-</section>
+interface</a>. Elastic
+deformation is computed using
+<a class="reference external" href="https://contactengineering.github.io/ContactMechanics/">ContactMechanics</a>.</p>
 <section id="funding">
 <h2>Funding<a class="headerlink" href="#funding" title="Link to this heading">¶</a></h2>
 <p>This work received funding from the German Research Foundation (DFG)
@@ -401,12 +303,12 @@ a Feodor Lynen Fellowship.</p>
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="tutorials/index.html">
+          <a class="next-page" href="quickstart.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">Tutorials</div>
+                <div class="title">Quick start</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
@@ -442,9 +344,6 @@ a Feodor Lynen Fellowship.</p>
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">GaPFlow</a><ul>
-<li><a class="reference internal" href="#installation">Installation</a></li>
-<li><a class="reference internal" href="#minimal-example">Minimal example</a></li>
-<li><a class="reference internal" href="#documentation">Documentation</a></li>
 <li><a class="reference internal" href="#funding">Funding</a></li>
 </ul>
 </li>
