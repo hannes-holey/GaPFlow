@@ -40,6 +40,7 @@ except ImportError:
     # Py<=3.10
     from typing_extensions import Self
 
+from . import __version__
 from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
@@ -135,6 +136,7 @@ class Problem:
 
             # Reconstruct dict
             full_dict = {}
+            full_dict.update(version=__version__)
 
             for k, v in zip(['options', 'grid', 'numerics', 'geo', 'prop'],
                             [options, grid, numerics, geo, prop]):
