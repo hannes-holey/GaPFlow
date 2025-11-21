@@ -42,7 +42,8 @@ html_theme = 'furo'  # 'sphinx_rtd_theme'
 # (due to code error, timeout, etc.)
 nb_execution_raise_on_error = False
 nb_execution_show_tb = True
-nb_execution_timeout = 180
+nb_execution_timeout = 300
+nb_merge_streams = True
 
 myst_enable_extensions = [
     "dollarmath",
