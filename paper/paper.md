@@ -16,7 +16,7 @@ affiliations:
     index: 1
   - name: Center for Complexity and Biosystems, Department of Physics, University of Milan, Via Celoria 16, 20133 Milan, Italy
     index: 2
-date: 17 October 2025
+date: 21 November 2025
 bibliography: paper.bib
 ---
 
@@ -95,8 +95,7 @@ For simulations in this *Elastohydrodynamic Regime*, `GaPFlow` uses the [Contact
 Under the assumption that the elastic deformation of the walls responds on a timescale much shorter than that of the fluid-dynamic system, the elastic response can be treated as quasi-static and represented by its steady-state solution. 
 Further assuming linear-elastic and isotropic walls, the tool utilizes a *Green's function* formulation that reduces the computational effort to a convolution operation, which can be efficiently solved in Fourier space [@stanley1997_FFT].
 The elastic deformation is determined based on the fluid pressure field and automatically adapts to the boundary conditions specified in the fluid-flow problem.
-Using the fact that, for small deformations, contact between two elastic bodies can be represented by a single elastic body with an effective modulus, the deformation is applied only to one wall.
-Fluid flow and wall deformation are linked through a *weak coupling* scheme in which both solutions are iteratively updated, with relaxation of the wall deformation applied to prevent oscillations.
+Fluid flow and wall deformation are linked through a *weak coupling* scheme in which both solutions are iteratively updated,.
 
 # Acknowledgments
 
