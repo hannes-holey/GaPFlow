@@ -328,7 +328,7 @@ def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
     sol = q_nc[:, 0]
     press = p_nc
     lower = shear_nc[4, 0]
-    upper = shear_nc[4, 0]
+    upper = shear_nc[10, 0]
 
     if 'pressure_var' in data.variables.keys():
         var_press = np.asarray(data.variables['pressure_var'])[frame]
@@ -418,35 +418,28 @@ def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
 
     data = netCDF4.Dataset(filename)
 
-    q_nc = np.asarray(data.variables['solution'])
-    p_nc = np.asarray(data.variables['pressure'])
-    tau_xz_nc = np.asarray(data.variables['wall_stress_xz'])
-    tau_yz_nc = np.asarray(data.variables['wall_stress_yz'])
+    q_nc = np.asarray(data.variables['solution'])[frame]
+    p_nc = np.asarray(data.variables['pressure'])[frame]
+    shear_xz_nc = np.asarray(data.variables['wall_stress_xz'])[frame]
+    shear_yz_nc = np.asarray(data.variables['wall_stress_yz'])[frame]
 
-    nt, nc, _, nx, ny = q_nc.shape
+    sol = q_nc[:, 0]
+    press = p_nc
+    lower_xz = shear_xz_nc[4, 0]
+    upper_xz = shear_xz_nc[10, 0]
+    lower_yz = shear_yz_nc[3, 0]
+    upper_yz = shear_yz_nc[9, 0]
 
-    imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
-
-    ax[0, 0].imshow(q_nc[frame, 0, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[0, 1].imshow(q_nc[frame, 1, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[0, 2].imshow(q_nc[frame, 2, 0, 1:-1, 1:-1].T, **imshow_args)
-
-    ax[1, 0].imshow(p_nc[frame, 1:-1, 1:-1].T, **imshow_args)
-    ax[1, 1].imshow(tau_xz_nc[frame, 4, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[1, 2].imshow(tau_yz_nc[frame, 3, 0, 1:-1, 1:-1].T, **imshow_args)
-
-    ax[2, 0].imshow(p_nc[frame, 1:-1, 1:-1].T, **imshow_args)
-    ax[2, 1].imshow(tau_xz_nc[frame, 10, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[2, 2].imshow(tau_yz_nc[frame, 9, 0, 1:-1, 1:-1].T, **imshow_args)
-
-    titles = [r'$\rho$', r'$j_x$', r'$j_y$',
-              r'$p$', r'$\tau_{xz}^\text{bot}$', r'$\tau_{xz}^\text{top}$',
-              r'$p$', r'$\tau_{yz}^\text{bot}$', r'$\tau_{yz}^\text{top}$', ]
-
-    for (a, title) in zip(ax.flat, titles):
-        a.set_xlabel(r'$x/L_x$')
-        a.set_ylabel(r'$y/L_y$')
-        a.set_title(title)
+    _plot_sol_from_field_2d(sol,
+                            press,
+                            lower_xz,
+                            upper_xz,
+                            lower_yz,
+                            upper_yz,
+                            var_press=None,
+                            var_shear_xz=None,
+                            var_shear_yz=None,
+                            ax=ax)
 
 
 def _plot_sol_from_field_2d(q,
@@ -458,8 +451,35 @@ def _plot_sol_from_field_2d(q,
                             var_press=None,
                             var_shear_xz=None,
                             var_shear_yz=None,
-                            ax=None,):
-    raise NotImplementedError
+                            ax=None):
+
+    if ax is None:
+        fig, ax = plt.subplots(2, 3)
+
+    s = [slice(1, -1), slice(1, -1)]
+
+    imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
+
+    ax[0, 0].imshow(q[(0, *s,)].T, **imshow_args)
+    ax[0, 1].imshow(q[(1, *s,)].T, **imshow_args)
+    ax[0, 2].imshow(q[(2, *s,)].T, **imshow_args)
+
+    ax[1, 0].imshow(pressure[(*s,)].T, **imshow_args)
+    ax[1, 1].imshow(lower_xz[(*s,)].T, **imshow_args)
+    ax[1, 2].imshow(upper_xz[(*s,)].T, **imshow_args)
+
+    ax[2, 0].imshow(pressure[(*s,)].T, **imshow_args)
+    ax[2, 1].imshow(lower_yz[(*s,)].T, **imshow_args)
+    ax[2, 2].imshow(upper_yz[(*s,)].T, **imshow_args)
+
+    titles = [r'$\rho$', r'$j_x$', r'$j_y$',
+              r'$p$', r'$\tau_{xz}^\text{bot}$', r'$\tau_{xz}^\text{top}$',
+              r'$p$', r'$\tau_{yz}^\text{bot}$', r'$\tau_{yz}^\text{top}$', ]
+
+    for (a, title) in zip(ax.flat, titles):
+        a.set_xlabel(r'$x/L_x$')
+        a.set_ylabel(r'$y/L_y$')
+        a.set_title(title)
 
 
 def _plot_multiple_frames_1d(filename, every=1):

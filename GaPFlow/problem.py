@@ -725,8 +725,17 @@ class Problem:
     # Plotting and animations
     # ---------------------------
     def plot(self, ax=None) -> None:
+        """Plot a snaphsot of the solution and the current stress state.
+
+        Parameters
+        ----------
+        ax : matplotlib.pyplot.axis, optional
+            An axis to plot into, if None or wrong shape a new axis is created
+        """
 
         if self.grid['dim'] == 1:
+            if ax is not None and ax.shape != (2, 3):
+                ax = None
 
             _plot_sol_from_field_1d(self.q,
                                     self.pressure.pressure,
@@ -747,15 +756,19 @@ class Problem:
                                     ax=ax)
 
         elif self.grid['dim'] == 2:
+            if ax is not None and ax.shape != (3, 3):
+                ax = None
+
+            # TODO: plots for GPs
             _plot_sol_from_field_2d(self.q,
                                     self.pressure.pressure,
                                     self.wall_stress_xz.lower[4],
                                     self.wall_stress_xz.upper[4],
                                     self.wall_stress_yz.lower[3],
                                     self.wall_stress_yz.upper[3],
-                                    var_press=self.pressure.variance,
-                                    var_shear_xz=self.wall_stress_xz.variance,
-                                    var_shear_yz=self.wall_stress_xz.variance,
+                                    var_press=None,
+                                    var_shear_xz=None,
+                                    var_shear_yz=None,
                                     ax=ax)
 
     def plot_topo(self, show_defo=False, show_pressure=False) -> None:
