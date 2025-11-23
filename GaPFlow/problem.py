@@ -28,7 +28,6 @@ import signal
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
-from collections import deque
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
 from typing import Type
@@ -42,10 +41,10 @@ except ImportError:
 
 from . import __version__
 from .db import Database
+from .solver_explicit import ExplicitSolver
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from .models import WallStress, BulkStress, Pressure
-from .integrate import predictor_corrector, source
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
@@ -89,6 +88,9 @@ class Problem:
         self.numerics = numerics
         self.geo = geo
         self.prop = prop
+
+        # Initialize solver
+        self.solver = ExplicitSolver(self)
 
         # Initialize field collection
         nb_grid_pts = (self.grid['Nx'] + 2,
@@ -283,32 +285,10 @@ class Problem:
     # ---------------------------
 
     def pre_run(self) -> None:
-        self.pressure.init_database(self.grid['dim'])
-        self.wall_stress_xz.init_database(self.grid['dim'])
-        self.wall_stress_yz.init_database(self.grid['dim'])
-
-        self.pressure.init()
-        self.wall_stress_xz.init()
-        self.wall_stress_yz.init()
-
-        if not self.options['silent']:
-            self.pressure.write()
-            self.wall_stress_xz.write()
-            self.wall_stress_yz.write()
-
-        # Numerics
-        self.step = 0
-        self.simtime = 0.
-        self.residual = 1.
-        self.residual_buffer = deque([self.residual, ], 5)
-
-        if self.numerics["adaptive"]:
-            self.dt = self.numerics["CFL"] * self.dt_crit
-        else:
-            self.dt = self.numerics['dt']
-
-        self.tol = self.numerics['tol']
-        self.max_it = self.numerics['max_it']
+        """
+        Solver-dependent pre-run initialization.
+        """
+        self.solver.pre_run()
 
     def run(self,
             keep_open: bool = False) -> None:
@@ -344,7 +324,7 @@ class Problem:
         # Run
         self._tic = datetime.now()
         while not self.converged and self.step < self.max_it and not self._stop:
-            self.update()
+            self.solver.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
@@ -422,6 +402,10 @@ class Problem:
     def q(self) -> npt.NDArray[np.floating]:
         """Full density field"""
         return self.__field.p
+
+    @q.setter
+    def q(self, sol_field: npt.NDArray[np.floating]) -> None:
+        self.__field.p = sol_field
 
     @property
     def q_has_nan(self) -> bool:
@@ -573,55 +557,7 @@ class Problem:
         Single update iteration performing predictor-corrector for each sweep
         direction and updating constitutive models (pressure, wall/bulk stress).
         """
-        switch = (self.step % 2 == 0) * 2 - 1 if self.numerics["MC_order"] == 0 else self.numerics["MC_order"]
-        directions = [[-1, 1], [1, -1]][(switch + 1) // 2]
-
-        dx = self.grid["dx"]
-        dy = self.grid["dy"]
-        dt = self.dt
-
-        q0 = self.__field.p.copy()
-
-        one_step_before_output = (self.step + 1) % self.options['write_freq'] == 0
-
-        for i, d in enumerate(directions):
-            # update surrogates / constitutive models (predictor on first pass)
-            self.pressure.update(predictor=i == 0,
-                                 compute_var=one_step_before_output)
-            self.wall_stress_xz.update(predictor=i == 0,
-                                       compute_var=one_step_before_output)
-            self.wall_stress_yz.update(predictor=i == 0,
-                                       compute_var=one_step_before_output)
-            self.bulk_stress.update()
-
-            # fluxes and source terms
-            fX, fY = predictor_corrector(
-                self.__field.p,
-                self.pressure.pressure,
-                self.bulk_stress.stress,
-                d,
-            )
-
-            src = source(
-                self.__field.p,
-                self.topo.height_and_slopes,
-                self.bulk_stress.stress,
-                self.wall_stress_xz.lower + self.wall_stress_yz.lower,
-                self.wall_stress_xz.upper + self.wall_stress_yz.upper,
-            )
-
-            self.__field.p = self.__field.p - dt * (fX / dx + fY / dy - src)
-
-            self._communicate_ghost_buffers()
-
-        # second-order temporal averaging (Crank-Nicolson-like)
-        self.__field.p = (self.__field.p + q0) / 2.0
-
-        if self.q_is_valid:
-            self.topo.update()
-            self.post_update()
-        else:
-            self.finalize(q0)
+        self.solver.update()
 
     # ---------------------------
     # Ghost cell handling
