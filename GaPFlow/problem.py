@@ -73,6 +73,7 @@ class Problem:
                  numerics: dict,
                  prop: dict,
                  geo: dict,
+                 fem_solver: dict,
                  gp: dict | None = None,
                  database: Database | None = None,
                  extra_field: npt.NDArray | None = None
@@ -88,6 +89,7 @@ class Problem:
         self.numerics = numerics
         self.geo = geo
         self.prop = prop
+        self.fem_solver = fem_solver
 
         # Initialize solver
         self.solver = ExplicitSolver(self)
@@ -190,8 +192,9 @@ class Problem:
         numerics = input_dict['numerics']
         prop = input_dict['properties']
         geo = input_dict['geometry']
+        fem_solver = input_dict['fem_solver']
 
-        return options, grid, numerics, prop, geo
+        return options, grid, numerics, prop, geo, fem_solver
 
     @staticmethod
     def _get_optional_input(input_dict):
@@ -324,7 +327,7 @@ class Problem:
         # Run
         self._tic = datetime.now()
         while not self.converged and self.step < self.max_it and not self._stop:
-            self.solver.update()
+            self.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()

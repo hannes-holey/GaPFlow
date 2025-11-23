@@ -102,7 +102,8 @@ def read_yaml_input(file):
                             'properties': sanitize_properties,
                             'gp': sanitize_gp,
                             'db': sanitize_db,
-                            'md': sanitize_md}
+                            'md': sanitize_md,
+                            'fem_solver': sanitize_fem_solver}
 
     sanitized_dict = {}
 
@@ -375,6 +376,7 @@ def sanitize_numerics(d):
 
     out = {}
 
+    out['solver'] = str(d.get('solver', 'explicit'))
     out['tol'] = float(d.get('tol', 1e-6))
     out['max_it'] = int(d.get('max_it', 1000))
     out['dt'] = float(d.get('dt', 3e-10))
@@ -443,3 +445,20 @@ def sanitize_md(d):
     print_dict(d)
 
     return d
+
+
+def sanitize_fem_solver(d):
+
+    out = {}
+    out['type'] = str(d.get('type', 'newton_alpha'))
+    out['max_iter'] = int(d.get('max_iter', 100))
+    out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
+    out['alpha'] = float(d.get('alpha', 1.0))
+
+    out['equations'] = {}
+    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
+    out['equations']['term_list'] = d.get('equations', {}).get('term_list', [])
+
+    print_dict(out)
+
+    return out
