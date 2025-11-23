@@ -41,7 +41,6 @@ except ImportError:
 
 from . import __version__
 from .db import Database
-from .solver_explicit import ExplicitSolver
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from .models import WallStress, BulkStress, Pressure
@@ -92,7 +91,15 @@ class Problem:
         self.fem_solver = fem_solver
 
         # Initialize solver
-        self.solver = ExplicitSolver(self)
+        if self.numerics['solver'] == 'explicit':
+            from .solver_explicit import ExplicitSolver
+            self.solver = ExplicitSolver(self)
+        elif self.numerics['solver'] == 'fem':
+            if self.grid['Ny'] == 1:
+                from .solver_fem import FEMSolver1D
+                self.solver = FEMSolver1D(self)
+            else:
+                raise NotImplementedError("FEM solver only implemented for 1D problems in x.")
 
         # Initialize field collection
         nb_grid_pts = (self.grid['Nx'] + 2,

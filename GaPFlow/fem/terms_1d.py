@@ -1,3 +1,4 @@
+# flake8: noqa: E501
 #
 # Copyright 2025 Christoph Huber
 #

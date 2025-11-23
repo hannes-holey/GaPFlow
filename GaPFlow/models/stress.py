@@ -25,9 +25,9 @@
 import numpy as np
 import numpy.typing as npt
 import jax.numpy as jnp
-from jax import vmap, grad
+from jax import vmap, grad, jit
 from jax import Array
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, Callable
 
 from .gp import GaussianProcessSurrogate
 from .gp import multi_in_single_out, multi_in_multi_out
@@ -601,3 +601,40 @@ class Pressure(GaussianProcessSurrogate):
             self.__field_variance.p = var
         else:
             self.__field.p = eos_pressure(self.solution[0], self.prop)
+
+    def init_quad(self,
+                  fc,
+                  quad_list: list[int]) -> None:
+        """Initialize quadrature point fields"""
+        self.quad_list = quad_list
+        for nb_quad in quad_list:
+            fieldname = f'pressure_quad_{nb_quad}'
+            setattr(self, f'_pressure_quad_{nb_quad}', fc.real_field(fieldname))
+            fieldname = f'dp_drho_quad_{nb_quad}'
+            setattr(self, f'_dp_drho_quad_{nb_quad}', fc.real_field(fieldname))
+
+    def update_quad(self,
+                    quad_fun: Callable[[NDArray, int], NDArray],
+                    *args) -> None:
+        """Update pressure and gradients at quadrature points"""
+        self.update(*args)  # update p field
+
+        for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
+            p_quad = quad_fun(self.__field.p, nb_quad)
+            dp_drho_quad = self.dp_drho(p_quad)
+            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad
+            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad
+
+    def build_grad(self) -> None:
+        if self.is_gp_model:
+            raise NotImplementedError("Gradient of GP-based EOS not implemented.")
+        else:
+            self.dp_drho = jit(vmap(grad(eos_pressure, argnums=0)))
+
+    def p_quad(self, nb_quad: int) -> NDArray:
+        """Pressure field at quadrature points."""
+        return getattr(self, f'_pressure_quad_{nb_quad}').p
+
+    def dp_drho_quad(self, nb_quad: int) -> NDArray:
+        """Pressure gradient w.r.t. density at quadrature points."""
+        return getattr(self, f'_dp_drho_quad_{nb_quad}').p

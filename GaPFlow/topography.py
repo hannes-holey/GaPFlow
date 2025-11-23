@@ -27,7 +27,7 @@ import numpy as np
 import copy
 
 import numpy.typing as npt
-from typing import Tuple
+from typing import Tuple, Callable
 
 import warnings
 
@@ -245,7 +245,7 @@ class Topography:
         else:
             pass
 
-    def update_gradients(self) -> None:
+    def _update_gradients(self) -> None:
         """Updates gradient arrays using second-order central differences.
         """
         h = self.__field.p[0]
@@ -265,7 +265,7 @@ class Topography:
     @h.setter
     def h(self, value: NDArray) -> None:
         self.__field.p[0] = value
-        self.update_gradients()
+        self._update_gradients()
 
     @property
     def deformation(self) -> NDArray:
@@ -290,6 +290,36 @@ class Topography:
     @property
     def y(self):
         return self._y.p
+
+    def init_quad(self,
+                  fc,
+                  quad_list: list[int]) -> None:
+        """Initialize quadrature point fields"""
+        self.quad_list = quad_list
+        for nb_quad in quad_list:
+            fieldname = f'h_quad_{nb_quad}'
+            setattr(self, f'_h_quad_{nb_quad}', fc.real_field(fieldname))
+            fieldname = f'dh_dx_quad_{nb_quad}'
+            setattr(self, f'_dh_dx_quad_{nb_quad}', fc.real_field(fieldname))
+
+    def update_quad(self,
+                    quad_fun: Callable[[NDArray, int], NDArray],
+                    dx_fun: Callable[[NDArray, int], NDArray],
+                    *args) -> None:
+        """Update pressure and gradients at quadrature points"""
+        self.update(*args)  # update p field
+
+        for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
+            h_quad = quad_fun(self.h, nb_quad)
+            dh_dx_quad = dx_fun(self.h, nb_quad)
+            getattr(self, f'_h_quad_{nb_quad}').p = h_quad
+            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad
+
+    def h_quad(self, nb_quad: int) -> NDArray:
+        return getattr(self, f'_h_quad_{nb_quad}').p
+
+    def dh_dx_quad(self, nb_quad: int) -> NDArray:
+        return getattr(self, f'_dh_dx_quad_{nb_quad}').p
 
 
 class ElasticDeformation:

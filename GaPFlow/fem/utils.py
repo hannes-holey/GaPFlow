@@ -69,6 +69,17 @@ class NonLinearTerm():
         return self.der_funs[i](*args)
 
 
+def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
+    from .terms_1d import term_list
+    term_list_res = []
+    for term in term_list:
+        if term.name in fem_solver.term_list:
+            term_list_res.append(term)
+        else:
+            pass
+    return term_list_res
+
+
 def get_norm_quad_pts(nb_quad_pts: int) -> NDArray:
     xi, _ = leggauss(nb_quad_pts)
     xi = 0.5 * (xi + 1)
@@ -91,3 +102,13 @@ def print_matrix(mat):
                 formatted.append(f'{x:6.2f}')  # width 6, 2 decimals
         print('[', ' '.join(formatted), ']')
     print(np.linalg.matrix_rank(mat))
+
+
+def get_quad_vals(self, vec: NDArray, nb_quad_pts: int) -> NDArray:
+
+    if self.periodic:
+        vec = np.append(vec, vec[0])  # for periodicity, nb_ele is already increased
+    xi = get_norm_quad_pts(nb_quad_pts)
+    i = np.arange(self.nb_ele)[:, None]
+    x_quad = i + xi[None, :]
+    return np.interp(x_quad.ravel(), np.arange(len(vec)), vec)

@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 from .fem.num_solver import Solver
-from .fem.utils import NonLinearTerm, get_norm_quad_pts, get_norm_quad_wts
+from .fem.utils import NonLinearTerm, get_active_terms, get_norm_quad_pts, get_norm_quad_wts
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .problem import Problem
@@ -36,55 +36,32 @@ NDArray = npt.NDArray[np.floating]
 class FEMSolver1D:
 
     def __init__(self, problem: "Problem") -> None:
-        from .fem.terms_1d import term_list
-
         self.problem = problem
-        self.term_list = term_list
-
-    def pre_run(self) -> None:
-
-        # TODO: argument: problem.fem_solver: dict
-        self.num_solver = Solver()
-
-        self._build_terms()
-        self._init_convenience_accessors()
 
     def _build_terms(self) -> None:
         """Linking functions of initialized models into abstract term functions"""
         # build model gradient functions
         p = self.problem
-        p.topo.build_grad()
+        # p.topo.build_grad()
         p.pressure.build_grad()
-        p.wall_stress_xz.build_grad()
-        p.energy.build_grad()
-
-        self.config.time_step = getattr(self.config, 'time_step', 0.0)
+        # p.wall_stress_xz.build_grad()
+        # p.energy.build_grad()
 
         ctx = {
-            'p': p.pressure.p_func,
-            'dp_drho': p.pressure.p_grad,
             'tau_xz': p.wall_stress_xz.tau_xz_func,
             'dtau_xz_drho': p.wall_stress_xz.tau_xz_grad_rho,
             'dtau_xz_djx': p.wall_stress_xz.tau_xz_grad_jx,
             'tau_xz_bot': p.wall_stress_xz.tau_xz_bot,
             'dtau_xz_bot_drho': p.wall_stress_xz.dtau_xz_bot_drho,
-            'dtau_xz_bot_djx': p.wall_stress_xz.dtau_xz_bot_djx,
-            'k': p.energy.k_func,
-            'T': p.energy.T_func,
-            'dT_drho': p.energy.T_grad_rho,
-            'dT_djx': p.energy.T_grad_jx,
-            'dT_dE': p.energy.T_grad_E,
-            'S': p.energy.S_wall,
-            'dS_drho': p.energy.S_grad_rho,
-            'dS_djx': p.energy.S_grad_jx,
-            'dS_dE': p.energy.S_grad_E,
-            'dt': self.config.time_step
+            'dtau_xz_bot_djx': p.wall_stress_xz.dtau_xz_bot_djx
         }
 
         # build terms with context
-        self.terms = self.term_config.get_active_terms()
+        self.terms = get_active_terms(p.fem_solver)
         for term in self.terms:
             term_ctx = ctx.copy()
+            term_ctx['p'] = lambda nbq=term.nb_quad_pts: p.pressure.p_quad(nbq)
+            term_ctx['dp_drho'] = lambda nbq=term.nb_quad_pts: p.pressure.dp_drho_quad(nbq)
             term_ctx['h'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_val(nbq)
             term_ctx['dh_dx'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_dx(nbq)
             term_ctx['U'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_U(nbq)
@@ -96,6 +73,7 @@ class FEMSolver1D:
     def _init_convenience_accessors(self) -> None:
         p = self.problem
 
+        self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
         self.nb_pts = p.grid['Nx']
         self.nb_ele = self.nb_pts if self.periodic else self.nb_pts - 1
 
@@ -108,6 +86,34 @@ class FEMSolver1D:
 
         self.res_size = len(self.residuals) * self.nb_pts
         self.mat_size = (self.res_size, self.res_size)
+
+    def _init_quad_fun(self) -> None:
+        """Init quadrature point evaluation function."""
+
+        def quad_fun(var: NDArray, nb_quad_pts: int) -> NDArray:
+            if self.periodic:
+                vals = np.append(var, var[0])  # for periodicity, nb_ele is already increased
+            else:
+                vals = var
+            xi = get_norm_quad_pts(nb_quad_pts)
+            i = np.arange(self.nb_ele)[:, None]
+            x_quad = i + xi[None, :]
+            return np.interp(x_quad.ravel(), np.arange(self.nb_ele), vals)
+
+        self.quad_fun = quad_fun
+
+    def _init_dx_fun(self) -> None:
+        """Init quadrature point derivative evaluation function."""
+
+        def dx_fun(var: NDArray, nb_quad_pts: int) -> NDArray:
+            if self.periodic:
+                vals = np.append(var, var[0])
+            else:
+                vals = var
+            diff = np.diff(vals) / self.problem.grid['dx']
+            return np.repeat(diff, nb_quad_pts)
+
+        self.dx_fun = dx_fun
 
     def _res_slice(self, res_name) -> slice:
         i = self.residuals.index(res_name)
@@ -309,3 +315,24 @@ class FEMSolver1D:
 
     def get_R(self, a) -> NDArray:
         pass
+
+    def pre_run(self) -> None:
+        p = self.problem
+
+        self.num_solver = Solver(p.fem_solver)
+
+        self._build_terms()
+        self._init_convenience_accessors()
+        self._init_quad_fun()  # quadrature function used for all fields
+        self._init_dx_fun()
+
+        p.pressure.build_grad()
+        p.wall_stress_xz.build_grad()
+        # p.energy.build_grad()
+
+    def update(self) -> None:
+        p = self.problem
+
+        p.pressure.update_quad(self.quad_fun)
+        p.wall_stress_xz.update_quad(self.quad_fun)
+        # p.energy.update_quad(self.quad_fun)

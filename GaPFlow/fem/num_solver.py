@@ -65,7 +65,8 @@ def newton_alpha_solver(config,
 
 
 class Solver():
-    def __init__(self):
+    def __init__(self,
+                 fem_solver: dict):
         self.get_MR_fun = None
         self.callback_fun = lambda sol: None
 
