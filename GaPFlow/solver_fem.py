@@ -72,6 +72,7 @@ class FEMSolver1D:
             term_ctx['U'] = lambda nbq=term.nb_quad_pts: p.topo.U_quad(nbq)
             term_ctx['rho_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('rho_prev', nbq)
             term_ctx['jx_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('jx_prev', nbq)
+            term_ctx['dt'] = p.numerics['dt']
             term.build(term_ctx)
 
     def _init_convenience_accessors(self) -> None:
@@ -79,6 +80,8 @@ class FEMSolver1D:
         p = self.problem
 
         self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
+        if self.periodic:
+            print("FEMSolver1D: Using periodic boundary conditions in x-direction.")
         self.dynamic = p.fem_solver['dynamic']
         self.nb_pts = p.grid['Nx']
         self.nb_ele = self.nb_pts if self.periodic else self.nb_pts - 1
@@ -314,10 +317,10 @@ class FEMSolver1D:
         p = self.problem
 
         # check Dirichlet
-        if p.grid['bc_xW_D']:
+        if p.grid['bc_xW_D'][0]:
             M[0, :] = 0.0
             M[0, 0] = 1.0
-        if p.grid['bc_xE_D']:
+        if p.grid['bc_xE_D'][0]:
             M[-1, :] = 0.0
             M[-1, self.nb_pts - 1] = 1.0
         return M
@@ -326,11 +329,11 @@ class FEMSolver1D:
         p = self.problem
 
         # check Dirichlet
-        if p.grid['bc_xW_D']:
+        if p.grid['bc_xW_D'][0]:
             target = p.grid['bc_xW_D_val']
             guess = self.get_nodal_val('rho')[0]
             R[0] = guess - target
-        if p.grid['bc_xE_D']:
+        if p.grid['bc_xE_D'][0]:
             target = p.grid['bc_xE_D_val']
             guess = self.get_nodal_val('rho')[-1]
             R[-1] = guess - target
@@ -430,6 +433,16 @@ class FEMSolver1D:
         p.wall_stress_xz.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field, p.topo)
         # p.energy.update_quad(self.quad_fun)
 
+    def update_prev_quad(self) -> None:
+        p = self.problem
+
+        for nb_quad in self.quad_list:
+            for field in ['rho', 'jx']:
+                curr_fieldname = f'_{field}_quad_{nb_quad}'
+                prev_fieldname = f'_{field}_prev_quad_{nb_quad}'
+                curr_vals = getattr(self, curr_fieldname).p
+                getattr(self, prev_fieldname).p = np.copy(curr_vals)
+
     def pre_run(self, **kwargs) -> None:
         p = self.problem
 
@@ -477,6 +490,10 @@ class FEMSolver1D:
         # p.energy.build_grad()
 
         self._build_terms()
+        self.update_quad()
+
+        if self.dynamic:
+            self.update_prev_quad()
 
     def solver_step_fun(self, q_guess: NDArray ) -> Tuple[NDArray, NDArray]:
         self.set_q_nodal(q_guess)
@@ -492,21 +509,57 @@ class FEMSolver1D:
         print_matrix(M)
         print(R)
 
+    def steady_state(self) -> None:
+        p = self.problem
+
+        print("Solving steady-state problem...")
+        self.num_solver.sol_dict.q0 = self.get_q_nodal()
+        self.num_solver.get_MR_fun = self.solver_step_fun
+
+        tic = time.time()
+        self.num_solver.solve()
+        toc = time.time()
+        print(f"Solver took {toc - tic:.2f} seconds.")
+
+        p._stop = True
+
+    def update_dynamic(self) -> None:
+        p = self.problem
+
+        self.update_prev_quad()
+
+        print(f"Time step {p.step}, Time {p.simtime:.6f}, dt {p.numerics['dt']:.6f}")
+
+        self.num_solver.sol_dict.reset()
+        self.num_solver.sol_dict.q0 = self.get_q_nodal()
+        self.num_solver.get_MR_fun = self.solver_step_fun
+
+        tic = time.time()
+        self.num_solver.solve()
+        toc = time.time()
+        print(f"Solver took {toc - tic:.2f} seconds.")
+
+        # update time and step
+        p.post_update()
+        p.simtime += p.numerics['dt']
+        p.step += 1
+
     def update(self) -> None:
+        """Top-level solver update function"""
+        
+        if self.dynamic:
+            self.update_dynamic()
+        else:
+            self.steady_state()
+
+        
         p = self.problem
 
         self.update_quad()
         if self.nb_pts < 10:
             self.print_system()
 
-        print("Solving steady-state problem...")
-        self.num_solver.sol_dict.q0 = self.get_q_nodal()
-        self.num_solver.get_MR_fun = self.solver_step_fun
-        tic = time.time()
-        self.num_solver.solve()
-        toc = time.time()
-        print(f"Solver took {toc - tic:.2f} seconds.")
-        p._stop = True
+        
         return
 
     def print_status_header(self) -> None:

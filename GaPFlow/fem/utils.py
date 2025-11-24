@@ -98,9 +98,9 @@ def print_matrix(mat):
         formatted = []
         for x in row:
             if x == 0:
-                formatted.append(f'{0:>6}')  # width 6, right aligned
+                formatted.append(f'{0:>8}')  # width 8, right aligned
             else:
-                formatted.append(f'{x:6.2f}')  # width 6, 2 decimals
+                formatted.append(f'{x:8.2f}')  # width 8, 2 decimals
         print('[', ' '.join(formatted), ']')
     print(np.linalg.matrix_rank(mat))
 

@@ -23,6 +23,7 @@
 #
 import os
 import numpy as np
+import jax.numpy as jnp
 from scipy.constants import gas_constant
 
 
@@ -99,7 +100,7 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
         Computed pressure.
 
     """
-    rho = np.minimum(dens, 0.99 * C2 * rho0)
+    rho = jnp.minimum(dens, 0.99 * C2 * rho0)
     return P0 + (C1 * (rho / rho0 - 1.)) / (C2 - rho / rho0)
 
 
