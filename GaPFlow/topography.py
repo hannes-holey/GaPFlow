@@ -291,35 +291,38 @@ class Topography:
     def y(self):
         return self._y.p
 
-    def init_quad(self,
-                  fc,
-                  quad_list: list[int]) -> None:
+    def init_quad(self, fc_fem, geo, quad_list: list[int]) -> None:
         """Initialize quadrature point fields"""
+        from .fem.utils import create_quad_fields
         self.quad_list = quad_list
-        for nb_quad in quad_list:
-            fieldname = f'h_quad_{nb_quad}'
-            setattr(self, f'_h_quad_{nb_quad}', fc.real_field(fieldname))
-            fieldname = f'dh_dx_quad_{nb_quad}'
-            setattr(self, f'_dh_dx_quad_{nb_quad}', fc.real_field(fieldname))
+        self.U, self.V = geo['U'], geo['V']
+        self.field_list = ['h', 'dh_dx']
+        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
 
     def update_quad(self,
                     quad_fun: Callable[[NDArray, int], NDArray],
                     dx_fun: Callable[[NDArray, int], NDArray],
+                    inner_fun: Callable[[NDArray], NDArray],
                     *args) -> None:
         """Update pressure and gradients at quadrature points"""
-        self.update(*args)  # update p field
+        self.update(*args)  # update h field
 
-        for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
-            h_quad = quad_fun(self.h, nb_quad)
-            dh_dx_quad = dx_fun(self.h, nb_quad)
-            getattr(self, f'_h_quad_{nb_quad}').p = h_quad
-            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad
+        for nb_quad in self.quad_list:
+            h_inner = inner_fun(self.h)
+            h_quad = quad_fun(h_inner, nb_quad)
+            dh_dx_quad = dx_fun(h_inner, nb_quad)
+            getattr(self, f'_h_quad_{nb_quad}').p = h_quad.reshape(nb_quad, -1)
+            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad.reshape(nb_quad, -1)
 
     def h_quad(self, nb_quad: int) -> NDArray:
         return getattr(self, f'_h_quad_{nb_quad}').p
 
     def dh_dx_quad(self, nb_quad: int) -> NDArray:
         return getattr(self, f'_dh_dx_quad_{nb_quad}').p
+
+    def U_quad(self, nb_quad: int) -> NDArray:
+        """Assumed constant top wall velocity at quadrature points."""
+        return np.full_like(self.h_quad(nb_quad), self.U)
 
 
 class ElasticDeformation:

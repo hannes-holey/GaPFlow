@@ -23,7 +23,7 @@
 #
 import numpy as np
 from GaPFlow import Problem
-
+from GaPFlow.models.pressure import eos_pressure
 
 sim = """
 options:
@@ -66,12 +66,23 @@ fem_solver:
 """
 
 
-def test_pressure():
+def dp_drho_fd(rho: float, problem: Problem, eps: float = 1e-8) -> np.ndarray:
+    return (eos_pressure(rho + eps, problem.prop) - eos_pressure(rho - eps, problem.prop)) / (2 * eps)
+
+
+def test_dp_drho():
 
     problem = Problem.from_string(sim)
     problem.pre_run()
+
+    problem.solver.update_quad()
     p_grad = problem.pressure.dp_drho_quad(3)
-    print(p_grad)
+    # p_quad = problem.pressure.p_quad(3)
+    rho = problem.solver.get_quad_field('rho', 3)
+
+    p_grad_fd = dp_drho_fd(rho[0, 0], problem)
+
+    assert np.isclose(p_grad[0, 0], p_grad_fd, rtol=1e-6), f"Analytical: {p_grad[0, 0]}, FD: {p_grad_fd}"
 
 
-test_pressure()
+test_dp_drho()

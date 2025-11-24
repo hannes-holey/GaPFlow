@@ -104,34 +104,33 @@ class Problem:
         # Initialize field collection
         nb_grid_pts = (self.grid['Nx'] + 2,
                        self.grid['Ny'] + 2)
-        fc = GlobalFieldCollection(nb_grid_pts)
+        self.fc = GlobalFieldCollection(nb_grid_pts)
 
         # Solution field
         self.step = None
-        self.__field = fc.real_field('solution', (3,))
+        self.__field = self.fc.real_field('solution', (3,))
         self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
 
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
-        extra = fc.real_field('extra', (num_extra_features,))
+        extra = self.fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
             extra.p = extra_field
 
         # Forward declaration of cross-dependent fields
-        fc.register_real_field('x')
-        fc.register_real_field('y')
-        fc.register_real_field('pressure')
-        fc.register_real_field('topography', (4,))
+        self.fc.register_real_field('x')
+        self.fc.register_real_field('y')
+        self.fc.register_real_field('pressure')
+        self.fc.register_real_field('topography', (4,))
 
         # Initialize stress and topography models
         gpx, gpy, gpz = self._select_gp_config(gp)
-        self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
-        self.bulk_stress = BulkStress(fc, prop, geo, data=None, gp=None)
-        self.wall_stress_xz = WallStress(fc, prop, geo, direction='x', data=database, gp=gpx)
-        self.wall_stress_yz = WallStress(fc, prop, geo, direction='y', data=database, gp=gpy)
+        self.pressure = Pressure(self.fc, prop, geo, data=database, gp=gpz)
+        self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
+        self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
+        self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
 
-        self.topo = Topography(fc, self.grid, geo, prop)
-
+        self.topo = Topography(self.fc, self.grid, geo, prop)
         # I/O
         if not self.options['silent']:
 
@@ -164,7 +163,7 @@ class Problem:
             # No elastic deformation - write once and close
             # Elastic deformation - write initial topo and keep open
             self.topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Overwrite)
-            self.topofile.register_field_collection(fc, field_names=['topography'])
+            self.topofile.register_field_collection(self.fc, field_names=['topography'])
             self.topofile.append_frame().write()
             if not self.prop['elastic']['enabled']:
                 self.topofile.close()
@@ -184,7 +183,7 @@ class Problem:
             if gpz:
                 field_names.append('pressure_var')
 
-            self.file.register_field_collection(fc, field_names=field_names)
+            self.file.register_field_collection(self.fc, field_names=field_names)
 
     # ---------------------------
     # Constructors

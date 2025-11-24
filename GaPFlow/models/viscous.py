@@ -25,7 +25,8 @@
 # flake8: noqa: W503
 
 import numpy as np
-
+import jax.numpy as jnp
+from .viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
 
 def stress_bottom(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
     """Viscous stress tensor at the bottom wall.
@@ -777,3 +778,69 @@ def stress_avg(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
         )
 
     return tau
+
+
+def stress_bottom_xz(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
+
+    if dqx is None:
+        dqx = jnp.zeros_like(q[0])
+    if dqy is None:
+        dqy = jnp.zeros_like(q[0])
+
+    if slip == "top":
+        tau_xz = (
+            2 * eta
+            * (-6 * Ls * U * q[0] + 6 * Ls * q[1] - 2 * U * h[0] * q[0] + 3 * h[0] * q[1])
+            / (h[0] * q[0] * (4 * Ls + h[0]))
+        )
+    else:
+        tau_xz = (
+            2 * eta
+            * (-6 * Ls * U * q[0] + 6 * Ls * q[1] - 2 * U * h[0] * q[0] + 3 * h[0] * q[1])
+            / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
+        )
+    return tau_xz
+
+
+def stress_top_xz(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
+
+    if dqx is None:
+        dqx = jnp.zeros_like(q[0])
+    if dqy is None:
+        dqy = jnp.zeros_like(q[0])
+
+    if slip == "top":
+        tau_xz = (2 * eta * (U * q[0] - 3 * q[1]) / (q[0] * (4 * Ls + h[0])))
+    else:
+        tau_xz = (
+            2 * eta
+            * (-6 * Ls * q[1] + U * h[0] * q[0] - 3 * h[0] * q[1])
+            / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
+        )
+    return tau_xz
+
+
+def get_shear_viscosity(stress_object):
+    s = stress_object
+
+    # piezoviscosity
+    if 'piezo' in s.prop.keys():
+        mu0 = piezoviscosity(s.pressure if not s.prop['EOS'] == 'Bayada' else s.solution[0],
+                                s.prop['shear'],
+                                s.prop['piezo'])
+    else:
+        mu0 = s.prop['shear']
+    # shear-thinning
+    if 'thinning' in s.prop.keys():
+        shear_rate = shear_rate_avg(s.dp_dx,
+                                    s.dp_dy,
+                                    s.height,
+                                    s.geo['U'],
+                                    s.geo['V'],
+                                    mu0)
+
+        shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
+                                                        s.prop['thinning'])
+    else:
+        shear_viscosity = mu0
+    return shear_viscosity

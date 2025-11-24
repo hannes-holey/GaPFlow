@@ -22,13 +22,15 @@
 # SOFTWARE.
 #
 from .fem.num_solver import Solver
-from .fem.utils import NonLinearTerm, get_active_terms, get_norm_quad_pts, get_norm_quad_wts
+from .fem.utils import NonLinearTerm, get_active_terms, get_norm_quad_pts, get_norm_quad_wts, create_quad_fields
+
+from muGrid import GlobalFieldCollection
+import numpy as np
+
+import numpy.typing as npt
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .problem import Problem
-
-import numpy.typing as npt
-import numpy as np
 
 NDArray = npt.NDArray[np.floating]
 
@@ -40,30 +42,23 @@ class FEMSolver1D:
 
     def _build_terms(self) -> None:
         """Linking functions of initialized models into abstract term functions"""
-        # build model gradient functions
         p = self.problem
-        # p.topo.build_grad()
+
+        # build model gradient functions
         p.pressure.build_grad()
-        # p.wall_stress_xz.build_grad()
+        p.wall_stress_xz.build_grad()
         # p.energy.build_grad()
 
-        ctx = {
-            'tau_xz': p.wall_stress_xz.tau_xz_func,
-            'dtau_xz_drho': p.wall_stress_xz.tau_xz_grad_rho,
-            'dtau_xz_djx': p.wall_stress_xz.tau_xz_grad_jx,
-            'tau_xz_bot': p.wall_stress_xz.tau_xz_bot,
-            'dtau_xz_bot_drho': p.wall_stress_xz.dtau_xz_bot_drho,
-            'dtau_xz_bot_djx': p.wall_stress_xz.dtau_xz_bot_djx
-        }
-
         # build terms with context
-        self.terms = get_active_terms(p.fem_solver)
         for term in self.terms:
-            term_ctx = ctx.copy()
+            term_ctx = {}
             term_ctx['p'] = lambda nbq=term.nb_quad_pts: p.pressure.p_quad(nbq)
             term_ctx['dp_drho'] = lambda nbq=term.nb_quad_pts: p.pressure.dp_drho_quad(nbq)
-            term_ctx['h'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_val(nbq)
-            term_ctx['dh_dx'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_dx(nbq)
+            term_ctx['tau_xz'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_quad(nbq)
+            term_ctx['dtau_xz_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_drho_quad(nbq)
+            term_ctx['dtau_xz_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_djx_quad(nbq)
+            term_ctx['h'] = lambda nbq=term.nb_quad_pts: p.topo.h_quad(nbq)
+            term_ctx['dh_dx'] = lambda nbq=term.nb_quad_pts: p.topo.dh_dx_quad(nbq)
             term_ctx['U'] = lambda nbq=term.nb_quad_pts: self.h_wrapper.quad_U(nbq)
             term_ctx['rho_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_vals(self.a_prev, 'rho', nbq)
             term_ctx['jx_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_vals(self.a_prev, 'jx', nbq)
@@ -71,6 +66,7 @@ class FEMSolver1D:
             term.build(term_ctx)
 
     def _init_convenience_accessors(self) -> None:
+        """Initialize convenience accessors for problem and grid properties."""
         p = self.problem
 
         self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
@@ -87,18 +83,28 @@ class FEMSolver1D:
         self.res_size = len(self.residuals) * self.nb_pts
         self.mat_size = (self.res_size, self.res_size)
 
+    def _get_active_terms(self) -> None:
+        """Initialize list of active terms from problem fem_solver config."""
+        self.terms = get_active_terms(self.problem.fem_solver)
+
+    def _get_quad_list(self) -> None:
+        """Get list of occuring quadrature point numbers from active terms."""
+        nb_quad_pts_set = set()
+        for term in self.terms:
+            nb_quad_pts_set.add(term.nb_quad_pts)
+        self.quad_list = sorted(list(nb_quad_pts_set))
+
     def _init_quad_fun(self) -> None:
         """Init quadrature point evaluation function."""
 
         def quad_fun(var: NDArray, nb_quad_pts: int) -> NDArray:
-            if self.periodic:
-                vals = np.append(var, var[0])  # for periodicity, nb_ele is already increased
-            else:
-                vals = var
+            vals = np.append(var, var[0]) if self.periodic else var
+            if vals.ndim != 1:
+                raise ValueError(f"quad_fun expects a 1D array, got shape {vals.shape}")
             xi = get_norm_quad_pts(nb_quad_pts)
             i = np.arange(self.nb_ele)[:, None]
             x_quad = i + xi[None, :]
-            return np.interp(x_quad.ravel(), np.arange(self.nb_ele), vals)
+            return np.interp(x_quad.ravel(), np.arange(len(vals)), vals)
 
         self.quad_fun = quad_fun
 
@@ -106,14 +112,14 @@ class FEMSolver1D:
         """Init quadrature point derivative evaluation function."""
 
         def dx_fun(var: NDArray, nb_quad_pts: int) -> NDArray:
-            if self.periodic:
-                vals = np.append(var, var[0])
-            else:
-                vals = var
+            vals = np.append(var, var[0]) if self.periodic else var
             diff = np.diff(vals) / self.problem.grid['dx']
             return np.repeat(diff, nb_quad_pts)
 
         self.dx_fun = dx_fun
+
+    def _init_fc_fem(self) -> None:
+        self.fc_fem = GlobalFieldCollection((self.nb_ele, ))
 
     def _res_slice(self, res_name) -> slice:
         i = self.residuals.index(res_name)
@@ -321,18 +327,64 @@ class FEMSolver1D:
 
         self.num_solver = Solver(p.fem_solver)
 
+        self._get_active_terms()
+        self._get_quad_list()
         self._build_terms()
         self._init_convenience_accessors()
-        self._init_quad_fun()  # quadrature function used for all fields
+        self._init_quad_fun()
         self._init_dx_fun()
+        self._init_fc_fem()
 
+        self.init_quad()
+        p.topo.init_quad(self.fc_fem, p.geo, self.quad_list)
+        p.pressure.init_quad(self.fc_fem, self.quad_list)
         p.pressure.build_grad()
+        p.wall_stress_xz.init_quad(self.fc_fem, self.quad_list)
         p.wall_stress_xz.build_grad()
         # p.energy.build_grad()
 
-    def update(self) -> None:
+    def _inner_1d(self, field: NDArray) -> NDArray:
+        """Extract inner 1D field from 2D field array with ghost cells."""
+        assert field.shape[1] == 3, "Not a 1D problem: {}".format(field.shape)
+        return field[1:-1, 1:-1].ravel()
+
+    def _get_sol_quad_fields(self) -> dict:
+        sol_inner = self._get_inner_sol_fields()
+        sol_quad = {}
+        for field in sol_inner:
+            sol_quad[field] = {}
+            for nb_quad in self.quad_list:
+                quad_vec = self.quad_fun(sol_inner[field], nb_quad)
+                sol_quad[field][nb_quad] = quad_vec
+        return sol_quad
+
+    def init_quad(self) -> None:
+        p = self.problem
+        self.field_list = ['rho', 'jx', 'jy']
+        self.field_val_list = [p.q[0], p.q[1], p.q[2]]
+        create_quad_fields(self, self.fc_fem, self.field_list, self.quad_list)
+
+    def update_sol_quad(self) -> None:
+        for nb_quad in self.quad_list:
+            for field, val in zip(self.field_list, self.field_val_list):
+                fieldname = f'_{field}_quad_{nb_quad}'
+                quad_vals = self.quad_fun(self._inner_1d(val), nb_quad)
+                getattr(self, fieldname).p = quad_vals.reshape(nb_quad, -1)
+
+    def get_quad_field(self, field_name: str, nb_quad: int) -> NDArray:
+        """Returns the quadrature values of a field in shape (nb_quad, nb_ele)."""
+        fieldname = f'_{field_name}_quad_{nb_quad}'
+        return getattr(self, fieldname).p
+
+    def update_quad(self) -> None:
         p = self.problem
 
-        p.pressure.update_quad(self.quad_fun)
-        p.wall_stress_xz.update_quad(self.quad_fun)
+        # update value and gradient quadrature values
+        self.update_sol_quad()
+        p.topo.update_quad(self.quad_fun, self.dx_fun, self._inner_1d)
+        p.pressure.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
+        p.wall_stress_xz.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field, p.topo)
         # p.energy.update_quad(self.quad_fun)
+
+    def update(self) -> None:
+        self.update_quad()

@@ -450,14 +450,31 @@ def sanitize_md(d):
 def sanitize_fem_solver(d):
 
     out = {}
+    out['dynamic'] = bool(d.get('dynamic', False))
     out['type'] = str(d.get('type', 'newton_alpha'))
     out['max_iter'] = int(d.get('max_iter', 100))
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
     out['alpha'] = float(d.get('alpha', 1.0))
 
     out['equations'] = {}
-    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
-    out['equations']['term_list'] = d.get('equations', {}).get('term_list', [])
+    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', None))
+    out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
+
+    # figure out what terms to include, do it here so that it is printed
+    list_energy = ['R11', 'R12', 'R1T', 'R21', 'R24', 'R2T', 'R31',
+                   'R31S', 'R32', 'R32S', 'R34', 'R35', 'R36', 'R3T']
+    list_wo_energy = ['R11', 'R12', 'R1T', 'R21', 'R24', 'R2T']
+
+    if out['equations']['term_list'] is None:  # auto-select terms
+        if out['equations']['energy']:
+            term_list = list_energy
+        else:
+            term_list = list_wo_energy
+        if not out['dynamic']:
+            term_list = [t for t in term_list if 'T' not in t]
+        out['equations']['term_list'] = term_list
+    else:
+        pass  # user-specified term_list overwrites other settings
 
     print_dict(out)
 

@@ -1,4 +1,3 @@
-# flake8: noqa: E501
 #
 # Copyright 2025 Christoph Huber
 #
@@ -22,6 +21,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+# flake8: noqa: E501
+
 from .utils import NonLinearTerm
 import numpy as np
 

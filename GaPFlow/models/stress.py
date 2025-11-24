@@ -27,14 +27,17 @@ import numpy.typing as npt
 import jax.numpy as jnp
 from jax import vmap, grad, jit
 from jax import Array
-from typing import Optional, Tuple, Any, Callable
+from typing import TYPE_CHECKING, Optional, Tuple, Any, Callable
 
 from .gp import GaussianProcessSurrogate
 from .gp import multi_in_single_out, multi_in_multi_out
 from .pressure import eos_pressure
-from .viscous import stress_bottom, stress_top, stress_avg
+from .viscous import stress_bottom, stress_top, stress_avg, stress_top_xz, stress_bottom_xz, get_shear_viscosity
 from .sound import eos_sound_velocity
 from .viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
+
+if TYPE_CHECKING:
+    from ..topography import Topography
 
 NDArray = npt.NDArray[np.floating]
 JAXArray = Array
@@ -377,6 +380,94 @@ class WallStress(GaussianProcessSurrogate):
             self.__field.p[self._out_index] = s_bot[self._out_index]
             self.__field.p[self._out_index + 6] = s_top[self._out_index]
 
+    def init_quad(self,
+                  fc_fem,
+                  quad_list: list[int]) -> None:
+        """Initialize quadrature point fields"""
+        from ..fem.utils import create_quad_fields
+        self.quad_list = quad_list
+        self.field_list = ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx']
+        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
+
+    def build_grad(self) -> None:
+        if self.is_gp_model:
+            raise NotImplementedError("Gradient of GP-based wall stress not implemented.")
+
+        def get_tau_xz(rho, jx, jy, h, hx, U, V, Ls):
+            eta = get_shear_viscosity(self)
+            q = jnp.array([rho, jx, jy])
+            h = jnp.array([h, hx])
+            tau_xz_top = stress_top_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
+            tau_xz_bot = stress_bottom_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
+            return tau_xz_top - tau_xz_bot
+
+        # only V is constant
+        self.dtau_xz_drho = jit(
+            vmap(
+                vmap(
+                    grad(get_tau_xz, argnums=0),
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
+        self.dtau_xz_djx = jit(
+            vmap(
+                vmap(
+                    grad(get_tau_xz, argnums=1),
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
+
+    def update_quad(self,
+                    quad_fun: Callable[[NDArray, int], NDArray],
+                    inner_fun: Callable[[NDArray], NDArray],
+                    get_quad_field: Callable[[str, int], NDArray],
+                    topography: "Topography",
+                    *args) -> None:
+        """Update tau_xz and gradients at quadrature points"""
+        self.update(*args)
+        tau_xz_inner = inner_fun(self.upper[4] - self.lower[4])
+
+        for nb_quad in self.quad_list:
+            tau_xz_quad = quad_fun(tau_xz_inner, nb_quad)
+            Ls_quad = quad_fun(inner_fun(self.extra[0]), nb_quad).reshape(nb_quad, -1)
+
+            args = (get_quad_field('rho', nb_quad),
+                    get_quad_field('jx', nb_quad),
+                    get_quad_field('jy', nb_quad),
+                    topography.h_quad(nb_quad),
+                    topography.dh_dx_quad(nb_quad),
+                    topography.U_quad(nb_quad),
+                    0,
+                    Ls_quad)
+
+            for arg in args:
+                if type(arg) is int:
+                    continue
+                assert arg.shape[0] == nb_quad, f"Argument shape mismatch for nb_quad={nb_quad}: {arg.shape}"
+
+            dtau_xz_drho_quad: NDArray = self.dtau_xz_drho(*args)  # type: ignore
+            dtau_xz_djx_quad: NDArray = self.dtau_xz_djx(*args)  # type: ignore
+
+            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad.reshape(nb_quad, -1)
+            getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad.reshape(nb_quad, -1)
+            getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad.reshape(nb_quad, -1)
+
+    def tau_xz_quad(self, nb_quad: int) -> NDArray:
+        """Wall shear stress tau_xz (top - bottom) at quadrature points."""
+        return getattr(self, f'_tau_xz_quad_{nb_quad}').p
+
+    def dtau_xz_drho_quad(self, nb_quad: int) -> NDArray:
+        """Gradient of wall shear stress tau_xz w.r.t. density at quadrature points."""
+        return getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p
+
+    def dtau_xz_djx_quad(self, nb_quad: int) -> NDArray:
+        """Gradient of wall shear stress tau_xz w.r.t. x-momentum at quadrature points."""
+        return getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p
+
 
 class BulkStress(GaussianProcessSurrogate):
     """
@@ -602,34 +693,42 @@ class Pressure(GaussianProcessSurrogate):
         else:
             self.__field.p = eos_pressure(self.solution[0], self.prop)
 
-    def init_quad(self,
-                  fc,
-                  quad_list: list[int]) -> None:
+    def init_quad(self, fc_fem, quad_list: list[int]) -> None:
         """Initialize quadrature point fields"""
+        from ..fem.utils import create_quad_fields
         self.quad_list = quad_list
-        for nb_quad in quad_list:
-            fieldname = f'pressure_quad_{nb_quad}'
-            setattr(self, f'_pressure_quad_{nb_quad}', fc.real_field(fieldname))
-            fieldname = f'dp_drho_quad_{nb_quad}'
-            setattr(self, f'_dp_drho_quad_{nb_quad}', fc.real_field(fieldname))
+        self.field_list = ['pressure', 'dp_drho']
+        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
 
     def update_quad(self,
                     quad_fun: Callable[[NDArray, int], NDArray],
+                    inner_fun: Callable[[NDArray], NDArray],
+                    get_quad_field: Callable[[str, int], NDArray],
                     *args) -> None:
         """Update pressure and gradients at quadrature points"""
         self.update(*args)  # update p field
 
         for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
-            p_quad = quad_fun(self.__field.p, nb_quad)
-            dp_drho_quad = self.dp_drho(p_quad)
-            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad
-            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad
+            p_inner = inner_fun(self.pressure)
+            p_quad = quad_fun(p_inner, nb_quad)
+            dp_drho_quad: NDArray = self.dp_drho(get_quad_field('rho', nb_quad))  # type: ignore
+
+            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad.reshape(nb_quad, -1)
+            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad.reshape(nb_quad, -1)
 
     def build_grad(self) -> None:
         if self.is_gp_model:
             raise NotImplementedError("Gradient of GP-based EOS not implemented.")
         else:
-            self.dp_drho = jit(vmap(grad(eos_pressure, argnums=0)))
+            self.dp_drho = jit(
+                vmap(
+                    vmap(
+                        grad(lambda rho: eos_pressure(rho, self.prop), argnums=0),
+                        in_axes=0
+                    ),
+                    in_axes=0
+                )
+            )
 
     def p_quad(self, nb_quad: int) -> NDArray:
         """Pressure field at quadrature points."""
