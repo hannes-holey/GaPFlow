@@ -433,7 +433,7 @@ class WallStress(GaussianProcessSurrogate):
 
         for nb_quad in self.quad_list:
             tau_xz_quad = quad_fun(tau_xz_inner, nb_quad)
-            Ls_quad = quad_fun(inner_fun(self.extra[0]), nb_quad).reshape(nb_quad, -1)
+            Ls_quad = quad_fun(inner_fun(self.extra[0]), nb_quad).reshape(-1, nb_quad).T
 
             args = (get_quad_field('rho', nb_quad),
                     get_quad_field('jx', nb_quad),
@@ -452,9 +452,9 @@ class WallStress(GaussianProcessSurrogate):
             dtau_xz_drho_quad: NDArray = self.dtau_xz_drho(*args)  # type: ignore
             dtau_xz_djx_quad: NDArray = self.dtau_xz_djx(*args)  # type: ignore
 
-            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad.reshape(nb_quad, -1)
-            getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad.reshape(nb_quad, -1)
-            getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad.reshape(nb_quad, -1)
+            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad.reshape(-1, nb_quad).T
+            getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad
+            getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad
 
     def tau_xz_quad(self, nb_quad: int) -> NDArray:
         """Wall shear stress tau_xz (top - bottom) at quadrature points."""
@@ -713,8 +713,8 @@ class Pressure(GaussianProcessSurrogate):
             p_quad = quad_fun(p_inner, nb_quad)
             dp_drho_quad: NDArray = self.dp_drho(get_quad_field('rho', nb_quad))  # type: ignore
 
-            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad.reshape(nb_quad, -1)
-            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad.reshape(nb_quad, -1)
+            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad.reshape(-1, nb_quad).T
+            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad
 
     def build_grad(self) -> None:
         if self.is_gp_model:

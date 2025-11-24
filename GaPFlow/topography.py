@@ -311,8 +311,8 @@ class Topography:
             h_inner = inner_fun(self.h)
             h_quad = quad_fun(h_inner, nb_quad)
             dh_dx_quad = dx_fun(h_inner, nb_quad)
-            getattr(self, f'_h_quad_{nb_quad}').p = h_quad.reshape(nb_quad, -1)
-            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad.reshape(nb_quad, -1)
+            getattr(self, f'_h_quad_{nb_quad}').p = h_quad.reshape(-1, nb_quad).T
+            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad.reshape(-1, nb_quad).T
 
     def h_quad(self, nb_quad: int) -> NDArray:
         return getattr(self, f'_h_quad_{nb_quad}').p

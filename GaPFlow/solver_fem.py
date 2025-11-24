@@ -87,8 +87,11 @@ class FEMSolver1D:
         """Initialize list of active terms from problem fem_solver config."""
         self.terms = get_active_terms(self.problem.fem_solver)
 
-    def _get_quad_list(self) -> None:
+    def _get_quad_list(self, **kwargs) -> None:
         """Get list of occuring quadrature point numbers from active terms."""
+        if 'enforced_quad_list' in kwargs:
+            self.quad_list = kwargs['enforced_quad_list']
+            return
         nb_quad_pts_set = set()
         for term in self.terms:
             nb_quad_pts_set.add(term.nb_quad_pts)
@@ -322,13 +325,13 @@ class FEMSolver1D:
     def get_R(self, a) -> NDArray:
         pass
 
-    def pre_run(self) -> None:
+    def pre_run(self, **kwargs) -> None:
         p = self.problem
 
         self.num_solver = Solver(p.fem_solver)
 
         self._get_active_terms()
-        self._get_quad_list()
+        self._get_quad_list(**kwargs)
         self._build_terms()
         self._init_convenience_accessors()
         self._init_quad_fun()
@@ -369,7 +372,7 @@ class FEMSolver1D:
             for field, val in zip(self.field_list, self.field_val_list):
                 fieldname = f'_{field}_quad_{nb_quad}'
                 quad_vals = self.quad_fun(self._inner_1d(val), nb_quad)
-                getattr(self, fieldname).p = quad_vals.reshape(nb_quad, -1)
+                getattr(self, fieldname).p = quad_vals.reshape(-1, nb_quad).T
 
     def get_quad_field(self, field_name: str, nb_quad: int) -> NDArray:
         """Returns the quadrature values of a field in shape (nb_quad, nb_ele)."""

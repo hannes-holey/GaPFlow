@@ -293,11 +293,11 @@ class Problem:
     # Main run loop
     # ---------------------------
 
-    def pre_run(self) -> None:
+    def pre_run(self, **kwargs) -> None:
         """
         Solver-dependent pre-run initialization.
         """
-        self.solver.pre_run()
+        self.solver.pre_run(**kwargs)
 
     def run(self,
             keep_open: bool = False) -> None:
