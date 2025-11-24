@@ -420,6 +420,15 @@ class WallStress(GaussianProcessSurrogate):
                 in_axes=(0, 0, 0, 0, 0, 0, None, 0)
             )
         )
+        self.tau_xz = jit(
+            vmap(
+                vmap(
+                    get_tau_xz,
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
 
     def update_quad(self,
                     quad_fun: Callable[[NDArray, int], NDArray],
@@ -429,10 +438,8 @@ class WallStress(GaussianProcessSurrogate):
                     *args) -> None:
         """Update tau_xz and gradients at quadrature points"""
         self.update(*args)
-        tau_xz_inner = inner_fun(self.upper[4] - self.lower[4])
 
         for nb_quad in self.quad_list:
-            tau_xz_quad = quad_fun(tau_xz_inner, nb_quad)
             Ls_quad = quad_fun(inner_fun(self.extra[0]), nb_quad).reshape(-1, nb_quad).T
 
             args = (get_quad_field('rho', nb_quad),
@@ -449,10 +456,11 @@ class WallStress(GaussianProcessSurrogate):
                     continue
                 assert arg.shape[0] == nb_quad, f"Argument shape mismatch for nb_quad={nb_quad}: {arg.shape}"
 
+            tau_xz_quad: NDArray = self.tau_xz(*args)  # type: ignore
             dtau_xz_drho_quad: NDArray = self.dtau_xz_drho(*args)  # type: ignore
             dtau_xz_djx_quad: NDArray = self.dtau_xz_djx(*args)  # type: ignore
 
-            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad.reshape(-1, nb_quad).T
+            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad
             getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad
             getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad
 

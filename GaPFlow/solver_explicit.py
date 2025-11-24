@@ -121,3 +121,26 @@ class ExplicitSolver:
             p.post_update()
         else:
             p.finalize(q0)
+
+    def print_status_header(self) -> None:
+        p = self.problem
+        
+        if not p.options['silent']:
+            print(61 * '-')
+            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
+            print(61 * '-')
+            p.write(params=False)
+
+    def print_status(self, scalars) -> None:
+        """
+        Write scalars, fields and hyperparameters to disk as configured.
+        """
+        p = self.problem
+
+        if scalars:
+            print(f"{p.step:<6d} {p.dt:.4e} {p.simtime:.4e} {p.cfl:.4e} {p.residual:.4e}")
+            p.history["step"].append(p.step)
+            p.history["time"].append(p.simtime)
+            p.history["ekin"].append(p.kinetic_energy)
+            p.history["residual"].append(p.residual)
+            p.history["vsound"].append(p.pressure.v_sound)

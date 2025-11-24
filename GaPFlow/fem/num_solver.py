@@ -27,40 +27,41 @@ import numpy as np
 
 class SolutionDict:
     def __init__(self):
-        pass
+        self.R_norm_history = []
+        self.iter = 0
 
     def reset(self):
-        pass
+        self.R_norm_history = []
+        self.iter = 0
 
 
-def newton_alpha_solver(config,
+def newton_alpha_solver(fem_solver,
                         sol: SolutionDict,
                         get_MR: Callable,
                         check_delta: Callable
                         ):
 
-    sol.alpha = getattr(config, 'alpha', 1.0)
-    sol.a = config.a0.copy()
-    sol.iter = 0
+    sol.alpha = getattr(fem_solver, 'alpha', 1.0)
+    sol.q = sol.q0.copy()
 
     while True:
-        M, R = get_MR(sol)
+        M, R = get_MR(sol.q)
 
         R_norm = np.linalg.norm(R)
         sol.R_norm_history.append(R_norm)
         print("Iteration", sol.iter, "Residual norm:", R_norm, "alpha:", sol.alpha)
 
-        if sol.iter > config.max_iter:
+        if sol.iter > fem_solver['max_iter']:
             print("Did not converge")
             break
-        if R_norm < config.R_norm_tol:
+        if R_norm < fem_solver['R_norm_tol']:
             print("Converged!")
             break
 
-        sol.delta_a = np.linalg.solve(M, -R)
+        sol.delta_q = np.linalg.solve(M, -R)
         check_delta(sol)
 
-        sol.a += sol.alpha * sol.delta_a
+        sol.q += sol.alpha * sol.delta_q
         sol.iter += 1
 
 
@@ -70,9 +71,16 @@ class Solver():
         self.get_MR_fun = None
         self.callback_fun = lambda sol: None
 
-    def solve(self):
+        self.sol_dict = SolutionDict()
+        self.fem_solver = fem_solver
+
+        self.solve_fun = newton_alpha_solver
+
+    def solve(self, q_guess: np.ndarray = None) -> SolutionDict:
         assert self.get_MR_fun is not None, "get_MR_fun not set"
-        self.solve_fun(self.config,
+
+        self.solve_fun(self.fem_solver,
                        self.sol_dict,
                        self.get_MR_fun,
-                       self.check_delta_fun)
+                       self.callback_fun)
+        return self.sol_dict

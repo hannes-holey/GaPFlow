@@ -65,8 +65,8 @@ R21 = NonLinearTerm(
     res='momentum_x',
     dep_vars=['rho'],
     dep_vals=[],
-    fun=lambda ctx: lambda rho: -ctx['p'](rho),
-    der_funs=[lambda ctx: lambda rho: -ctx['dp_drho'](rho)],
+    fun=lambda ctx: lambda *args: -ctx['p'](),
+    der_funs=[lambda ctx: lambda *args: -ctx['dp_drho']()],
     d_dx_resfun=True,
     d_dx_testfun=False,
     nb_quad_pts=2)
@@ -76,9 +76,9 @@ R24 = NonLinearTerm(
     res='momentum_x',
     dep_vars=['rho', 'jx'],
     dep_vals=['h', 'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx'],
-    fun=lambda ctx: lambda rho, jx: 1 / ctx['h']() * ctx['tau_xz'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']()),
-    der_funs=[lambda ctx: lambda rho, jx: 1 / ctx['h']() * ctx['dtau_xz_drho'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']()),
-              lambda ctx: lambda rho, jx: 1 / ctx['h']() * ctx['dtau_xz_djx'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']())],
+    fun=lambda ctx: lambda *args: 1 / ctx['h']() * ctx['tau_xz'](),
+    der_funs=[lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_drho'](),
+              lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_djx']()],
     d_dx_resfun=False,
     d_dx_testfun=False,
     nb_quad_pts=3)

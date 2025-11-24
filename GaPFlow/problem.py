@@ -324,11 +324,7 @@ class Problem:
             "vsound": []
         }
 
-        if not self.options['silent']:
-            print(61 * '-')
-            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
-            print(61 * '-')
-            self.write(params=False)
+        self.solver.print_status_header()
 
         # Run
         self._tic = datetime.now()
@@ -471,13 +467,7 @@ class Problem:
         """
         Write scalars, fields and hyperparameters to disk as configured.
         """
-        if scalars:
-            print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
-            self.history["step"].append(self.step)
-            self.history["time"].append(self.simtime)
-            self.history["ekin"].append(self.kinetic_energy)
-            self.history["residual"].append(self.residual)
-            self.history["vsound"].append(self.pressure.v_sound)
+        self.solver.print_status(scalars)
 
         if fields:
             self.file.append_frame().write()
