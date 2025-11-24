@@ -1,6 +1,5 @@
 #
 # Copyright 2025 Hannes Holey
-#           2025 Christoph Huber
 #
 # ### MIT License
 #
@@ -27,8 +26,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .problem import Problem
 
-from collections import deque
-
 
 class ExplicitSolver:
 
@@ -37,25 +34,6 @@ class ExplicitSolver:
 
     def pre_run(self) -> None:
         p = self.problem
-
-        p.pressure.init_database(p.grid['dim'])
-        p.wall_stress_xz.init_database(p.grid['dim'])
-        p.wall_stress_yz.init_database(p.grid['dim'])
-
-        p.pressure.init()
-        p.wall_stress_xz.init()
-        p.wall_stress_yz.init()
-
-        if not p.options['silent']:
-            p.pressure.write()
-            p.wall_stress_xz.write()
-            p.wall_stress_yz.write()
-
-        # Numerics
-        p.step = 0
-        p.simtime = 0.
-        p.residual = 1.
-        p.residual_buffer = deque([p.residual, ], 5)
 
         if p.numerics["adaptive"]:
             p.dt = p.numerics["CFL"] * p.dt_crit
@@ -124,7 +102,7 @@ class ExplicitSolver:
 
     def print_status_header(self) -> None:
         p = self.problem
-        
+
         if not p.options['silent']:
             print(61 * '-')
             print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")

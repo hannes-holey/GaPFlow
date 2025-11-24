@@ -38,7 +38,8 @@ class SolutionDict:
 def newton_alpha_solver(fem_solver,
                         sol: SolutionDict,
                         get_MR: Callable,
-                        check_delta: Callable
+                        check_delta: Callable,
+                        **kwargs
                         ):
 
     sol.alpha = getattr(fem_solver, 'alpha', 1.0)
@@ -49,13 +50,15 @@ def newton_alpha_solver(fem_solver,
 
         R_norm = np.linalg.norm(R)
         sol.R_norm_history.append(R_norm)
-        print("Iteration", sol.iter, "Residual norm:", R_norm, "alpha:", sol.alpha)
+        if 'silent' not in kwargs or not kwargs['silent']:
+            print("Iteration", sol.iter, "Residual norm:", R_norm, "alpha:", sol.alpha)
 
         if sol.iter > fem_solver['max_iter']:
             print("Did not converge")
             break
         if R_norm < fem_solver['R_norm_tol']:
-            print("Converged!")
+            if 'silent' not in kwargs or not kwargs['silent']:
+                print("Converged!")
             break
 
         sol.delta_q = np.linalg.solve(M, -R)
@@ -76,11 +79,12 @@ class Solver():
 
         self.solve_fun = newton_alpha_solver
 
-    def solve(self, q_guess: np.ndarray = None) -> SolutionDict:
+    def solve(self, **kwargs) -> SolutionDict:
         assert self.get_MR_fun is not None, "get_MR_fun not set"
 
         self.solve_fun(self.fem_solver,
                        self.sol_dict,
                        self.get_MR_fun,
-                       self.callback_fun)
+                       self.callback_fun,
+                       **kwargs)
         return self.sol_dict

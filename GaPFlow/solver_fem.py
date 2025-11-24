@@ -32,10 +32,8 @@ from .fem.utils import (
 )
 
 from muGrid import GlobalFieldCollection
-from collections import deque
 import numpy as np
 import time
-import sys
 
 import numpy.typing as npt
 from typing import TYPE_CHECKING, Tuple
@@ -316,7 +314,6 @@ class FEMSolver1D:
     def boundary_condition_M(self, M: NDArray) -> NDArray:
         p = self.problem
 
-        # check Dirichlet
         if p.grid['bc_xW_D'][0]:
             M[0, :] = 0.0
             M[0, 0] = 1.0
@@ -364,22 +361,12 @@ class FEMSolver1D:
         assert field.shape[1] == 3, "Not a 1D problem: {}".format(field.shape)
         return field[1:-1, 1:-1].ravel()
 
-    def _get_sol_quad_fields(self) -> dict:
-        sol_inner = self._get_inner_sol_fields()
-        sol_quad = {}
-        for field in sol_inner:
-            sol_quad[field] = {}
-            for nb_quad in self.quad_list:
-                quad_vec = self.quad_fun(sol_inner[field], nb_quad)
-                sol_quad[field][nb_quad] = quad_vec
-        return sol_quad
-
     def init_quad(self) -> None:
+        """Initialize quadrature fields for 'q' and 'q_prev'"""
         p = self.problem
         self.field_list = ['rho', 'jx', 'jy']
         self.field_val_list = [p.q[0], p.q[1], p.q[2]]
         create_quad_fields(self, self.fc_fem, self.field_list, self.quad_list)
-
         field_list = ['rho_prev', 'jx_prev']
         create_quad_fields(self, self.fc_fem, field_list, self.quad_list)
 
@@ -408,6 +395,7 @@ class FEMSolver1D:
             p.q[var_idx][1:-1, 1:-1] = var_nodal.reshape((self.nb_pts, 1))
 
     def update_sol_quad(self) -> None:
+        """Update all quadrature fields from 'q' nodal solution."""
         for nb_quad in self.quad_list:
             for field, val in zip(self.field_list, self.field_val_list):
                 fieldname = f'_{field}_quad_{nb_quad}'
@@ -425,8 +413,8 @@ class FEMSolver1D:
         return self._get_quad_deriv(vec, nb_quad)
 
     def update_quad(self) -> None:
+        """Update all quadrature fields from current nodal solution."""
         p = self.problem
-
         self.update_sol_quad()
         p.topo.update_quad(self.quad_fun, self.dx_fun, self._inner_1d)
         p.pressure.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
@@ -434,8 +422,7 @@ class FEMSolver1D:
         # p.energy.update_quad(self.quad_fun)
 
     def update_prev_quad(self) -> None:
-        p = self.problem
-
+        """Write current quad values into 'previous' quad fields."""
         for nb_quad in self.quad_list:
             for field in ['rho', 'jx']:
                 curr_fieldname = f'_{field}_quad_{nb_quad}'
@@ -446,29 +433,7 @@ class FEMSolver1D:
     def pre_run(self, **kwargs) -> None:
         p = self.problem
 
-        p.pressure.init_database(p.grid['dim'])
-        p.wall_stress_xz.init_database(p.grid['dim'])
-        p.wall_stress_yz.init_database(p.grid['dim'])
-
-        p.pressure.init()
-        p.wall_stress_xz.init()
-        p.wall_stress_yz.init()
-
-        if not p.options['silent']:
-            p.pressure.write()
-            p.wall_stress_xz.write()
-            p.wall_stress_yz.write()
-
-        p.step = 0
-        p.simtime = 0.
-        p.residual = 1.
-        p.residual_buffer = deque([p.residual, ], 5)
-
-        if p.numerics["adaptive"]:
-            p.dt = p.numerics["CFL"] * p.dt_crit
-        else:
-            p.dt = p.numerics['dt']
-
+        p.dt = p.numerics['dt']
         p.tol = p.numerics['tol']
         p.max_it = p.numerics['max_it']
 
@@ -494,8 +459,9 @@ class FEMSolver1D:
 
         if self.dynamic:
             self.update_prev_quad()
+        self.time_inner = 0.0
 
-    def solver_step_fun(self, q_guess: NDArray ) -> Tuple[NDArray, NDArray]:
+    def solver_step_fun(self, q_guess: NDArray) -> Tuple[NDArray, NDArray]:
         self.set_q_nodal(q_guess)
         self.update_quad()
         M = self.get_M()
@@ -524,46 +490,39 @@ class FEMSolver1D:
         p._stop = True
 
     def update_dynamic(self) -> None:
+        """Do a single dynamic time step update.
+        R_norm_tol applies to inner convergence loop.
+        """
         p = self.problem
-
         self.update_prev_quad()
-
-        print(f"Time step {p.step}, Time {p.simtime:.6f}, dt {p.numerics['dt']:.6f}")
 
         self.num_solver.sol_dict.reset()
         self.num_solver.sol_dict.q0 = self.get_q_nodal()
         self.num_solver.get_MR_fun = self.solver_step_fun
 
         tic = time.time()
-        self.num_solver.solve()
+        self.num_solver.solve(silent=True)
         toc = time.time()
-        print(f"Solver took {toc - tic:.2f} seconds.")
+        self.time_inner = toc - tic
 
-        # update time and step
         p.post_update()
-        p.simtime += p.numerics['dt']
-        p.step += 1
 
     def update(self) -> None:
         """Top-level solver update function"""
-        
         if self.dynamic:
             self.update_dynamic()
         else:
             self.steady_state()
 
-        
-        p = self.problem
-
-        self.update_quad()
-        if self.nb_pts < 10:
-            self.print_system()
-
-        
-        return
-
     def print_status_header(self) -> None:
         p = self.problem
+        if not p.options['silent'] and self.dynamic:
+            print(61 * '-')
+            print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Convergence Time':<18s} {'Residual':<12s}")
+            print(61 * '-')
+            p.write(params=False)
 
-    def print_status(self, scalars) -> None:
-        print("** FEM Solver Status **")
+    def print_status(self, scalars=None) -> None:
+        p = self.problem
+        if not p.options['silent'] and self.dynamic:
+            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.time_inner:<18.4e} {p.residual:<12.4e}")

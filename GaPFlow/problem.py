@@ -27,6 +27,7 @@ import io
 import signal
 import numpy as np
 from copy import deepcopy
+from collections import deque
 from datetime import datetime
 from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
 
@@ -295,8 +296,26 @@ class Problem:
 
     def pre_run(self, **kwargs) -> None:
         """
-        Solver-dependent pre-run initialization.
+        Generic and solver-dependent pre-run initialization.
         """
+        self.pressure.init_database(self.grid['dim'])
+        self.wall_stress_xz.init_database(self.grid['dim'])
+        self.wall_stress_yz.init_database(self.grid['dim'])
+
+        self.pressure.init()
+        self.wall_stress_xz.init()
+        self.wall_stress_yz.init()
+
+        if not self.options['silent']:
+            self.pressure.write()
+            self.wall_stress_xz.write()
+            self.wall_stress_yz.write()
+
+        self.step = 0
+        self.simtime = 0.
+        self.residual = 1.
+        self.residual_buffer = deque([self.residual, ], 5)
+
         self.solver.pre_run(**kwargs)
 
     def run(self,
@@ -525,7 +544,7 @@ class Problem:
         self.step += 1
         self.simtime += self.dt
 
-        if self.numerics["adaptive"]:
+        if self.numerics["adaptive"] and self.numerics["solver"] == "explicit":
             self.dt = self.numerics["CFL"] * self.dt_crit
 
     def finalize(self, q0: npt.NDArray) -> None:
