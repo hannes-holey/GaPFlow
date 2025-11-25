@@ -343,7 +343,7 @@ class WallStress(GaussianProcessSurrogate):
             shear_viscosity = mu0
 
         s_bot = stress_bottom(self.solution,
-                              self.topography,
+                              self.height_and_slopes,
                               self.geo['U'],
                               self.geo['V'],
                               shear_viscosity,
@@ -352,7 +352,7 @@ class WallStress(GaussianProcessSurrogate):
                               )
 
         s_top = stress_top(self.solution,
-                           self.topography,
+                           self.height_and_slopes,
                            self.geo['U'],
                            self.geo['V'],
                            shear_viscosity,
@@ -451,7 +451,7 @@ class BulkStress(GaussianProcessSurrogate):
             shear_viscosity = mu0
 
         self.__field.p = stress_avg(self.solution,
-                                    self.topography,
+                                    self.height_and_slopes,
                                     self.geo['U'],
                                     self.geo['V'],
                                     shear_viscosity,
