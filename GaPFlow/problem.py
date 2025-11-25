@@ -128,8 +128,9 @@ class Problem:
 
             if database is not None:
                 # Set training path inside output path
-                if database.overwrite_training_path:
-                    database.set_training_path(os.path.join(self.outdir, 'train'))
+                # if database.overwrite_training_path:
+                database.set_training_path(os.path.join(self.outdir, 'train'),
+                                           check_temporary=True)
 
                 database.output_path = self.outdir
                 options['output'] = self.outdir
@@ -144,8 +145,8 @@ class Problem:
 
             if database is not None:
                 full_dict['gp'] = gp
-                full_dict['db'] = database.db
-                full_dict['md'] = database.md.params
+                full_dict['db'] = database.config
+                full_dict['md'] = database.md_config
 
             write_yaml(full_dict, os.path.join(self.outdir, 'config.yml'))
 
