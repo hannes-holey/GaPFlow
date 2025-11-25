@@ -701,19 +701,18 @@ class Pressure(GaussianProcessSurrogate):
         else:
             self.__field.p = eos_pressure(self.solution[0], self.prop)
 
-    def init_quad(self, fc_fem, quad_list: list[int]) -> None:
+    def init_quad(self, fc_fem, quad_list: list[int], create_fun: Callable) -> None:
         """Initialize quadrature point fields"""
-        from ..fem.utils import create_quad_fields
         self.quad_list = quad_list
         self.field_list = ['pressure', 'dp_drho']
-        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
+        create_fun(self, fc_fem, self.field_list, self.quad_list)
 
     def update_quad(self,
                     quad_fun: Callable[[NDArray, int], NDArray],
                     inner_fun: Callable[[NDArray], NDArray],
                     get_quad_field: Callable[[str, int], NDArray],
                     *args) -> None:
-        """Update pressure and gradients at quadrature points"""
+        """Update pressure and gradients at nodal and quadrature points"""
         self.update(*args)  # update p field
 
         for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields

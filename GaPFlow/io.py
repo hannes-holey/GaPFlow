@@ -103,7 +103,9 @@ def read_yaml_input(file):
                             'gp': sanitize_gp,
                             'db': sanitize_db,
                             'md': sanitize_md,
-                            'fem_solver': sanitize_fem_solver}
+                            'fem_solver': sanitize_fem_solver,
+                            'energy': sanitize_energy
+                            }
 
     sanitized_dict = {}
 
@@ -474,7 +476,24 @@ def sanitize_fem_solver(d):
             term_list = [t for t in term_list if 'T' not in t]
         out['equations']['term_list'] = term_list
     else:
-        pass  # user-specified term_list overwrites other settings
+        # user-specified term_list overwrites other settings
+        # find out if user included energy terms
+        term_list = out['equations']['term_list']
+        out['equations']['energy'] = any(t[1] == '3' for t in term_list)
+
+    print_dict(out)
+
+    return out
+
+
+def sanitize_energy(d):
+
+    out = {}
+
+    out['cv'] = float(d.get('cv', 718.))
+    out['k'] = float(d.get('k', 0.6))
+    out['T_wall'] = float(d.get('T_wall', 300.))
+    out['alpha_wall'] = float(d.get('alpha_wall', 1e5))
 
     print_dict(out)
 

@@ -65,11 +65,20 @@ class FEMSolver1D:
             term_ctx['tau_xz'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_quad(nbq)
             term_ctx['dtau_xz_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_drho_quad(nbq)
             term_ctx['dtau_xz_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_djx_quad(nbq)
+            term_ctx['T'] = lambda nbq=term.nb_quad_pts: p.energy.T_quad(nbq)
+            term_ctx['dT_drho'] = lambda nbq=term.nb_quad_pts: p.energy.dT_drho_quad(nbq)
+            term_ctx['dT_djx'] = lambda nbq=term.nb_quad_pts: p.energy.dT_djx_quad(nbq)
+            term_ctx['dT_dE'] = lambda nbq=term.nb_quad_pts: p.energy.dT_dE_quad(nbq)
+            term_ctx['S'] = lambda nbq=term.nb_quad_pts: p.energy.S_quad(nbq)
+            term_ctx['dS_drho'] = lambda nbq=term.nb_quad_pts: p.energy.dS_drho_quad(nbq)
+            term_ctx['dS_djx'] = lambda nbq=term.nb_quad_pts: p.energy.dS_djx_quad(nbq)
+            term_ctx['dS_dE'] = lambda nbq=term.nb_quad_pts: p.energy.dS_dE_quad(nbq)
             term_ctx['h'] = lambda nbq=term.nb_quad_pts: p.topo.h_quad(nbq)
             term_ctx['dh_dx'] = lambda nbq=term.nb_quad_pts: p.topo.dh_dx_quad(nbq)
             term_ctx['U'] = lambda nbq=term.nb_quad_pts: p.topo.U_quad(nbq)
             term_ctx['rho_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('rho_prev', nbq)
             term_ctx['jx_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('jx_prev', nbq)
+            term_ctx['E_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('E_prev', nbq)
             term_ctx['dt'] = p.numerics['dt']
             term.build(term_ctx)
 
@@ -78,19 +87,34 @@ class FEMSolver1D:
         p = self.problem
 
         self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
-        if self.periodic:
-            print("FEMSolver1D: Using periodic boundary conditions in x-direction.")
+        self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
+
+        print("FEM Solver 1D intialized with the following settings:")
+        print(f"  Periodic boundary conditions in x-direction: {self.periodic}")
+        print(f"  Energy equation included: {self.energy}")
+        print(f"  Dynamic solver enabled: {self.dynamic}")
+
         self.nb_pts = p.grid['Nx']
         self.nb_ele = self.nb_pts if self.periodic else self.nb_pts - 1
         self.dx = p.grid['Lx'] / self.nb_ele
 
-        if p.fem_solver['equations']['energy']:
+        if self.energy:
+            # equation system
             self.variables = ['rho', 'jx', 'E']
             self.residuals = ['mass', 'momentum_x', 'energy']
+            # quadrature point fields
+            self.field_list = ['rho', 'jx', 'jy', 'E']
+            self.field_val_list = [p.q[0], p.q[1], p.q[2], p.energy.energy]
+            self.prev_field_list = ['rho_prev', 'jx_prev', 'E_prev']
         else:
+            # equation system
             self.variables = ['rho', 'jx']
             self.residuals = ['mass', 'momentum_x']
+            # quadrature point fields
+            self.field_list = ['rho', 'jx', 'jy']
+            self.field_val_list = [p.q[0], p.q[1], p.q[2]]
+            self.prev_field_list = ['rho_prev', 'jx_prev']
 
         self.res_size = len(self.residuals) * self.nb_pts
         self.mat_size = (self.res_size, self.res_size)
@@ -363,18 +387,13 @@ class FEMSolver1D:
 
     def init_quad(self) -> None:
         """Initialize quadrature fields for 'q' and 'q_prev'"""
-        p = self.problem
-        self.field_list = ['rho', 'jx', 'jy']
-        self.field_val_list = [p.q[0], p.q[1], p.q[2]]
         create_quad_fields(self, self.fc_fem, self.field_list, self.quad_list)
-        field_list = ['rho_prev', 'jx_prev']
-        create_quad_fields(self, self.fc_fem, field_list, self.quad_list)
+        create_quad_fields(self, self.fc_fem, self.prev_field_list, self.quad_list)
 
     def get_nodal_val(self, field_name: str) -> NDArray:
         """Returns the nodal values of a field in shape (nb_pts,)."""
-        p = self.problem
         var_idx = self.field_list.index(field_name)
-        return self._inner_1d(p.q[var_idx])
+        return self._inner_1d(self.field_val_list[var_idx])
 
     def get_q_nodal(self) -> NDArray:
         """Returns the full solution vector q in nodal values shape (nb_vars*nb_pts,)."""
@@ -419,12 +438,13 @@ class FEMSolver1D:
         p.topo.update_quad(self.quad_fun, self.dx_fun, self._inner_1d)
         p.pressure.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
         p.wall_stress_xz.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field, p.topo)
-        # p.energy.update_quad(self.quad_fun)
+        if self.energy:
+            p.energy.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
 
     def update_prev_quad(self) -> None:
         """Write current quad values into 'previous' quad fields."""
         for nb_quad in self.quad_list:
-            for field in ['rho', 'jx']:
+            for field in self.variables:
                 curr_fieldname = f'_{field}_quad_{nb_quad}'
                 prev_fieldname = f'_{field}_prev_quad_{nb_quad}'
                 curr_vals = getattr(self, curr_fieldname).p
@@ -448,11 +468,13 @@ class FEMSolver1D:
 
         self.init_quad()
         p.topo.init_quad(self.fc_fem, p.geo, self.quad_list)
-        p.pressure.init_quad(self.fc_fem, self.quad_list)
+        p.pressure.init_quad(self.fc_fem, self.quad_list, create_quad_fields)
         p.pressure.build_grad()
         p.wall_stress_xz.init_quad(self.fc_fem, self.quad_list)
         p.wall_stress_xz.build_grad()
-        # p.energy.build_grad()
+        if self.energy:
+            p.energy.init_quad(self.fc_fem, self.quad_list, create_quad_fields)
+            p.energy.build_grad()
 
         self._build_terms()
         self.update_quad()
@@ -490,8 +512,8 @@ class FEMSolver1D:
         p._stop = True
 
     def update_dynamic(self) -> None:
-        """Do a single dynamic time step update.
-        R_norm_tol applies to inner convergence loop.
+        """Do a single dynamic time step update, then return to problem main loop.
+        R_norm_tol and fem_solver['max_iter'] apply to inner convergence loop.
         """
         p = self.problem
         self.update_prev_quad()

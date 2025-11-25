@@ -44,7 +44,7 @@ from . import __version__
 from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
-from .models import WallStress, BulkStress, Pressure
+from .models import WallStress, BulkStress, Pressure, Energy
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
@@ -74,6 +74,7 @@ class Problem:
                  prop: dict,
                  geo: dict,
                  fem_solver: dict,
+                 energy: dict,
                  gp: dict | None = None,
                  database: Database | None = None,
                  extra_field: npt.NDArray | None = None
@@ -90,6 +91,7 @@ class Problem:
         self.geo = geo
         self.prop = prop
         self.fem_solver = fem_solver
+        self.energy = energy
 
         # Initialize solver
         if self.numerics['solver'] == 'explicit':
@@ -130,6 +132,8 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
+        if self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy']:
+            self.energy = Energy(self.fc, energy)
 
         self.topo = Topography(self.fc, self.grid, geo, prop)
         # I/O
@@ -200,8 +204,9 @@ class Problem:
         prop = input_dict['properties']
         geo = input_dict['geometry']
         fem_solver = input_dict['fem_solver']
+        energy = input_dict['energy']
 
-        return options, grid, numerics, prop, geo, fem_solver
+        return options, grid, numerics, prop, geo, fem_solver, energy
 
     @staticmethod
     def _get_optional_input(input_dict):
