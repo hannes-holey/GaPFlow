@@ -102,7 +102,7 @@ class Problem:
         database : GaPFlow.db.Database or None
             A database object, handling the GP training data with an attached MD runner.
         extra_field: numpy.ndarray or None
-            An additional field, whose entries can be used as GP features 
+            An additional field, whose entries can be used as GP features
             (besides the solution itself and the topography).
         """
 
@@ -409,7 +409,7 @@ class Problem:
             self._post_run()
 
     def _pre_run(self) -> None:
-        """Initialize time-stepping and GP models. 
+        """Initialize time-stepping and GP models.
 
         Has to be called before the first call to :meth:`update`.
         """

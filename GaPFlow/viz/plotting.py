@@ -26,7 +26,7 @@
 """
 Create line and contour plots of the simulation results.
 
-The methods within this module are either called from the command-line interface 
+The methods within this module are either called from the command-line interface
 or directly from a :class:`GaPFlow.Problem` instance. The former reads the output
 from stored NetCDF files.
 """
