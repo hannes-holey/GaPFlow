@@ -422,9 +422,9 @@ def _plot_sol_from_field_1d(q,
         ax[1, 3].plot(x, temperature[(*s,)], color=color_e)
         ax[1, 3].set_ylabel(r'Temperature $T$')
 
-    set_axes_labels(ax)
     for a in ax.flat:
         autoscale_ylim(a)
+    set_axes_labels(ax)
 
 
 def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):
