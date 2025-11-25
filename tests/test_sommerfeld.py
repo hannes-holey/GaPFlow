@@ -118,7 +118,7 @@ def test_pressure_profile(setup, eps):
     input_dict = setup
     input_dict['geometry']['eps'] = eps
 
-    problem = Problem.from_dict(input_dict)
+    problem = Problem._from_dict(input_dict)
     problem.run()
 
     p_num = problem.pressure.pressure[1:-1, 1]

@@ -67,7 +67,7 @@ properties:
 def test_x_y():
 
     problem = Problem.from_string(sim)
-    problem.pre_run()
+    problem._pre_run()
 
     mass_before = problem.mass.copy()
 

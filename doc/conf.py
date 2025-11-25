@@ -55,6 +55,7 @@ autodoc_default_options = {
     'undoc-members': True,
     'inherited-members': True,
     'show-inheritance': True,
+    'private-members': False,
 }
 
 # The following makes mystnb convert notebooks with jupytext
