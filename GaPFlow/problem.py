@@ -540,7 +540,7 @@ class Problem:
 
             src = source(
                 self.__field.p,
-                self.topo.height_and_slopes,
+                self.topo.full,
                 self.bulk_stress.stress,
                 self.wall_stress_xz.lower + self.wall_stress_yz.lower,
                 self.wall_stress_xz.upper + self.wall_stress_yz.upper,
@@ -822,13 +822,13 @@ class Problem:
         """
 
         if self.grid['dim'] == 1:
-            _plot_height_1d_from_field(self.topo.height_and_slopes,
+            _plot_height_1d_from_field(self.topo.full,
                                        self.pressure.pressure,
                                        show_defo=show_defo,
                                        show_pressure=show_pressure)
         elif self.grid['dim'] == 2:
             # TODO: show defo in 2D
-            _plot_height_2d_from_field(self.topo.height_and_slopes)
+            _plot_height_2d_from_field(self.topo.full)
 
     def animate(self,
                 save: bool = False,
