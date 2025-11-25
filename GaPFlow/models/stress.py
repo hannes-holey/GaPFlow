@@ -386,7 +386,8 @@ class WallStress(GaussianProcessSurrogate):
         """Initialize quadrature point fields"""
         from ..fem.utils import create_quad_fields
         self.quad_list = quad_list
-        self.field_list = ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx']
+        self.field_list = ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
+                           'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']
         create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
 
     def build_grad(self) -> None:
@@ -401,7 +402,23 @@ class WallStress(GaussianProcessSurrogate):
             tau_xz_bot = stress_bottom_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
             return tau_xz_top - tau_xz_bot
 
+        def get_tau_xz_bot(rho, jx, jy, h, hx, U, V, Ls):
+            eta = get_shear_viscosity(self)
+            q = jnp.array([rho, jx, jy])
+            h = jnp.array([h, hx])
+            tau_xz_bot = stress_bottom_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
+            return tau_xz_bot
+
         # only V is constant
+        self.tau_xz = jit(
+            vmap(
+                vmap(
+                    get_tau_xz,
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
         self.dtau_xz_drho = jit(
             vmap(
                 vmap(
@@ -420,10 +437,28 @@ class WallStress(GaussianProcessSurrogate):
                 in_axes=(0, 0, 0, 0, 0, 0, None, 0)
             )
         )
-        self.tau_xz = jit(
+        self.tau_xz_bot = jit(
             vmap(
                 vmap(
-                    get_tau_xz,
+                    get_tau_xz_bot,
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
+        self.dtau_xz_bot_drho = jit(
+            vmap(
+                vmap(
+                    grad(get_tau_xz_bot, argnums=0),
+                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+                ),
+                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
+            )
+        )
+        self.dtau_xz_bot_djx = jit(
+            vmap(
+                vmap(
+                    grad(get_tau_xz_bot, argnums=1),
                     in_axes=(0, 0, 0, 0, 0, 0, None, 0)
                 ),
                 in_axes=(0, 0, 0, 0, 0, 0, None, 0)
@@ -451,18 +486,21 @@ class WallStress(GaussianProcessSurrogate):
                     0,
                     Ls_quad)
 
-            for arg in args:
-                if type(arg) is int:
-                    continue
-                assert arg.shape[0] == nb_quad, f"Argument shape mismatch for nb_quad={nb_quad}: {arg.shape}"
-
             tau_xz_quad: NDArray = self.tau_xz(*args)  # type: ignore
             dtau_xz_drho_quad: NDArray = self.dtau_xz_drho(*args)  # type: ignore
             dtau_xz_djx_quad: NDArray = self.dtau_xz_djx(*args)  # type: ignore
 
+            tau_xz_bot_quad: NDArray = self.tau_xz_bot(*args)  # type: ignore
+            dtau_xz_bot_drho_quad: NDArray = self.dtau_xz_bot_drho(*args)  # type: ignore
+            dtau_xz_bot_djx_quad: NDArray = self.dtau_xz_bot_djx(*args)  # type: ignore
+
             getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad
             getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad
             getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad
+
+            getattr(self, f'_tau_xz_bot_quad_{nb_quad}').p = tau_xz_bot_quad
+            getattr(self, f'_dtau_xz_bot_drho_quad_{nb_quad}').p = dtau_xz_bot_drho_quad
+            getattr(self, f'_dtau_xz_bot_djx_quad_{nb_quad}').p = dtau_xz_bot_djx_quad
 
     def tau_xz_quad(self, nb_quad: int) -> NDArray:
         """Wall shear stress tau_xz (top - bottom) at quadrature points."""
@@ -475,6 +513,18 @@ class WallStress(GaussianProcessSurrogate):
     def dtau_xz_djx_quad(self, nb_quad: int) -> NDArray:
         """Gradient of wall shear stress tau_xz w.r.t. x-momentum at quadrature points."""
         return getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p
+
+    def tau_xz_bot_quad(self, nb_quad: int) -> NDArray:
+        """Bottom wall shear stress tau_xz at quadrature points."""
+        return getattr(self, f'_tau_xz_bot_quad_{nb_quad}').p
+
+    def dtau_xz_bot_drho_quad(self, nb_quad: int) -> NDArray:
+        """Gradient of bottom wall shear stress tau_xz w.r.t. density at quadrature points."""
+        return getattr(self, f'_dtau_xz_bot_drho_quad_{nb_quad}').p
+
+    def dtau_xz_bot_djx_quad(self, nb_quad: int) -> NDArray:
+        """Gradient of bottom wall shear stress tau_xz w.r.t. x-momentum at quadrature points."""
+        return getattr(self, f'_dtau_xz_bot_djx_quad_{nb_quad}').p
 
 
 class BulkStress(GaussianProcessSurrogate):

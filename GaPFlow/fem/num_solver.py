@@ -29,10 +29,12 @@ class SolutionDict:
     def __init__(self):
         self.R_norm_history = []
         self.iter = 0
+        self.success = False
 
     def reset(self):
         self.R_norm_history = []
         self.iter = 0
+        self.success = False
 
 
 def newton_alpha_solver(fem_solver,
@@ -51,14 +53,13 @@ def newton_alpha_solver(fem_solver,
         R_norm = np.linalg.norm(R)
         sol.R_norm_history.append(R_norm)
         if 'silent' not in kwargs or not kwargs['silent']:
-            print("Iteration", sol.iter, "Residual norm:", R_norm, "alpha:", sol.alpha)
+            print(f"{sol.iter:<10d} {R_norm:<12.4e}")
 
         if sol.iter > fem_solver['max_iter']:
-            print("Did not converge")
+            sol.success = False
             break
         if R_norm < fem_solver['R_norm_tol']:
-            if 'silent' not in kwargs or not kwargs['silent']:
-                print("Converged!")
+            sol.success = True
             break
 
         sol.delta_q = np.linalg.solve(M, -R)

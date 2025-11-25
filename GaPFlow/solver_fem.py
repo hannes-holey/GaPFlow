@@ -47,6 +47,7 @@ class FEMSolver1D:
 
     def __init__(self, problem: "Problem") -> None:
         self.problem = problem
+        self.num_solver = Solver(problem.fem_solver)
 
     def _build_terms(self) -> None:
         """Linking functions of initialized models into abstract term functions"""
@@ -65,6 +66,9 @@ class FEMSolver1D:
             term_ctx['tau_xz'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_quad(nbq)
             term_ctx['dtau_xz_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_drho_quad(nbq)
             term_ctx['dtau_xz_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_djx_quad(nbq)
+            term_ctx['tau_xz_bot'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_bot_quad(nbq)
+            term_ctx['dtau_xz_bot_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_bot_drho_quad(nbq)
+            term_ctx['dtau_xz_bot_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_bot_djx_quad(nbq)
             term_ctx['T'] = lambda nbq=term.nb_quad_pts: p.energy.T_quad(nbq)
             term_ctx['dT_drho'] = lambda nbq=term.nb_quad_pts: p.energy.dT_drho_quad(nbq)
             term_ctx['dT_djx'] = lambda nbq=term.nb_quad_pts: p.energy.dT_djx_quad(nbq)
@@ -89,11 +93,6 @@ class FEMSolver1D:
         self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
-
-        print("FEM Solver 1D intialized with the following settings:")
-        print(f"  Periodic boundary conditions in x-direction: {self.periodic}")
-        print(f"  Energy equation included: {self.energy}")
-        print(f"  Dynamic solver enabled: {self.dynamic}")
 
         self.nb_pts = p.grid['Nx']
         self.nb_ele = self.nb_pts if self.periodic else self.nb_pts - 1
@@ -137,6 +136,7 @@ class FEMSolver1D:
         """Init quadrature point evaluation function."""
 
         def quad_fun(var: NDArray, nb_quad_pts: int) -> NDArray:
+            """Returns quadrature point values in 1d array (nb_ele*nb_quad_pts,)"""
             vals = np.append(var, var[0]) if self.periodic else var
             if vals.ndim != 1:
                 raise ValueError(f"quad_fun expects a 1D array, got shape {vals.shape}")
@@ -212,7 +212,7 @@ class FEMSolver1D:
         dep_var_vals = {dep_var: self.get_quad_field(dep_var, term.nb_quad_pts)
                         for dep_var in term.dep_vars}
         res_deriv_vals = term.evaluate_deriv(dep_var, *[dep_var_vals[dep_var] for dep_var in term.dep_vars])
-        res_deriv_vals = res_deriv_vals.T
+        res_deriv_vals = res_deriv_vals.T  # get shape (nb_ele, nb_quad_pts)
 
         if not term.d_dx_resfun:  # res = f(a)
             for pt_test in range(self.nb_pts):
@@ -281,14 +281,13 @@ class FEMSolver1D:
 
         if not term.d_dx_resfun:  # res = f(a)
             res_fun_vals = term.evaluate(*[dep_var_vals[dep_var] for dep_var in term.dep_vars])
-            res_fun_vals = res_fun_vals.T
-
-        if term.d_dx_resfun:  # res = df/da * da/dx
+            res_fun_vals = res_fun_vals.T  # get shape (nb_ele, nb_quad_pts)
+        else:  # res = df/da * da/dx
             res_fun_vals = np.zeros((self.nb_ele, term.nb_quad_pts))
             for dep_var in term.dep_vars:
                 fun_deriv_vals = term.evaluate_deriv(dep_var, *[dep_var_vals[dep_var] for dep_var in term.dep_vars])
                 dep_var_deriv_vals = self.get_quad_deriv(dep_var, term.nb_quad_pts)
-                res_fun_vals += (fun_deriv_vals * dep_var_deriv_vals).T
+                res_fun_vals += (fun_deriv_vals * dep_var_deriv_vals).T  # get shape (nb_ele, nb_quad_pts)
 
         if not term.d_dx_testfun:
             N1_quad_w, N2_quad_w = self.get_N_quad_w(term.nb_quad_pts)
@@ -346,7 +345,7 @@ class FEMSolver1D:
             M[-1, self.nb_pts - 1] = 1.0
         return M
 
-    def get_boundary_condition_R(self, R: NDArray) -> NDArray:
+    def boundary_condition_R(self, R: NDArray) -> NDArray:
         p = self.problem
 
         # check Dirichlet
@@ -360,16 +359,6 @@ class FEMSolver1D:
             R[-1] = guess - target
         return R
 
-    def boundary_conditions(self, M, R) -> tuple[NDArray, NDArray]:
-        pass
-        return M, R
-
-    def get_MR(self) -> tuple[NDArray, NDArray]:
-        M = self.get_tang_matrix()
-        R = self.get_residual_vec()
-        M, R = self.boundary_conditions(M, R)
-        return M, R
-
     def get_M(self) -> NDArray:
         M = self.get_tang_matrix()
         M = self.boundary_condition_M(M)
@@ -377,7 +366,7 @@ class FEMSolver1D:
 
     def get_R(self) -> NDArray:
         R = self.get_residual_vec()
-        R = self.get_boundary_condition_R(R)
+        R = self.boundary_condition_R(R)
         return R
 
     def _inner_1d(self, field: NDArray) -> NDArray:
@@ -406,12 +395,11 @@ class FEMSolver1D:
 
     def set_q_nodal(self, q_nodal: NDArray) -> None:
         """Sets the full solution vector q from nodal values shape (nb_vars*nb_pts,)."""
-        p = self.problem
         for var in self.variables:
             var_slice = self._var_slice(var)
             var_nodal = q_nodal[var_slice]
             var_idx = self.field_list.index(var)
-            p.q[var_idx][1:-1, 1:-1] = var_nodal.reshape((self.nb_pts, 1))
+            self.field_val_list[var_idx][1:-1, 1:-1] = var_nodal.reshape((self.nb_pts, 1))
 
     def update_sol_quad(self) -> None:
         """Update all quadrature fields from 'q' nodal solution."""
@@ -420,6 +408,8 @@ class FEMSolver1D:
                 fieldname = f'_{field}_quad_{nb_quad}'
                 quad_vals = self.quad_fun(self._inner_1d(val), nb_quad)
                 getattr(self, fieldname).p = quad_vals.reshape(-1, nb_quad).T
+                # reshape(-1, nb_quad) gives shape (nb_ele, nb_quad)
+                # transpose to (nb_quad, nb_ele) for muGrid storage
 
     def get_quad_field(self, field_name: str, nb_quad: int) -> NDArray:
         """Returns the quadrature values of a field in shape (nb_quad, nb_ele)."""
@@ -457,14 +447,17 @@ class FEMSolver1D:
         p.tol = p.numerics['tol']
         p.max_it = p.numerics['max_it']
 
-        self.num_solver = Solver(p.fem_solver)
-
         self._get_active_terms()
         self._get_quad_list(**kwargs)
         self._init_convenience_accessors()
         self._init_quad_fun()
         self._init_dx_fun()
         self._init_fc_fem()
+
+        print("FEM Solver 1D intialized with the following settings:")
+        print(f"  Periodic boundary conditions in x-direction: {self.periodic}")
+        print(f"  Energy equation included: {self.energy}")
+        print(f"  Dynamic solver enabled: {self.dynamic} \n")
 
         self.init_quad()
         p.topo.init_quad(self.fc_fem, p.geo, self.quad_list)
@@ -500,14 +493,18 @@ class FEMSolver1D:
     def steady_state(self) -> None:
         p = self.problem
 
-        print("Solving steady-state problem...")
+        print(61 * '-')
+        print(f"{'Iteration':<10s} {'Residual':<12s}")
+        print(61 * '-')
+
         self.num_solver.sol_dict.q0 = self.get_q_nodal()
         self.num_solver.get_MR_fun = self.solver_step_fun
 
         tic = time.time()
-        self.num_solver.solve()
+        sol_dict = self.num_solver.solve()
         toc = time.time()
-        print(f"Solver took {toc - tic:.2f} seconds.")
+        if sol_dict.success:
+            print(f"Converged. Solving took {toc - tic:.2f} seconds.")
 
         p._stop = True
 

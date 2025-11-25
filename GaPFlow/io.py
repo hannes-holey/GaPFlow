@@ -104,7 +104,7 @@ def read_yaml_input(file):
                             'db': sanitize_db,
                             'md': sanitize_md,
                             'fem_solver': sanitize_fem_solver,
-                            'energy': sanitize_energy
+                            'energy_spec': sanitize_energy
                             }
 
     sanitized_dict = {}

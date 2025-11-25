@@ -33,14 +33,14 @@ class Energy():
 
     def __init__(self,
                  fc: Any,
-                 energy: dict
+                 energy_spec: dict
                  ) -> None:
 
         self.__field = fc.register_real_field('total_energy')
-        self.k = energy['k']
-        self.cv = energy['cv']
-        self.T_wall = energy['T_wall']
-        self.alpha_wall = energy['alpha_wall']
+        self.k = energy_spec['k']
+        self.cv = energy_spec['cv']
+        self.T_wall = energy_spec['T_wall']
+        self.alpha_wall = energy_spec['alpha_wall']
 
     @property
     def energy(self) -> NDArray:
@@ -63,7 +63,6 @@ class Energy():
                     get_quad_field: Callable[[str, int], NDArray],
                     *args) -> None:
         """Update pressure and gradients at nodal and quadrature points"""
-        self.update(*args)  # update p field
 
         for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
             args = (get_quad_field('rho', nb_quad),

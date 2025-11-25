@@ -29,6 +29,7 @@ import numpy as np
 
 R11 = NonLinearTerm(
     name='R11',
+    description='flux divergence',
     res='mass',
     dep_vars=['jx'],
     dep_vals=[],
@@ -38,8 +39,9 @@ R11 = NonLinearTerm(
     d_dx_testfun=False,
     nb_quad_pts=2)
 
-R12 = NonLinearTerm(
-    name='R12',
+R11S = NonLinearTerm(
+    name='R11S',
+    description='flux divergence height source',
     res='mass',
     dep_vars=['jx'],
     dep_vals=['h', 'dh_dx'],
@@ -51,6 +53,7 @@ R12 = NonLinearTerm(
 
 R1T = NonLinearTerm(
     name='R1T',
+    description='time derivative',
     res='mass',
     dep_vars=['rho'],
     dep_vals=[],
@@ -62,6 +65,7 @@ R1T = NonLinearTerm(
 
 R21 = NonLinearTerm(
     name='R21',
+    description='pressure gradient',
     res='momentum_x',
     dep_vars=['rho'],
     dep_vals=[],
@@ -71,8 +75,35 @@ R21 = NonLinearTerm(
     d_dx_testfun=False,
     nb_quad_pts=2)
 
+R22 = NonLinearTerm(
+    name='R22',
+    description='momentum flux',
+    res='momentum_x',
+    dep_vars=['rho', 'jx'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx: - (jx**2) / rho,
+    der_funs=[lambda ctx: lambda rho, jx: (jx**2) / rho**2,
+              lambda ctx: lambda rho, jx: - (2 * jx) / rho],
+    d_dx_resfun=True,
+    d_dx_testfun=False,
+    nb_quad_pts=2)
+
+R22S = NonLinearTerm(
+    name='R22S',
+    description='momentum flux height source',
+    res='momentum_x',
+    dep_vars=['rho', 'jx'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda rho, jx: - (jx**2) / rho * (1 / ctx['h']()) * ctx['dh_dx'](),
+    der_funs=[lambda ctx: lambda rho, jx: (jx**2) / rho**2 * (1 / ctx['h']()) * ctx['dh_dx'](),
+              lambda ctx: lambda rho, jx: - (2 * jx) / rho * (1 / ctx['h']()) * ctx['dh_dx']()],
+    d_dx_resfun=False,
+    d_dx_testfun=False,
+    nb_quad_pts=2)
+
 R24 = NonLinearTerm(
     name='R24',
+    description='wall stress',
     res='momentum_x',
     dep_vars=['rho', 'jx'],
     dep_vals=['h', 'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx'],
@@ -85,6 +116,7 @@ R24 = NonLinearTerm(
 
 R2T = NonLinearTerm(
     name='R2T',
+    description='time derivative',
     res='momentum_x',
     dep_vars=['jx'],
     dep_vals=[],
@@ -96,6 +128,7 @@ R2T = NonLinearTerm(
 
 R31 = NonLinearTerm(
     name='R31',
+    description='energy convection',
     res='energy',
     dep_vars=['rho', 'jx', 'E'],
     dep_vals=[],
@@ -109,6 +142,7 @@ R31 = NonLinearTerm(
 
 R31S = NonLinearTerm(
     name='R31S',
+    description='energy convection height source',
     res='energy',
     dep_vars=['rho', 'jx', 'E'],
     dep_vals=['h', 'dh_dx'],
@@ -122,24 +156,26 @@ R31S = NonLinearTerm(
 
 R32 = NonLinearTerm(
     name='R32',
+    description='pressure work',
     res='energy',
     dep_vars=['rho', 'jx'],
     dep_vals=[],
-    fun=lambda ctx: lambda rho, jx, E: - ctx['p'](rho) * (jx / rho),
-    der_funs=[lambda ctx: lambda rho, jx: - (ctx['dp_drho'](rho) * (jx / rho) + ctx['p'](rho) * (jx / rho**2)),
-              lambda ctx: lambda rho, jx: - ctx['p'](rho) * (1 / rho)],
+    fun=lambda ctx: lambda rho, jx, E: - ctx['p']() * (jx / rho),
+    der_funs=[lambda ctx: lambda rho, jx: - (ctx['dp_drho']() * (jx / rho) + ctx['p']() * (jx / rho**2)),
+              lambda ctx: lambda rho, jx: - ctx['p']() * (1 / rho)],
     d_dx_resfun=True,
     d_dx_testfun=False,
     nb_quad_pts=3)
 
 R32S = NonLinearTerm(
     name='R32S',
+    description='pressure work height source',
     res='energy',
     dep_vars=['rho', 'jx'],
     dep_vals=['h', 'dh_dx'],
-    fun=lambda ctx: lambda rho, jx, E: - ctx['p'](rho) * (jx / rho) * (1 / ctx['h']() * ctx['dh_dx']()),
-    der_funs=[lambda ctx: lambda rho, jx: - ((ctx['dp_drho'](rho) * (jx / rho) - ctx['p'](rho) * (jx / rho**2)) * (1 / ctx['h']() * ctx['dh_dx']())),
-              lambda ctx: lambda rho, jx: - ctx['p'](rho) * (1 / rho) * (1 / ctx['h']() * ctx['dh_dx']())],
+    fun=lambda ctx: lambda rho, jx, E: - ctx['p']() * (jx / rho) * (1 / ctx['h']() * ctx['dh_dx']()),
+    der_funs=[lambda ctx: lambda rho, jx: - ((ctx['dp_drho']() * (jx / rho) - ctx['p']() * (jx / rho**2)) * (1 / ctx['h']() * ctx['dh_dx']())),
+              lambda ctx: lambda rho, jx: - ctx['p']() * (1 / rho) * (1 / ctx['h']() * ctx['dh_dx']())],
     d_dx_resfun=False,
     d_dx_testfun=False,
     nb_quad_pts=3)
@@ -148,38 +184,41 @@ R32S = NonLinearTerm(
 
 R34 = NonLinearTerm(
     name='R34',
+    description='wall stress work',
     res='energy',
     dep_vars=['rho', 'jx'],
     dep_vals=['h', 'dh_dx', 'tau_xz_bot', 'U'],
-    fun=lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['tau_xz_bot'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']()) * ctx['U'](),
-    der_funs=[lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dtau_xz_bot_drho'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']()) * ctx['U'](),
-              lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dtau_xz_bot_djx'](rho, jx, ctx['h'](), ctx['dh_dx'](), ctx['U']()) * ctx['U']()],
+    fun=lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['tau_xz_bot']() * ctx['U'](),
+    der_funs=[lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dtau_xz_bot_drho']() * ctx['U'](),
+              lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dtau_xz_bot_djx']() * ctx['U']()],
     d_dx_resfun=False,
     d_dx_testfun=False,
     nb_quad_pts=3)
 
 R35 = NonLinearTerm(
     name='R35',
+    description='thermal diffusion',
     res='energy',
     dep_vars=['rho', 'jx', 'E'],
     dep_vals=[],
-    fun=lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['T'](rho, jx, E),
-    der_funs=[lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_drho'](rho, jx, E),
-              lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_djx'](rho, jx, E),
-              lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_dE'](rho, jx, E)],
+    fun=lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['T'](),
+    der_funs=[lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_drho'](),
+              lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_djx'](),
+              lambda ctx: lambda rho, jx, E: - ctx['k']() * ctx['dT_dE']()],
     d_dx_resfun=True,
     d_dx_testfun=True,
     nb_quad_pts=3)
 
 R36 = NonLinearTerm(
     name='R36',
+    description='wall heat balance',
     res='energy',
     dep_vars=['rho', 'jx', 'E'],
     dep_vals=['dh_dx'],
-    fun=lambda ctx: lambda rho, jx, E: ctx['S'](rho, jx, E, ctx['dh_dx']()),
-    der_funs=[lambda ctx: lambda rho, jx, E: ctx['dS_drho'](rho, jx, E, ctx['dh_dx']()),
-              lambda ctx: lambda rho, jx, E: ctx['dS_djx'](rho, jx, E, ctx['dh_dx']()),
-              lambda ctx: lambda rho, jx, E: ctx['dS_dE'](rho, jx, E, ctx['dh_dx']())],
+    fun=lambda ctx: lambda rho, jx, E: ctx['S'](),
+    der_funs=[lambda ctx: lambda rho, jx, E: ctx['dS_drho'](),
+              lambda ctx: lambda rho, jx, E: ctx['dS_djx'](),
+              lambda ctx: lambda rho, jx, E: ctx['dS_dE']()],
     d_dx_resfun=False,
     d_dx_testfun=False,
     nb_quad_pts=3
@@ -187,6 +226,7 @@ R36 = NonLinearTerm(
 
 R3T = NonLinearTerm(
     name='R3T',
+    description='time derivative',
     res='energy',
     dep_vars=['E'],
     dep_vals=[],
@@ -196,4 +236,4 @@ R3T = NonLinearTerm(
     d_dx_testfun=False,
     nb_quad_pts=3)
 
-term_list = [R11, R12, R1T, R21, R24, R2T, R31, R31S, R32, R32S, R34, R35, R36, R3T]
+term_list = [R11, R11S, R1T, R21, R22, R22S, R24, R2T, R31, R31S, R32, R32S, R34, R35, R36, R3T]

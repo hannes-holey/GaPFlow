@@ -74,7 +74,7 @@ class Problem:
                  prop: dict,
                  geo: dict,
                  fem_solver: dict,
-                 energy: dict,
+                 energy_spec: dict,
                  gp: dict | None = None,
                  database: Database | None = None,
                  extra_field: npt.NDArray | None = None
@@ -91,7 +91,7 @@ class Problem:
         self.geo = geo
         self.prop = prop
         self.fem_solver = fem_solver
-        self.energy = energy
+        self.energy_spec = energy_spec
 
         # Initialize solver
         if self.numerics['solver'] == 'explicit':
@@ -133,7 +133,7 @@ class Problem:
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
         if self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy']:
-            self.energy = Energy(self.fc, energy)
+            self.energy = Energy(self.fc, self.energy_spec)
 
         self.topo = Topography(self.fc, self.grid, geo, prop)
         # I/O
@@ -204,9 +204,9 @@ class Problem:
         prop = input_dict['properties']
         geo = input_dict['geometry']
         fem_solver = input_dict['fem_solver']
-        energy = input_dict['energy']
+        energy_spec = input_dict['energy_spec']
 
-        return options, grid, numerics, prop, geo, fem_solver, energy
+        return options, grid, numerics, prop, geo, fem_solver, energy_spec
 
     @staticmethod
     def _get_optional_input(input_dict):

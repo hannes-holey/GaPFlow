@@ -33,6 +33,7 @@ NDArray = npt.NDArray[np.floating]
 class NonLinearTerm():
     def __init__(self,
                  name: str,
+                 description: str,
                  res: str,
                  dep_vars: list[str],
                  dep_vals: list[str],
@@ -42,6 +43,7 @@ class NonLinearTerm():
                  d_dx_testfun: bool = False,
                  nb_quad_pts: int = 3):
         self.name = name
+        self.description = description
         self.res = res
         self.dep_vars = dep_vars
         self.dep_vals = dep_vals
