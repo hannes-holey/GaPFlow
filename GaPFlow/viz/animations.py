@@ -22,6 +22,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""
+Create animations from simulation output stored as NetCDF files.
+
+The methods within this module are either called from the command-line interface 
+or directly from a :class:`GaPFlow.Problem` instance.
+"""
+
 import os
 import numpy as np
 import numpy.typing as npt

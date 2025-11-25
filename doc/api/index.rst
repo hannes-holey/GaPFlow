@@ -60,5 +60,4 @@ Visualization
 
    animations
    plotting
-   utils
 
