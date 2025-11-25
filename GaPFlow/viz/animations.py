@@ -167,6 +167,12 @@ def _create_animation_1d(filename_sol: str,
     q_nc = np.asarray(data_sol.variables['solution'])
     p_nc = np.asarray(data_sol.variables['pressure'])
     tau_nc = np.asarray(data_sol.variables['wall_stress_xz'])
+    if 'total_energy' in data_sol.variables:
+        plot_energy = True
+        energy_nc = np.asarray(data_sol.variables['total_energy'])
+        temperature_nc = np.asarray(data_sol.variables['temperature'])
+    else:
+        plot_energy = False
 
     data_topo = netCDF4.Dataset(filename_topo)
     topo_nc = np.asarray(data_topo.variables['topography'])
@@ -175,8 +181,9 @@ def _create_animation_1d(filename_sol: str,
     x = np.linspace(0, 1, nx - 2)
 
     plot_topo = True if topo_nc.shape[0] > 1 else False
+    col_topo = 3 if not plot_energy else 4
 
-    fig, ax = plt.subplots(2, 3 + int(plot_topo), figsize=(10, 4))
+    fig, ax = plt.subplots(2, 3 + int(plot_topo) + int(plot_energy), figsize=(10, 4))
 
     color_q, color_p, color_t, color_h = 'C0', 'C1', 'C2', 'C3'
 
@@ -187,12 +194,16 @@ def _create_animation_1d(filename_sol: str,
     (line_tauxz_bot,) = ax[1, 1].plot([], [], color=color_t)
     (line_tauxz_top,) = ax[1, 2].plot([], [], color=color_t)
 
+    if plot_energy:
+        (line_E,) = ax[0, 3].plot([], [], color='C4')
+        (line_T,) = ax[1, 3].plot([], [], color='C5')
+
     if plot_topo:
-        (line_h,) = ax[0, 3].plot([], [], color=color_h)
-        (line_def,) = ax[1, 3].plot([], [], color=color_h)
-        ax[0, 3].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
-                      linestyle='--', label='Initial')
-        ax[0, 3].legend(loc='upper center')
+        (line_h,) = ax[0, col_topo].plot([], [], color=color_h)
+        (line_def,) = ax[1, col_topo].plot([], [], color=color_h)
+        ax[0, col_topo].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
+                             linestyle='--', label='Initial')
+        ax[0, col_topo].legend(loc='upper center')
 
     set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
     set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
@@ -201,11 +212,15 @@ def _create_animation_1d(filename_sol: str,
     set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
     set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
 
-    if plot_topo:
-        set_axes_limits(ax[0, 3], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-        set_axes_limits(ax[1, 3], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    if plot_energy:
+        set_axes_limits(ax[0, 3], energy_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, 3], temperature_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
 
-    set_axes_labels(ax, plot_topo)
+    if plot_topo:
+        set_axes_limits(ax[0, col_topo], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, col_topo], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+
+    set_axes_labels(ax, plot_energy, plot_topo)
 
     def init():
         line_rho.set_data([], [])
@@ -214,14 +229,18 @@ def _create_animation_1d(filename_sol: str,
         line_p.set_data([], [])
         line_tauxz_bot.set_data([], [])
         line_tauxz_top.set_data([], [])
+        lines = (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
+
+        if plot_energy:
+            line_E.set_data([], [])
+            line_T.set_data([], [])
+            lines += (line_E, line_T)
 
         if plot_topo:
             line_h.set_data([], [])
             line_def.set_data([], [])
-            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
-                    line_tauxz_top, line_h, line_def)
-        else:
-            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
+            lines += (line_h, line_def)
+        return lines
 
     def update(i):
         line_rho.set_data(x, q_nc[i, 0, 0, 1:-1, ny // 2])
@@ -230,14 +249,18 @@ def _create_animation_1d(filename_sol: str,
         line_p.set_data(x, p_nc[i, 1:-1, ny // 2])
         line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, 1:-1, ny // 2])
         line_tauxz_top.set_data(x, tau_nc[i, 10, 0, 1:-1, ny // 2])
+        lines = (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
+
+        if plot_energy:
+            line_E.set_data(x, energy_nc[i, 1:-1, ny // 2])
+            line_T.set_data(x, temperature_nc[i, 1:-1, ny // 2])
+            lines += (line_E, line_T)
 
         if plot_topo:
             line_h.set_data(x, topo_nc[i, 0, 0, 1:-1, ny // 2])
             line_def.set_data(x, topo_nc[i, 3, 0, 1:-1, ny // 2])
-            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot,
-                    line_tauxz_top, line_h, line_def)
-        else:
-            return (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
+            lines += (line_h, line_def)
+        return lines
 
     ani = animation.FuncAnimation(
         fig,

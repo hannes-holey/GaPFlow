@@ -132,7 +132,8 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
-        if self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy']:
+        self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
+        if self.bEnergy:
             self.energy = Energy(self.fc, self.energy_spec)
 
         self.topo = Topography(self.fc, self.grid, geo, prop)
@@ -189,6 +190,10 @@ class Problem:
                 field_names.append('pressure_var')
 
             self.file.register_field_collection(self.fc, field_names=field_names)
+
+            # Energy and temperature fields
+            if self.bEnergy:
+                self.file.register_field_collection(self.fc, field_names=['total_energy', 'temperature'])
 
     # ---------------------------
     # Constructors
@@ -711,6 +716,9 @@ class Problem:
                                     else None,
                                     var_tol_shear=self.wall_stress_xz.variance_tol
                                     if self.wall_stress_xz.is_gp_model and self.wall_stress_xz.use_active_learning
+                                    else None,
+                                    energy=[self.energy.energy, self.energy.temperature]
+                                    if self.bEnergy
                                     else None,
                                     ax=ax)
 

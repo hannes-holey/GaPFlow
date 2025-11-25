@@ -28,7 +28,7 @@ import netCDF4
 import numpy as np
 import polars as pl
 
-from .utils import set_axes_labels, _plot_gp, mpl_style_context
+from .utils import set_axes_labels, _plot_gp, mpl_style_context, autoscale_ylim
 
 import numpy.typing as npt
 NDArray = npt.NDArray[np.floating]
@@ -343,6 +343,7 @@ def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
     _plot_sol_from_field_1d(sol, press, lower, upper, var_press, var_shear, ax=ax)
 
 
+@mpl_style_context
 def _plot_sol_from_field_1d(q,
                             pressure,
                             lower,
@@ -351,12 +352,14 @@ def _plot_sol_from_field_1d(q,
                             var_shear=None,
                             var_tol_press=None,
                             var_tol_shear=None,
+                            energy=None,
                             ax=None,
                             ):
 
-    if ax is None:
-        fig, ax = plt.subplots(2, 3)
+    col = 3 if energy is None else 4
 
+    if ax is None:
+        fig, ax = plt.subplots(2, col, figsize=(1.7 * col, 3), sharex=True)
     nx, ny = q.shape[-2:]
     ci = max(1, (ny - 2) // 2)
     s = [slice(1, -1), ci]
@@ -366,6 +369,7 @@ def _plot_sol_from_field_1d(q,
     color_q = 'C0'
     color_p = 'C1'
     color_t = 'C2'
+    color_e = 'C3'
 
     ax[0, 0].plot(x, q[(0, *s)], color=color_q)
     ax[0, 1].plot(x, q[(1, *s)], color=color_q)
@@ -411,7 +415,16 @@ def _plot_sol_from_field_1d(q,
         ax[1, 2].plot(x, upper[(*s,)] + 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
         ax[1, 2].plot(x, upper[(*s,)] - 1.96 * np.sqrt(var_tol_shear), '--', color=color_t)
 
+    if energy is not None:
+        tot_energy, temperature = energy[0], energy[1]
+        ax[0, 3].plot(x, tot_energy[(*s,)], color=color_e)
+        ax[0, 3].set_ylabel(r'Energy $E$')
+        ax[1, 3].plot(x, temperature[(*s,)], color=color_e)
+        ax[1, 3].set_ylabel(r'Temperature $T$')
+
     set_axes_labels(ax)
+    for a in ax.flat:
+        autoscale_ylim(a)
 
 
 def _plot_single_frame_2d(ax, filename, frame=-1, disc=None):

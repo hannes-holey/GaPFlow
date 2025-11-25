@@ -86,7 +86,7 @@ def _get_centerline_coords(nx, ny, disc=None):
     return x, y
 
 
-def set_axes_labels(ax, bDef=False):
+def set_axes_labels(ax, plot_energy=False, plot_topo=False):
 
     ax[1, 0].set_xlabel(r"$x$")
     ax[1, 1].set_xlabel(r"$x$")
@@ -100,9 +100,14 @@ def set_axes_labels(ax, bDef=False):
     ax[1, 1].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{bot}$")
     ax[1, 2].set_ylabel(r"Shear stress $\tau_{xz}^\mathsf{top}$")
 
-    if bDef:
-        ax[0, 3].set_ylabel(r"Height $h$ in m")
-        ax[1, 3].set_ylabel(r"Deformation $u$ in m")
+    if plot_energy:
+        ax[0, 3].set_ylabel(r"Energy $E$")
+        ax[1, 3].set_ylabel(r"Temperature $T$ in K")
+
+    if plot_topo:
+        col = 3 if not plot_energy else 4
+        ax[0, col].set_ylabel(r"Height $h$ in m")
+        ax[1, col].set_ylabel(r"Deformation $u$ in m")
 
 
 def set_axes_limits(ax,
@@ -137,6 +142,13 @@ def set_axes_limits(ax,
     ax.set_ylim(q_min, q_max)
 
 
+def autoscale_ylim(ax, margin=0.05):
+    """Autoscale y-limits with a given margin."""
+    y_min, y_max = ax.get_ylim()
+    y_range = max(y_max - y_min, 0.2)
+    ax.set_ylim(y_min - margin * y_range, y_max + margin * y_range)
+
+
 def _plot_gp(ax, x, mean, var, tol=None, color='C0'):
 
     ax.fill_between(x,
@@ -167,6 +179,10 @@ def mpl_style_context(func):
             rcparams = bundles.beamer_moml()
         except ImportError:
             rcparams = plt.rcParams.copy()
+
+        # rcparams["axes.ymargin"] = 0.05   # 5% vertical padding
+        # rcparams["axes.formatter.useoffset"] = False
+        rcparams["axes.formatter.use_mathtext"] = True
 
         with plt.rc_context(rcparams):
             return func(*args, **kwargs)

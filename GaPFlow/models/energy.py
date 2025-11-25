@@ -37,15 +37,38 @@ class Energy():
                  ) -> None:
 
         self.__field = fc.register_real_field('total_energy')
+        self.__temperature = fc.register_real_field('temperature')
         self.k = energy_spec['k']
         self.cv = energy_spec['cv']
         self.T_wall = energy_spec['T_wall']
         self.alpha_wall = energy_spec['alpha_wall']
+        self.__solution = fc.get_real_field('solution')
 
     @property
     def energy(self) -> NDArray:
         """Total energy field"""
         return self.__field.p
+
+    @energy.setter
+    def energy(self, value: NDArray) -> None:
+        """Set total energy field, also updates temperature field"""
+        print("energy setter called")
+        self.__field.p = value
+
+    @property
+    def temperature(self) -> NDArray:
+        """Temperature field"""
+        return self.__temperature.p
+
+    @temperature.setter
+    def temperature(self, value: NDArray) -> None:
+        """Set temperature field"""
+        self.__temperature.p = value
+
+    @property
+    def solution(self):
+        """Return full solution field."""
+        return self.__solution.p
 
     def init_quad(self, fc_fem, quad_list: list[int], create_fun: Callable) -> None:
         """Initialize quadrature point fields"""
@@ -62,7 +85,9 @@ class Energy():
                     inner_fun: Callable[[NDArray], NDArray],
                     get_quad_field: Callable[[str, int], NDArray],
                     *args) -> None:
-        """Update pressure and gradients at nodal and quadrature points"""
+        """Update energy, temperature and gradients at nodal and quadrature points"""
+
+        self.temperature = self.T_func(self.solution[0], self.solution[1], self.energy)
 
         for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
             args = (get_quad_field('rho', nb_quad),
