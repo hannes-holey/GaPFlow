@@ -1,0 +1,14 @@
+﻿GaPFlow.viz.animations
+======================
+
+.. automodule:: GaPFlow.viz.animations
+
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      animate_1d
+      animate_1d_gp
+      animate_2d
+   

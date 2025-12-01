@@ -1,0 +1,45 @@
+﻿GaPFlow.Problem
+===============
+
+.. currentmodule:: GaPFlow
+
+.. autoclass:: Problem
+
+   
+   .. automethod:: __init__
+
+   
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~Problem.__init__
+      ~Problem.animate
+      ~Problem.from_string
+      ~Problem.from_yaml
+      ~Problem.plot
+      ~Problem.plot_topo
+      ~Problem.run
+      ~Problem.update
+      ~Problem.write
+   
+   
+
+   
+   
+   .. rubric:: Attributes
+
+   .. autosummary::
+   
+      ~Problem.cfl
+      ~Problem.converged
+      ~Problem.dt_crit
+      ~Problem.kinetic_energy
+      ~Problem.mass
+      ~Problem.q
+      ~Problem.q_has_nan
+      ~Problem.q_has_negative_density
+      ~Problem.q_is_valid
+      ~Problem.v_max
+   
+   
