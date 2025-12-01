@@ -3,3 +3,6 @@ repos:
     rev: 4.0.1
     hooks:
       - id: nb-clean
+        args:
+          - --remove-all-notebook-metadata
+          - --
