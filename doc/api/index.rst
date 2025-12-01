@@ -20,12 +20,13 @@ Models
 .. autosummary::
    :toctree: summary
    
+   gp.GaussianProcessSurrogate
    Pressure
    BulkStress
    WallStress
    
-MolecularDynamics
------------------
+Molecular dynamics
+------------------
 
 .. currentmodule:: GaPFlow.md
 
@@ -37,6 +38,18 @@ MolecularDynamics
    LennardJones
    GoldAlkane
 
+Topography
+----------
+
+.. currentmodule:: GaPFlow.topography
+
+.. autosummary::
+   :toctree: summary
+
+   Topography
+   ElasticDeformation
+
+
 Visualization
 -------------
 
@@ -47,5 +60,4 @@ Visualization
 
    animations
    plotting
-   utils
 

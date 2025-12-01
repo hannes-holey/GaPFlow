@@ -34,9 +34,6 @@ from scipy.stats import qmc
 
 from .utils import progressbar
 
-# ----------------------------------------------------------------------
-# Fixed-shape array type aliases
-# ----------------------------------------------------------------------
 ArrayX = Float[Array, "Ntrain Nfeat"]   # Input features
 ArrayY = Float[Array, "Ntrain 13"]  # Output features
 
@@ -54,30 +51,18 @@ class Database:
 
     Parameters
     ----------
+    md : GaPFlow.md.MolecularDynamics
+        An instance of the MD runner object. Adding a data point will lead to calling its `run` method.
     db : dict
         Configuration dictionary with keys:
-        - ``'dtool'`` : bool, use dtool datasets if True.
+        - ``'dtool_path'`` : str, path where training data is stored and loaded from.
         - ``'init_size'`` : int, minimum dataset size.
         - ``'init_width'`` : float, relative sampling width.
-    Xtrain : jax.Array, optional
-        Initial training inputs of shape (Ntrain, 6).
-    Ytrain : jax.Array, optional
-        Initial training outputs of shape (Ntrain, 13).
-    Ytrain_err : jax.Array, optional
-        Observation errors of shape (Ntrain, 3).
-    outdir : str or None, optional
-        Directory for local dataset output.
+        - ``'init_method'`` : str, name of the (quasi-)random initialization method ('lhc', 'rand', 'sobol').
+        - ``'init_seed'`` : int, random seed for initialization.
+    num_extra_features : int, number of additional features (next to solution, gap height + gradients)
+        stored with the database (default is 1)
 
-    Attributes
-    ----------
-    outdir : str or None
-        Output directory for saving arrays.
-    minimum_size : int
-        Minimum number of samples to maintain in the dataset.
-    db_init_width : float
-        Relative sampling width for database initialization.
-    X_scale, Y_scale : jax.Array
-        Feature-wise normalization factors.
     """
 
     def __init__(
@@ -87,21 +72,20 @@ class Database:
         num_extra_features: int = 1
     ) -> None:
 
-        self.md = md
-        self.db = db
+        self._md = md
+        self._db = db
 
-        #  number of possible features, actual ones are selected from GP's active_dims
-        self.num_features = 6 + num_extra_features
+        self._num_features = 6 + num_extra_features
 
         self._output_path = None
         _training_path = db.get('dtool_path')
-        self.overwrite_training_path = False
 
         if _training_path is not None:
+            self._temporary_training_path = False
             self.set_training_path(_training_path)
             readme_list = self.get_readme_list_local()
         else:
-            self.overwrite_training_path = True
+            self._temporary_training_path = True
             self.set_training_path('/tmp/')
             readme_list = []
 
@@ -121,34 +105,38 @@ class Database:
             Ytrain = jnp.empty((0, 13))
             Yerr = jnp.empty((0, 13))
 
-        # self.minimum_size = init_size
-        self.minimum_size = db['init_size']
-        self.init_method = db["init_method"]
-        self.init_width = db["init_width"]
-        self.init_seed = db["init_seed"]
-
         self._Xtrain = Xtrain
         self._Ytrain = Ytrain
         self._Ytrain_err = Yerr
 
         if self.size == 0:
-            self.X_scale = jnp.ones((self.num_features,))
-            self.Y_scale = jnp.ones((13,))
+            self._X_scale = jnp.ones((self.num_features,))
+            self._Y_scale = jnp.ones((13,))
         else:
-            self.X_scale = self.normalizer(self._Xtrain)
-            self.Y_scale = self.normalizer(self._Ytrain)
+            self._X_scale = self._normalizer(self._Xtrain)
+            self._Y_scale = self._normalizer(self._Ytrain)
 
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
     @property
+    def config(self) -> dict:
+        """Configuration parameters of the database object."""
+        return self._db
+
+    @property
+    def md_config(self) -> dict:
+        """Configuration parameters of the attached MD runner object."""
+        return self._md.params
+
+    @property
     def Xtrain(self) -> ArrayX:
-        """Normalized input features of shape (Ntrain, 6)."""
+        """Normalized input features of shape (Ntrain, Nfeat)."""
         return self._Xtrain / self.X_scale
 
     @property
     def Ytrain(self) -> ArrayY:
-        """Normalized output features of shape (Ntrain, 13)."""
+        """Normalized observations of shape (Ntrain, 13)."""
         return self._Ytrain / self.Y_scale
 
     @property
@@ -162,19 +150,38 @@ class Database:
         return self._Xtrain.shape[0]
 
     @property
-    def has_mock_md(self):
-        return self.md.is_mock
+    def X_scale(self) -> ArrayX:
+        """Normalization constants for input features."""
+        return self._X_scale
 
     @property
-    def output_path(self):
+    def Y_scale(self) -> ArrayY:
+        """Normalization constants for observations"""
+        return self._Y_scale
+
+    @property
+    def num_features(self) -> int:
+        """Number of possible features, actual ones are selected from GP's active_dims."""
+        return self._num_features
+
+    @property
+    def has_mock_md(self) -> bool:
+        """Flag that indicates whether the attached MD runner is a 'mock' object."""
+        return self._md.is_mock
+
+    @property
+    def output_path(self) -> str:
+        """Simulation output path"""
         return self._output_path
 
     @output_path.setter
-    def output_path(self, path):
+    def output_path(self, path) -> None:
+        """Simulation output path setter."""
         self._output_path = path
 
     @property
-    def training_path(self):
+    def training_path(self) -> str:
+        """Local storage location of dtool datasets."""
         return self._training_path
 
     # ------------------------------------------------------------------
@@ -225,20 +232,39 @@ class Database:
 
         return readme_list
 
-    def set_training_path(self, new_path):
-        if not os.path.exists(new_path):
-            os.makedirs(new_path)
+    def set_training_path(self,
+                          new_path: str,
+                          check_temporary: bool = False) -> None:
+        """Set training path.
 
-        self._training_path = new_path
-        self.md._dtool_basepath = new_path
-        self.db['dtool_path'] = new_path
+        This modifies the storage location of dtool basepaths,
+        also for the attached MD runner object.
 
-    def normalizer(self, x: ArrayX) -> ArrayX:
+        Parameters
+        ----------
+        new_path : str
+            Training path
+        """
+
+        if check_temporary:
+            overwrite = self._temporary_training_path
+        else:
+            overwrite = True
+
+        if overwrite:
+            if not os.path.exists(new_path):
+                os.makedirs(new_path)
+
+            self._training_path = new_path
+            self._md._dtool_basepath = new_path
+            self._db['dtool_path'] = new_path
+
+    def _normalizer(self, x: ArrayX) -> ArrayX:
         """Compute feature-wise normalization factors."""
         return jnp.maximum(jnp.max(jnp.abs(x), axis=0), 1e-12)
 
     def write(self) -> None:
-        """Write the dataset arrays to disk (if outdir is specified)."""
+        """Write the dataset arrays to disk (if the simulation output path is specified)."""
         if self.output_path is not None:
             jnp.save(os.path.join(self.output_path, "Xtrain.npy"), self._Xtrain)
             jnp.save(os.path.join(self.output_path, "Ytrain.npy"), self._Ytrain)
@@ -259,16 +285,19 @@ class Database:
         ----------
         Xtest : jax.Array
             Candidate test points of shape (n_test, 6).
-        Returns
-        -------
-        Xnew : jax.Array
-            New input samples of shape (n_new, 6).
+        dim : int
+            Dimension of the fluid problem (either 1 or 2, defaults to 1)
         """
 
-        Nsample = self.minimum_size - self.size
+        init_method = self._db['init_method']
+        init_width = self._db['init_width']
+        init_seed = self._db['init_seed']
+        init_size = self._db['init_size']
+
+        Nsample = init_size - self.size
 
         if Nsample > 0:
-            print(f"Database contains less than {self.minimum_size} MD runs.")
+            print(f"Database contains less than {init_size} MD runs.")
             print(f"Generate new training data in {self.training_path}")
 
             if dim == 1:
@@ -280,22 +309,22 @@ class Database:
 
             rho = jnp.mean(Xtest[:, 0])
 
-            l_bounds = jnp.array([(1.0 - self.init_width) * rho,
+            l_bounds = jnp.array([(1.0 - init_width) * rho,
                                   0.5 * flux,
                                   -0.5 * flux])[active]
 
-            u_bounds = jnp.array([(1.0 + self.init_width) * rho,
+            u_bounds = jnp.array([(1.0 + init_width) * rho,
                                   1.5 * flux,
                                   0.5 * flux])[active]
 
-            key = jr.key(self.init_seed)
+            key = jr.key(init_seed)
             key, subkey = jr.split(key)
 
-            if self.init_method == 'rand':
+            if init_method == 'rand':
                 _samples = _get_random_samples(subkey, Nsample, l_bounds, u_bounds)
-            elif self.init_method == 'lhc':
+            elif init_method == 'lhc':
                 _samples = _get_lhc_samples(Nsample, l_bounds, u_bounds)
-            elif self.init_method == 'sobol':
+            elif init_method == 'sobol':
                 _samples = _get_sobol_samples(Nsample, l_bounds, u_bounds)
                 Nsample = _samples.shape[0]
 
@@ -319,26 +348,44 @@ class Database:
         Parameters
         ----------
         Xnew : jax.Array
-            New samples of shape (n_new, 6).
+            New samples of shape (Nnew, Nfeat).
         """
         size_before = self.size
 
         for X in Xnew:
             size_before += 1
 
-            Y, Ye = self.md.run(X, size_before)
+            Y, Ye = self._md.run(X, size_before)
 
             self._Xtrain = jnp.vstack([self._Xtrain, X])
             self._Ytrain = jnp.vstack([self._Ytrain, Y])
             self._Ytrain_err = jnp.vstack([self._Ytrain_err, Ye])
 
-            self.X_scale = self.normalizer(self._Xtrain)
-            self.Y_scale = self.normalizer(self._Ytrain)
+            self._X_scale = self._normalizer(self._Xtrain)
+            self._Y_scale = self._normalizer(self._Ytrain)
 
         self.write()
 
 
 def _get_random_samples(key, N, lo, hi):
+    """Random samples
+
+    Parameters
+    ----------
+    key : int
+        Random seed
+    N : int
+        Number of samples
+    lo : array-like
+        Lower bounds
+    hi : array-like
+        Upper bounds
+
+    Returns
+    -------
+    numpy.ndarray
+        Scaled samples
+    """
     dim = len(lo)
     samples = jr.uniform(
         key,
@@ -351,6 +398,23 @@ def _get_random_samples(key, N, lo, hi):
 
 
 def _get_lhc_samples(N, lo, hi):
+    """Latin hypercube sampler
+
+    Parameters
+    ----------
+    N : int
+        Number of samples
+    lo : array-like
+        Lower bounds
+    hi : array-like
+        Upper bounds
+
+    Returns
+    -------
+    numpy.ndarray
+        Scaled samples
+    """
+
     dim = len(lo)
     sampler = qmc.LatinHypercube(d=dim)
     sample = sampler.random(n=N)
@@ -360,6 +424,23 @@ def _get_lhc_samples(N, lo, hi):
 
 
 def _get_sobol_samples(N, lo, hi):
+    """Sobol sampler
+
+    Parameters
+    ----------
+    N : int
+        Number of samples
+    lo : array-like
+        Lower bounds
+    hi : array-like
+        Upper bounds
+
+    Returns
+    -------
+    numpy.ndarray
+        Scaled samples
+    """
+
     dim = len(lo)
     sampler = qmc.Sobol(d=dim)
     m = int(jnp.log2(N))

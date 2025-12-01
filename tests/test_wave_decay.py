@@ -86,8 +86,8 @@ def setup():
 def test_shear_wave_decay(setup, n):
 
     input_dict = setup
-    problem = Problem.from_dict(input_dict)
-    problem.pre_run()
+    problem = Problem._from_dict(input_dict)
+    problem._pre_run()
 
     h = problem.geo['hmin']
     kin_visc = problem.prop['shear'] / problem.prop['rho0']
@@ -113,8 +113,8 @@ def test_shear_wave_decay(setup, n):
 def test_sound_wave_decay(setup, n):
 
     input_dict = setup
-    problem = Problem.from_dict(input_dict)
-    problem.pre_run()
+    problem = Problem._from_dict(input_dict)
+    problem._pre_run()
 
     h = problem.geo['hmin']
     kin_visc = problem.prop['shear'] / problem.prop['rho0']

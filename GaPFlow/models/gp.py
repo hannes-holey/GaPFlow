@@ -98,21 +98,6 @@ class GaussianProcessSurrogate:
     Subclasses must define abstract properties that describe the kernel
     hyperparameters, data arrays, and noise models.
 
-    Parameters
-    ----------
-    fc : muGrid.GlobalFieldCollection
-        Field container with accessors for real fields such as 'solution' and 'gap'.
-    database : GaPFlow.db.Database
-        Training database providing `initialize`, `add_data`, and `size` attributes.
-
-    Attributes
-    ----------
-    step : int
-        Current training step.
-    history : dict
-        Stores GP hyperparameter evolution over time.
-    cumtime_train, cumtime_infer : datetime.timedelta
-        Cumulative training and inference times.
     """
 
     __metaclass__ = abc.ABCMeta
@@ -133,21 +118,31 @@ class GaussianProcessSurrogate:
     geo: dict
 
     def __init__(self, fc, database):
-        self.step = 0
+        """Constructor.
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            Field container with accessors for real fields such as 'solution' and 'topography'.
+        database : GaPFlow.db.Database
+            Training database providing `initialize`, `add_data`, and `size` attributes.
+        """
+
+        self._step = 0
         self.__solution = fc.get_real_field('solution')
         self.__topo = fc.get_real_field('topography')
         self.__extra = fc.get_real_field('extra')
 
         if self.is_gp_model:
             self._cache = None
-            self.database = database
-            self.last_fit_train_size = 0
-            self.pause = 0
+            self._database = database
+            self._last_fit_train_size = 0
+            self._pause = 0
 
             # Initialize timers
             ref = datetime.now()
-            self.cumtime_train = datetime.now() - ref
-            self.cumtime_infer = datetime.now() - ref
+            self._cumtime_train = datetime.now() - ref
+            self._cumtime_infer = datetime.now() - ref
 
             # History of hyperparameters
             self.history = {
@@ -162,9 +157,16 @@ class GaussianProcessSurrogate:
             for li in self.active_dims:
                 self.history[f'lengthscale_{li}'] = []
 
-    def init_database(self, dim):
+    def init_database(self, dim: int) -> None:
+        """Triggers the first database initialization.
+
+        Parameters
+        ----------
+        dim : int
+            Dimension of the fluid problem.
+        """
         if self.is_gp_model:
-            self.database.initialize(self._Xtest, dim)
+            self._database.initialize(self._Xtest, dim)
 
     # ------------------------------------------------------------------
     # Abstract Properties (must be implemented by subclasses)
@@ -173,85 +175,109 @@ class GaussianProcessSurrogate:
     @property
     @abc.abstractmethod
     def kernel_lengthscale(self):
-        """Return kernel lengthscale(s)."""
+        """Kernel lengthscale(s)."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def kernel_variance(self):
-        """Return kernel variance."""
+        """Kernel variance."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def obs_stddev(self):
-        """Return observation noise standard deviation."""
+        """Observation noise standard deviation."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Xtrain(self):
-        """Return training inputs."""
+        """Training inputs (only active dimensions."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Ytrain(self):
-        """Return training outputs."""
+        """Training observations (only active dimensions, scaled)."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Xtest(self):
-        """Return test inputs."""
+        """Test inputs."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Yscale(self):
-        """Return output scaling factor."""
+        """Observations scaling factor."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Yerr(self):
-        """Return training observation error."""
+        """Observations standard error."""
         raise NotImplementedError
 
     # ------------------------------------------------------------------
     # Convenience properties
     # ------------------------------------------------------------------
     @property
+    def database(self):
+        """The database holding the training data for the GP surrogate model."""
+        return self._database
+
+    @property
+    def last_fit_train_size(self):
+        """Size of the training database at the last fit."""
+        return self._last_fit_train_size
+
+    @property
     def solution(self):
         """Return full solution field."""
         return self.__solution.p
 
     @property
-    def topography(self) -> JAXArray:
+    def height_and_slopes(self) -> JAXArray:
         """Return the topography (height and gradients)."""
-        return self.__topo.p
-
-    @property
-    def extra(self):
-        """Return extra constant field, which can be used as input."""
-        return self.__extra.p
+        return self.__topo.p[:3]
 
     @property
     def height(self):
+        """Return the gap height field."""
         return self.__topo.p[0]
 
     @property
-    def dh_dx(self):
-        return self.__topo.p[1]
-
-    @property
-    def dh_dy(self):
-        return self.__topo.p[2]
+    def extra(self):
+        """Return constant extra field, which can be used as additional input."""
+        return self.__extra.p
 
     @property
     def trusted(self) -> bool:
         """Return True if model predictive variance is below tolerance."""
         return self.maximum_variance < self.variance_tol
+
+    @property
+    def cumtime_train(self):
+        """Cumulative time spent for training of the GP (fitting hyperparameters)"""
+        return self._cumtime_train
+
+    @property
+    def cumtime_infer(self):
+        """Cumulative time spent for inference from the GP (making predictions)"""
+        return self._cumtime_infer
+
+    @property
+    def _Xtest(self) -> JAXArray:
+        """
+        Flattened test input array from physical fields.
+        """
+        return jnp.vstack([
+            self.solution,
+            self.height_and_slopes,
+            self.extra
+        ]).reshape(self._database.num_features, -1).T
 
     # ------------------------------------------------------------------
     # Logging and summary
@@ -259,8 +285,8 @@ class GaussianProcessSurrogate:
     def write(self) -> None:
         """Log current GP hyperparameters and diagnostics."""
         if self.is_gp_model:
-            self.history['step'].append(self.step)
-            self.history['database_size'].append(self.database.size)
+            self.history['step'].append(self._step)
+            self.history['database_size'].append(self._database.size)
             self.history['variance'].append(self.kernel_variance)
             self.history['obs_stddev'].append(self.obs_stddev)
             self.history['maximum_variance'].append(self.maximum_variance)
@@ -269,7 +295,7 @@ class GaussianProcessSurrogate:
             for i, l in enumerate(self.active_dims):
                 self.history[f'lengthscale_{l}'].append(self.kernel_lengthscale[i])
 
-    def print_opt_summary(self, obj: float) -> None:
+    def _print_opt_summary(self, obj: float) -> None:
         """Print summary of optimization results."""
         print(f'# Objective    : {obj:.5g}')
         print("# Hyperparam   :", end=' ')
@@ -291,13 +317,13 @@ class GaussianProcessSurrogate:
         reason : int, optional
             Training reason code: `0` = database update, `1` = active learning.
         """
-        self.last_fit_train_size = deepcopy(self.database.size)
+        self._last_fit_train_size = deepcopy(self._database.size)
         reasons = ['DB', "AL"]
 
         print('#' + 17 * '-' + f"GP TRAINING ({self.name.upper()})" + 17 * '-')
-        print('# Timestep     :', self.step)
+        print('# Timestep     :', self._step)
         print('# Reason       :', reasons[reason])
-        print('# Database size:', self.database.size)
+        print('# Database size:', self._database.size)
 
         @jax.jit
         def loss(params, X, yerr):
@@ -309,9 +335,9 @@ class GaussianProcessSurrogate:
         self.gp = self.build_gp(self.params, self.Xtrain, self.Yerr)
 
         obj = -self.gp.log_probability(self.Ytrain)
-        self.print_opt_summary(obj)
+        self._print_opt_summary(obj)
 
-        if self.step > 0:
+        if self._step > 0:
             self.write()
 
         if reason == 0:
@@ -321,6 +347,15 @@ class GaussianProcessSurrogate:
         self._cache = None
 
     def _infer_mean(self) -> JAXArray:
+        """Infer mean for new test inputs.
+
+        Uses cached quantities of the previous inference step, if available.
+
+        Returns
+        -------
+        JAXArray
+            Predictive mean
+        """
 
         if self._cache is None:
             m, _, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
@@ -333,6 +368,17 @@ class GaussianProcessSurrogate:
         return predictive_mean
 
     def _infer_mean_var(self) -> Tuple[JAXArray, JAXArray]:
+        """Infer mean and variance for new test inputs.
+
+        Uses cached quantities of the previous inference step, if available.
+
+        Returns
+        -------
+        JAXArray
+            Predictive mean
+        JAXArray
+            Predictive variance
+        """
 
         if self._cache is None:
             m, v, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
@@ -349,6 +395,11 @@ class GaussianProcessSurrogate:
                compute_var: bool = True) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction on test data.
+
+        Parameters
+        ----------
+        compute_var : bool
+            Flag to re-compute predictive variance, default is True.
 
         Returns
         -------
@@ -382,7 +433,7 @@ class GaussianProcessSurrogate:
         """
         imax = np.argmax(var)
         Xnew = self._Xtest[imax, :][None, :]
-        self.database.add_data(Xnew)
+        self._database.add_data(Xnew)
 
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
@@ -396,8 +447,10 @@ class GaussianProcessSurrogate:
 
         Parameters
         ----------
-        predictor : bool, default=True
-            Whether to perform active learning updates.
+        predictor : bool
+            Whether to perform active learning updates (only in predictor step, default is True).
+        compute_var : bool
+            If true (default), preditive variance is re-computed.
 
         Returns
         -------
@@ -409,22 +462,22 @@ class GaussianProcessSurrogate:
 
         # Update hyperparameters
         if predictor:
-            self.step += 1
-            self.pause = max(-1, self.pause - 1)
-            if self.last_fit_train_size < self.database.size:
+            self._step += 1
+            self._pause = max(-1, self._pause - 1)
+            if self._last_fit_train_size < self._database.size:
                 tic = datetime.now()
                 self._train(reason=0)
                 toc = datetime.now()
-                self.cumtime_train += toc - tic
+                self._cumtime_train += toc - tic
 
         tic = datetime.now()
         m, v = self._infer(compute_var=compute_var and predictor)
         toc = datetime.now()
-        self.cumtime_infer += toc - tic
+        self._cumtime_infer += toc - tic
 
         if self.use_active_learning \
                 and predictor \
-                and self.pause < 0:
+                and self._pause < 0:
 
             counter = 0
             before = deepcopy(self.maximum_variance / self.variance_tol)
@@ -438,13 +491,13 @@ class GaussianProcessSurrogate:
                 tic = datetime.now()
                 self._train(reason=1)
                 toc = datetime.now()
-                self.cumtime_train += toc - tic
+                self._cumtime_train += toc - tic
 
                 # predict again
                 tic = datetime.now()
                 m, v = self._infer(compute_var=True)
                 toc = datetime.now()
-                self.cumtime_infer += tic - toc
+                self._cumtime_infer += tic - toc
 
                 after = self.maximum_variance / self.variance_tol
                 print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
@@ -454,28 +507,9 @@ class GaussianProcessSurrogate:
                 print("# Active learning loop missed uncertainty threshold")
                 print(f"# Pause for {self.pause_steps} steps...")
                 print('#' + 50 * '-')
-                self.pause = self.pause_steps
+                self._pause = self.pause_steps
 
         return m, v
-
-    # ------------------------------------------------------------------
-    # Helper Property
-    # ------------------------------------------------------------------
-    @property
-    def _Xtest(self) -> JAXArray:
-        """
-        Construct flattened test input array from physical fields.
-
-        Returns
-        -------
-        jax.Array
-            Test inputs of shape (n_samples, 6).
-        """
-        return jnp.vstack([
-            self.solution,
-            self.topography[:3],
-            self.extra
-        ]).reshape(self.database.num_features, -1).T
 
 
 @jax.jit
@@ -486,9 +520,9 @@ def _repredict_mean_var(gp: GaussianProcess,
     alpha, noise = cache
 
     Ks = gp.kernel(gp.X, Xtest)
-    mean = Ks.T @ alpha  # cond_gp.mean_function.alpha  # reuse previous alpha
+    mean = Ks.T @ alpha
     v = gp.solver.solve_triangular(Ks)
-    Kss = gp.kernel(Xtest) + noise  # cond_gp.noise.diag
+    Kss = gp.kernel(Xtest) + noise
     var = Kss - jnp.sum(v**2, axis=0)
 
     return mean, var
@@ -524,7 +558,7 @@ def multi_in_single_out(params: dict,
                         X: JAXArray,
                         yerr: float | JAXArray) -> GaussianProcess:
     """
-    Build a single-output anisotropic Matern GP.
+    Build a single-output GP with anisotropic Matérn kernel.
 
     Parameters
     ----------
@@ -553,7 +587,7 @@ def multi_in_multi_out(params: dict,
                        X: JAXArray,
                        yerr: float | JAXArray) -> GaussianProcess:
     """
-    Build a multi-output anisotropic Matern GP.
+    Build a multi-output GP with anisotropic Matérn kernel.
 
     Parameters
     ----------

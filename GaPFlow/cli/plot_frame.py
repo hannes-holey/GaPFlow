@@ -36,7 +36,7 @@ def get_parser():
     return parser
 
 
-def main(cli=True, dim=1):
+def main(cli=True, dim=1, frame=-1):
 
     if cli:
         # overwrite defaults with cmdline args

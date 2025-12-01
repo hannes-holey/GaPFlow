@@ -27,39 +27,7 @@ import subprocess
 import scipy.constants as sci
 from ase.lattice.cubic import FaceCenteredCubic
 
-
-def _get_MPI_grid(Natoms, size, max_cpu, atoms_per_core=1000):
-    """Estimate a suitable MPI processor grid.
-
-    Parameters
-    ----------
-    Natoms : int
-        Total number of atoms
-    size : int
-        Lateral size parameter
-    max_cpu : int
-        Maximum available processors
-    atoms_per_core : float, optional
-        Approximate minimum number of atoms per core (the default is 1000)
-
-    Returns
-    -------
-    tuple
-        Cartesian processor grid (int, int, int)
-    """
-
-    ncpus = min(max_cpu, Natoms // atoms_per_core)
-
-    ny = size // 2 + size % 2
-    if max_cpu < ny**2:
-        ny = 1
-        nx = 1
-    else:
-        nx = ny
-
-    nz = max(ncpus // (nx * ny), 1)
-
-    return (nx, ny, nz)
+from .utils import _get_MPI_grid
 
 
 def write_init(preset="TraPPE", **kwargs):
@@ -67,11 +35,7 @@ def write_init(preset="TraPPE", **kwargs):
     if preset == "TraPPE":
         return _write_init_trappe(**kwargs)
     elif preset == "LJ":
-        return _write_init_lj(**kwargs)
-
-
-def _write_init_lj():
-    return ""
+        return ""
 
 
 def _write_init_trappe(cutoff=11., extra_pair="", extra_args="", shift=False, mpi_grid=None):
@@ -111,13 +75,15 @@ write_once("In Init") {
 
 
 def write_slab(name='solid', shift=0.):
+    """Write the moltemplate input for the two wall slabs
 
-    # Old version does not work for rotated slabs
-    #     out = f"""
-    # {name} = new solid [{nx}].move({ax}, 0, 0)
-    #                 [{ny}].move(0, {ay}, 0)
-    #                 [{nz}].move(0, 0, {az})
-    # """
+    Parameters
+    ----------
+    name : str, optional
+        The name (the default is 'solid')
+    shift : float, optional
+         A vertical (z) shift applied to all coordinates (the default is 0.)
+    """
 
     out = f"""
 {name} = new {name}[0][0][0]
@@ -135,26 +101,9 @@ def write_solid_data(slabL,
                      sig=2.629
                      ):
 
-    # Pair coeffs
-    if pair_style == "eam":
-        file = "static/Au_u3.eam"
-        pair_coeff_line = f"\t\tpair_coeff @atom:au @atom:au eam {file}\n"
-    elif pair_style == "eam/alloy":
-        file = "static/Au-Grochola-JCP05.eam.alloy"
-        pair_coeff_line = f"\t\tpair_coeff * * eam/alloy {file} Au NULL NULL NULL \n"
-    elif pair_style == "lj/cut":
-        # dafults from Heinz et al., J. Phys. Chem. C 112 2008
-        pair_coeff_line = f"\t\tpair_coeff @atom:au @atom:au {eps} {sig}\n"
-    else:
-        pair_coeff_line = ""
-
-    out = "solid {\n\n"
-
     # Coordinates
+    out = "solid {\n\n"
     out += "\twrite(\"Data Atoms\") {\n\t\t"
-    # data = [f"$atom:au_{i+1} $mol:. @atom:au " + "0.0 " + " ".join(coord)
-    #         for i, coord in enumerate(coords)]
-
     data = []
     offset = 0
     for slab in [slabL, slabU]:
@@ -169,14 +118,25 @@ def write_solid_data(slabL,
 
     out += "\n\t\t".join(data) + "\n\t}\n\n"
 
-    mass = slabL.get_masses()[0]
-
     # Masses
+    mass = slabL.get_masses()[0]
     out += "\twrite_once(\"Data Masses\") {\n\t\t@atom:au "
     out += f"{mass}"
     out += "\n\t}\n\n"
 
     # Pair coeffs
+    if pair_style == "eam":
+        file = "static/Au_u3.eam"
+        pair_coeff_line = f"\t\tpair_coeff @atom:au @atom:au eam {file}\n"
+    elif pair_style == "eam/alloy":
+        file = "static/Au-Grochola-JCP05.eam.alloy"
+        pair_coeff_line = f"\t\tpair_coeff * * eam/alloy {file} Au NULL NULL NULL \n"
+    elif pair_style == "lj/cut":
+        # dafults from Heinz et al., J. Phys. Chem. C 112 2008
+        pair_coeff_line = f"\t\tpair_coeff @atom:au @atom:au {eps} {sig}\n"
+    else:
+        pair_coeff_line = ""
+
     out += "\twrite_once(\"In Settings\") {\n"
     out += pair_coeff_line
     out += "\t\tgroup solid type @atom:au\n\t}\n"
@@ -185,41 +145,53 @@ def write_solid_data(slabL,
     return out
 
 
-def _create_fcc_wall_ase(size, symbol):
+def _create_fcc_wall_ase(symbol='Au',
+                         a=4.08,
+                         ax=[1, 1, 0],
+                         ay=[-1, 1, 2],
+                         az=[1, -1, 1],
+                         rotation=0.,
+                         nx=30,
+                         ny=None,
+                         nz=7,
+                         min_angle=4.4,
+                         max_angle=6.
+                         ):
+    """Create a slab of face-centered cubic atoms using ASE.
 
-    nx = 4 * size
-    ny = 7 * size
-    nz = 3
+    Parameters
+    ----------
+    symbol : str, optional
+        Element symbol (the default is 'Au')
+    a : float, optional
+        Lattice parameter (the default is 4.08, for gold)
+    ax : list, optional
+        Lattice vector pointing in x direction (the default is [1, 1, 0])
+    ay : list, optional
+        Lattice vector pointing in y direction (the default is [-1, 1, 2])
+    az : list, optional
+        Lattice vector pointing in z direction (the default is [1, -1, 1])
+    rotation : float, optional
+        Rotation angle around the y axis in degreees (the default is 0.)
+    nx : int, optional
+        Number of repetitions in x direction (the default is 30)
+    ny : int or None, optional
+        Number of repetitions in y direction (the default is None, which
+        will create a nearly quadratic (x,y)-shape)
+    nz : int, optional
+        Number of repetitions in z direction (the default is 7)
+    min_angle : float, optional
+        Minimum angle in degrees to apply a rotation (the default is 4.4)
+    max_angle : float, optional
+        Maximum angle in degrees to apply a rotation (the default is 6.)
 
-    slab = FaceCenteredCubic(directions=[[1, 1, -2], [-1, 1, 0], [1, 1, 1]],
-                             size=(nx, ny, nz),
-                             symbol=symbol,
-                             pbc=(1, 1, 1))
-
-    ax, ay, az = np.diag(slab.cell)
-
-    # coords = slab.get_positions()
-    # slab.positions += np.array([0., 0., az / 6.])
-
-    # lx = ax * nx
-    # ly = ay * ny
-    # lz = az * nz
-
-    return slab
-
-
-def _create_fcc_wall_ase_rotate(symbol='Au',
-                                a=4.08,
-                                ax=[1, 1, 0],
-                                ay=[-1, 1, 2],
-                                az=[1, -1, 1],
-                                rotation=0.,
-                                nx=30,
-                                ny=None,
-                                nz=None,
-                                min_angle=4.4,
-                                max_angle=6.
-                                ):
+    Returns
+    -------
+    ase.Atoms
+        The fcc slab
+    int
+        Number of repetitions used in x direction.
+    """
 
     if abs(rotation) < min_angle:
         rotation = None
@@ -443,12 +415,6 @@ fluid = new {name} [{Nx}].move({ax}, 0.0, 0.0)
 
 fluid[*][*][*].move(0, 0, {Lz + buffer})
 """
-    # i = 0
-    # diff = 0
-    # while diff < delta:
-    #     out += f"delete fluid[0-{min(Nx, delta-diff-1)}][{i}][0]\n"
-    #     i += 1
-    #     diff += Nx
 
     delta = Nx * Ny * Nz - Nf
     for i in range(Nx):
@@ -644,7 +610,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     - Settings: variable/group/... definitions, computes, thermo settings, ...
     - Run: fixes, runs
 
-    System agnostic sections may be included, e.g. from the static subdirectory
+    System agnostic sections may be included, e.g. from the static subdirectory.
 
 
     Parameters
@@ -681,15 +647,15 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     # solid = args.get("solid", "Au")
 
     # top wall possibly rotated
-    slab_top, nx = _create_fcc_wall_ase_rotate(nx=nx,
-                                               ny=ny,
-                                               nz=nz,
-                                               rotation=target_rotation)
+    slab_top, nx = _create_fcc_wall_ase(nx=nx,
+                                        ny=ny,
+                                        nz=nz,
+                                        rotation=target_rotation)
 
-    slab_bot, _ = _create_fcc_wall_ase_rotate(nx=nx,
-                                              ny=ny,
-                                              nz=nz,
-                                              rotation=0.)
+    slab_bot, _ = _create_fcc_wall_ase(nx=nx,
+                                       ny=ny,
+                                       nz=nz,
+                                       rotation=0.)
 
     lx, ly, lz = slab_bot.get_cell_lengths_and_angles()[:3]
 

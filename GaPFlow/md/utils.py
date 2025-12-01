@@ -24,6 +24,40 @@
 import numpy as np
 
 
+def _get_MPI_grid(Natoms, size, max_cpu, atoms_per_core=1000):
+    """Estimate a suitable MPI processor grid.
+
+    Parameters
+    ----------
+    Natoms : int
+        Total number of atoms
+    size : int
+        Lateral size parameter
+    max_cpu : int
+        Maximum available processors
+    atoms_per_core : float, optional
+        Approximate minimum number of atoms per core (the default is 1000)
+
+    Returns
+    -------
+    tuple
+        Cartesian processor grid (int, int, int)
+    """
+
+    ncpus = min(max_cpu, Natoms // atoms_per_core)
+
+    ny = size // 2 + size % 2
+    if max_cpu < ny**2:
+        ny = 1
+        nx = 1
+    else:
+        nx = ny
+
+    nz = max(ncpus // (nx * ny), 1)
+
+    return (nx, ny, nz)
+
+
 def read_output_files(fname='stress_wall.dat', sf=1.):
 
     md_data = np.loadtxt(fname) * sf

@@ -34,12 +34,13 @@ exclude_patterns = ['conf.py']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'furo'  # 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 
 # -- Extension configuration -------------------------------------------------
 
 # Raise Error (not default Warning) when a notebook execution fails
 # (due to code error, timeout, etc.)
+# nb_execution_mode = "off"
 nb_execution_raise_on_error = False
 nb_execution_show_tb = True
 nb_execution_timeout = 300
@@ -55,6 +56,7 @@ autodoc_default_options = {
     'undoc-members': True,
     'inherited-members': True,
     'show-inheritance': True,
+    'private-members': False,
 }
 
 # The following makes mystnb convert notebooks with jupytext

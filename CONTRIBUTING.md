@@ -22,7 +22,7 @@ Before committing, please run a linter such as `flake8` to ensure your changes m
 We use [pre-commit](https://pre-commit.com) to ensure code and notebooks stay clean.
 To set up locally:
 ```bash
-pip install pre-commit nbstripout
+pip install pre-commit nb-clean
 pre-commit install
 ```
 
