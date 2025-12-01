@@ -48,20 +48,6 @@ class WallStress(GaussianProcessSurrogate):
     - Deterministic: compute wall/boundary stresses from viscous models.
     - GP-based surrogate: train/predict wall stress using GaussianProcessSurrogate.
 
-    Parameters
-    ----------
-    fc : muGrid.GlobalFieldCollection
-        Field collection that provides access to 'pressure', 'gap', 'x', 'y', etc.
-    prop : dict
-        Physical properties (e.g., 'shear', 'bulk', optionally 'piezo', 'thinning').
-    geo : dict
-        Geometry and flow parameters (e.g., 'U', 'V').
-    direction : {'x', 'y'}, optional
-        Direction of the wall stress ('x' -> xz component, 'y' -> yz component).
-    data : Database or None, optional
-        Training database if using GP surrogates.
-    gp : dict or None, optional
-        GP configuration dictionary (if using GP surrogates).
     """
 
     def __init__(
@@ -73,6 +59,24 @@ class WallStress(GaussianProcessSurrogate):
         data: Optional[Any] = None,
         gp: Optional[dict] = None
     ) -> None:
+        """Constructor
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            Field collection that provides access to 'pressure', 'topography', etc.
+        prop : dict
+            Physical fluid properties (e.g., shear viscosity).
+        geo : dict
+            Geometry parameters.
+        direction : {'x', 'y'}, optional
+            Direction of the wall stress ('x' -> xz component (default), 'y' -> yz component).
+        data : Database or None, optional
+            Training database if using GP surrogates.
+        gp : dict or None, optional
+            GP configuration dictionary (if using GP surrogates).
+        """
+
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
         self.__pressure = fc.get_real_field('pressure')
         self.__x = fc.get_real_field('x')
@@ -239,7 +243,7 @@ class WallStress(GaussianProcessSurrogate):
     @property
     def Ytrain(self) -> JAXArray:
         """
-        Training outputs for GP corresponding to the lower and upper wall stress.
+        Normalized training outputs for GP corresponding to the lower and upper wall stress.
 
         Returns
         -------
@@ -297,7 +301,8 @@ class WallStress(GaussianProcessSurrogate):
     # -------------------------
     # Update
     # -------------------------
-    def init(self):
+    def init(self) -> None:
+        """Run first training and inference."""
         if self.is_gp_model:
             self.params_init = {
                 "log_amp": jnp.log(1.),
@@ -319,7 +324,11 @@ class WallStress(GaussianProcessSurrogate):
         ----------
         predictor : bool, optional
             Whether this update is part of the predictor stage.
+        compute_var : bool, optional
+            Flag for re-computing the variance (the default is False which uses
+            the stored variance from previous steps).
         """
+
         # piezoviscosity
         if 'piezo' in self.prop.keys():
             mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.solution[0],
@@ -348,7 +357,7 @@ class WallStress(GaussianProcessSurrogate):
                               self.geo['V'],
                               shear_viscosity,
                               self.prop['bulk'],
-                              self.extra  # slip length
+                              self.extra  # e.g. slip length
                               )
 
         s_top = stress_top(self.solution,
@@ -357,7 +366,7 @@ class WallStress(GaussianProcessSurrogate):
                            self.geo['V'],
                            shear_viscosity,
                            self.prop['bulk'],
-                           self.extra  # slip length
+                           self.extra  # e.g. slip length
                            )
 
         self.__field.p[:3] = s_bot[:3] / 2.
@@ -393,6 +402,21 @@ class BulkStress(GaussianProcessSurrogate):
                  geo: dict,
                  data: Optional[Any] = None,
                  gp: Optional[dict] = None) -> None:
+        """Constructor
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            Field collection that provides access to 'pressure', 'topography', etc.
+        prop : dict
+            Physical fluid properties (e.g., shear viscosity).
+        geo : dict
+            Geometry parameters.
+        data : Database or None, optional
+            Training database if using GP surrogates.
+        gp : dict or None, optional
+            GP configuration dictionary (if using GP surrogates).
+        """
 
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
         self.__pressure = fc.get_real_field('pressure')
@@ -427,8 +451,8 @@ class BulkStress(GaussianProcessSurrogate):
 
     def update(self) -> None:
         """Compute and store bulk viscous stress using viscous model."""
-        # piezoviscosity
 
+        # piezoviscosity
         if 'piezo' in self.prop.keys():
             mu0 = piezoviscosity(self.pressure if not self.prop['EOS'] == 'Bayada' else self.solution[0],
                                  self.prop['shear'],
@@ -456,7 +480,7 @@ class BulkStress(GaussianProcessSurrogate):
                                     self.geo['V'],
                                     shear_viscosity,
                                     self.prop['bulk'],
-                                    self.extra  # slip length
+                                    self.extra  # e.g. slip length
                                     )
 
 
@@ -464,7 +488,7 @@ class Pressure(GaussianProcessSurrogate):
     """
     Pressure model.
 
-    Supports deterministic pressure via eos_pressure or a GP surrogate.
+    Supports deterministic pressure via lookup equation of state or a GP surrogate.
     """
 
     name = "zz"
@@ -475,6 +499,21 @@ class Pressure(GaussianProcessSurrogate):
                  geo: dict,
                  data: Optional[Any] = None,
                  gp: Optional[dict] = None) -> None:
+        """Constructor
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            Field collection that provides access to 'pressure', 'topography', etc.
+        prop : dict
+            Physical fluid properties (e.g., shear viscosity).
+        geo : dict
+            Geometry parameters.
+        data : Database or None, optional
+            Training database if using GP surrogates.
+        gp : dict or None, optional
+            GP configuration dictionary (if using GP surrogates).
+        """
 
         self.__field = fc.get_real_field('pressure')
         self.geo = geo
@@ -528,25 +567,21 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def Xtest(self) -> JAXArray:
         """Test inputs for pressure GP (not normalized)."""
-        # not normalized
         return (self._Xtest / self.database.X_scale)[:, self.active_dims]
 
     @property
     def Xtrain(self) -> JAXArray:
         """Training inputs for pressure GP (normalized)."""
-        # normalized
         return self.database.Xtrain[:, self.active_dims]
 
     @property
     def _Ytrain(self) -> JAXArray:
         """Training outputs for pressure GP (normalized)."""
-        # normalized
         return self.database._Ytrain[:self.last_fit_train_size, 0]
 
     @property
     def Ytrain(self) -> JAXArray:
         """Training outputs for pressure GP (normalized)."""
-        # normalized
         return self._Ytrain / self.Yscale
 
     @property
@@ -574,7 +609,8 @@ class Pressure(GaussianProcessSurrogate):
         """Observation standard deviation for pressure GP."""
         return self.Yerr
 
-    def init(self):
+    def init(self) -> None:
+        """Run first training and inference."""
         if self.is_gp_model:
             # for sound speed
             self.eos = lambda x: self.gp.predict(self.Ytrain, x[None, :]).squeeze()
@@ -591,8 +627,17 @@ class Pressure(GaussianProcessSurrogate):
                predictor: bool = False,
                compute_var: bool = False) -> None:
         """
-        Update the pressure field: perform GP inference if enabled or
-        compute analytic pressure via eos_pressure.
+        Update pressure: compute deterministic stresses and, if enabled,
+        perform GP prediction and place predicted mean and variance into the
+        appropriate field entries.
+
+        Parameters
+        ----------
+        predictor : bool, optional
+            Whether this update is part of the predictor stage.
+        compute_var : bool, optional
+            Flag for re-computing the variance (the default is False which uses
+            the stored variance from previous steps).
         """
         if self.is_gp_model:
             mean, var = self.predict(predictor=predictor,

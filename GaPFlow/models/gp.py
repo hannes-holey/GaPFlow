@@ -98,13 +98,6 @@ class GaussianProcessSurrogate:
     Subclasses must define abstract properties that describe the kernel
     hyperparameters, data arrays, and noise models.
 
-    Parameters
-    ----------
-    fc : muGrid.GlobalFieldCollection
-        Field container with accessors for real fields such as 'solution' and 'gap'.
-    database : GaPFlow.db.Database
-        Training database providing `initialize`, `add_data`, and `size` attributes.
-
     """
 
     __metaclass__ = abc.ABCMeta
@@ -125,7 +118,15 @@ class GaussianProcessSurrogate:
     geo: dict
 
     def __init__(self, fc, database):
-        """Constructor."""
+        """Constructor.
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            Field container with accessors for real fields such as 'solution' and 'topography'.
+        database : GaPFlow.db.Database
+            Training database providing `initialize`, `add_data`, and `size` attributes.
+        """
 
         self._step = 0
         self.__solution = fc.get_real_field('solution')
@@ -157,7 +158,7 @@ class GaussianProcessSurrogate:
                 self.history[f'lengthscale_{li}'] = []
 
     def init_database(self, dim: int) -> None:
-        """Initialize the database.
+        """Triggers the first database initialization.
 
         Parameters
         ----------
@@ -174,49 +175,49 @@ class GaussianProcessSurrogate:
     @property
     @abc.abstractmethod
     def kernel_lengthscale(self):
-        """Return kernel lengthscale(s)."""
+        """Kernel lengthscale(s)."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def kernel_variance(self):
-        """Return kernel variance."""
+        """Kernel variance."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def obs_stddev(self):
-        """Return observation noise standard deviation."""
+        """Observation noise standard deviation."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Xtrain(self):
-        """Return training inputs."""
+        """Training inputs (only active dimensions."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Ytrain(self):
-        """Return training outputs."""
+        """Training observations (only active dimensions, scaled)."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Xtest(self):
-        """Return test inputs."""
+        """Test inputs."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Yscale(self):
-        """Return output scaling factor."""
+        """Observations scaling factor."""
         raise NotImplementedError
 
     @property
     @abc.abstractmethod
     def Yerr(self):
-        """Return training observation error."""
+        """Observations standard error."""
         raise NotImplementedError
 
     # ------------------------------------------------------------------
@@ -249,7 +250,7 @@ class GaussianProcessSurrogate:
 
     @property
     def extra(self):
-        """Return constant extra field, which can be used as input."""
+        """Return constant extra field, which can be used as additional input."""
         return self.__extra.p
 
     @property
@@ -395,6 +396,11 @@ class GaussianProcessSurrogate:
         """
         Perform GP prediction on test data.
 
+        Parameters
+        ----------
+        compute_var : bool
+            Flag to re-compute predictive variance, default is True.
+
         Returns
         -------
         predictive_mean : jax.Array
@@ -441,10 +447,10 @@ class GaussianProcessSurrogate:
 
         Parameters
         ----------
-        predictor : bool, default=True
-            Whether to perform active learning updates (only in predictor step).
-        compute_var : bool, default=True
-            If true, preditive variance is re-computed.
+        predictor : bool
+            Whether to perform active learning updates (only in predictor step, default is True).
+        compute_var : bool
+            If true (default), preditive variance is re-computed.
 
         Returns
         -------
@@ -552,7 +558,7 @@ def multi_in_single_out(params: dict,
                         X: JAXArray,
                         yerr: float | JAXArray) -> GaussianProcess:
     """
-    Build a single-output anisotropic Matern GP.
+    Build a single-output GP with anisotropic Matérn kernel.
 
     Parameters
     ----------
@@ -581,7 +587,7 @@ def multi_in_multi_out(params: dict,
                        X: JAXArray,
                        yerr: float | JAXArray) -> GaussianProcess:
     """
-    Build a multi-output anisotropic Matern GP.
+    Build a multi-output GP with anisotropic Matérn kernel.
 
     Parameters
     ----------
