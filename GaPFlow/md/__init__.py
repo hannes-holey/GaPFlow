@@ -21,4 +21,4 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from .runner import MolecularDynamics, Mock, LennardJones, GoldAlkane  # noqa: F401
+from .md import MolecularDynamics, Mock, LennardJones, GoldAlkane  # noqa: F401
