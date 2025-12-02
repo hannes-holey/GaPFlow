@@ -1,12 +1,20 @@
 ################
-# Binning for z profiles
-variable        dz equal $(v_gap/v_nbinz)
-compute         cchunk all chunk/atom bin/1d z lower ${dz} bound z $(bound(surfL,zmax)) $(bound(surfU,zmin)) units box
-
 # Z-PROFILES
-fix             avedens TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk density/number ave running overwrite file dens_profile.dat
-fix             avevelX TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vx ave running overwrite file velX_profile.dat
-fix             avevelY TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vy ave running overwrite file velY_profile.dat
+compute         cchunk all chunk/atom bin/1d z lower ${dz} units box # bound z $(bound(surfL,zmax)) $(bound(surfU,zmin))
+compute			Tprof all temp/profile 1 0 0 z $(floor(lz/v_dz)+1) out bin
+
+# density
+fix             avedens_fluid TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk density/mass ave running overwrite file profile.dens.fluid.dat
+fix             avedens_solid solid ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk density/mass ave running overwrite file profile.dens.solid.dat
+
+# velocity
+fix             avevelX_fluid TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vx ave running overwrite file profile.vx.fluid.dat
+fix             avevelX_solid solid ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vx ave running overwrite file profile.vx.solid.dat
+fix             avevelY_fluid TraPPE ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vy ave running overwrite file profile.vy.fluid.dat
+fix             avevelY_solid solid ave/chunk ${Nevery} ${Nrepeat} ${Nfreq} cchunk vy ave running overwrite file profile.vy.solid.dat
+
+# temperature
+fix             avetemp_all all ave/time ${Nevery} ${Nrepeat} ${Nfreq} c_Tprof[2] mode vector ave running overwrite file profile.temp.all.dat
 
 # Compute pressure on the walls
 compute         forceL surfL group/group TraPPE
@@ -26,11 +34,10 @@ variable        pressW equal (v_pressL+v_pressU)/2.
 # MEAN STRESS
 fix              avewall all ave/time ${Nevery} ${Nrepeat} ${Nfreq} v_pressL v_shearxzL v_pressU v_shearxzU v_shearyzL v_shearyzU file stress_wall.dat 
 
-
-restart 		100000 restart.*  
-
 dump            1 all custom ${dumpfreq} traj.sample.dump type id mol x y z vx vy vz
 
 run		    	${Nsample}
 
 undump 			1
+
+write_restart   restart.sample

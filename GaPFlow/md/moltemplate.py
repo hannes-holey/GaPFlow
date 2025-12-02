@@ -488,7 +488,8 @@ def write_settings(args):
 
     h = args.get("gap_height")
 
-    nlayers = 9  # 3 * unit cell size (default)
+    nwall = args.get('nz', 7)
+    nlayers = 3 * nwall
     nthermal = (nlayers - 1) // 2 + (nlayers - 1) % 2
 
     # Couette flow
@@ -507,12 +508,14 @@ def write_settings(args):
     Nsteady = args.get("Nsteady", 100_000)  # should depend on sliding velocity and size
     Nsample = args.get("Nsample", 300_000)
     temperature = args.get("temperature", 300.)
+    thermostat_fluid = int(args.get('thermostat_fluid', False))
 
-    nbinz = args.get("nbinz", 200)
     Nevery = args.get("Nevery", 10)
     Nrepeat = args.get("Nrepeat", 100)
     Nfreq = args.get("Nfreq", 1000)
     dumpfreq = args.get("Nfreq", 10_000)
+
+    dz = args.get("dz", 0.1)  # sampling of z profiles
 
     rotation = args.get("rotation", 0.)
     if abs(rotation) > 4.:
@@ -538,18 +541,19 @@ def write_settings(args):
     variable        hmin equal {h}
 
     # Wall sections
-    variable        nwall equal 3
+    variable        nwall equal {nwall}
     variable        ntherm equal {nthermal}
     variable        angle_sf equal {angle_sf}
-
-    # sampling // spatial
-    variable        nbinz index {nbinz}
 
     # sampling // temporal
     variable        Nevery equal {Nevery}
     variable        Nrepeat equal {Nrepeat}
     variable        Nfreq equal {Nfreq}
 
+    # sampling // spatial
+    variable        dz equal {dz}
+
+    # Dump trajectory
     variable        dumpfreq equal {dumpfreq}
 
 
@@ -631,21 +635,18 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     # general
     shift = args.get("shift", False)
     max_cpu = args.get("ncpu")
+    mpi_grid = args.get("mpiGrid", None)
     wall_potential = args.get("wall", "eam/alloy")
 
     # input variables
-    target_density = args.get("density")  # g/mol/ A^3
-    # target_density *= sci.N_A * 1e-24    # g / cm^3 to g/mol/A^3
+    target_density = args.get("density")  # g/mol/A^3
     target_gap = args.get("gap_height")  # Angstrom
     target_rotation = args.get("rotation", 0.)
-
-    mpi_grid = args.get("mpiGrid", None)
 
     # solid, create ASE Atoms object
     nx = args.get("nx", 21)
     ny = args.get("ny", None)
     nz = args.get("nz", None)
-    # solid = args.get("solid", "Au")
 
     # top wall possibly rotated
     slab_top, nx = _create_fcc_wall_ase(nx=nx,
@@ -676,7 +677,11 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     Natoms = num_fluid_atoms + num_solid_atoms
 
     if mpi_grid is None:
-        mpi_grid = _get_MPI_grid(Natoms, nx // 7, max_cpu)
+        mpi_grid = _get_MPI_grid(Natoms,
+                                 max(nx // 15, 1),
+                                 max_cpu)
+    else:
+        assert np.prod(mpi_grid) <= max_cpu
 
     outfile = os.path.join(output_dir, 'system.lt')
     with open(outfile, 'w') as f:
