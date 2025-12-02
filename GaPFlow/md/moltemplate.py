@@ -533,6 +533,7 @@ def write_settings(args):
     variable        input_fluxX equal {jx_real}
     variable        input_fluxY equal {jy_real}
     variable        input_temp equal {temperature} # K
+    variable        thermostat_fluid equal {thermostat_fluid} # 1: True
     variable        vWall equal {U_real} # A/fs
     variable        hmin equal {h}
 

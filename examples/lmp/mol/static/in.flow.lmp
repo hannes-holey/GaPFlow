@@ -8,8 +8,14 @@ variable        vCOM equal ${input_fluxY}*(lx*ly*v_gap)/mass(TraPPE)
 velocity        TraPPE zero linear
 velocity        TraPPE set v_uCOM v_vCOM 0. sum yes units box
 
-# 2nd equilibration (Langevin walls)
-fix             1 TraPPE nve
+# Thermostat fluid and walls or only walls
+if "${thermostat_fluid}==1" then &
+	"fix 1 TraPPE nvt temp ${input_temp} ${input_temp} $(100.0*dt)" &
+	"compute thermotemp_fluid TraPPE temp/partial 0 1 0" &
+	"fix_modify 1 temp thermotemp_fluid" &
+else &
+	"fix 1 TraPPE nve"
+
 fix             2 solid nve
 fix             2L thermL langevin ${input_temp} ${input_temp} $(100.0*dt) 435623
 fix             2U thermU langevin ${input_temp} ${input_temp} $(100.0*dt) 435623
