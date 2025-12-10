@@ -40,7 +40,7 @@ test = ['pytest',
 		'coverage']
 
 doc = ['sphinx',
-	   'furo',
+	   'sphinx_book_theme',
 	   'myst-nb',
 	   'jupytext',
 	   'sympy']

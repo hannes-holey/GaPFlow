@@ -59,12 +59,17 @@ class Problem:
     bulk stress), optional Gaussian-process surrogate databases, time-stepping
     parameters, and I/O.
 
-    Parameters
-    ----------
-    input_dict : dict
-        Configuration dictionary parsed from YAML. Expected keys include
-        ``options``, ``grid``, ``properties``, ``geometry``, ``numerics``,
-        and optionally ``gp`` and ``db``.
+    Notes
+    -----
+    Calling the constructor :meth:`__init__` directly expects properly formatted innput dictionaries.
+    It is recommended to use the :meth:`from_yaml` or :meth:`from_string` class methods, which automatically
+    sanitize the simulation input.
+
+    Examples
+    --------
+        >>> from GaPFlow import Problem
+        >>> myProblem = Problem.from_yaml('my_input_file.yaml')
+
     """
 
     def __init__(self,
@@ -79,6 +84,28 @@ class Problem:
                  database: Database | None = None,
                  extra_field: npt.NDArray | None = None
                  ) -> None:
+        """Constructor.
+
+        Parameters
+        ----------
+        options : dict
+            general simulation options.
+        grid : dict
+            Parameters controlling spatial discretization.
+        numerics : dict
+            Time integration parameters.
+        prop : dict
+            Material properties.
+        geo : dict
+            Geometry settings.
+        gp : dict or None
+            Parameters controlling the GP surrogate models.
+        database : GaPFlow.db.Database or None
+            A database object, handling the GP training data with an attached MD runner.
+        extra_field: numpy.ndarray or None
+            An additional field, whose entries can be used as GP features
+            (besides the solution itself and the topography).
+        """
 
         if database is not None:
             if not database.has_mock_md:
@@ -145,8 +172,9 @@ class Problem:
 
             if database is not None:
                 # Set training path inside output path
-                if database.overwrite_training_path:
-                    database.set_training_path(os.path.join(self.outdir, 'train'))
+                # if database.overwrite_training_path:
+                database.set_training_path(os.path.join(self.outdir, 'train'),
+                                           check_temporary=True)
 
                 database.output_path = self.outdir
                 options['output'] = self.outdir
@@ -161,8 +189,8 @@ class Problem:
 
             if database is not None:
                 full_dict['gp'] = gp
-                full_dict['db'] = database.db
-                full_dict['md'] = database.md.params
+                full_dict['db'] = database.config
+                full_dict['md'] = database.md_config
 
             write_yaml(full_dict, os.path.join(self.outdir, 'config.yml'))
 
@@ -261,7 +289,7 @@ class Problem:
         with open(fname, "r") as ymlfile:
             input_dict = read_yaml_input(ymlfile)
 
-        return cls.from_dict(input_dict)
+        return cls._from_dict(input_dict)
 
     @classmethod
     def from_string(cls: Type[Self], ymlstring: str) -> Self:
@@ -281,17 +309,17 @@ class Problem:
         with io.StringIO(ymlstring) as ymlfile:
             input_dict = read_yaml_input(ymlfile)
 
-        return cls.from_dict(input_dict)
+        return cls._from_dict(input_dict)
 
     @classmethod
-    def from_dict(cls: Type[Self], input_dict: dict) -> Self:
+    def _from_dict(cls: Type[Self], input_dict: dict) -> Self:
         """
-        Create a Problem instance from a YAML string.
+        Create a Problem instance from a sanitized input dictionary.
 
         Parameters
         ----------
-        ymlstring : str
-            YAML content as a string.
+        input_dict : dict
+            Sanitized input dictionary
 
         Returns
         -------
@@ -302,12 +330,115 @@ class Problem:
                    **cls._get_optional_input(input_dict))
 
     # ---------------------------
-    # Main run loop
+    # Convenience properties (field accessors)
     # ---------------------------
 
-    def pre_run(self, **kwargs) -> None:
+    @property
+    def q(self) -> npt.NDArray[np.floating]:
+        """Full density field"""
+        return self.__field.p
+
+    @q.setter
+    def q(self, sol_field: npt.NDArray[np.floating]) -> None:
+        self.__field.p = sol_field
+
+    @property
+    def q_has_nan(self) -> bool:
+        """Check for NaNs in the solution field."""
+        return np.any(np.isnan(self.q))
+
+    @property
+    def q_has_negative_density(self) -> bool:
+        """Check for negative densities in the solution field."""
+        return np.any(self.q[0] < 0.)
+
+    @property
+    def q_is_valid(self) -> bool:
+        """Validity flag for the solution field."""
+        return ~self.q_has_nan and ~self.q_has_negative_density
+
+    @property
+    def mass(self) -> np.floating:
+        """Total mass integrated over domain (scalar)."""
+        return np.sum(self.__field.p[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
+
+    @property
+    def kinetic_energy(self) -> np.floating:
+        """Total kinetic energy (scalar)."""
+        return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
+
+    @property
+    def v_max(self) -> np.floating:
+        """Maximum speed in the domain (scalar)."""
+        return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
+
+    @property
+    def dt_crit(self) -> np.floating:
+        """Critical timestep determined by grid spacing and sound speed."""
+        return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.pressure.v_sound)
+
+    @property
+    def cfl(self) -> np.floating:
+        """Current CFL number."""
+        return self.dt / self.dt_crit
+
+    @property
+    def converged(self) -> bool:
+        """Return True if residuals in the buffer are below tolerance."""
+        return np.all(np.array(self.residual_buffer) < self.tol)
+
+    # ---------------------------
+    # Simulation run utilities
+    # ---------------------------
+
+    def run(self,
+            keep_open: bool = False) -> None:
         """
-        Generic and solver-dependent pre-run initialization.
+        Run the time-stepping loop until convergence, maximum iterations,
+        or until a termination signal is received.
+
+        Parameters
+        ----------
+        keep_open : bool, optional
+            If True, keeps files open after run for following runs to be
+            written in the same files, by default False.
+        """
+        if self.step is None:
+            self._pre_run()
+
+        self._stop = False
+
+        self.history = {
+            "step": [],
+            "time": [],
+            "ekin": [],
+            "residual": [],
+            "vsound": []
+        }
+
+        if not self.options['silent']:
+            print(61 * '-')
+            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
+            print(61 * '-')
+            self.write(params=False)
+
+        # Run
+        self._tic = datetime.now()
+        while not self.converged and self.step < self.max_it and not self._stop:
+            self.update()
+
+            if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
+                self.write()
+
+            _handle_signals(self._receive_signal)
+
+        if not keep_open:
+            self._post_run()
+
+    def _pre_run(self, **kwargs) -> None:
+        """Initialize time-stepping and GP models.
+
+        Has to be called before the first call to :meth:`update`.
         """
         self.pressure.init_database(self.grid['dim'])
         self.wall_stress_xz.init_database(self.grid['dim'])
@@ -329,47 +460,7 @@ class Problem:
 
         self.solver.pre_run(**kwargs)
 
-    def run(self,
-            keep_open: bool = False) -> None:
-        """
-        Run the time-stepping loop until convergence, maximum iterations,
-        or until a termination signal is received.
-
-        Parameters
-        ----------
-        keep_open : bool, optional
-            If True, keeps files open after run for following runs to be
-            written in the same files, by default False.
-        """
-        if self.step is None:
-            self.pre_run()
-
-        self._stop = False
-
-        self.history = {
-            "step": [],
-            "time": [],
-            "ekin": [],
-            "residual": [],
-            "vsound": []
-        }
-
-        self.solver.print_status_header()
-
-        # Run
-        self._tic = datetime.now()
-        while not self.converged and self.step < self.max_it and not self._stop:
-            self.update()
-
-            if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
-                self.write()
-
-            _handle_signals(self.receive_signal)
-
-        if not keep_open:
-            self.post_run()
-
-    def receive_signal(self, signum, frame) -> None:
+    def _receive_signal(self, signum, frame) -> None:
         """
         Signal handler: set the `_stop` flag on termination signals.
         """
@@ -377,7 +468,7 @@ class Problem:
         if signum in signals:
             self._stop = True
 
-    def post_run(self) -> None:
+    def _post_run(self) -> None:
         """
         Finalize run: write history, print timing and GP timing info.
         """
@@ -430,64 +521,55 @@ class Problem:
                     print(self.wall_stress_yz.gp, file=f)
 
     # ---------------------------
-    # Convenience properties (field accessors)
+    # Single time step (update)
     # ---------------------------
 
-    @property
-    def q(self) -> npt.NDArray[np.floating]:
-        """Full density field"""
-        return self.__field.p
+    def update(self) -> None:
+        """
+        Single update iteration delegated to the solver.
+        """
+        self.solver.update()
 
-    @q.setter
-    def q(self, sol_field: npt.NDArray[np.floating]) -> None:
-        self.__field.p = sol_field
+    def _post_update(self) -> None:
+        """
+        Operations executed after each timestep: ghost cell comms, residual
+        update, time advance, and adaptive dt update if enabled.
+        """
+        self._communicate_ghost_buffers()
 
-    @property
-    def q_has_nan(self) -> bool:
-        return np.any(np.isnan(self.q))
+        self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old / self.cfl
+        self.residual_buffer.append(self.residual)
+        self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
-    @property
-    def q_has_negative_density(self) -> bool:
-        return np.any(self.q[0] < 0.)
+        self.step += 1
+        self.simtime += self.dt
 
-    @property
-    def q_is_valid(self) -> bool:
-        return ~self.q_has_nan and ~self.q_has_negative_density
+        if self.numerics["adaptive"] and self.numerics["solver"] == "explicit":
+            self.dt = self.numerics["CFL"] * self.dt_crit
 
-    @property
-    def centerline_mass_density(self) -> npt.NDArray[np.floating]:
-        """Centerline mass density w/o ghost buffers"""
-        return self.__field.p[0, 1:-1, self.grid['Ny'] // 2]
+    def _finalize(self, q0: npt.NDArray) -> None:
+        """
+        Reset the solution field to the one of the ols time step and update stresses.
+        Sets the _stop flag to abort the simulation run.
 
-    @property
-    def mass(self) -> np.floating:
-        """Total mass integrated over domain (scalar)."""
-        return np.sum(self.__field.p[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
+        Parameters
+        ----------
+        q0 : np.ndarray
+            Solution field
+        """
+        if self.q_has_nan:
+            print('NaN detected.', end=' ')
+        elif self.q_has_negative_density:
+            print('Negative density detected.', end=' ')
 
-    @property
-    def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar)."""
-        return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
+        self.q = q0
+        self.pressure.update(predictor=False, compute_var=True)
+        self.wall_stress_xz.update(predictor=False, compute_var=True)
+        self.wall_stress_yz.update(predictor=False, compute_var=True)
+        self.bulk_stress.update()
 
-    @property
-    def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar)."""
-        return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
-
-    @property
-    def dt_crit(self) -> np.floating:
-        """Critical timestep determined by grid spacing and sound speed."""
-        return min(self.grid["dx"], self.grid["dy"]) / (self.v_max + self.pressure.v_sound)
-
-    @property
-    def cfl(self) -> np.floating:
-        """Current CFL number."""
-        return self.dt / self.dt_crit
-
-    @property
-    def converged(self) -> bool:
-        """Return True if residuals in the buffer are below tolerance."""
-        return np.all(np.array(self.residual_buffer) < self.tol)
+        print('Writing previous step and aborting simulation.')
+        self._stop = True
 
     # ---------------------------
     # I/O and state writing
@@ -515,7 +597,9 @@ class Problem:
     # ---------------------------
 
     def _select_gp_config(self, gp):
-        # Active GP models
+        """
+        Select active GP models
+        """
         if gp is not None:
             if self.grid['dim'] == 1:
                 gpz = gp.get('press')
@@ -540,53 +624,6 @@ class Problem:
         self.__field.p[2] = rho0 * V / 2.0
 
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
-
-    def post_update(self) -> None:
-        """
-        Operations executed after each timestep: ghost cell comms, residual
-        update, time advance, and adaptive dt update if enabled.
-        """
-        self._communicate_ghost_buffers()
-
-        self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old / self.cfl
-        self.residual_buffer.append(self.residual)
-        self.kinetic_energy_old = deepcopy(self.kinetic_energy)
-
-        self.step += 1
-        self.simtime += self.dt
-
-        if self.numerics["adaptive"] and self.numerics["solver"] == "explicit":
-            self.dt = self.numerics["CFL"] * self.dt_crit
-
-    def finalize(self, q0: npt.NDArray) -> None:
-        """Reset the solution field to the one of the ols time step and update stresses.
-        Sets the _stop flag to abort the simulation run.
-
-        Parameters
-        ----------
-        q0 : np.ndarray
-            Solution field
-        """
-        if self.q_has_nan:
-            print('NaN detected.', end=' ')
-        elif self.q_has_negative_density:
-            print('Negative density detected.', end=' ')
-
-        self.__field.p = q0
-        self.pressure.update(predictor=False, compute_var=True)
-        self.wall_stress_xz.update(predictor=False, compute_var=True)
-        self.wall_stress_yz.update(predictor=False, compute_var=True)
-        self.bulk_stress.update()
-
-        print('Writing previous step and aborting simulation.')
-        self._stop = True
-
-    def update(self) -> None:
-        """
-        Single update iteration performing predictor-corrector for each sweep
-        direction and updating constitutive models (pressure, wall/bulk stress).
-        """
-        self.solver.update()
 
     # ---------------------------
     # Ghost cell handling
@@ -739,9 +776,10 @@ class Problem:
                                     var_shear_yz=None,
                                     ax=ax)
 
-    def plot_topo(self, show_defo=False, show_pressure=False) -> None:
-        """
-        Wrapper for plot_height in viz/plotting.py
+    def plot_topo(self,
+                  show_defo=False,
+                  show_pressure=False) -> None:
+        """Plot the gap topography, optionally in deformed state and with pressure profile.
 
         Parameters
         ----------
@@ -751,24 +789,23 @@ class Problem:
             Flag for showing pressure, default is False
         """
 
-        # dim = 1 if self.grid['Ny'] == 1 else 2
-
         if self.grid['dim'] == 1:
-            _plot_height_1d_from_field(self.topo.height_and_slopes,
+            _plot_height_1d_from_field(self.topo.full,
                                        self.pressure.pressure,
                                        show_defo=show_defo,
                                        show_pressure=show_pressure)
         elif self.grid['dim'] == 2:
             # TODO: show defo in 2D
-            _plot_height_2d_from_field(self.topo.height_and_slopes)
+            _plot_height_2d_from_field(self.topo.full)
 
     def animate(self,
                 save: bool = False,
                 seconds: float = 10.0
                 ) -> None:
-        """Wrapper for animating the solution in viz / animations.py
-        Checks if simulation has run already. Detects 1D vs 2D.
-        Includes height and deformation if elastic deformation is enabled.
+        """Create an animation of the solution time series.
+
+        Checks if simulation has run already and if output has been generated.
+        For 1D elastic simulations, height and deformation are included.
 
         Parameters
         ----------

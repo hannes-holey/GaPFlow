@@ -81,7 +81,7 @@ class ExplicitSolver:
 
             src = source(
                 p.q,
-                p.topo.height_and_slopes,
+                p.topo.full,
                 p.bulk_stress.stress,
                 p.wall_stress_xz.lower + p.wall_stress_yz.lower,
                 p.wall_stress_xz.upper + p.wall_stress_yz.upper,
@@ -96,9 +96,9 @@ class ExplicitSolver:
 
         if p.q_is_valid:
             p.topo.update()
-            p.post_update()
+            p._post_update()
         else:
-            p.finalize(q0)
+            p._finalize(q0)
 
     def print_status_header(self) -> None:
         p = self.problem

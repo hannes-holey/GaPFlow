@@ -76,11 +76,11 @@ def test_x_y():
     input_y['geometry']['V'] = input_x['geometry']['U']
     input_y['geometry']['flip'] = True
 
-    problem_x = Problem.from_dict(input_x)
-    problem_y = Problem.from_dict(input_y)
+    problem_x = Problem._from_dict(input_x)
+    problem_y = Problem._from_dict(input_y)
 
-    problem_x.pre_run()
-    problem_y.pre_run()
+    problem_x._pre_run()
+    problem_y._pre_run()
 
     for _ in range(5):
         problem_x.update()

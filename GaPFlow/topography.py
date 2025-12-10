@@ -27,7 +27,7 @@ import numpy as np
 import copy
 
 import numpy.typing as npt
-from typing import Tuple
+from typing import Tuple, Any
 
 import warnings
 
@@ -170,8 +170,30 @@ def asperity(xx, yy, grid, geo):
 
 
 class Topography:
+    """Topography container.
 
-    def __init__(self, fc, grid, geo, prop) -> None:
+    Holds the rigid gap topography, and, in case of an elastic substrate, its deformation
+    due to the fluid pressure field.
+    """
+
+    def __init__(self,
+                 fc: Any,
+                 grid: dict,
+                 geo: dict,
+                 prop: dict) -> None:
+        """Constructor
+
+        Parameters
+        ----------
+        fc : muGrid.GlobalFieldCollection
+            The field collection object.
+        grid : dict
+            Parameters controlling spatial discretization.
+        geo : dict
+            Geometry settings.
+        prop : dict
+            Material properties.
+        """
 
         xx, yy = create_midpoint_grid(grid)
 
@@ -184,6 +206,8 @@ class Topography:
 
         self.dx = grid['dx']
         self.dy = grid['dy']
+
+        # TODO: height profiles via callable passed to topography (next to implemented ones)
 
         # 1D profiles
         if geo['type'] == 'journal':
@@ -230,7 +254,7 @@ class Topography:
         self.__field.p[3] = np.zeros_like(h)  # inital deformation set to zero
 
     def update(self) -> None:
-        """Updates the topography field in case of enabled deformation.
+        """Updates the topography field in case of enabled elastic deformation.
         """
         if self.elastic:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
@@ -255,11 +279,13 @@ class Topography:
         self.__field.p[2] = dh_dy
 
     @property
-    def height_and_slopes(self) -> Tuple[NDArray, NDArray, NDArray]:
+    def full(self) -> NDArray:
+        """Return the full topography array (height, slopes, and displacement)"""
         return self.__field.p
 
     @property
     def h(self) -> NDArray:
+        """Height field."""
         return self.__field.p[0]
 
     @h.setter
@@ -269,6 +295,7 @@ class Topography:
 
     @property
     def deformation(self) -> NDArray:
+        """Displacement field."""
         return self.__field.p[3]
 
     @deformation.setter
@@ -277,23 +304,28 @@ class Topography:
 
     @property
     def dh_dx(self) -> NDArray:
+        """Height gradient field (∂h/∂x)"""
         return self.__field.p[1]
 
     @property
     def dh_dy(self) -> NDArray:
+        """Height gradient field (∂h/∂y)"""
         return self.__field.p[2]
 
     @property
     def x(self):
+        """Cell center x coordinates"""
         return self._x.p
 
     @property
     def y(self):
+        """Cell center y coordinates"""
         return self._y.p
 
 
 class ElasticDeformation:
-    """Wrapper class around the FFTElasticHalfSpace classes from ContactMechanics.
+    """Thin wrapper around the FFTElasticHalfSpace classes from ContactMechanics.
+
     Selects the appropriate Half-Space class based on the periodicity of the problem.
     """
 
@@ -304,6 +336,21 @@ class ElasticDeformation:
                  grid: dict,
                  n_images: int
                  ) -> None:
+        """Constructor
+
+        Parameters
+        ----------
+        E : float
+            Young's modulus.
+        v : float
+            Poisson's ratio.
+        alpha_underrelax : float
+            Underrelaxation factor.
+        grid : dict
+            Parameters controlling spatial discretization.
+        n_images : int
+            Number of periodic images for semi-periodic grids.
+        """
 
         self.area_per_cell = grid['dx'] * grid['dy']
         Nx, Ny = grid['Nx'] + 2, grid['Ny'] + 2

@@ -70,7 +70,7 @@ fem_solver:
 def init_problem(quad_list) -> Problem:
     problem = Problem.from_string(sim)
     problem.solver.quad_list = quad_list
-    problem.pre_run(enforced_quad_list=quad_list)
+    problem._pre_run(enforced_quad_list=quad_list)
     return problem
 
 

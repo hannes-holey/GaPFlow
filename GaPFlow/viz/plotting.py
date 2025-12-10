@@ -22,6 +22,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""
+Create line and contour plots of the simulation results.
+
+The methods within this module are either called from the command-line interface
+or directly from a :class:`GaPFlow.Problem` instance. The former reads the output
+from stored NetCDF files.
+"""
+
 import os
 import matplotlib.pyplot as plt
 import netCDF4

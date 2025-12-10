@@ -86,7 +86,7 @@ db:
 """
 
     testProblem = Problem.from_string(sim)
-    testProblem.pre_run()
+    testProblem._pre_run()
 
     for _ in range(3):
 

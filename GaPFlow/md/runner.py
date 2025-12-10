@@ -94,18 +94,36 @@ if __name__ == "__main__":
 
 
 class MolecularDynamics:
+    """Driver for molecular dynamics simulations.
+
+    Abstract base class for MD setup, running, and reading outputs.
+    Derived classes need to implement methods to write LAMMPS input files
+    into a dtool dataset, and to read the output of this simulation.
+
+    Attributes
+    ----------
+    name : str
+        Name of the MD object
+    params : dict
+        Parameters to control the MD setup, will be written to the dtool metadata.
+    main_file : str
+        File name of the main LAMMPS input file.
+    num_worker : int
+        Number of cores to run the parallel MD simulation.
+    is_mock : bool
+        Whether the subclass is only a mock object, which does not run an actual MD simulation.
+    """
     __metaclass__ = abc.ABCMeta
 
     name = str
     params: dict
     main_file: str
     num_worker: int
-    path: str
     is_mock: bool
     _dtool_basepath: str = '/tmp/'
-    readme_template: str = ""
-    input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
-    ascii_art: str = r"""
+    _readme_template: str = ""
+    _input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
+    _ascii_art: str = r"""
   _        _    __  __ __  __ ____  ____
  | |      / \  |  \/  |  \/  |  _ \/ ___|
  | |     / _ \ | |\/| | |\/| | |_) \___ \
@@ -116,6 +134,7 @@ class MolecularDynamics:
 
     @property
     def dtool_basepath(self):
+        """File location, where dtool datasets are written into (default is '/tmp/')."""
         return self._dtool_basepath
 
     @dtool_basepath.setter
@@ -123,29 +142,61 @@ class MolecularDynamics:
         self._dtool_basepath = name
 
     @abc.abstractmethod
-    def build_input_files(self, dataset, location, X):
+    def build_input_files(self, dataset, location, X) -> None:
+        """Builds LAMMPS input files based on GP inputs
+         and writes them to a dtool dataset.
+
+        Parameters
+        ----------
+        dataset : dtoolcore.proto_dataset
+            A proto_dataset object.
+        location : str
+            Absolute path of the proto dataset.
+        X : Array
+            Input (i.e. density, gap height, ...)
+        """
         raise NotImplementedError
 
     @abc.abstractmethod
     def read_output(self):
+        """Read simulation output and returns observations and their standard error."""
         raise NotImplementedError
 
-    def add_metadata_to_readme(self):
-        raise NotImplementedError
+    def _pretty_print(self, proto_datapath, X) -> None:
+        """Print header before the start of a LAMMPS simulation.
 
-    def pretty_print(self, proto_datapath, X):
+        Parameters
+        ----------
+        proto_datapath : str
+            The data path inside the dtool proto dataset
+        X : Array
+            The input array
+        """
         text = ['Run next MD simulation in:', f'{proto_datapath}']
-        text.append(self.ascii_art)
+        text.append(self._ascii_art)
         text.append('---')
-        for i, (Xi, name) in enumerate(zip(X, self.input_names)):
+        for i, (Xi, name) in enumerate(zip(X, self._input_names)):
             text.append(f'Input {i + 1}: {Xi:+.3e}    ({name})')
         print(bordered_text('\n'.join(text)))
 
-    def write_dtool_readme(self, dataset_path, Xnew, Ynew, Yerrnew):
-        if len(self.readme_template) == 0:
+    def _write_dtool_readme(self, dataset_path, Xnew, Ynew, Yerrnew):
+        """Write the simulation metadata into the dtool README.
+
+        Parameters
+        ----------
+        dataset_path : str
+            Path of the dtool dataset.
+        Xnew : Array
+            New inputs.
+        Ynew : Array
+            New observations (from MD).
+        Yerrnew : [type]
+            New observatio standard error (from MD).
+        """
+        if len(self._readme_template) == 0:
             metadata = {}
         else:
-            metadata = yaml.load(self.readme_template)
+            metadata = yaml.load(self._readme_template)
 
         # Update metadata
         metadata["owners"] = [{'username': getuser()}]
@@ -163,7 +214,22 @@ class MolecularDynamics:
         with open(out_fname, 'w') as outfile:
             yaml.dump(metadata, outfile)
 
-    def create_dtool_dataset(self, tag):
+    def _create_dtool_dataset(self, tag):
+        """Create a dtool proto dataset. The name of the dataset consists of a time stamp,
+        the name of the MD runner, and a tag (e.g. a number).
+
+        Parameters
+        ----------
+        tag : str
+            A tag to attach to the dataset name.
+
+        Returns
+        -------
+        dtoolcore.proto_dataset
+            The proto_dataset object
+        str
+            Current path to the dataset
+        """
         ds_name = f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_{self.name}-{tag:03}'
 
         proto_ds = dtoolcore.create_proto_dataset(name=ds_name,
@@ -174,12 +240,31 @@ class MolecularDynamics:
         return proto_ds, proto_ds_path
 
     def run(self, X, tag):
+        """Run an MD simulation and store its input, metadata, and output into a dtool dataset.
+
+        This method is called from a Database instance when new training data is added e.g. during
+        initialization or in an active learning simulation.
+
+        Parameters
+        ----------
+        X : Array
+            The training input.
+        tag : str
+            A tag to attach to the dataset name.
+
+        Returns
+        -------
+        Array
+            Training observations
+        Array
+            Standard error of traiing observations
+        """
 
         # Setup MD simulation
-        dataset, location = self.create_dtool_dataset(tag)
+        dataset, location = self._create_dtool_dataset(tag)
         self.build_input_files(dataset, location, X)
 
-        self.pretty_print(location, X)
+        self._pretty_print(location, X)
 
         # Move to dtool datapath...
         basedir = os.getcwd()
@@ -200,17 +285,24 @@ class MolecularDynamics:
         os.chdir(basedir)
 
         # Finalize dataset
-        self.write_dtool_readme(location, X, Y, Ye)
+        self._write_dtool_readme(location, X, Y, Ye)
         dataset.freeze()
 
         return Y, Ye
 
 
 class Mock(MolecularDynamics):
+    """Mock implementation of an MD runner.
+
+    Instances of this class mimick the behavior of an MD simulations.
+    Instead of running an MD simulations, data is generated from implemented
+    constitutive laws with added Gaussian noise. During an active learning simulation
+    noisy look-up tables are generated, which are used to train a surrogate model.
+    """
 
     name = 'mock'
 
-    ascii_art: str = r"""
+    _ascii_art: str = r"""
   __  __  ___   ____ _  __
  |  \/  |/ _ \ / ___| |/ /
  | |\/| | | | | |   | ' /
@@ -220,6 +312,17 @@ class Mock(MolecularDynamics):
 """
 
     def __init__(self, prop, geo, gp):
+        """Constructor.
+
+        Parameters
+        ----------
+        prop : dict
+            Physical fluid properties (e.g., shear viscosity).
+        geo : dict
+            Geometry parameters.
+        gp : dict or None, optional
+            GP configuration dictionary.
+        """
 
         self.is_mock = True
 
@@ -266,10 +369,18 @@ class Mock(MolecularDynamics):
 
 
 class LennardJones(MolecularDynamics):
+    """Run MD simulations with LAMMPS for a pure LJ system."""
 
     name = 'lj'
 
     def __init__(self, params):
+        """Constructor.
+
+        Parameters
+        ----------
+        params : dict
+            Parameters to control the setup of the MD simulations (read from YAML input).
+        """
         self.is_mock = False
         self.main_file = 'in.run'
         self.num_worker = params['ncpu']
@@ -304,10 +415,21 @@ variable\tinput_fluxY equal {X[2]}
 
 
 class GoldAlkane(MolecularDynamics):
+    """Run MD simulations with LAMMPS for n-alkanes confined between gold surfaces.
+
+    Input files are build with the help of ASE and moltemplate.
+    """
 
     name = 'mol'
 
     def __init__(self, params):
+        """Constructor.
+
+        Parameters
+        ----------
+        params : dict
+            Parameters to control the setup of the MD simulations (read from YAML input).
+        """
         self.is_mock = False
         self.main_file = 'run.in.all'
         self.params = params
@@ -339,7 +461,6 @@ class GoldAlkane(MolecularDynamics):
             dataset.put_item(os.path.join(self.params["staticFiles"], f),
                              os.path.join("static", f))
 
-        # TODO: separate section of metadata
         args = deepcopy(self.params)
         args["density"] = float(X[0])
         args["fluxX"] = float(X[1])

@@ -773,7 +773,7 @@ class FEMSolver1D:
         # Update output fields for plotting
         self.update_output_fields()
 
-        p.post_update()
+        p._post_update()
 
     def update(self) -> None:
         """Top-level solver update function."""
