@@ -24,7 +24,6 @@
 from .fem.num_solver import Solver
 from .fem.utils import (
     NonLinearTerm,
-    create_quad_fields,
     get_active_terms,
     get_norm_quad_pts,
     get_norm_quad_wts,
@@ -36,7 +35,7 @@ import numpy as np
 import time
 
 import numpy.typing as npt
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Tuple, Dict, Any
 if TYPE_CHECKING:
     from .problem import Problem
 
@@ -44,47 +43,22 @@ NDArray = npt.NDArray[np.floating]
 
 
 class FEMSolver1D:
+    """1D FEM solver with centralized quadrature field management.
+
+    All quadrature fields are stored in self.quad_fields dict with keys (field_name, nb_quad).
+    Physical models only provide nodal data and JIT-compiled functions.
+    """
 
     def __init__(self, problem: "Problem") -> None:
         self.problem = problem
         self.num_solver = Solver(problem.fem_solver)
 
-    def _build_terms(self) -> None:
-        """Linking functions of initialized models into abstract term functions"""
-        p = self.problem
+        # Centralized quadrature field storage: {(field_name, nb_quad): muGrid_field}
+        self.quad_fields: Dict[Tuple[str, int], Any] = {}
 
-        # build model gradient functions
-        p.pressure.build_grad()
-        p.wall_stress_xz.build_grad()
-        # p.energy.build_grad()
-
-        # build terms with context
-        for term in self.terms:
-            term_ctx = {}
-            term_ctx['p'] = lambda nbq=term.nb_quad_pts: p.pressure.p_quad(nbq)
-            term_ctx['dp_drho'] = lambda nbq=term.nb_quad_pts: p.pressure.dp_drho_quad(nbq)
-            term_ctx['tau_xz'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_quad(nbq)
-            term_ctx['dtau_xz_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_drho_quad(nbq)
-            term_ctx['dtau_xz_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_djx_quad(nbq)
-            term_ctx['tau_xz_bot'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.tau_xz_bot_quad(nbq)
-            term_ctx['dtau_xz_bot_drho'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_bot_drho_quad(nbq)
-            term_ctx['dtau_xz_bot_djx'] = lambda nbq=term.nb_quad_pts: p.wall_stress_xz.dtau_xz_bot_djx_quad(nbq)
-            term_ctx['T'] = lambda nbq=term.nb_quad_pts: p.energy.T_quad(nbq)
-            term_ctx['dT_drho'] = lambda nbq=term.nb_quad_pts: p.energy.dT_drho_quad(nbq)
-            term_ctx['dT_djx'] = lambda nbq=term.nb_quad_pts: p.energy.dT_djx_quad(nbq)
-            term_ctx['dT_dE'] = lambda nbq=term.nb_quad_pts: p.energy.dT_dE_quad(nbq)
-            term_ctx['S'] = lambda nbq=term.nb_quad_pts: p.energy.S_quad(nbq)
-            term_ctx['dS_drho'] = lambda nbq=term.nb_quad_pts: p.energy.dS_drho_quad(nbq)
-            term_ctx['dS_djx'] = lambda nbq=term.nb_quad_pts: p.energy.dS_djx_quad(nbq)
-            term_ctx['dS_dE'] = lambda nbq=term.nb_quad_pts: p.energy.dS_dE_quad(nbq)
-            term_ctx['h'] = lambda nbq=term.nb_quad_pts: p.topo.h_quad(nbq)
-            term_ctx['dh_dx'] = lambda nbq=term.nb_quad_pts: p.topo.dh_dx_quad(nbq)
-            term_ctx['U'] = lambda nbq=term.nb_quad_pts: p.topo.U_quad(nbq)
-            term_ctx['rho_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('rho_prev', nbq)
-            term_ctx['jx_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('jx_prev', nbq)
-            term_ctx['E_prev'] = lambda nbq=term.nb_quad_pts: self.get_quad_field('E_prev', nbq)
-            term_ctx['dt'] = p.numerics['dt']
-            term.build(term_ctx)
+    # =========================================================================
+    # Initialization
+    # =========================================================================
 
     def _init_convenience_accessors(self) -> None:
         """Initialize convenience accessors for problem and grid properties."""
@@ -99,21 +73,11 @@ class FEMSolver1D:
         self.dx = p.grid['Lx'] / self.nb_ele
 
         if self.energy:
-            # equation system
             self.variables = ['rho', 'jx', 'E']
             self.residuals = ['mass', 'momentum_x', 'energy']
-            # quadrature point fields
-            self.field_list = ['rho', 'jx', 'jy', 'E']
-            self.field_val_list = [p.q[0], p.q[1], p.q[2], p.energy.energy]
-            self.prev_field_list = ['rho_prev', 'jx_prev', 'E_prev']
         else:
-            # equation system
             self.variables = ['rho', 'jx']
             self.residuals = ['mass', 'momentum_x']
-            # quadrature point fields
-            self.field_list = ['rho', 'jx', 'jy']
-            self.field_val_list = [p.q[0], p.q[1], p.q[2]]
-            self.prev_field_list = ['rho_prev', 'jx_prev']
 
         self.res_size = len(self.residuals) * self.nb_pts
         self.mat_size = (self.res_size, self.res_size)
@@ -123,7 +87,7 @@ class FEMSolver1D:
         self.terms = get_active_terms(self.problem.fem_solver)
 
     def _get_quad_list(self, **kwargs) -> None:
-        """Get list of occuring quadrature point numbers from active terms."""
+        """Get list of occurring quadrature point numbers from active terms."""
         if 'enforced_quad_list' in kwargs:
             self.quad_list = kwargs['enforced_quad_list']
             return
@@ -160,6 +124,303 @@ class FEMSolver1D:
     def _init_fc_fem(self) -> None:
         self.fc_fem = GlobalFieldCollection((self.nb_ele, ))
 
+    def _init_quad_field_storage(self) -> None:
+        """Create all quadrature fields in fc_fem with centralized storage."""
+        # Determine which fields are needed
+        needed_fields = self._get_needed_quad_fields()
+
+        for field_name in needed_fields:
+            for nb_quad in self.quad_list:
+                full_name = f'{field_name}_quad_{nb_quad}'
+                field = self.fc_fem.real_field(full_name, nb_quad)
+                self.quad_fields[(field_name, nb_quad)] = field
+
+    def _get_needed_quad_fields(self) -> set:
+        """Determine which quad fields are needed based on active terms and energy flag."""
+        # Always needed: primary solution variables
+        needed = {'rho', 'jx', 'jy'}
+
+        # Nodal fields that need interpolation
+        nodal_fields = {'p', 'h', 'dh_dx', 'dh_dy', 'eta'}
+
+        # Constants (broadcast)
+        constant_fields = {'U', 'V', 'Ls'}
+
+        # Computed fields (pressure gradient)
+        pressure_computed = {'dp_drho'}
+
+        # Wall stress xz computed fields
+        stress_xz_fields = {'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
+                            'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx'}
+
+        # Wall stress yz computed fields (unused for now but kept for symmetry)
+        _ = {'tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
+             'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy'}
+
+        # Previous timestep fields
+        prev_fields = {'rho_prev', 'jx_prev'}
+
+        needed.update(nodal_fields)
+        needed.update(constant_fields)
+        needed.update(pressure_computed)
+        needed.update(stress_xz_fields)
+        needed.update(prev_fields)
+
+        if self.energy:
+            # Energy nodal fields
+            energy_nodal = {'E', 'Tb_top', 'Tb_bot'}
+            # Temperature computed fields
+            temp_fields = {'T', 'dT_drho', 'dT_djx', 'dT_djy', 'dT_dE'}
+            # Wall heat flux computed fields
+            heat_flux_fields = {'S', 'dS_drho', 'dS_djx', 'dS_djy', 'dS_dE'}
+            # Previous energy
+            energy_prev = {'E_prev'}
+
+            needed.update(energy_nodal)
+            needed.update(temp_fields)
+            needed.update(heat_flux_fields)
+            needed.update(energy_prev)
+
+        return needed
+
+    def _build_jit_functions(self) -> None:
+        """Build JIT-compiled gradient functions for all physical models."""
+        p = self.problem
+
+        p.pressure.build_grad()
+        p.wall_stress_xz.build_grad()
+        p.wall_stress_yz.build_grad()
+
+        if self.energy:
+            p.energy.build_grad()
+
+    def _build_terms(self) -> None:
+        """Build term contexts with direct quad_fields references."""
+        p = self.problem
+
+        for term in self.terms:
+            nbq = term.nb_quad_pts
+
+            # Context directly references quad_fields via get_quad method
+            term_ctx = {
+                # Pressure
+                'p': lambda nbq=nbq: self.get_quad('p', nbq),
+                'dp_drho': lambda nbq=nbq: self.get_quad('dp_drho', nbq),
+
+                # Wall stress xz
+                'tau_xz': lambda nbq=nbq: self.get_quad('tau_xz', nbq),
+                'dtau_xz_drho': lambda nbq=nbq: self.get_quad('dtau_xz_drho', nbq),
+                'dtau_xz_djx': lambda nbq=nbq: self.get_quad('dtau_xz_djx', nbq),
+                'tau_xz_bot': lambda nbq=nbq: self.get_quad('tau_xz_bot', nbq),
+                'dtau_xz_bot_drho': lambda nbq=nbq: self.get_quad('dtau_xz_bot_drho', nbq),
+                'dtau_xz_bot_djx': lambda nbq=nbq: self.get_quad('dtau_xz_bot_djx', nbq),
+
+                # Topography
+                'h': lambda nbq=nbq: self.get_quad('h', nbq),
+                'dh_dx': lambda nbq=nbq: self.get_quad('dh_dx', nbq),
+                'U': lambda nbq=nbq: self.get_quad('U', nbq),
+
+                # Previous timestep
+                'rho_prev': lambda nbq=nbq: self.get_quad('rho_prev', nbq),
+                'jx_prev': lambda nbq=nbq: self.get_quad('jx_prev', nbq),
+                'E_prev': lambda nbq=nbq: self.get_quad('E_prev', nbq),
+
+                # Time step
+                'dt': p.numerics['dt'],
+            }
+
+            # Energy terms (only if energy equation enabled)
+            if self.energy:
+                term_ctx.update({
+                    'T': lambda nbq=nbq: self.get_quad('T', nbq),
+                    'dT_drho': lambda nbq=nbq: self.get_quad('dT_drho', nbq),
+                    'dT_djx': lambda nbq=nbq: self.get_quad('dT_djx', nbq),
+                    'dT_dE': lambda nbq=nbq: self.get_quad('dT_dE', nbq),
+                    'S': lambda nbq=nbq: self.get_quad('S', nbq),
+                    'dS_drho': lambda nbq=nbq: self.get_quad('dS_drho', nbq),
+                    'dS_djx': lambda nbq=nbq: self.get_quad('dS_djx', nbq),
+                    'dS_dE': lambda nbq=nbq: self.get_quad('dS_dE', nbq),
+                    'k': lambda: p.energy.k,
+                })
+
+            term.build(term_ctx)
+
+    # =========================================================================
+    # Quadrature Field Access and Update
+    # =========================================================================
+
+    def get_quad(self, name: str, nb_quad: int) -> NDArray:
+        """Get quadrature field values."""
+        return self.quad_fields[(name, nb_quad)].p
+
+    def _inner_1d(self, field: NDArray) -> NDArray:
+        """Extract inner 1D field from 2D field array with ghost cells."""
+        assert field.shape[1] == 3, "Not a 1D problem: {}".format(field.shape)
+        return field[1:-1, 1:-1].ravel()
+
+    def update_nodal_fields(self) -> None:
+        """Step 1: Update nodal data from physical models."""
+        p = self.problem
+
+        # Pressure from EOS
+        p.pressure.update()
+
+        # Topography (elastic deformation if enabled)
+        p.topo.update()
+
+        # Viscosity (piezoviscosity + shear-thinning)
+        # Need pressure gradient for shear-thinning
+        dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
+        dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
+        p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy, p.topo.h, p.geo['U'], p.geo['V'])
+
+        # Energy temperature
+        if self.energy:
+            p.energy.update_temperature()
+
+    def update_quad_nodal(self) -> None:
+        """Step 2: Interpolate nodal fields to quadrature points."""
+        p = self.problem
+
+        # Map of field names to their nodal data sources
+        nodal_sources = {
+            'rho': self._inner_1d(p.q[0]),
+            'jx': self._inner_1d(p.q[1]),
+            'jy': self._inner_1d(p.q[2]),
+            'p': self._inner_1d(p.pressure.pressure),
+            'h': self._inner_1d(p.topo.h),
+            'dh_dx': self._inner_1d(p.topo.dh_dx),
+            'dh_dy': self._inner_1d(p.topo.dh_dy),
+            'eta': self._inner_1d(p.viscosity.eta),
+        }
+
+        if self.energy:
+            nodal_sources.update({
+                'E': self._inner_1d(p.energy.energy),
+                'Tb_top': self._inner_1d(p.energy.Tb_top),
+                'Tb_bot': self._inner_1d(p.energy.Tb_bot),
+            })
+
+        # Constants
+        Ls = p.prop.get('slip_length', 0.0)
+        constants = {
+            'U': p.geo['U'],
+            'V': p.geo['V'],
+            'Ls': Ls,
+        }
+
+        for nb_quad in self.quad_list:
+            # Interpolate nodal fields
+            for name, nodal_vals in nodal_sources.items():
+                if (name, nb_quad) in self.quad_fields:
+                    quad_vals = self.quad_fun(nodal_vals, nb_quad)
+                    self.quad_fields[(name, nb_quad)].p = quad_vals.reshape(-1, nb_quad).T
+
+            # Broadcast constants
+            for name, value in constants.items():
+                if (name, nb_quad) in self.quad_fields:
+                    self.quad_fields[(name, nb_quad)].p[:] = value
+
+    def update_quad_computed(self) -> None:
+        """Step 3: Compute derived quantities at quadrature points."""
+        p = self.problem
+
+        for nb_quad in self.quad_list:
+            # Helper to get quad field
+            def q(name):
+                return self.quad_fields[(name, nb_quad)].p
+
+            # Pressure gradient: dp_drho(rho)
+            if ('dp_drho', nb_quad) in self.quad_fields:
+                self.quad_fields[('dp_drho', nb_quad)].p = p.pressure.dp_drho(q('rho'))
+
+            # Wall stress xz
+            # Args: rho, jx, jy, h, hx, U, V, Ls
+            args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'),
+                       q('U'), q('V'), q('Ls'))
+
+            if ('tau_xz', nb_quad) in self.quad_fields:
+                self.quad_fields[('tau_xz', nb_quad)].p = p.wall_stress_xz.tau_xz(*args_xz)
+            if ('dtau_xz_drho', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_xz_drho', nb_quad)].p = p.wall_stress_xz.dtau_xz_drho(*args_xz)
+            if ('dtau_xz_djx', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_xz_djx', nb_quad)].p = p.wall_stress_xz.dtau_xz_djx(*args_xz)
+            if ('tau_xz_bot', nb_quad) in self.quad_fields:
+                self.quad_fields[('tau_xz_bot', nb_quad)].p = p.wall_stress_xz.tau_xz_bot(*args_xz)
+            if ('dtau_xz_bot_drho', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_xz_bot_drho', nb_quad)].p = p.wall_stress_xz.dtau_xz_bot_drho(*args_xz)
+            if ('dtau_xz_bot_djx', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_xz_bot_djx', nb_quad)].p = p.wall_stress_xz.dtau_xz_bot_djx(*args_xz)
+
+            # Wall stress yz (uses dh_dy instead of dh_dx, and U is constant instead of V)
+            # Args: rho, jx, jy, h, hy, U, V, Ls
+            args_yz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dy'),
+                       q('U'), q('V'), q('Ls'))
+
+            if ('tau_yz', nb_quad) in self.quad_fields:
+                self.quad_fields[('tau_yz', nb_quad)].p = p.wall_stress_yz.tau_yz(*args_yz)
+            if ('dtau_yz_drho', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_yz_drho', nb_quad)].p = p.wall_stress_yz.dtau_yz_drho(*args_yz)
+            if ('dtau_yz_djy', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_yz_djy', nb_quad)].p = p.wall_stress_yz.dtau_yz_djy(*args_yz)
+            if ('tau_yz_bot', nb_quad) in self.quad_fields:
+                self.quad_fields[('tau_yz_bot', nb_quad)].p = p.wall_stress_yz.tau_yz_bot(*args_yz)
+            if ('dtau_yz_bot_drho', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_yz_bot_drho', nb_quad)].p = p.wall_stress_yz.dtau_yz_bot_drho(*args_yz)
+            if ('dtau_yz_bot_djy', nb_quad) in self.quad_fields:
+                self.quad_fields[('dtau_yz_bot_djy', nb_quad)].p = p.wall_stress_yz.dtau_yz_bot_djy(*args_yz)
+
+            # Energy fields
+            if self.energy:
+                # Temperature: T(rho, jx, jy, E)
+                args_T = (q('rho'), q('jx'), q('jy'), q('E'))
+
+                if ('T', nb_quad) in self.quad_fields:
+                    self.quad_fields[('T', nb_quad)].p = p.energy.T_func(*args_T)
+                if ('dT_drho', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dT_drho', nb_quad)].p = p.energy.T_grad_rho(*args_T)
+                if ('dT_djx', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dT_djx', nb_quad)].p = p.energy.T_grad_jx(*args_T)
+                if ('dT_djy', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dT_djy', nb_quad)].p = p.energy.T_grad_jy(*args_T)
+                if ('dT_dE', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dT_dE', nb_quad)].p = p.energy.T_grad_E(*args_T)
+
+                # Wall heat flux: q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+                args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
+                          q('rho'), q('E'), q('jx'), q('jy'),
+                          q('U'), q('V'), q('Tb_top'), q('Tb_bot'), None)
+
+                if ('S', nb_quad) in self.quad_fields:
+                    self.quad_fields[('S', nb_quad)].p = p.energy.q_wall_sum(*args_S)
+                if ('dS_drho', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dS_drho', nb_quad)].p = p.energy.q_wall_grad_rho(*args_S)
+                if ('dS_djx', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dS_djx', nb_quad)].p = p.energy.q_wall_grad_jx(*args_S)
+                if ('dS_djy', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dS_djy', nb_quad)].p = p.energy.q_wall_grad_jy(*args_S)
+                if ('dS_dE', nb_quad) in self.quad_fields:
+                    self.quad_fields[('dS_dE', nb_quad)].p = p.energy.q_wall_grad_E(*args_S)
+
+    def update_quad(self) -> None:
+        """Full quadrature update (Steps 1-3)."""
+        self.update_nodal_fields()
+        self.update_quad_nodal()
+        self.update_quad_computed()
+
+    def update_prev_quad(self) -> None:
+        """Store current quad values for time derivatives."""
+        for nb_quad in self.quad_list:
+            for var in self.variables:
+                curr_key = (var, nb_quad)
+                prev_key = (f'{var}_prev', nb_quad)
+                if curr_key in self.quad_fields and prev_key in self.quad_fields:
+                    self.quad_fields[prev_key].p = np.copy(self.quad_fields[curr_key].p)
+
+    # =========================================================================
+    # Solution Vector Management
+    # =========================================================================
+
     def _res_slice(self, res_name) -> slice:
         i = self.residuals.index(res_name)
         return slice(i * self.nb_pts, (i + 1) * self.nb_pts)
@@ -170,6 +431,47 @@ class FEMSolver1D:
 
     def _block_slices(self, res_name, var_name) -> tuple[slice, slice]:
         return (self._res_slice(res_name), self._var_slice(var_name))
+
+    def get_nodal_val(self, field_name: str) -> NDArray:
+        """Returns the nodal values of a field in shape (nb_pts,)."""
+        p = self.problem
+        field_map = {
+            'rho': p.q[0],
+            'jx': p.q[1],
+            'jy': p.q[2],
+        }
+        if self.energy:
+            field_map['E'] = p.energy.energy
+        return self._inner_1d(field_map[field_name])
+
+    def get_q_nodal(self) -> NDArray:
+        """Returns the full solution vector q in nodal values shape (nb_vars*nb_pts,)."""
+        q_nodal = np.zeros(self.res_size)
+        for var in self.variables:
+            var_slice = self._var_slice(var)
+            q_nodal[var_slice] = self.get_nodal_val(var)
+        assert q_nodal.shape == (self.res_size, )
+        return q_nodal
+
+    def set_q_nodal(self, q_nodal: NDArray) -> None:
+        """Sets the full solution vector q from nodal values shape (nb_vars*nb_pts,)."""
+        p = self.problem
+        field_map = {
+            'rho': p.q[0],
+            'jx': p.q[1],
+            'jy': p.q[2],
+        }
+        if self.energy:
+            field_map['E'] = p.energy.energy
+
+        for var in self.variables:
+            var_slice = self._var_slice(var)
+            var_nodal = q_nodal[var_slice]
+            field_map[var][1:-1, 1:-1] = var_nodal.reshape((self.nb_pts, 1))
+
+    # =========================================================================
+    # Shape Functions and Quadrature
+    # =========================================================================
 
     def get_N_quad(self, nb_quad_pts: int) -> tuple[NDArray, NDArray]:
         xi = get_norm_quad_pts(nb_quad_pts)
@@ -200,6 +502,15 @@ class FEMSolver1D:
         diff = np.diff(vals) / self.dx
         return np.repeat(diff[None, :], nb_quad_pts, axis=0)
 
+    def get_quad_deriv(self, field_name: str, nb_quad: int) -> NDArray:
+        """Returns the quadrature derivative values of a field in shape (nb_quad, nb_ele)."""
+        vec = self.get_nodal_val(field_name)
+        return self._get_quad_deriv(vec, nb_quad)
+
+    # =========================================================================
+    # Matrix and Residual Assembly
+    # =========================================================================
+
     def tang_matrix_term(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         M = np.zeros((self.nb_pts, self.nb_pts))
 
@@ -207,17 +518,15 @@ class FEMSolver1D:
             N1_quad_w, N2_quad_w = self.get_N_quad_w(term.nb_quad_pts)
             N1_quad, N2_quad = self.get_N_quad(term.nb_quad_pts)
         else:
-            N1_quad_w, N2_quad_w = self.get_dN_dx_quad_w(term.nb_quad_pts)  # scaled later by dx_ele
+            N1_quad_w, N2_quad_w = self.get_dN_dx_quad_w(term.nb_quad_pts)
 
-        dep_var_vals = {dep_var: self.get_quad_field(dep_var, term.nb_quad_pts)
+        dep_var_vals = {dep_var: self.get_quad(dep_var, term.nb_quad_pts)
                         for dep_var in term.dep_vars}
         res_deriv_vals = term.evaluate_deriv(dep_var, *[dep_var_vals[dep_var] for dep_var in term.dep_vars])
         res_deriv_vals = res_deriv_vals.T  # get shape (nb_ele, nb_quad_pts)
 
         if not term.d_dx_resfun:  # res = f(a)
             for pt_test in range(self.nb_pts):
-
-                # apply wrap-around by default, sort out non-periodic later
                 pt_mid = pt_test % self.nb_pts
                 pt_left = (pt_test - 1) % self.nb_pts
                 pt_right = (pt_test + 1) % self.nb_pts
@@ -234,17 +543,15 @@ class FEMSolver1D:
                     res_deriv_local = res_deriv_vals[element % self.nb_ele, :]
                     dx_ele = self.dx
 
-                    if rel_element == -1:  # left side
+                    if rel_element == -1:
                         M[pt_mid, pt_mid] += np.sum(N2_quad_w * res_deriv_local * N2_quad) * dx_ele
                         M[pt_mid, pt_left] += np.sum(N2_quad_w * res_deriv_local * N1_quad) * dx_ele
-                    else:  # right side
+                    else:
                         M[pt_mid, pt_mid] += np.sum(N1_quad_w * res_deriv_local * N1_quad) * dx_ele
                         M[pt_mid, pt_right] += np.sum(N1_quad_w * res_deriv_local * N2_quad) * dx_ele
 
         if term.d_dx_resfun:  # res = df/da * da/dx
             for pt_test in range(self.nb_pts):
-
-                # apply wrap-around by default, sort out non-periodic later
                 pt_mid = pt_test % self.nb_pts
                 pt_left = (pt_test - 1) % self.nb_pts
                 pt_right = (pt_test + 1) % self.nb_pts
@@ -252,7 +559,6 @@ class FEMSolver1D:
                 for rel_element in [-1, 0]:
                     element = pt_test + rel_element
 
-                    # prevent wrap-around for non-periodic
                     if not self.periodic and (element < 0 or element == self.nb_ele):
                         continue
 
@@ -265,10 +571,10 @@ class FEMSolver1D:
                         N1_quad_w_scaled = N1_quad_w
                         N2_quad_w_scaled = N2_quad_w
 
-                    if rel_element == -1:  # left side
+                    if rel_element == -1:
                         M[pt_mid, pt_mid] += np.sum(N2_quad_w_scaled * res_deriv_local * 1.0)
                         M[pt_mid, pt_left] += np.sum(N2_quad_w_scaled * res_deriv_local * -1.0)
-                    else:  # right side
+                    else:
                         M[pt_mid, pt_mid] += np.sum(N1_quad_w_scaled * res_deriv_local * -1.0)
                         M[pt_mid, pt_right] += np.sum(N1_quad_w_scaled * res_deriv_local * 1.0)
         return M
@@ -276,29 +582,27 @@ class FEMSolver1D:
     def residual_vector_term(self, term: NonLinearTerm) -> NDArray:
         res_vec = np.zeros(self.nb_pts)
 
-        dep_var_vals = {dep_var: self.get_quad_field(dep_var, term.nb_quad_pts)
+        dep_var_vals = {dep_var: self.get_quad(dep_var, term.nb_quad_pts)
                         for dep_var in term.dep_vars}
 
-        if not term.d_dx_resfun:  # res = f(a)
+        if not term.d_dx_resfun:
             res_fun_vals = term.evaluate(*[dep_var_vals[dep_var] for dep_var in term.dep_vars])
-            res_fun_vals = res_fun_vals.T  # get shape (nb_ele, nb_quad_pts)
-        else:  # res = df/da * da/dx
+            res_fun_vals = res_fun_vals.T
+        else:
             res_fun_vals = np.zeros((self.nb_ele, term.nb_quad_pts))
             for dep_var in term.dep_vars:
                 fun_deriv_vals = term.evaluate_deriv(dep_var, *[dep_var_vals[dep_var] for dep_var in term.dep_vars])
                 dep_var_deriv_vals = self.get_quad_deriv(dep_var, term.nb_quad_pts)
-                res_fun_vals += (fun_deriv_vals * dep_var_deriv_vals).T  # get shape (nb_ele, nb_quad_pts)
+                res_fun_vals += (fun_deriv_vals * dep_var_deriv_vals).T
 
         if not term.d_dx_testfun:
             N1_quad_w, N2_quad_w = self.get_N_quad_w(term.nb_quad_pts)
         else:
-            N1_quad_w, N2_quad_w = self.get_dN_dx_quad_w(term.nb_quad_pts)  # scaled later by dx_ele
+            N1_quad_w, N2_quad_w = self.get_dN_dx_quad_w(term.nb_quad_pts)
 
         assert res_fun_vals.shape == (self.nb_ele, term.nb_quad_pts)
 
-        # for each test function, get left and right element integral
         for pt_test in range(self.nb_pts):
-
             for rel_element in [-1, 0]:
                 element = pt_test + rel_element
                 if not self.periodic and (element < 0 or element == self.nb_ele):
@@ -348,7 +652,6 @@ class FEMSolver1D:
     def boundary_condition_R(self, R: NDArray) -> NDArray:
         p = self.problem
 
-        # check Dirichlet
         if p.grid['bc_xW_D'][0]:
             target = p.grid['bc_xW_D_val']
             guess = self.get_nodal_val('rho')[0]
@@ -369,76 +672,9 @@ class FEMSolver1D:
         R = self.boundary_condition_R(R)
         return R
 
-    def _inner_1d(self, field: NDArray) -> NDArray:
-        """Extract inner 1D field from 2D field array with ghost cells."""
-        assert field.shape[1] == 3, "Not a 1D problem: {}".format(field.shape)
-        return field[1:-1, 1:-1].ravel()
-
-    def init_quad(self) -> None:
-        """Initialize quadrature fields for 'q' and 'q_prev'"""
-        create_quad_fields(self, self.fc_fem, self.field_list, self.quad_list)
-        create_quad_fields(self, self.fc_fem, self.prev_field_list, self.quad_list)
-
-    def get_nodal_val(self, field_name: str) -> NDArray:
-        """Returns the nodal values of a field in shape (nb_pts,)."""
-        var_idx = self.field_list.index(field_name)
-        return self._inner_1d(self.field_val_list[var_idx])
-
-    def get_q_nodal(self) -> NDArray:
-        """Returns the full solution vector q in nodal values shape (nb_vars*nb_pts,)."""
-        q_nodal = np.zeros(self.res_size)
-        for var in self.variables:
-            var_slice = self._var_slice(var)
-            q_nodal[var_slice] = self.get_nodal_val(var)
-        assert q_nodal.shape == (self.res_size, )
-        return q_nodal
-
-    def set_q_nodal(self, q_nodal: NDArray) -> None:
-        """Sets the full solution vector q from nodal values shape (nb_vars*nb_pts,)."""
-        for var in self.variables:
-            var_slice = self._var_slice(var)
-            var_nodal = q_nodal[var_slice]
-            var_idx = self.field_list.index(var)
-            self.field_val_list[var_idx][1:-1, 1:-1] = var_nodal.reshape((self.nb_pts, 1))
-
-    def update_sol_quad(self) -> None:
-        """Update all quadrature fields from 'q' nodal solution."""
-        for nb_quad in self.quad_list:
-            for field, val in zip(self.field_list, self.field_val_list):
-                fieldname = f'_{field}_quad_{nb_quad}'
-                quad_vals = self.quad_fun(self._inner_1d(val), nb_quad)
-                getattr(self, fieldname).p = quad_vals.reshape(-1, nb_quad).T
-                # reshape(-1, nb_quad) gives shape (nb_ele, nb_quad)
-                # transpose to (nb_quad, nb_ele) for muGrid storage
-
-    def get_quad_field(self, field_name: str, nb_quad: int) -> NDArray:
-        """Returns the quadrature values of a field in shape (nb_quad, nb_ele)."""
-        fieldname = f'_{field_name}_quad_{nb_quad}'
-        return getattr(self, fieldname).p
-
-    def get_quad_deriv(self, field_name: str, nb_quad: int) -> NDArray:
-        """Returns the quadrature derivative values of a field in shape (nb_quad, nb_ele)."""
-        vec = self.get_nodal_val(field_name)
-        return self._get_quad_deriv(vec, nb_quad)
-
-    def update_quad(self) -> None:
-        """Update all quadrature fields from current nodal solution."""
-        p = self.problem
-        self.update_sol_quad()
-        p.topo.update_quad(self.quad_fun, self.dx_fun, self._inner_1d)
-        p.pressure.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
-        p.wall_stress_xz.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field, p.topo)
-        if self.energy:
-            p.energy.update_quad(self.quad_fun, self._inner_1d, self.get_quad_field)
-
-    def update_prev_quad(self) -> None:
-        """Write current quad values into 'previous' quad fields."""
-        for nb_quad in self.quad_list:
-            for field in self.variables:
-                curr_fieldname = f'_{field}_quad_{nb_quad}'
-                prev_fieldname = f'_{field}_prev_quad_{nb_quad}'
-                curr_vals = getattr(self, curr_fieldname).p
-                getattr(self, prev_fieldname).p = np.copy(curr_vals)
+    # =========================================================================
+    # Solver Interface
+    # =========================================================================
 
     def pre_run(self, **kwargs) -> None:
         p = self.problem
@@ -454,27 +690,29 @@ class FEMSolver1D:
         self._init_dx_fun()
         self._init_fc_fem()
 
-        print("FEM Solver 1D intialized with the following settings:")
-        print(f"  Periodic boundary conditions in x-direction: {self.periodic}")
-        print(f"  Energy equation included: {self.energy}")
-        print(f"  Dynamic solver enabled: {self.dynamic} \n")
+        # Centralized quad field initialization
+        self._init_quad_field_storage()
 
-        self.init_quad()
-        p.topo.init_quad(self.fc_fem, p.geo, self.quad_list)
-        p.pressure.init_quad(self.fc_fem, self.quad_list, create_quad_fields)
-        p.pressure.build_grad()
-        p.wall_stress_xz.init_quad(self.fc_fem, self.quad_list)
-        p.wall_stress_xz.build_grad()
-        if self.energy:
-            p.energy.init_quad(self.fc_fem, self.quad_list, create_quad_fields)
-            p.energy.build_grad()
+        # Build JIT functions
+        self._build_jit_functions()
 
+        # Build term contexts
         self._build_terms()
+
+        # Initial quad update
         self.update_quad()
 
         if self.dynamic:
             self.update_prev_quad()
+
+        # Update output fields for initial frame
+        self.update_output_fields()
+
         self.time_inner = 0.0
+
+        print("FEM Solver 1D initialized with centralized quad field management:")
+        print(f"  Periodic: {self.periodic}, Energy: {self.energy}, Dynamic: {self.dynamic}")
+        print(f"  Quad fields: {len(self.quad_fields)} total")
 
     def solver_step_fun(self, q_guess: NDArray) -> Tuple[NDArray, NDArray]:
         self.set_q_nodal(q_guess)
@@ -489,6 +727,13 @@ class FEMSolver1D:
         R = self.get_R()
         print_matrix(M)
         print(R)
+
+    def update_output_fields(self) -> None:
+        """Update nodal output fields (wall stress, bulk stress) for plotting/output."""
+        p = self.problem
+        p.wall_stress_xz.update()
+        p.wall_stress_yz.update()
+        p.bulk_stress.update()
 
     def steady_state(self) -> None:
         p = self.problem
@@ -506,12 +751,13 @@ class FEMSolver1D:
         if sol_dict.success:
             print(f"Converged. Solving took {toc - tic:.2f} seconds.")
 
+        # Update output fields for plotting
+        self.update_output_fields()
+
         p._stop = True
 
     def update_dynamic(self) -> None:
-        """Do a single dynamic time step update, then return to problem main loop.
-        R_norm_tol and fem_solver['max_iter'] apply to inner convergence loop.
-        """
+        """Do a single dynamic time step update, then return to problem main loop."""
         p = self.problem
         self.update_prev_quad()
 
@@ -524,10 +770,13 @@ class FEMSolver1D:
         toc = time.time()
         self.time_inner = toc - tic
 
+        # Update output fields for plotting
+        self.update_output_fields()
+
         p.post_update()
 
     def update(self) -> None:
-        """Top-level solver update function"""
+        """Top-level solver update function."""
         if self.dynamic:
             self.update_dynamic()
         else:

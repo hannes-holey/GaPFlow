@@ -27,7 +27,7 @@ import numpy as np
 import copy
 
 import numpy.typing as npt
-from typing import Tuple, Callable
+from typing import Tuple
 
 import warnings
 
@@ -290,39 +290,6 @@ class Topography:
     @property
     def y(self):
         return self._y.p
-
-    def init_quad(self, fc_fem, geo, quad_list: list[int]) -> None:
-        """Initialize quadrature point fields"""
-        from .fem.utils import create_quad_fields
-        self.quad_list = quad_list
-        self.U, self.V = geo['U'], geo['V']
-        self.field_list = ['h', 'dh_dx']
-        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
-
-    def update_quad(self,
-                    quad_fun: Callable[[NDArray, int], NDArray],
-                    dx_fun: Callable[[NDArray, int], NDArray],
-                    inner_fun: Callable[[NDArray], NDArray],
-                    *args) -> None:
-        """Update pressure and gradients at quadrature points"""
-        self.update(*args)  # update h field
-
-        for nb_quad in self.quad_list:
-            h_inner = inner_fun(self.h)
-            h_quad = quad_fun(h_inner, nb_quad)
-            dh_dx_quad = dx_fun(h_inner, nb_quad)
-            getattr(self, f'_h_quad_{nb_quad}').p = h_quad.reshape(-1, nb_quad).T
-            getattr(self, f'_dh_dx_quad_{nb_quad}').p = dh_dx_quad.reshape(-1, nb_quad).T
-
-    def h_quad(self, nb_quad: int) -> NDArray:
-        return getattr(self, f'_h_quad_{nb_quad}').p
-
-    def dh_dx_quad(self, nb_quad: int) -> NDArray:
-        return getattr(self, f'_dh_dx_quad_{nb_quad}').p
-
-    def U_quad(self, nb_quad: int) -> NDArray:
-        """Assumed constant top wall velocity at quadrature points."""
-        return np.full_like(self.h_quad(nb_quad), self.U)
 
 
 class ElasticDeformation:

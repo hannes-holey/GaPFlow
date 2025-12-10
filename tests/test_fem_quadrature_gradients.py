@@ -87,8 +87,9 @@ def dp_drho_fd(rho: float, problem: Problem, eps: float = 1e-8) -> np.ndarray:
 def test_dp_drho(problem: Problem):
 
     problem.solver.update_quad()
-    p_grad = problem.pressure.dp_drho_quad(3)
-    rho = problem.solver.get_quad_field('rho', 3)
+    # Use centralized quad field access
+    p_grad = problem.solver.get_quad('dp_drho', 3)
+    rho = problem.solver.get_quad('rho', 3)
 
     p_grad_fd = dp_drho_fd(rho[0, 0], problem)
 
@@ -115,7 +116,8 @@ def test_dtau_xz_drho(problem: Problem, nb_quad: int):
     nb_ele = 9
 
     problem.solver.update_quad()
-    dtau_xz_drho = problem.wall_stress_xz.dtau_xz_drho_quad(nb_quad)
+    # Use centralized quad field access
+    dtau_xz_drho = problem.solver.get_quad('dtau_xz_drho', nb_quad)
 
     grad_fd = dtau_xz_drho_fd(problem).ravel()
 
@@ -135,7 +137,8 @@ def test_tau_xz_quad_structure(problem: Problem, nb_quad: int):
     nb_ele = 9
 
     problem.solver.update_quad()
-    quad_field = problem.wall_stress_xz.dtau_xz_drho_quad(nb_quad)
+    # Use centralized quad field access
+    quad_field = problem.solver.get_quad('dtau_xz_drho', nb_quad)
     assert quad_field.shape == (nb_quad, nb_ele), f"Expected shape ({nb_quad}, {nb_ele}), got {quad_field.shape}"
 
     # in this test, value should increase over elements and within each element (h gets smaller)
@@ -151,7 +154,8 @@ def test_height_quad_structure(problem: Problem, nb_quad: int):
     nb_ele = 9
 
     problem.solver.update_quad()
-    quad_field = problem.topo.h_quad(nb_quad)
+    # Use centralized quad field access
+    quad_field = problem.solver.get_quad('h', nb_quad)
     assert quad_field.shape == (nb_quad, nb_ele), f"Expected shape ({nb_quad}, {nb_ele}), got {quad_field.shape}"
 
     # in this test, value should decrease over elements and within each element (h gets smaller)
@@ -167,7 +171,8 @@ def test_jx_quad_structure(problem: Problem, nb_quad: int):
     nb_ele = 9
 
     problem.solver.update_quad()
-    quad_field = problem.solver.get_quad_field('jx', nb_quad)
+    # Use centralized quad field access
+    quad_field = problem.solver.get_quad('jx', nb_quad)
     assert quad_field.shape == (nb_quad, nb_ele), f"Expected shape ({nb_quad}, {nb_ele}), got {quad_field.shape}"
 
     # in this test, value should increase over elements and within each element (jx gets larger)
@@ -189,7 +194,8 @@ def test_p_quad_structure(problem: Problem, nb_quad: int):
     problem.q[0, :, :] += arr
     problem.solver.update_quad()
 
-    quad_field = problem.pressure.p_quad(nb_quad)
+    # Use centralized quad field access
+    quad_field = problem.solver.get_quad('p', nb_quad)
     assert quad_field.shape == (nb_quad, nb_ele), f"Expected shape ({nb_quad}, {nb_ele}), got {quad_field.shape}"
 
     # in this test, value should increase over elements and within each element (rho gets larger)
@@ -200,7 +206,7 @@ def test_p_quad_structure(problem: Problem, nb_quad: int):
             last_val = quad_field[j, i]
 
     # check rho similarly
-    quad_rho = problem.solver.get_quad_field('rho', nb_quad)
+    quad_rho = problem.solver.get_quad('rho', nb_quad)
     last_val = -np.inf
     for i in range(nb_ele):
         for j in range(nb_quad):

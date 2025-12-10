@@ -491,7 +491,10 @@ def sanitize_energy(d):
     out = {}
 
     out['cv'] = float(d.get('cv', 718.))
-    out['k'] = float(d.get('k', 0.6))
+    out['k'] = float(d.get('k', 0.13))
+
+    out['wall_flux_model'] = str(d.get('wall_flux_model', 'simple'))
+    out['h_Robin'] = float(d.get('h_Robin', 1e04))
     out['T_wall'] = float(d.get('T_wall', 300.))
     out['alpha_wall'] = float(d.get('alpha_wall', 1e5))
 

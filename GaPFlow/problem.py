@@ -44,7 +44,7 @@ from . import __version__
 from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
-from .models import WallStress, BulkStress, Pressure, Energy
+from .models import WallStress, BulkStress, Pressure, Energy, Viscosity
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
@@ -132,6 +132,7 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
+        self.viscosity = Viscosity(self.fc, prop)
         self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
         if self.bEnergy:
             self.energy = Energy(self.fc, self.energy_spec)

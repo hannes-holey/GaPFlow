@@ -24,7 +24,7 @@
 import numpy as np
 from numpy.polynomial.legendre import leggauss
 
-from typing import Callable
+from typing import Callable  # used in NonLinearTerm type hints
 import numpy.typing as npt
 
 NDArray = npt.NDArray[np.floating]
@@ -105,23 +105,3 @@ def print_matrix(mat):
                 formatted.append(f'{x:8.2f}')  # width 8, 2 decimals
         print('[', ' '.join(formatted), ']')
     print(np.linalg.matrix_rank(mat))
-
-
-def get_quad_vals(self, vec: NDArray, nb_quad_pts: int) -> NDArray:
-    if self.periodic:
-        vec = np.append(vec, vec[0])  # for periodicity, nb_ele is already increased
-    xi = get_norm_quad_pts(nb_quad_pts)
-    i = np.arange(self.nb_ele)[:, None]
-    x_quad = i + xi[None, :]
-    return np.interp(x_quad.ravel(), np.arange(len(vec)), vec)
-
-
-def create_quad_fields(caller,
-                       fc_fem,
-                       field_list: list[str],
-                       quad_list: list[int]) -> None:
-    """Create quadrature fields for given field names and quadrature point list"""
-    for fieldname in field_list:
-        for nb_quad in quad_list:
-            full_fieldname = f'{fieldname}_quad_{nb_quad}'
-            setattr(caller, f'_{full_fieldname}', fc_fem.real_field(full_fieldname, nb_quad))

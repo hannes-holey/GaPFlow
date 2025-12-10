@@ -24,4 +24,5 @@
 from .stress import Pressure  # noqa: F401
 from .stress import WallStress  # noqa: F401
 from .stress import BulkStress  # noqa: F401
+from .stress import Viscosity  # noqa: F401
 from .energy import Energy  # noqa: F401

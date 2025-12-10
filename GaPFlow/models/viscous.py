@@ -820,6 +820,110 @@ def stress_top_xz(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
     return tau_xz
 
 
+def stress_bottom_yz(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
+    """Wall stress tau_yz at bottom wall.
+
+    Analogous to stress_bottom_xz but for the y-direction (yz component).
+    Extracted from stress_bottom tau[3] entries.
+
+    Parameters
+    ----------
+    q : array-like
+        Height-averaged variables [rho, jx, jy]
+    h : array-like
+        Gap height field [h, dh_dx, dh_dy]
+    U : float
+        Lower wall velocity in x direction
+    V : float
+        Lower wall velocity in y direction
+    eta : float
+        Dynamic shear viscosity
+    zeta : float
+        Dynamic bulk viscosity (unused for shear stress)
+    Ls : float
+        Slip length
+    dqx, dqy : array-like, optional
+        Gradients of q (unused for simplified shear stress)
+    slip : str
+        Slip condition: "top" or "both"
+
+    Returns
+    -------
+    float or array
+        Wall shear stress tau_yz at bottom wall
+    """
+    if dqx is None:
+        dqx = jnp.zeros_like(q[0])
+    if dqy is None:
+        dqy = jnp.zeros_like(q[0])
+
+    if slip == "top":
+        # From stress_bottom tau[3] with slip="top"
+        tau_yz = (
+            2 * eta
+            * (-6 * Ls * V * q[0] + 6 * Ls * q[2] - 2 * V * h[0] * q[0] + 3 * h[0] * q[2])
+            / (h[0] * q[0] * (4 * Ls + h[0]))
+        )
+    else:
+        # From stress_bottom tau[3] with slip="both"
+        tau_yz = (
+            2 * eta
+            * (-6 * Ls * V * q[0] + 6 * Ls * q[2] - 2 * V * h[0] * q[0] + 3 * h[0] * q[2])
+            / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
+        )
+    return tau_yz
+
+
+def stress_top_yz(q, h, U, V, eta, zeta, Ls, dqx=None, dqy=None, slip="top"):
+    """Wall stress tau_yz at top wall.
+
+    Analogous to stress_top_xz but for the y-direction (yz component).
+    Extracted from stress_top tau[3] entries.
+
+    Parameters
+    ----------
+    q : array-like
+        Height-averaged variables [rho, jx, jy]
+    h : array-like
+        Gap height field [h, dh_dx, dh_dy]
+    U : float
+        Lower wall velocity in x direction
+    V : float
+        Lower wall velocity in y direction
+    eta : float
+        Dynamic shear viscosity
+    zeta : float
+        Dynamic bulk viscosity (unused for shear stress)
+    Ls : float
+        Slip length
+    dqx, dqy : array-like, optional
+        Gradients of q (unused for simplified shear stress)
+    slip : str
+        Slip condition: "top" or "both"
+
+    Returns
+    -------
+    float or array
+        Wall shear stress tau_yz at top wall
+    """
+    if dqx is None:
+        dqx = jnp.zeros_like(q[0])
+    if dqy is None:
+        dqy = jnp.zeros_like(q[0])
+
+    if slip == "top":
+        # From stress_top tau[3] with slip="top"
+        tau_yz = 2 * eta * (V * q[0] - 3 * q[2]) / (q[0] * (4 * Ls + h[0]))
+    else:
+        # From stress_top tau[3] with slip="both"
+        tau_yz = (
+            2 * eta
+            * (-6 * Ls * q[2] + V * h[0] * q[0] - 3 * h[0] * q[2])
+            / (q[0] * (12 * Ls**2 + 8 * Ls * h[0] + h[0] ** 2))
+        )
+    return tau_yz
+
+
 def get_shear_viscosity(stress_object):
     s = stress_object
 

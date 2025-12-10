@@ -27,17 +27,17 @@ import numpy.typing as npt
 import jax.numpy as jnp
 from jax import vmap, grad, jit
 from jax import Array
-from typing import TYPE_CHECKING, Optional, Tuple, Any, Callable
+from typing import Optional, Tuple, Any
 
 from .gp import GaussianProcessSurrogate
 from .gp import multi_in_single_out, multi_in_multi_out
 from .pressure import eos_pressure
-from .viscous import stress_bottom, stress_top, stress_avg, stress_top_xz, stress_bottom_xz, get_shear_viscosity
+from .viscous import (stress_bottom, stress_top, stress_avg,
+                      stress_top_xz, stress_bottom_xz,
+                      stress_top_yz, stress_bottom_yz,
+                      get_shear_viscosity)
 from .sound import eos_sound_velocity
 from .viscosity import piezoviscosity, shear_thinning_factor, shear_rate_avg
-
-if TYPE_CHECKING:
-    from ..topography import Topography
 
 NDArray = npt.NDArray[np.floating]
 JAXArray = Array
@@ -380,151 +380,79 @@ class WallStress(GaussianProcessSurrogate):
             self.__field.p[self._out_index] = s_bot[self._out_index]
             self.__field.p[self._out_index + 6] = s_top[self._out_index]
 
-    def init_quad(self,
-                  fc_fem,
-                  quad_list: list[int]) -> None:
-        """Initialize quadrature point fields"""
-        from ..fem.utils import create_quad_fields
-        self.quad_list = quad_list
-        self.field_list = ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
-                           'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']
-        create_quad_fields(self, fc_fem, self.field_list, self.quad_list)
-
     def build_grad(self) -> None:
+        """Build JIT-compiled gradient functions for wall stress.
+
+        Creates tau and its gradients for both xz (direction='x') and yz (direction='y').
+        The gradient should be aware of all dependencies including viscosity computation.
+        """
         if self.is_gp_model:
             raise NotImplementedError("Gradient of GP-based wall stress not implemented.")
 
-        def get_tau_xz(rho, jx, jy, h, hx, U, V, Ls):
-            eta = get_shear_viscosity(self)
-            q = jnp.array([rho, jx, jy])
-            h = jnp.array([h, hx])
-            tau_xz_top = stress_top_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
-            tau_xz_bot = stress_bottom_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
-            return tau_xz_top - tau_xz_bot
+        if self.name == 'xz':
+            # tau_xz functions (x-direction wall stress)
+            def get_tau(rho, jx, jy, h, hx, U, V, Ls):
+                eta = get_shear_viscosity(self)
+                q = jnp.array([rho, jx, jy])
+                h_arr = jnp.array([h, hx])
+                tau_top = stress_top_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                tau_bot = stress_bottom_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                return tau_top - tau_bot
 
-        def get_tau_xz_bot(rho, jx, jy, h, hx, U, V, Ls):
-            eta = get_shear_viscosity(self)
-            q = jnp.array([rho, jx, jy])
-            h = jnp.array([h, hx])
-            tau_xz_bot = stress_bottom_xz(q, h, U, V, eta, self.prop['bulk'], Ls)
-            return tau_xz_bot
+            def get_tau_bot(rho, jx, jy, h, hx, U, V, Ls):
+                eta = get_shear_viscosity(self)
+                q = jnp.array([rho, jx, jy])
+                h_arr = jnp.array([h, hx])
+                return stress_bottom_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
 
-        # only V is constant
-        self.tau_xz = jit(
-            vmap(
-                vmap(
-                    get_tau_xz,
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
-        self.dtau_xz_drho = jit(
-            vmap(
-                vmap(
-                    grad(get_tau_xz, argnums=0),
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
-        self.dtau_xz_djx = jit(
-            vmap(
-                vmap(
-                    grad(get_tau_xz, argnums=1),
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
-        self.tau_xz_bot = jit(
-            vmap(
-                vmap(
-                    get_tau_xz_bot,
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
-        self.dtau_xz_bot_drho = jit(
-            vmap(
-                vmap(
-                    grad(get_tau_xz_bot, argnums=0),
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
-        self.dtau_xz_bot_djx = jit(
-            vmap(
-                vmap(
-                    grad(get_tau_xz_bot, argnums=1),
-                    in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-                ),
-                in_axes=(0, 0, 0, 0, 0, 0, None, 0)
-            )
-        )
+            # For xz: V is constant (index 6), gradient w.r.t. jx (index 1)
+            map_axes = (0, 0, 0, 0, 0, 0, None, 0)
+            grad_j_idx = 1  # jx
 
-    def update_quad(self,
-                    quad_fun: Callable[[NDArray, int], NDArray],
-                    inner_fun: Callable[[NDArray], NDArray],
-                    get_quad_field: Callable[[str, int], NDArray],
-                    topography: "Topography",
-                    *args) -> None:
-        """Update tau_xz and gradients at quadrature points"""
-        self.update(*args)
+            # Set attribute names for xz
+            tau_name = 'tau_xz'
+            dtau_drho_name = 'dtau_xz_drho'
+            dtau_dj_name = 'dtau_xz_djx'
+            tau_bot_name = 'tau_xz_bot'
+            dtau_bot_drho_name = 'dtau_xz_bot_drho'
+            dtau_bot_dj_name = 'dtau_xz_bot_djx'
 
-        for nb_quad in self.quad_list:
-            Ls_quad = quad_fun(inner_fun(self.extra[0]), nb_quad).reshape(-1, nb_quad).T
+        else:  # self.name == 'yz'
+            # tau_yz functions (y-direction wall stress)
+            def get_tau(rho, jx, jy, h, hy, U, V, Ls):
+                eta = get_shear_viscosity(self)
+                q = jnp.array([rho, jx, jy])
+                h_arr = jnp.array([h, hy])
+                tau_top = stress_top_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                tau_bot = stress_bottom_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                return tau_top - tau_bot
 
-            args = (get_quad_field('rho', nb_quad),
-                    get_quad_field('jx', nb_quad),
-                    get_quad_field('jy', nb_quad),
-                    topography.h_quad(nb_quad),
-                    topography.dh_dx_quad(nb_quad),
-                    topography.U_quad(nb_quad),
-                    0,
-                    Ls_quad)
+            def get_tau_bot(rho, jx, jy, h, hy, U, V, Ls):
+                eta = get_shear_viscosity(self)
+                q = jnp.array([rho, jx, jy])
+                h_arr = jnp.array([h, hy])
+                return stress_bottom_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
 
-            tau_xz_quad: NDArray = self.tau_xz(*args)  # type: ignore
-            dtau_xz_drho_quad: NDArray = self.dtau_xz_drho(*args)  # type: ignore
-            dtau_xz_djx_quad: NDArray = self.dtau_xz_djx(*args)  # type: ignore
+            # For yz: U is constant (index 5), gradient w.r.t. jy (index 2)
+            map_axes = (0, 0, 0, 0, 0, None, 0, 0)
+            grad_j_idx = 2  # jy
 
-            tau_xz_bot_quad: NDArray = self.tau_xz_bot(*args)  # type: ignore
-            dtau_xz_bot_drho_quad: NDArray = self.dtau_xz_bot_drho(*args)  # type: ignore
-            dtau_xz_bot_djx_quad: NDArray = self.dtau_xz_bot_djx(*args)  # type: ignore
+            # Set attribute names for yz
+            tau_name = 'tau_yz'
+            dtau_drho_name = 'dtau_yz_drho'
+            dtau_dj_name = 'dtau_yz_djy'
+            tau_bot_name = 'tau_yz_bot'
+            dtau_bot_drho_name = 'dtau_yz_bot_drho'
+            dtau_bot_dj_name = 'dtau_yz_bot_djy'
 
-            getattr(self, f'_tau_xz_quad_{nb_quad}').p = tau_xz_quad
-            getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p = dtau_xz_drho_quad
-            getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p = dtau_xz_djx_quad
-
-            getattr(self, f'_tau_xz_bot_quad_{nb_quad}').p = tau_xz_bot_quad
-            getattr(self, f'_dtau_xz_bot_drho_quad_{nb_quad}').p = dtau_xz_bot_drho_quad
-            getattr(self, f'_dtau_xz_bot_djx_quad_{nb_quad}').p = dtau_xz_bot_djx_quad
-
-    def tau_xz_quad(self, nb_quad: int) -> NDArray:
-        """Wall shear stress tau_xz (top - bottom) at quadrature points."""
-        return getattr(self, f'_tau_xz_quad_{nb_quad}').p
-
-    def dtau_xz_drho_quad(self, nb_quad: int) -> NDArray:
-        """Gradient of wall shear stress tau_xz w.r.t. density at quadrature points."""
-        return getattr(self, f'_dtau_xz_drho_quad_{nb_quad}').p
-
-    def dtau_xz_djx_quad(self, nb_quad: int) -> NDArray:
-        """Gradient of wall shear stress tau_xz w.r.t. x-momentum at quadrature points."""
-        return getattr(self, f'_dtau_xz_djx_quad_{nb_quad}').p
-
-    def tau_xz_bot_quad(self, nb_quad: int) -> NDArray:
-        """Bottom wall shear stress tau_xz at quadrature points."""
-        return getattr(self, f'_tau_xz_bot_quad_{nb_quad}').p
-
-    def dtau_xz_bot_drho_quad(self, nb_quad: int) -> NDArray:
-        """Gradient of bottom wall shear stress tau_xz w.r.t. density at quadrature points."""
-        return getattr(self, f'_dtau_xz_bot_drho_quad_{nb_quad}').p
-
-    def dtau_xz_bot_djx_quad(self, nb_quad: int) -> NDArray:
-        """Gradient of bottom wall shear stress tau_xz w.r.t. x-momentum at quadrature points."""
-        return getattr(self, f'_dtau_xz_bot_djx_quad_{nb_quad}').p
+        # Build JIT-compiled vmapped functions
+        vmap2 = lambda f: vmap(vmap(f, in_axes=map_axes), in_axes=map_axes)  # noqa: E731
+        setattr(self, tau_name, jit(vmap2(get_tau)))
+        setattr(self, dtau_drho_name, jit(vmap2(grad(get_tau, argnums=0))))
+        setattr(self, dtau_dj_name, jit(vmap2(grad(get_tau, argnums=grad_j_idx))))
+        setattr(self, tau_bot_name, jit(vmap2(get_tau_bot)))
+        setattr(self, dtau_bot_drho_name, jit(vmap2(grad(get_tau_bot, argnums=0))))
+        setattr(self, dtau_bot_dj_name, jit(vmap2(grad(get_tau_bot, argnums=grad_j_idx))))
 
 
 class BulkStress(GaussianProcessSurrogate):
@@ -751,28 +679,6 @@ class Pressure(GaussianProcessSurrogate):
         else:
             self.__field.p = eos_pressure(self.solution[0], self.prop)
 
-    def init_quad(self, fc_fem, quad_list: list[int], create_fun: Callable) -> None:
-        """Initialize quadrature point fields"""
-        self.quad_list = quad_list
-        self.field_list = ['pressure', 'dp_drho']
-        create_fun(self, fc_fem, self.field_list, self.quad_list)
-
-    def update_quad(self,
-                    quad_fun: Callable[[NDArray, int], NDArray],
-                    inner_fun: Callable[[NDArray], NDArray],
-                    get_quad_field: Callable[[str, int], NDArray],
-                    *args) -> None:
-        """Update pressure and gradients at nodal and quadrature points"""
-        self.update(*args)  # update p field
-
-        for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
-            p_inner = inner_fun(self.pressure)
-            p_quad = quad_fun(p_inner, nb_quad)
-            dp_drho_quad: NDArray = self.dp_drho(get_quad_field('rho', nb_quad))  # type: ignore
-
-            getattr(self, f'_pressure_quad_{nb_quad}').p = p_quad.reshape(-1, nb_quad).T
-            getattr(self, f'_dp_drho_quad_{nb_quad}').p = dp_drho_quad
-
     def build_grad(self) -> None:
         if self.is_gp_model:
             raise NotImplementedError("Gradient of GP-based EOS not implemented.")
@@ -787,10 +693,57 @@ class Pressure(GaussianProcessSurrogate):
                 )
             )
 
-    def p_quad(self, nb_quad: int) -> NDArray:
-        """Pressure field at quadrature points."""
-        return getattr(self, f'_pressure_quad_{nb_quad}').p
 
-    def dp_drho_quad(self, nb_quad: int) -> NDArray:
-        """Pressure gradient w.r.t. density at quadrature points."""
-        return getattr(self, f'_dp_drho_quad_{nb_quad}').p
+class Viscosity():
+
+    def __init__(self,
+                 fc: Any,
+                 prop: dict) -> None:
+        self.__field = fc.real_field('shear_viscosity')
+        self.prop = prop
+
+    @property
+    def shear_viscosity(self) -> NDArray:
+        """Shear viscosity field."""
+        return self.__field.p
+
+    def update(self,
+               pressure: NDArray,
+               dp_dx: NDArray,
+               dp_dy: NDArray,
+               height: NDArray,
+               U: float,
+               V: float) -> None:
+        """Update shear viscosity field using piezoviscosity and shear-thinning."""
+        # piezoviscosity
+        if 'piezo' in self.prop.keys():
+            mu0 = piezoviscosity(pressure,
+                                 self.prop['shear'],
+                                 self.prop['piezo'])
+        else:
+            mu0 = self.prop['shear']
+
+        # shear-thinning
+        if 'thinning' in self.prop.keys():
+            shear_rate = shear_rate_avg(dp_dx,
+                                        dp_dy,
+                                        height,
+                                        U,
+                                        V,
+                                        mu0)
+
+            shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
+                                                          self.prop['thinning'])
+        else:
+            shear_viscosity = mu0
+
+        # Handle scalar case (constant viscosity)
+        if np.isscalar(shear_viscosity):
+            self.__field.p[:] = shear_viscosity
+        else:
+            self.__field.p = shear_viscosity
+
+    @property
+    def eta(self) -> NDArray:
+        """Alias for shear_viscosity for cleaner access."""
+        return self.__field.p

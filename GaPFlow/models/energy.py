@@ -22,14 +22,44 @@
 # SOFTWARE.
 #
 import numpy as np
+from jax import vmap, grad, jit
+
+from .heatflux import heatflux_bot, heatflux_top
 
 import numpy.typing as npt
-from typing import Callable, Any
+from typing import Any
 
 NDArray = npt.NDArray[np.floating]
 
 
+def vvmap(fn, map_list):
+    return jit(
+        vmap(
+            vmap(fn, in_axes=map_list),
+            in_axes=map_list
+        )
+    )
+
+
 class Energy():
+    """Energy model for gap-averaged energy equation.
+
+    Handles total energy, temperature, and wall heat flux computations.
+    Includes bulk wall temperatures (Tb_top, Tb_bot) for thermal boundary conditions.
+
+    Parameters
+    ----------
+    fc : muGrid.GlobalFieldCollection
+        Field collection for storing fields.
+    energy_spec : dict
+        Energy specification containing:
+        - k: thermal conductivity [W/(m·K)]
+        - cv: specific heat capacity [J/(kg·K)]
+        - wall_flux_model: 'Tz_Robin' or 'simple'
+        - T_wall: wall temperature (for simple model)
+        - h_Robin: effective heat transfer coefficient
+        - alpha_wall: wall heat transfer coefficient (for simple model)
+    """
 
     def __init__(self,
                  fc: Any,
@@ -38,133 +68,145 @@ class Energy():
 
         self.__field = fc.register_real_field('total_energy')
         self.__temperature = fc.register_real_field('temperature')
+        self.__q_wall = fc.register_real_field('q_wall', (2,))
+
+        # Bulk wall temperatures (merged from WallTemperature class)
+        self.__Tb_top = fc.register_real_field('Tb_top')
+        self.__Tb_bot = fc.register_real_field('Tb_bot')
+
         self.k = energy_spec['k']
         self.cv = energy_spec['cv']
-        self.T_wall = energy_spec['T_wall']
-        self.alpha_wall = energy_spec['alpha_wall']
+
+        self.wall_flux_model = energy_spec['wall_flux_model']
+        self.T_wall = energy_spec.get('T_wall', 300.0)
+        self.h_Robin = energy_spec['h_Robin']
+        self.alpha_wall = energy_spec.get('alpha_wall', 0.0)
+
         self.__solution = fc.get_real_field('solution')
+
+        # Initialize bulk temperatures with T_wall as default
+        self.__Tb_top.p[:] = self.T_wall
+        self.__Tb_bot.p[:] = self.T_wall
 
     @property
     def energy(self) -> NDArray:
-        """Total energy field"""
+        """Total energy field."""
         return self.__field.p
 
     @energy.setter
     def energy(self, value: NDArray) -> None:
-        """Set total energy field, also updates temperature field"""
-        print("energy setter called")
+        """Set total energy field."""
         self.__field.p = value
 
     @property
     def temperature(self) -> NDArray:
-        """Temperature field"""
+        """Temperature field."""
         return self.__temperature.p
 
     @temperature.setter
     def temperature(self, value: NDArray) -> None:
-        """Set temperature field"""
+        """Set temperature field."""
         self.__temperature.p = value
+
+    @property
+    def Tb_top(self) -> NDArray:
+        """Top wall bulk temperature field."""
+        return self.__Tb_top.p
+
+    @Tb_top.setter
+    def Tb_top(self, value: NDArray) -> None:
+        """Set top wall bulk temperature field."""
+        self.__Tb_top.p = value
+
+    @property
+    def Tb_bot(self) -> NDArray:
+        """Bottom wall bulk temperature field."""
+        return self.__Tb_bot.p
+
+    @Tb_bot.setter
+    def Tb_bot(self, value: NDArray) -> None:
+        """Set bottom wall bulk temperature field."""
+        self.__Tb_bot.p = value
 
     @property
     def solution(self):
         """Return full solution field."""
         return self.__solution.p
 
-    def init_quad(self, fc_fem, quad_list: list[int], create_fun: Callable) -> None:
-        """Initialize quadrature point fields"""
-        self.quad_list = quad_list
-        self.field_list = ['E', 'T', 'dT_drho', 'dT_djx', 'dT_dE', 'S', 'dS_drho', 'dS_djx', 'dS_dE']
-        create_fun(self, fc_fem, self.field_list, self.quad_list)
+    def update_temperature(self) -> None:
+        """Update temperature field from current solution."""
+        self.temperature = self.T_func(
+            self.solution[0], self.solution[1], self.solution[2], self.energy
+        )
 
     def build_grad(self) -> None:
-        """Build gradients of energy-related fields at quadrature points"""
-        pass
+        """Build JIT-compiled gradient functions for energy-related quantities.
 
-    def update_quad(self,
-                    quad_fun: Callable[[NDArray, int], NDArray],
-                    inner_fun: Callable[[NDArray], NDArray],
-                    get_quad_field: Callable[[str, int], NDArray],
-                    *args) -> None:
-        """Update energy, temperature and gradients at nodal and quadrature points"""
+        Creates q_wall functions and their gradients with respect to
+        rho, jx, jy, and E.
+        """
+        if self.wall_flux_model == 'Tz_Robin':
+            # h, h_Robin, k, cv are constants (None in map_list)
+            # eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A are arrays (0 in map_list)
+            map_list = (0, None, None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
 
-        self.temperature = self.T_func(self.solution[0], self.solution[1], self.energy)
+            def q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A):
+                # heatflux_top/bot return W/m^2, divide by h to get W/m^3
+                q_top = heatflux_top(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+                q_bot = heatflux_bot(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+                return -(q_top + q_bot) / h
 
-        for nb_quad in self.quad_list:  # update p and dp_drho quadrature fields
-            args = (get_quad_field('rho', nb_quad),
-                    get_quad_field('jx', nb_quad),
-                    get_quad_field('E', nb_quad))
+            # Wall heat fluxes (W/m^2)
+            self.q_wall_top = vvmap(heatflux_top, map_list)
+            self.q_wall_bot = vvmap(heatflux_bot, map_list)
+            # Sum converted to W/m^3 for volume source term
+            self.q_wall_sum = vvmap(q_wall_sum, map_list)
 
-            getattr(self, f'_T_quad_{nb_quad}').p = self.T_func(*args)
-            getattr(self, f'_dT_drho_quad_{nb_quad}').p = self.T_grad_rho(*args)
-            getattr(self, f'_dT_djx_quad_{nb_quad}').p = self.T_grad_jx(*args)
-            getattr(self, f'_dT_dE_quad_{nb_quad}').p = self.T_grad_E(*args)
-            getattr(self, f'_S_quad_{nb_quad}').p = self.S_wall(*args, dh_dx=None)
-            getattr(self, f'_dS_drho_quad_{nb_quad}').p = self.S_grad_rho(*args, dh_dx=None)
-            getattr(self, f'_dS_djx_quad_{nb_quad}').p = self.S_grad_jx(*args, dh_dx=None)
-            getattr(self, f'_dS_dE_quad_{nb_quad}').p = self.S_grad_E(*args, dh_dx=None)
+            # Gradients w.r.t. solution variables
+            # argnums: 5=rho, 6=E, 7=jx, 8=jy
+            self.q_wall_grad_rho = vvmap(grad(q_wall_sum, argnums=5), map_list)
+            self.q_wall_grad_E = vvmap(grad(q_wall_sum, argnums=6), map_list)
+            self.q_wall_grad_jx = vvmap(grad(q_wall_sum, argnums=7), map_list)
+            self.q_wall_grad_jy = vvmap(grad(q_wall_sum, argnums=8), map_list)
 
-            E_quad = quad_fun(inner_fun(self.energy), nb_quad)
-            getattr(self, f'_E_quad_{nb_quad}').p = E_quad.reshape(-1, nb_quad).T
+        elif self.wall_flux_model == 'simple':
+            self.q_wall_sum = self.q_wall_simple
+            # For simple model, gradients would need to be defined separately
+            # (placeholder for now)
+            self.q_wall_grad_rho = lambda *args: np.zeros_like(args[5])
+            self.q_wall_grad_E = lambda *args: np.zeros_like(args[6])
+            self.q_wall_grad_jx = lambda *args: np.zeros_like(args[7])
+            self.q_wall_grad_jy = lambda *args: np.zeros_like(args[8])
 
-    def T_func(self, rho, jx, E):
-        return ((E / rho) - 0.5 * (jx / rho) ** 2) / self.cv
+    def T_func(self, rho, jx, jy, E):
+        """Compute temperature from solution variables.
 
-    def T_grad_rho(self, rho, jx, E):
-        return (-(E / rho**2) + (jx**2) / (rho**3)) / self.cv
+        T = (E/rho - 0.5*(ux^2 + uy^2)) / cv
+        where ux = jx/rho, uy = jy/rho
+        """
+        return ((E / rho) - 0.5 * (((jx / rho) ** 2) + ((jy / rho) ** 2))) / self.cv
 
-    def T_grad_jx(self, rho, jx, E):
+    def T_grad_rho(self, rho, jx, jy, E):
+        """Gradient of temperature w.r.t. density."""
+        return (-(E / rho**2) + (jx**2) / (rho**3) + (jy**2) / (rho**3)) / self.cv
+
+    def T_grad_jx(self, rho, jx, jy, E):
+        """Gradient of temperature w.r.t. x-momentum."""
         return (-jx / rho**2) / self.cv
 
-    def T_grad_E(self, rho, jx, E):
+    def T_grad_jy(self, rho, jx, jy, E):
+        """Gradient of temperature w.r.t. y-momentum."""
+        return (-jy / rho**2) / self.cv
+
+    def T_grad_E(self, rho, jx, jy, E):
+        """Gradient of temperature w.r.t. total energy."""
         return (1 / (rho * self.cv))
 
     def k_func(self):
+        """Return thermal conductivity."""
         return self.k
 
-    def S_wall(self, rho, jx, E, dh_dx):
-        return - (self.T_func(rho, jx, E) - self.T_wall) * self.alpha_wall
-
-    def S_grad_rho(self, rho, jx, E, dh_dx):
-        return - self.T_grad_rho(rho, jx, E) * self.alpha_wall
-
-    def S_grad_jx(self, rho, jx, E, dh_dx):
-        return - self.T_grad_jx(rho, jx, E) * self.alpha_wall
-
-    def S_grad_E(self, rho, jx, E, dh_dx):
-        return - self.T_grad_E(rho, jx, E) * self.alpha_wall
-
-    def E_quad(self, nb_quad: int) -> NDArray:
-        """Return energy quadrature field"""
-        return getattr(self, f'_E_quad_{nb_quad}').p
-
-    def T_quad(self, nb_quad: int) -> NDArray:
-        """Return temperature quadrature field"""
-        return getattr(self, f'_T_quad_{nb_quad}').p
-
-    def dT_drho_quad(self, nb_quad: int) -> NDArray:
-        """Return temperature gradient w.r.t. density quadrature field"""
-        return getattr(self, f'_dT_drho_quad_{nb_quad}').p
-
-    def dT_djx_quad(self, nb_quad: int) -> NDArray:
-        """Return temperature gradient w.r.t. momentum quadrature field"""
-        return getattr(self, f'_dT_djx_quad_{nb_quad}').p
-
-    def dT_dE_quad(self, nb_quad: int) -> NDArray:
-        """Return temperature gradient w.r.t. energy quadrature field"""
-        return getattr(self, f'_dT_dE_quad_{nb_quad}').p
-
-    def S_quad(self, nb_quad: int) -> NDArray:
-        """Return entropy quadrature field"""
-        return getattr(self, f'_S_quad_{nb_quad}').p
-
-    def dS_drho_quad(self, nb_quad: int) -> NDArray:
-        """Return entropy gradient w.r.t. density quadrature field"""
-        return getattr(self, f'_dS_drho_quad_{nb_quad}').p
-
-    def dS_djx_quad(self, nb_quad: int) -> NDArray:
-        """Return entropy gradient w.r.t. momentum quadrature field"""
-        return getattr(self, f'_dS_djx_quad_{nb_quad}').p
-
-    def dS_dE_quad(self, nb_quad: int) -> NDArray:
-        """Return entropy gradient w.r.t. energy quadrature field"""
-        return getattr(self, f'_dS_dE_quad_{nb_quad}').p
+    def q_wall_simple(self, h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A):
+        """Simple wall heat flux model (Newton cooling)."""
+        T = self.T_func(rho, jx, 0.0, E)  # jy=0 for simple 1D
+        return - (T - self.T_wall) * self.alpha_wall
