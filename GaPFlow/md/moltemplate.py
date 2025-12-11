@@ -27,8 +27,6 @@ import subprocess
 import scipy.constants as sci
 from ase.lattice.cubic import FaceCenteredCubic
 
-from .utils import _get_MPI_grid
-
 
 def write_init(preset="TraPPE", **kwargs):
 
@@ -635,6 +633,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     # general
     shift = args.get("shift", False)
     max_cpu = args.get("ncpu")
+    atoms_per_core = args.get("atoms_per_core", 1000)
     mpi_grid = args.get("mpiGrid", None)
     wall_potential = args.get("wall", "eam/alloy")
 
@@ -677,11 +676,12 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     Natoms = num_fluid_atoms + num_solid_atoms
 
     if mpi_grid is None:
-        mpi_grid = _get_MPI_grid(Natoms,
-                                 max(nx // 15, 1),
-                                 max_cpu)
+        # Let LAMMPS decide
+        num_cpu = min(max_cpu, Natoms // atoms_per_core)
+        mpi_grid = ['*', '*', '*']
     else:
-        assert np.prod(mpi_grid) <= max_cpu
+        num_cpu = np.prod(mpi_grid)
+        assert num_cpu <= max_cpu
 
     outfile = os.path.join(output_dir, 'system.lt')
     with open(outfile, 'w') as f:
@@ -707,7 +707,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
         # Write run
         f.write(write_run())
 
-    return np.prod(mpi_grid)
+    return num_cpu
 
 
 def build_template(args):
