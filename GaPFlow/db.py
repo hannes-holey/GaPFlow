@@ -352,10 +352,10 @@ class Database:
         """
         size_before = self.size
 
-        for X in Xnew:
+        for Xi in Xnew:
             size_before += 1
 
-            Y, Ye = self._md.run(X, size_before)
+            X, Y, Ye = self._md.run(Xi, size_before)
 
             self._Xtrain = jnp.vstack([self._Xtrain, X])
             self._Ytrain = jnp.vstack([self._Ytrain, Y])

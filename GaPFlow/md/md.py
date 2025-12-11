@@ -41,7 +41,7 @@ from .runner import run_parallel, run_serial
 from ..models.pressure import eos_pressure
 from ..models.viscous import stress_bottom, stress_top
 from .moltemplate import write_template, build_template
-from .utils import read_output_files
+from .utils import read_output_files, read_output_files_X
 from ..utils import bordered_text, make_dumpable
 
 yaml = YAML()
@@ -195,7 +195,7 @@ class MolecularDynamics:
 
         return proto_ds, proto_ds_path
 
-    def run(self, X, tag):
+    def run(self, X_target, tag):
         """Run an MD simulation and store its input, metadata, and output into a dtool dataset.
 
         This method is called from a Database instance when new training data is added e.g. during
@@ -203,7 +203,7 @@ class MolecularDynamics:
 
         Parameters
         ----------
-        X : Array
+        X_target : Array
             The training input.
         tag : str
             A tag to attach to the dataset name.
@@ -218,9 +218,9 @@ class MolecularDynamics:
 
         # Setup MD simulation
         dataset, location = self._create_dtool_dataset(tag)
-        self.build_input_files(dataset, location, X)
+        self.build_input_files(dataset, location, X_target)
 
-        self._pretty_print(location, X)
+        self._pretty_print(location, X_target)
 
         # Move to dtool datapath...
         basedir = os.getcwd()
@@ -235,7 +235,7 @@ class MolecularDynamics:
             pass
 
         # ...Read output / post-process MD result...
-        Y, Ye = self.read_output()
+        X, Y, Ye = self.read_output()
 
         # ...and return to cwd
         os.chdir(basedir)
@@ -244,7 +244,7 @@ class MolecularDynamics:
         self._write_dtool_readme(location, X, Y, Ye)
         dataset.freeze()
 
-        return Y, Ye
+        return X, Y, Ye
 
 
 class Mock(MolecularDynamics):
@@ -293,7 +293,7 @@ class Mock(MolecularDynamics):
         self.params.update(prop)
 
     def build_input_files(self, dataset, location, X):
-        self.X = X
+        self._X = X
 
     def read_output(self):
         key = jr.key(123)
@@ -307,7 +307,7 @@ class Mock(MolecularDynamics):
         U, V = self.geo["U"], self.geo["V"]
         eta, zeta = self.prop["shear"], self.prop["bulk"]
 
-        X = self.X
+        X = self._X
         tau_bot = stress_bottom(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s0
         tau_top = stress_top(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s1
         press = eos_pressure(X[0:1], self.prop) + noise_p
@@ -321,7 +321,7 @@ class Mock(MolecularDynamics):
             self.noise[1], self.noise[1], 0.  # yz, xz, xy
         ])
 
-        return Y, Ye
+        return X, Y, Ye
 
 
 class LennardJones(MolecularDynamics):
@@ -366,8 +366,12 @@ variable\tinput_fluxY equal {X[2]}
         dataset.put_item(self.params['wallfile'], 'in.wall')
         dataset.put_item(self.params['infile'], 'in.run')
 
+        self._X = X
+
     def read_output(self):
-        return read_output_files()
+        X = self._X
+        Y, Ye = read_output_files()
+        return X, Y, Ye
 
 
 class GoldAlkane(MolecularDynamics):
@@ -434,6 +438,12 @@ class GoldAlkane(MolecularDynamics):
         shutil.rmtree('output_ttree')
         os.chdir(cwd)
 
+        self._X = X
+
     def read_output(self):
         sf = sci.calorie * 1e-4  # from kcal/mol/A^3 to g/mol/A/fs^2
-        return read_output_files(sf=sf)
+
+        X = read_output_files_X(self._X)
+        Y, Ye = read_output_files(sf=sf)
+
+        return X, Y, Ye
