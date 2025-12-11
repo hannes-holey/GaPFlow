@@ -24,7 +24,8 @@
 import os
 import pytest
 
-from GaPFlow.md.moltemplate import _get_MPI_grid, _read_coords_from_lt
+from GaPFlow.md.moltemplate import _read_coords_from_lt
+from GaPFlow.md.utils import _get_MPI_grid
 
 
 @pytest.mark.parametrize("Na,size,max_cpu", [(1000, 2, 4),
