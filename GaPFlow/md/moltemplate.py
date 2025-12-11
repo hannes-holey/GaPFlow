@@ -511,7 +511,7 @@ def write_settings(args):
     Nevery = args.get("Nevery", 10)
     Nrepeat = args.get("Nrepeat", 100)
     Nfreq = args.get("Nfreq", 1000)
-    dumpfreq = args.get("Nfreq", 10_000)
+    dumpfreq = args.get("Nfreq_dump", 10_000)
 
     dz = args.get("dz", 0.1)  # sampling of z profiles
 
