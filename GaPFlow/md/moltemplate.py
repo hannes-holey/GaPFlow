@@ -27,6 +27,8 @@ import subprocess
 import scipy.constants as sci
 from ase.lattice.cubic import FaceCenteredCubic
 
+from .utils import is_prime
+
 
 def write_init(preset="TraPPE", **kwargs):
 
@@ -676,9 +678,14 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     Natoms = num_fluid_atoms + num_solid_atoms
 
     if mpi_grid is None:
-        # Let LAMMPS decide
-        num_cpu = min(max_cpu, Natoms // atoms_per_core)
+        # Let LAMMPS decide MPI grid
         mpi_grid = ['*', '*', '*']
+
+        # but avoid large prime numbers
+        num_cpu = min(max_cpu, Natoms // atoms_per_core)
+        while num_cpu > 5 and is_prime(num_cpu):
+            num_cpu -= 1
+
     else:
         num_cpu = np.prod(mpi_grid)
         assert num_cpu <= max_cpu
