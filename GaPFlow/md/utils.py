@@ -60,7 +60,7 @@ def _get_MPI_grid(Natoms, size, max_cpu, atoms_per_core=1000):
     return (nx, ny, nz)
 
 
-def is_prime(n: int) -> bool:
+def _is_prime(n: int) -> bool:
     """Return True if n is a prime number, otherwise False."""
     if n <= 1:
         return False
@@ -75,6 +75,50 @@ def is_prime(n: int) -> bool:
             return False
         i += 6
     return True
+
+
+def sanitize_num_cpus(n, max_cpu):
+    """
+    Avoid prime number processor counts or numbers whose
+    only factorization is (1, m, p) where m and p are prime.
+
+    Parameters
+    ----------
+    n : int
+        Estimated optimal number of processors
+
+    Returns
+    -------
+    int
+        Sanitized number whith reasonable factorization for MPI grid.
+    """
+
+    # n should be larger than 0
+    n = max(1, n)
+
+    # We may increase the number for more than double digit cpu counts
+    if n + 1 <= max_cpu and n > 9:
+        n += 1
+
+    # but should not be larger than the max number requestes
+    n = min(n, max_cpu)
+
+    for m in range(n, 3, -1):
+
+        if _is_prime(m):
+            continue
+        if m > 13 and m % 2 == 0 and _is_prime(m//2):
+            continue
+        if m > 14 and m % 3 == 0 and _is_prime(m//3):
+            continue
+        if m > 24 and m % 5 == 0 and _is_prime(m//5):
+            continue
+        if m > 48 and m % 7 == 0 and _is_prime(m//7):
+            continue
+
+        return m
+
+    return n
 
 
 def read_output_files(fname='stress_wall.dat', sf=1.):
