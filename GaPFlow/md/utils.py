@@ -237,10 +237,10 @@ def read_output_files_X(X):
     flux_y = vy_integral * density / gap_height
 
     # overwrite input data
-    X.at[0].set(density)
-    X.at[1].set(flux_x)
-    X.at[2].set(flux_y)
-    X.at[3].set(gap_height)
+    X = X.at[0].set(density)
+    X = X.at[1].set(flux_x)
+    X = X.at[2].set(flux_y)
+    X = X.at[3].set(gap_height)
 
     return X
 
