@@ -510,9 +510,14 @@ def write_settings(args):
     temperature = args.get("temperature", 300.)
     thermostat_fluid = int(args.get('thermostat_fluid', False))
 
-    Nevery = args.get("Nevery", 10)
-    Nrepeat = args.get("Nrepeat", 100)
-    Nfreq = args.get("Nfreq", 1000)
+    Nevery_z = args.get("Nevery_zprof", 100)
+    Nrepeat_z = args.get("Nrepeat_zprof", 10)
+    Nfreq_z = args.get("Nfreq_zprof", 1000)
+
+    Nevery = args.get("Nevery", 500)
+    Nrepeat = args.get("Nrepeat", 1)
+    Nfreq = args.get("Nfreq", 500)
+
     dumpfreq = args.get("Nfreq_dump", 10_000)
 
     dz = args.get("dz", 0.1)  # sampling of z profiles
@@ -545,12 +550,17 @@ def write_settings(args):
     variable        ntherm equal {nthermal}
     variable        angle_sf equal {angle_sf}
 
-    # sampling // temporal
+    # sampling // temporal (stress)
     variable        Nevery equal {Nevery}
     variable        Nrepeat equal {Nrepeat}
     variable        Nfreq equal {Nfreq}
 
-    # sampling // spatial
+    # sampling // temporal (profiles)
+    variable        Nevery_z equal {Nevery_z}
+    variable        Nrepeat_z equal {Nrepeat_z}
+    variable        Nfreq_z equal {Nfreq_z}
+
+    # sampling // spatial (profiles)
     variable        dz equal {dz}
 
     # Dump trajectory
