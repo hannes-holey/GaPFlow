@@ -641,17 +641,34 @@ class FEMSolver1D:
     def boundary_condition_M(self, M: NDArray) -> NDArray:
         p = self.problem
 
+        # Density (mass) BC
         if p.grid['bc_xW_D'][0]:
             M[0, :] = 0.0
             M[0, 0] = 1.0
         if p.grid['bc_xE_D'][0]:
-            M[-1, :] = 0.0
-            M[-1, self.nb_pts - 1] = 1.0
+            M[2 * self.nb_pts - 1, :] = 0.0
+            M[2 * self.nb_pts - 1, self.nb_pts - 1] = 1.0
+
+        # Energy BC
+        if self.energy:
+            E_row_W = 2 * self.nb_pts
+            E_row_E = 3 * self.nb_pts - 1
+            E_col_W = 2 * self.nb_pts
+            E_col_E = 3 * self.nb_pts - 1
+
+            if p.energy.bc_xW == 'D':
+                M[E_row_W, :] = 0.0
+                M[E_row_W, E_col_W] = 1.0
+            if p.energy.bc_xE == 'D':
+                M[E_row_E, :] = 0.0
+                M[E_row_E, E_col_E] = 1.0
+
         return M
 
     def boundary_condition_R(self, R: NDArray) -> NDArray:
         p = self.problem
 
+        # Density (mass) BC
         if p.grid['bc_xW_D'][0]:
             target = p.grid['bc_xW_D_val']
             guess = self.get_nodal_val('rho')[0]
@@ -659,8 +676,32 @@ class FEMSolver1D:
         if p.grid['bc_xE_D'][0]:
             target = p.grid['bc_xE_D_val']
             guess = self.get_nodal_val('rho')[-1]
-            R[-1] = guess - target
+            R[2 * self.nb_pts - 1] = guess - target
+
+        # Energy BC
+        if self.energy:
+            E_row_W = 2 * self.nb_pts
+            E_row_E = 3 * self.nb_pts - 1
+
+            if p.energy.bc_xW == 'D':
+                E_target = self._compute_E_from_T(p.energy.T_bc_xW, idx=0)
+                E_guess = self.get_nodal_val('E')[0]
+                R[E_row_W] = E_guess - E_target
+            if p.energy.bc_xE == 'D':
+                E_target = self._compute_E_from_T(p.energy.T_bc_xE, idx=-1)
+                E_guess = self.get_nodal_val('E')[-1]
+                R[E_row_E] = E_guess - E_target
+
         return R
+
+    def _compute_E_from_T(self, T_bc: float, idx: int) -> float:
+        """Compute target energy from temperature BC value."""
+        p = self.problem
+        rho = self.get_nodal_val('rho')[idx]
+        jx = self.get_nodal_val('jx')[idx]
+        ux = jx / rho
+        kinetic = 0.5 * ux**2
+        return rho * (p.energy.cv * T_bc + kinetic)
 
     def get_M(self) -> NDArray:
         M = self.get_tang_matrix()

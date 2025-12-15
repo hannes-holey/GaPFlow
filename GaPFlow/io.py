@@ -497,7 +497,20 @@ def sanitize_energy(d):
     out['h_Robin'] = float(d.get('h_Robin', 1e04))
     out['T_wall'] = float(d.get('T_wall', 300.))
     out['alpha_wall'] = float(d.get('alpha_wall', 1e5))
+    out['T0'] = _parse_T0(d.get('T0', ('uniform', 300.)))
+
+    out['bc_xW'] = str(d.get('bc_xW', 'P')).upper()
+    out['bc_xE'] = str(d.get('bc_xE', 'P')).upper()
+    out['T_bc_xW'] = float(d.get('T_bc_xW', out['T_wall']))
+    out['T_bc_xE'] = float(d.get('T_bc_xE', out['T_wall']))
 
     print_dict(out)
 
     return out
+
+
+def _parse_T0(T0_raw):
+    """Parse T0 specification into tuple."""
+    if isinstance(T0_raw, (int, float)):
+        return ('uniform', float(T0_raw))
+    return tuple(T0_raw)

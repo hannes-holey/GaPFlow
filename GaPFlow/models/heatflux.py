@@ -21,11 +21,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+# flake8: noqa: W503
+
 import numpy as np
 import numpy.typing as npt
 
 NDArray = npt.NDArray[np.floating]
-
 
 def heatflux_top(
     h: float,
@@ -44,30 +46,44 @@ def heatflux_top(
     A: float
 ) -> float:
     """
-    Heat flux fluid -> top wall using Robin BC
+    Heat flux fluid -> top wall using Robin BC.
 
-    Parameters:
-    ------------
-        h: channel height [m]
-        h_eff: effective heat transfer coefficient [m^2K/W]
-        k: thermal conductivity [W/mK]
-        c_v: specific heat capacity [J/kgK]
-        eta: dynamic viscosity [Pa s]
-        rho: density [kg/m^3]
-        E: total energy per unit volume [J/m^3]
-        jx: momentum flux in x direction [kg/m^2s]
-        jy: momentum flux in y direction [kg/m^2s]
-        U: bottom wall velocity in x direction [m/s]
-        V: bottom wall velocity in y direction [m/s]
-        T_bulk_top: bulk temperature top wall [K]
-        T_bulk_bot: bulk temperature bottom wall [K]
-        A: wall area [m^2]
+    Parameters
+    ----------
+    h : float
+        Channel height [m].
+    h_eff : float
+        Effective heat transfer coefficient [m^2K/W].
+    k : float
+        Thermal conductivity [W/mK].
+    c_v : float
+        Specific heat capacity [J/kgK].
+    eta : float
+        Dynamic viscosity [Pa s].
+    rho : float
+        Density [kg/m^3].
+    E : float
+        Total energy per unit volume [J/m^3].
+    jx : float
+        Momentum flux in x direction [kg/m^2s].
+    jy : float
+        Momentum flux in y direction [kg/m^2s].
+    U : float
+        Bottom wall velocity in x direction [m/s].
+    V : float
+        Bottom wall velocity in y direction [m/s].
+    T_bulk_top : float
+        Bulk temperature top wall [K].
+    T_bulk_bot : float
+        Bulk temperature bottom wall [K].
+    A : float
+        Wall area [m^2].
 
-    Returns:
-    --------
-        float: heat flux at the top wall [W/m^2]
+    Returns
+    -------
+    float
+        Heat flux at the top wall [W/m^2].
     """
-    # Precompute common terms
     h2 = h * h
     rho2 = rho * rho
     jx2 = jx * jx
@@ -77,10 +93,8 @@ def heatflux_top(
     k2 = k * k
     h_eff2 = h_eff * h_eff
 
-    # Denominator: 500*c_v*k*rho^2*(h^2 + 8*h*h_eff*k + 12*h_eff^2*k^2)
     denom = 500 * c_v * k * rho2 * (h2 + 8 * h * h_eff * k + 12 * h_eff2 * k2)
 
-    # Numerator from MATLAB expression
     numerator = (
         30 * h_eff * jx2 * k2 + 30 * h_eff * jy2 * k2
         + 15 * h * jx2 * k + 15 * h * jy2 * k
@@ -117,30 +131,44 @@ def heatflux_bot(
     A: float
 ) -> float:
     """
-    Heat flux fluid -> bottom wall using Robin BC
+    Heat flux fluid -> bottom wall using Robin BC.
 
-    Parameters:
-    ------------
-        h: channel height [m]
-        h_eff: effective heat transfer coefficient [m^2K/W]
-        k: thermal conductivity [W/mK]
-        c_v: specific heat capacity [J/kgK]
-        eta: dynamic viscosity [Pa s]
-        rho: density [kg/m^3]
-        E: total energy per unit volume [J/m^3]
-        jx: momentum flux in x direction [kg/m^2s]
-        jy: momentum flux in y direction [kg/m^2s]
-        U: bottom wall velocity in x direction [m/s]
-        V: bottom wall velocity in y direction [m/s]
-        T_bulk_top: bulk temperature top wall [K]
-        T_bulk_bot: bulk temperature bottom wall [K]
-        A: wall area [m^2]
+    Parameters
+    ----------
+    h : float
+        Channel height [m].
+    h_eff : float
+        Effective heat transfer coefficient [m^2K/W].
+    k : float
+        Thermal conductivity [W/mK].
+    c_v : float
+        Specific heat capacity [J/kgK].
+    eta : float
+        Dynamic viscosity [Pa s].
+    rho : float
+        Density [kg/m^3].
+    E : float
+        Total energy per unit volume [J/m^3].
+    jx : float
+        Momentum flux in x direction [kg/m^2s].
+    jy : float
+        Momentum flux in y direction [kg/m^2s].
+    U : float
+        Bottom wall velocity in x direction [m/s].
+    V : float
+        Bottom wall velocity in y direction [m/s].
+    T_bulk_top : float
+        Bulk temperature top wall [K].
+    T_bulk_bot : float
+        Bulk temperature bottom wall [K].
+    A : float
+        Wall area [m^2].
 
-    Returns:
-    --------
-        float: heat flux at the bottom wall [W/m^2]
+    Returns
+    -------
+    float
+        Heat flux at the bottom wall [W/m^2].
     """
-    # Precompute common terms
     h2 = h * h
     h4 = h2 * h2
     h5 = h4 * h
@@ -151,10 +179,8 @@ def heatflux_bot(
     V2 = V * V
     k2 = k * k
 
-    # Denominator: 500*c_v*h^4*k*rho^2*(h + 2*h_eff*k)*(h + 6*h_eff*k)
     denom = 500 * c_v * h4 * k * rho2 * (h + 2 * h_eff * k) * (h + 6 * h_eff * k)
 
-    # Numerator from MATLAB expression (with h^5 and h^4 terms)
     numerator = (
         15 * h5 * jx2 * k + 15 * h5 * jy2 * k
         + 30 * h4 * h_eff * jx2 * k2 + 30 * h4 * h_eff * jy2 * k2
@@ -190,31 +216,47 @@ def get_T_z(
     T_bulk_bot: float,
     z: NDArray
 ) -> NDArray:
-    """Calculate temperature profile in the channel using 2nd order velocity profile
+    """
+    Calculate temperature profile in the channel using 2nd order velocity profile.
 
-    Parameters:
-    ------------
-        h: channel height [m]
-        h_eff_inv: effective heat transfer coefficient [m^2K/W]
-        k: thermal conductivity [W/mK]
-        c_v: specific heat capacity [J/kgK]
-        eta: dynamic viscosity [Pa s]
-        rho: density [kg/m^3]
-        E: total energy per unit volume [J/m^3]
-        jx: momentum flux in x direction [kg/m^2s]
-        jy: momentum flux in y direction [kg/m^2s]
-        U: bottom wall velocity in x direction [m/s]
-        V: bottom wall velocity in y direction [m/s]
-        T_bulk_top: bulk temperature top wall [K]
-        T_bulk_bot: bulk temperature bottom wall [K]
-        z: positions within the channel [m]
+    Parameters
+    ----------
+    h : float
+        Channel height [m].
+    h_eff : float
+        Effective heat transfer coefficient [m^2K/W].
+    k : float
+        Thermal conductivity [W/mK].
+    c_v : float
+        Specific heat capacity [J/kgK].
+    eta : float
+        Dynamic viscosity [Pa s].
+    rho : float
+        Density [kg/m^3].
+    E : float
+        Total energy per unit volume [J/m^3].
+    jx : float
+        Momentum flux in x direction [kg/m^2s].
+    jy : float
+        Momentum flux in y direction [kg/m^2s].
+    U : float
+        Bottom wall velocity in x direction [m/s].
+    V : float
+        Bottom wall velocity in y direction [m/s].
+    T_bulk_top : float
+        Bulk temperature top wall [K].
+    T_bulk_bot : float
+        Bulk temperature bottom wall [K].
+    z : ndarray
+        Positions within the channel [m].
 
-    Returns:
-        NDArray: temperature at position z
+    Returns
+    -------
+    ndarray
+        Temperature at position z.
     """
     assert np.all((z >= 0) & (z <= h)), "z positions must be within the channel height [0, h]"
 
-    # Precompute common terms
     h2 = h * h
     h3 = h2 * h
     h4 = h3 * h
@@ -284,3 +326,44 @@ def get_T_z(
 
     T_vec = (term1 - term2 - term3 + term4 - term5 + term6) / k
     return T_vec
+
+
+def get_T_z_at_cell(problem, i: int, j: int, z: NDArray) -> NDArray:
+    """
+    Calculate temperature profile T(z) at cell (i, j).
+
+    Convenience wrapper that extracts state variables from the Problem
+    and calls get_T_z().
+
+    Parameters
+    ----------
+    problem : Problem
+        GaPFlow Problem instance with energy enabled.
+    i : int
+        Cell index in x-direction.
+    j : int
+        Cell index in y-direction.
+    z : ndarray
+        Positions within the channel [m].
+
+    Returns
+    -------
+    ndarray
+        Temperature at position z.
+    """
+    return get_T_z(
+        h=problem.topo.h[i, j],
+        h_eff=problem.energy.h_Robin,
+        k=problem.energy.k,
+        c_v=problem.energy.cv,
+        eta=problem.prop['shear'],
+        rho=problem.q[0, i, j],
+        E=problem.energy.energy[i, j],
+        jx=problem.q[1, i, j],
+        jy=problem.q[2, i, j],
+        U=problem.geo['U'],
+        V=problem.geo['V'],
+        T_bulk_top=problem.energy.Tb_top[i, j],
+        T_bulk_bot=problem.energy.Tb_bot[i, j],
+        z=z,
+    )

@@ -59,11 +59,14 @@ class Energy():
         - T_wall: wall temperature (for simple model)
         - h_Robin: effective heat transfer coefficient
         - alpha_wall: wall heat transfer coefficient (for simple model)
+        - T_0: tuple, initial temperature profile specification
+        - E_0: float or None, direct energy specification (alternative to T_0)
     """
 
     def __init__(self,
                  fc: Any,
-                 energy_spec: dict
+                 energy_spec: dict,
+                 grid: dict
                  ) -> None:
 
         self.__field = fc.register_real_field('total_energy')
@@ -78,11 +81,25 @@ class Energy():
         self.cv = energy_spec['cv']
 
         self.wall_flux_model = energy_spec['wall_flux_model']
-        self.T_wall = energy_spec.get('T_wall', 300.0)
+        self.T_wall = energy_spec['T_wall']
         self.h_Robin = energy_spec['h_Robin']
-        self.alpha_wall = energy_spec.get('alpha_wall', 0.0)
+        self.alpha_wall = energy_spec['alpha_wall']
+
+        # Initial condition specification
+        self.T_0_spec = energy_spec['T0']
+
+        # Boundary conditions (x-direction)
+        self.bc_xW = energy_spec.get('bc_xW', 'P')
+        self.bc_xE = energy_spec.get('bc_xE', 'P')
+        self.T_bc_xW = energy_spec.get('T_bc_xW', self.T_wall)
+        self.T_bc_xE = energy_spec.get('T_bc_xE', self.T_wall)
 
         self.__solution = fc.get_real_field('solution')
+        self.__x = fc.get_real_field('x')
+        self.dim = grid['dim']
+        self.Lx = grid['Lx']
+        self.dx = grid['dx']
+        self._flow_periodic_x = all(grid['bc_xW_P']) and all(grid['bc_xE_P'])
 
         # Initialize bulk temperatures with T_wall as default
         self.__Tb_top.p[:] = self.T_wall
@@ -133,37 +150,129 @@ class Energy():
         """Return full solution field."""
         return self.__solution.p
 
+    def initialize(self) -> None:
+        """
+        Initialize energy field from T_0 specification.
+        """
+        # Check dimensionality for non-uniform profiles
+        if self.T_0_spec[0] in ('half_sine', 'block') and self.dim != 1:
+            raise ValueError(
+                f"Temperature profile '{self.T_0_spec[0]}' is only supported for 1D problems. "
+                f"Got dim={self.dim}. Use 'uniform' profile for 2D problems."
+            )
+
+        # Check: flow periodic but energy BC non-periodic
+        if self._flow_periodic_x and (self.bc_xW != 'P' or self.bc_xE != 'P'):
+            raise ValueError(
+                "Flow is periodic in x but energy BC are non-periodic."
+            )
+
+        # Compute initial energy from initial temperature profile
+        ux = self.solution[1] / self.solution[0]
+        uy = self.solution[2] / self.solution[0]
+        kinetic_energy = 0.5 * (ux**2 + uy**2)
+        T_profile = self._get_T_profile(self.__x.p)
+        self.energy[:] = self.solution[0] * (self.cv * T_profile + kinetic_energy)
+
+        # Update temperature field for consistency
+        self.update_temperature()
+
+    def _get_T_profile(self, x: NDArray) -> NDArray:
+        """
+        Compute initial temperature profile based on specification.
+        """
+        if self.T_0_spec[0] == 'uniform':
+            T = self.T_0_spec[1]
+            return np.full_like(x, T)
+
+        elif self.T_0_spec[0] == 'half_sine':
+            T_min, T_max = self.T_0_spec[1], self.T_0_spec[2]
+            # Shift so first interior cell (x=dx/2) maps to x_norm=0
+            x_norm = (x - self.dx / 2) / (self.Lx - self.dx)
+            return T_min + (T_max - T_min) * np.sin(np.pi * x_norm)
+
+        elif self.T_0_spec[0] == 'block':
+            T_min, T_max = self.T_0_spec[1], self.T_0_spec[2]
+            # Shift so first interior cell (x=dx/2) maps to x_norm=0
+            x_norm = (x - self.dx / 2) / (self.Lx - self.dx)
+            return np.where(
+                (x_norm >= 0.4) & (x_norm <= 0.6),
+                T_max,
+                T_min
+            )
+
+        else:
+            raise ValueError(f"Unknown temperature profile type: {self.T_0_spec[0]}")
+
     def update_temperature(self) -> None:
         """Update temperature field from current solution."""
         self.temperature = self.T_func(
             self.solution[0], self.solution[1], self.solution[2], self.energy
         )
 
+    def update_ghost_cells(self) -> None:
+        """
+        Update energy ghost cells based on boundary conditions.
+
+        For 1D problems, updates ghost cells at x-boundaries (indices 0 and -1).
+        Energy ghost values are computed from temperature BCs:
+        E_ghost = rho_ghost * (cv * T_bc + 0.5 * (ux² + uy²))
+
+        Note: Must be called AFTER solution field ghost cells are updated,
+        since energy ghost values depend on rho at ghost cells.
+        """
+        rho = self.solution[0]
+        jx = self.solution[1]
+        jy = self.solution[2]
+
+        # West boundary (ghost cell at index 0)
+        if self.bc_xW == 'P':
+            # Periodic: copy from opposite interior cell
+            self.energy[0, :] = self.energy[-2, :].copy()
+        elif self.bc_xW == 'D':
+            # Dirichlet: compute energy from T_bc_xW
+            ux = jx[0, :] / rho[0, :]
+            uy = jy[0, :] / rho[0, :]
+            kinetic = 0.5 * (ux**2 + uy**2)
+            self.energy[0, :] = rho[0, :] * (self.cv * self.T_bc_xW + kinetic)
+        elif self.bc_xW == 'N':
+            # Neumann (zero gradient / adiabatic): copy from adjacent interior
+            self.energy[0, :] = self.energy[1, :].copy()
+
+        # East boundary (ghost cell at index -1)
+        if self.bc_xE == 'P':
+            # Periodic: copy from opposite interior cell
+            self.energy[-1, :] = self.energy[1, :].copy()
+        elif self.bc_xE == 'D':
+            # Dirichlet: compute energy from T_bc_xE
+            ux = jx[-1, :] / rho[-1, :]
+            uy = jy[-1, :] / rho[-1, :]
+            kinetic = 0.5 * (ux**2 + uy**2)
+            self.energy[-1, :] = rho[-1, :] * (self.cv * self.T_bc_xE + kinetic)
+        elif self.bc_xE == 'N':
+            # Neumann (zero gradient / adiabatic): copy from adjacent interior
+            self.energy[-1, :] = self.energy[-2, :].copy()
+
     def build_grad(self) -> None:
         """Build JIT-compiled gradient functions for energy-related quantities.
-
-        Creates q_wall functions and their gradients with respect to
-        rho, jx, jy, and E.
+        Creates q_wall functions and their gradients with respect to rho, jx, jy, and E.
         """
         if self.wall_flux_model == 'Tz_Robin':
-            # h, h_Robin, k, cv are constants (None in map_list)
-            # eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A are arrays (0 in map_list)
+            # h_Robin, k, cv, A are constants (None in map_list)
+            # h, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot are arrays (0 in map_list)
             map_list = (0, None, None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
 
             def q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A):
-                # heatflux_top/bot return W/m^2, divide by h to get W/m^3
                 q_top = heatflux_top(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
                 q_bot = heatflux_bot(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
                 return -(q_top + q_bot) / h
 
-            # Wall heat fluxes (W/m^2)
-            self.q_wall_top = vvmap(heatflux_top, map_list)
-            self.q_wall_bot = vvmap(heatflux_bot, map_list)
-            # Sum converted to W/m^3 for volume source term
-            self.q_wall_sum = vvmap(q_wall_sum, map_list)
+            # Wall heat fluxes
+            self.q_wall_top = vvmap(heatflux_top, map_list)  # W/m^2
+            self.q_wall_bot = vvmap(heatflux_bot, map_list)  # W/m^2
+            self.q_wall_sum = vvmap(q_wall_sum, map_list)    # W/m^3
 
             # Gradients w.r.t. solution variables
-            # argnums: 5=rho, 6=E, 7=jx, 8=jy
             self.q_wall_grad_rho = vvmap(grad(q_wall_sum, argnums=5), map_list)
             self.q_wall_grad_E = vvmap(grad(q_wall_sum, argnums=6), map_list)
             self.q_wall_grad_jx = vvmap(grad(q_wall_sum, argnums=7), map_list)

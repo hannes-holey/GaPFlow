@@ -160,11 +160,13 @@ class Problem:
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
         self.viscosity = Viscosity(self.fc, prop)
+        self.topo = Topography(self.fc, self.grid, geo, prop)
+
         self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
         if self.bEnergy:
-            self.energy = Energy(self.fc, self.energy_spec)
+            self.energy = Energy(self.fc, energy_spec, grid)
+            self.energy.initialize()
 
-        self.topo = Topography(self.fc, self.grid, geo, prop)
         # I/O
         if not self.options['silent']:
 
@@ -416,11 +418,7 @@ class Problem:
             "vsound": []
         }
 
-        if not self.options['silent']:
-            print(61 * '-')
-            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
-            print(61 * '-')
-            self.write(params=False)
+        self.solver.print_status_header()
 
         # Run
         self._tic = datetime.now()
@@ -537,7 +535,8 @@ class Problem:
         """
         self._communicate_ghost_buffers()
 
-        self.residual = abs(self.kinetic_energy - self.kinetic_energy_old) / self.kinetic_energy_old / self.cfl
+        E_kin_old = self.kinetic_energy_old
+        self.residual = abs(self.kinetic_energy - E_kin_old) / (E_kin_old + 1e-12) / self.cfl
         self.residual_buffer.append(self.residual)
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
@@ -661,6 +660,10 @@ class Problem:
         else:
             self.__field.p[self.grid["bc_yN_D"], :, -1:] = self._get_ghost_cell_values("D", axis=1, direction=1)
             self.__field.p[self.grid["bc_yN_N"], :, -1:] = self._get_ghost_cell_values("N", axis=1, direction=1)
+
+        # Energy ghost cells
+        if self.bEnergy:
+            self.energy.update_ghost_cells()
 
     def _get_ghost_cell_values(self,
                                bc_type: str,
