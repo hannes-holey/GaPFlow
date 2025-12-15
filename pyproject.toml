@@ -19,7 +19,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"DiscoverVersion",
-	"muGrid>=0.95.0",
+	"muGrid @ git+https://github.com/muSpectre/muGrid.git@585c9918",
 	"tinygp>=0.3.0",
 	"jax",
 	"jaxopt==0.8.5",

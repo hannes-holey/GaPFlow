@@ -29,7 +29,8 @@ import numpy as np
 from copy import deepcopy
 from collections import deque
 from datetime import datetime
-from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+from muGrid import FileIONetCDF, OpenMode
+from .parallel import DomainDecomposition
 
 from typing import Type
 import numpy.typing as npt
@@ -131,10 +132,10 @@ class Problem:
             else:
                 raise NotImplementedError("FEM solver only implemented for 1D problems in x.")
 
-        # Initialize field collection
-        nb_grid_pts = (self.grid['Nx'] + 2,
-                       self.grid['Ny'] + 2)
-        self.fc = GlobalFieldCollection(nb_grid_pts)
+        # Initialize domain decomposition and field collection
+        # Use DomainDecomposition for MPI-parallel runs, simple GlobalFieldCollection for serial
+        self.decomp = DomainDecomposition(grid)
+        self.fc = self.decomp.get_fc()
 
         # Solution field
         self.step = None
@@ -145,7 +146,7 @@ class Problem:
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = self.fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
-            extra.p = extra_field
+            extra.pg = extra_field
 
         # Forward declaration of cross-dependent fields
         self.fc.register_real_field('x')
@@ -338,11 +339,11 @@ class Problem:
     @property
     def q(self) -> npt.NDArray[np.floating]:
         """Full density field"""
-        return self.__field.p
+        return self.__field.pg
 
     @q.setter
     def q(self, sol_field: npt.NDArray[np.floating]) -> None:
-        self.__field.p = sol_field
+        self.__field.pg = sol_field
 
     @property
     def q_has_nan(self) -> bool:
@@ -362,17 +363,17 @@ class Problem:
     @property
     def mass(self) -> np.floating:
         """Total mass integrated over domain (scalar)."""
-        return np.sum(self.__field.p[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
+        return np.sum(self.__field.pg[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
 
     @property
     def kinetic_energy(self) -> np.floating:
         """Total kinetic energy (scalar)."""
-        return np.sum((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0] / 2.)
+        return np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
 
     @property
     def v_max(self) -> np.floating:
         """Maximum speed in the domain (scalar)."""
-        return np.sqrt((self.__field.p[1]**2 + self.__field.p[2]**2) / self.__field.p[0]).max()
+        return np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
 
     @property
     def dt_crit(self) -> np.floating:
@@ -618,9 +619,9 @@ class Problem:
         """
         Initialize solution field with given base density and mean velocities.
         """
-        self.__field.p[0] = rho0
-        self.__field.p[1] = rho0 * U / 2.0
-        self.__field.p[2] = rho0 * V / 2.0
+        self.__field.pg[0] = rho0
+        self.__field.pg[1] = rho0 * U / 2.0
+        self.__field.pg[2] = rho0 * V / 2.0
 
         self.kinetic_energy_old = deepcopy(self.kinetic_energy)
 
@@ -630,101 +631,13 @@ class Problem:
 
     def _communicate_ghost_buffers(self) -> None:
         """
-        Update ghost-cell values according to boundary conditions stored in
-        `self.grid`. This mutates the solution field `self.__field.p`.
+        Update ghost-cell values via MPI communication and boundary conditions.
+
+        Delegates to DomainDecomposition.communicate_ghost_buffers which handles:
+        1. MPI ghost exchange between ranks
+        2. Physical boundary condition application at domain boundaries
         """
-        # x0 (left)
-        if all(self.grid["bc_xE_P"]):
-            self.__field.p[:, 0, :] = self.__field.p[:, -2, :].copy()
-        else:
-            self.__field.p[self.grid["bc_xE_D"], :1, :] = self._get_ghost_cell_values("D", axis=0, direction=-1)
-            self.__field.p[self.grid["bc_xE_N"], :1, :] = self._get_ghost_cell_values("N", axis=0, direction=-1)
-
-        # x1 (right)
-        if np.all(self.grid["bc_xW_P"]):
-            self.__field.p[:, -1, :] = self.__field.p[:, 1, :].copy()
-        else:
-            self.__field.p[self.grid["bc_xW_D"], -1:, :] = self._get_ghost_cell_values("D", axis=0, direction=1)
-            self.__field.p[self.grid["bc_xW_N"], -1:, :] = self._get_ghost_cell_values("N", axis=0, direction=1)
-
-        # y0 (bottom)
-        if np.all(self.grid["bc_yS_P"]):
-            self.__field.p[:, :, 0] = self.__field.p[:, :, -2].copy()
-        else:
-            self.__field.p[self.grid["bc_yS_D"], :, :1] = self._get_ghost_cell_values("D", axis=1, direction=-1)
-            self.__field.p[self.grid["bc_yS_N"], :, :1] = self._get_ghost_cell_values("N", axis=1, direction=-1)
-
-        # y1 (top)
-        if np.all(self.grid["bc_yN_P"]):
-            self.__field.p[:, :, -1] = self.__field.p[:, :, 1].copy()
-        else:
-            self.__field.p[self.grid["bc_yN_D"], :, -1:] = self._get_ghost_cell_values("D", axis=1, direction=1)
-            self.__field.p[self.grid["bc_yN_N"], :, -1:] = self._get_ghost_cell_values("N", axis=1, direction=1)
-
-        # Energy ghost cells
-        if self.bEnergy:
-            self.energy.update_ghost_cells()
-
-    def _get_ghost_cell_values(self,
-                               bc_type: str,
-                               axis: int,
-                               direction: int,
-                               num_ghost: int = 1) -> npt.NDArray[np.floating]:
-        """
-        Computes ghost cell values for Dirichlet ('D') or Neumann ('N') boundary
-        conditions.
-
-        Parameters
-        ----------
-        bc_type : str
-            'D' for Dirichlet or 'N' for Neumann.
-        axis : int
-            0 for x-axis, 1 for y-axis.
-        direction : int
-            Upstream (<0) or downstream (>0) direction.
-        num_ghost : int
-            Number of ghost cells (<= 2 supported).
-
-        Returns
-        -------
-        Array
-            Ghost cell values extracted/computed for the selected mask.
-        """
-        assert bc_type in ["D", "N"]
-
-        if axis == 0:  # x-axis
-            if direction > 0:  # downstream
-                mask = self.grid[f"bc_xE_{bc_type}"]
-                q_target = self.grid["bc_xE_D_val"]
-                q_adj = self.__field.p[mask, -(num_ghost + num_ghost): -num_ghost, :]
-            else:  # upstream
-                mask = self.grid[f"bc_xW_{bc_type}"]
-                q_target = self.grid["bc_xW_D_val"]
-                q_adj = self.__field.p[mask, num_ghost: num_ghost + num_ghost, :]
-
-        elif axis == 1:  # y-axis
-            if direction > 0:  # downstream
-                mask = self.grid[f"bc_yS_{bc_type}"]
-                q_target = self.grid["bc_yS_D_val"]
-                q_adj = self.__field.p[mask, :, -(num_ghost + num_ghost): -num_ghost]
-            else:  # upstream
-                mask = self.grid[f"bc_yN_{bc_type}"]
-                q_target = self.grid["bc_yN_D_val"]
-                q_adj = self.__field.p[mask, :, num_ghost: num_ghost + num_ghost]
-        else:
-            raise RuntimeError("axis must be either 0 (x) or 1 (y)")
-
-        a1 = 0.5
-        a2 = 0.0
-        q1 = q_adj
-        q2 = 0.0
-
-        if bc_type == "D":
-            Q = (q_target - a1 * q1 + a2 * q2) / (a1 - a2)
-        else:
-            Q = ((1.0 - a1) * q1 + a2 * q2) / (a1 - a2)
-
-        return Q
+        self.decomp.communicate_ghost_buffers(self)
 
     # ---------------------------
     # Plotting and animations

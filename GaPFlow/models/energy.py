@@ -102,53 +102,53 @@ class Energy():
         self._flow_periodic_x = all(grid['bc_xW_P']) and all(grid['bc_xE_P'])
 
         # Initialize bulk temperatures with T_wall as default
-        self.__Tb_top.p[:] = self.T_wall
-        self.__Tb_bot.p[:] = self.T_wall
+        self.__Tb_top.pg[:] = self.T_wall
+        self.__Tb_bot.pg[:] = self.T_wall
 
     @property
     def energy(self) -> NDArray:
         """Total energy field."""
-        return self.__field.p
+        return self.__field.pg
 
     @energy.setter
     def energy(self, value: NDArray) -> None:
         """Set total energy field."""
-        self.__field.p = value
+        self.__field.pg = value
 
     @property
     def temperature(self) -> NDArray:
         """Temperature field."""
-        return self.__temperature.p
+        return self.__temperature.pg
 
     @temperature.setter
     def temperature(self, value: NDArray) -> None:
         """Set temperature field."""
-        self.__temperature.p = value
+        self.__temperature.pg = value
 
     @property
     def Tb_top(self) -> NDArray:
         """Top wall bulk temperature field."""
-        return self.__Tb_top.p
+        return self.__Tb_top.pg
 
     @Tb_top.setter
     def Tb_top(self, value: NDArray) -> None:
         """Set top wall bulk temperature field."""
-        self.__Tb_top.p = value
+        self.__Tb_top.pg = value
 
     @property
     def Tb_bot(self) -> NDArray:
         """Bottom wall bulk temperature field."""
-        return self.__Tb_bot.p
+        return self.__Tb_bot.pg
 
     @Tb_bot.setter
     def Tb_bot(self, value: NDArray) -> None:
         """Set bottom wall bulk temperature field."""
-        self.__Tb_bot.p = value
+        self.__Tb_bot.pg = value
 
     @property
     def solution(self):
         """Return full solution field."""
-        return self.__solution.p
+        return self.__solution.pg
 
     def initialize(self) -> None:
         """
@@ -171,7 +171,7 @@ class Energy():
         ux = self.solution[1] / self.solution[0]
         uy = self.solution[2] / self.solution[0]
         kinetic_energy = 0.5 * (ux**2 + uy**2)
-        T_profile = self._get_T_profile(self.__x.p)
+        T_profile = self._get_T_profile(self.__x.pg)
         self.energy[:] = self.solution[0] * (self.cv * T_profile + kinetic_energy)
 
         # Update temperature field for consistency
@@ -209,49 +209,6 @@ class Energy():
         self.temperature = self.T_func(
             self.solution[0], self.solution[1], self.solution[2], self.energy
         )
-
-    def update_ghost_cells(self) -> None:
-        """
-        Update energy ghost cells based on boundary conditions.
-
-        For 1D problems, updates ghost cells at x-boundaries (indices 0 and -1).
-        Energy ghost values are computed from temperature BCs:
-        E_ghost = rho_ghost * (cv * T_bc + 0.5 * (ux² + uy²))
-
-        Note: Must be called AFTER solution field ghost cells are updated,
-        since energy ghost values depend on rho at ghost cells.
-        """
-        rho = self.solution[0]
-        jx = self.solution[1]
-        jy = self.solution[2]
-
-        # West boundary (ghost cell at index 0)
-        if self.bc_xW == 'P':
-            # Periodic: copy from opposite interior cell
-            self.energy[0, :] = self.energy[-2, :].copy()
-        elif self.bc_xW == 'D':
-            # Dirichlet: compute energy from T_bc_xW
-            ux = jx[0, :] / rho[0, :]
-            uy = jy[0, :] / rho[0, :]
-            kinetic = 0.5 * (ux**2 + uy**2)
-            self.energy[0, :] = rho[0, :] * (self.cv * self.T_bc_xW + kinetic)
-        elif self.bc_xW == 'N':
-            # Neumann (zero gradient / adiabatic): copy from adjacent interior
-            self.energy[0, :] = self.energy[1, :].copy()
-
-        # East boundary (ghost cell at index -1)
-        if self.bc_xE == 'P':
-            # Periodic: copy from opposite interior cell
-            self.energy[-1, :] = self.energy[1, :].copy()
-        elif self.bc_xE == 'D':
-            # Dirichlet: compute energy from T_bc_xE
-            ux = jx[-1, :] / rho[-1, :]
-            uy = jy[-1, :] / rho[-1, :]
-            kinetic = 0.5 * (ux**2 + uy**2)
-            self.energy[-1, :] = rho[-1, :] * (self.cv * self.T_bc_xE + kinetic)
-        elif self.bc_xE == 'N':
-            # Neumann (zero gradient / adiabatic): copy from adjacent interior
-            self.energy[-1, :] = self.energy[-2, :].copy()
 
     def build_grad(self) -> None:
         """Build JIT-compiled gradient functions for energy-related quantities.

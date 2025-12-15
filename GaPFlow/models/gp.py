@@ -236,22 +236,22 @@ class GaussianProcessSurrogate:
     @property
     def solution(self):
         """Return full solution field."""
-        return self.__solution.p
+        return self.__solution.pg
 
     @property
     def height_and_slopes(self) -> JAXArray:
         """Return the topography (height and gradients)."""
-        return self.__topo.p[:3]
+        return self.__topo.pg[:3]
 
     @property
     def height(self):
         """Return the gap height field."""
-        return self.__topo.p[0]
+        return self.__topo.pg[0]
 
     @property
     def extra(self):
         """Return constant extra field, which can be used as additional input."""
-        return self.__extra.p
+        return self.__extra.pg
 
     @property
     def trusted(self) -> bool:

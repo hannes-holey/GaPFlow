@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import ContactMechanics as CM
+#import ContactMechanics as CM
 import numpy as np
 import copy
 
@@ -201,8 +201,8 @@ class Topography:
         self._x = fc.get_real_field('x')
         self._y = fc.get_real_field('y')
 
-        self._x.p = xx
-        self._y.p = yy
+        self._x.pg = xx
+        self._y.pg = yy
 
         self.dx = grid['dx']
         self.dy = grid['dy']
@@ -248,21 +248,21 @@ class Topography:
         else:
             self.elastic = False
 
-        self.__field.p[0] = h
-        self.__field.p[ix] = dh_dx
-        self.__field.p[iy] = dh_dy
-        self.__field.p[3] = np.zeros_like(h)  # inital deformation set to zero
+        self.__field.pg[0] = h
+        self.__field.pg[ix] = dh_dx
+        self.__field.pg[iy] = dh_dy
+        self.__field.pg[3] = np.zeros_like(h)  # inital deformation set to zero
 
     def update(self) -> None:
         """Updates the topography field in case of enabled elastic deformation.
         """
         if self.elastic:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
-                p = self.__pressure.p - self.__pressure.p[0, 0]  # reference pressure
+                p = self.__pressure.pg - self.__pressure.pg[0, 0]  # reference pressure
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
                 deformation = deformation - deformation[0, 0]  # reference deformation
             else:
-                p = self.__pressure.p
+                p = self.__pressure.pg
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
@@ -272,55 +272,55 @@ class Topography:
     def _update_gradients(self) -> None:
         """Updates gradient arrays using second-order central differences.
         """
-        h = self.__field.p[0]
+        h = self.__field.pg[0]
         dh_dx = np.gradient(h, axis=0) / self.dx
         dh_dy = np.gradient(h, axis=1) / self.dy
-        self.__field.p[1] = dh_dx
-        self.__field.p[2] = dh_dy
+        self.__field.pg[1] = dh_dx
+        self.__field.pg[2] = dh_dy
 
     @property
     def full(self) -> NDArray:
         """Return the full topography array (height, slopes, and displacement)"""
-        return self.__field.p
+        return self.__field.pg
 
     @property
     def h(self) -> NDArray:
         """Height field."""
-        return self.__field.p[0]
+        return self.__field.pg[0]
 
     @h.setter
     def h(self, value: NDArray) -> None:
-        self.__field.p[0] = value
+        self.__field.pg[0] = value
         self._update_gradients()
 
     @property
     def deformation(self) -> NDArray:
         """Displacement field."""
-        return self.__field.p[3]
+        return self.__field.pg[3]
 
     @deformation.setter
     def deformation(self, value: NDArray) -> None:
-        self.__field.p[3] = value
+        self.__field.pg[3] = value
 
     @property
     def dh_dx(self) -> NDArray:
         """Height gradient field (∂h/∂x)"""
-        return self.__field.p[1]
+        return self.__field.pg[1]
 
     @property
     def dh_dy(self) -> NDArray:
         """Height gradient field (∂h/∂y)"""
-        return self.__field.p[2]
+        return self.__field.pg[2]
 
     @property
     def x(self):
         """Cell center x coordinates"""
-        return self._x.p
+        return self._x.pg
 
     @property
     def y(self):
         """Cell center y coordinates"""
-        return self._y.p
+        return self._y.pg
 
 
 class ElasticDeformation:

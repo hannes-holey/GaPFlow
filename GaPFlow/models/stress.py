@@ -123,7 +123,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarray
             Array holding 12 components for wall stress (6 lower + 6 upper).
         """
-        return self.__field.p
+        return self.__field.pg
 
     @property
     def upper(self) -> NDArray:
@@ -135,7 +135,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarray
             Upper half of the wall stress components (6 entries).
         """
-        return self.__field.p[6:]
+        return self.__field.pg[6:]
 
     @property
     def lower(self) -> NDArray:
@@ -147,7 +147,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarray
             Lower half of the wall stress components (6 entries).
         """
-        return self.__field.p[:6]
+        return self.__field.pg[:6]
 
     @property
     def variance(self) -> NDArray:
@@ -155,7 +155,7 @@ class WallStress(GaussianProcessSurrogate):
         Variance of the shear stress field
 
         """
-        return self.__field_variance.p
+        return self.__field_variance.pg
 
     @property
     def pressure(self) -> NDArray:
@@ -167,7 +167,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarray
             Pressure field from the field collection.
         """
-        return self.__pressure.p
+        return self.__pressure.pg
 
     @property
     def dp_dx(self) -> NDArray:
@@ -179,7 +179,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarra
             Gradient along x computed with jnp.gradient.
         """
-        return np.gradient(self.pressure, self.__x.p[:, 0], axis=0)
+        return np.gradient(self.pressure, self.__x.pg[:, 0], axis=0)
 
     @property
     def dp_dy(self) -> NDArray:
@@ -191,7 +191,7 @@ class WallStress(GaussianProcessSurrogate):
         ndarray
             Gradient along y computed with jnp.gradient.
         """
-        return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
+        return np.gradient(self.pressure, self.__y.pg[0, :], axis=1)
 
     @property
     def Xtest(self) -> Tuple[JAXArray, JAXArray]:
@@ -372,22 +372,22 @@ class WallStress(GaussianProcessSurrogate):
                            self.extra  # e.g. slip length
                            )
 
-        self.__field.p[:3] = s_bot[:3] / 2.
-        self.__field.p[6:9] = s_top[:3] / 2.
+        self.__field.pg[:3] = s_bot[:3] / 2.
+        self.__field.pg[6:9] = s_top[:3] / 2.
 
-        self.__field.p[5] = s_bot[-1] / 2.
-        self.__field.p[11] = s_top[-1] / 2.
+        self.__field.pg[5] = s_bot[-1] / 2.
+        self.__field.pg[11] = s_top[-1] / 2.
 
         if self.is_gp_model:
             mean, var = self.predict(predictor=predictor,
                                      compute_var=self.use_active_learning or compute_var)
 
-            self.__field.p[self._out_index] = mean[0, :, :]
-            self.__field.p[self._out_index + 6] = mean[1, :, :]
-            self.__field_variance.p = var[0, :, :]
+            self.__field.pg[self._out_index] = mean[0, :, :]
+            self.__field.pg[self._out_index + 6] = mean[1, :, :]
+            self.__field_variance.pg = var[0, :, :]
         else:
-            self.__field.p[self._out_index] = s_bot[self._out_index]
-            self.__field.p[self._out_index + 6] = s_top[self._out_index]
+            self.__field.pg[self._out_index] = s_bot[self._out_index]
+            self.__field.pg[self._out_index + 6] = s_top[self._out_index]
 
     def build_grad(self) -> None:
         """Build JIT-compiled gradient functions for wall stress.
@@ -509,22 +509,22 @@ class BulkStress(GaussianProcessSurrogate):
     @property
     def stress(self) -> NDArray:
         """Return the bulk viscous stress field."""
-        return self.__field.p
+        return self.__field.pg
 
     @property
     def pressure(self) -> NDArray:
         """Return the pressure field."""
-        return self.__pressure.p
+        return self.__pressure.pg
 
     @property
     def dp_dx(self) -> NDArray:
         """Return ∂p/∂x."""
-        return np.gradient(self.pressure, self.__x.p[:, 0], axis=0)
+        return np.gradient(self.pressure, self.__x.pg[:, 0], axis=0)
 
     @property
     def dp_dy(self) -> NDArray:
         """Return ∂p/∂y."""
-        return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
+        return np.gradient(self.pressure, self.__y.pg[0, :], axis=1)
 
     def update(self) -> None:
         """Compute and store bulk viscous stress using viscous model."""
@@ -551,7 +551,7 @@ class BulkStress(GaussianProcessSurrogate):
         else:
             shear_viscosity = mu0
 
-        self.__field.p = stress_avg(self.solution,
+        self.__field.pg = stress_avg(self.solution,
                                     self.height_and_slopes,
                                     self.geo['U'],
                                     self.geo['V'],
@@ -615,12 +615,12 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def pressure(self) -> NDArray:
         """Pressure field."""
-        return self.__field.p
+        return self.__field.pg
 
     @property
     def variance(self) -> NDArray:
         """Variance of the pressure field."""
-        return self.__field_variance.p
+        return self.__field_variance.pg
 
     @property
     def v_sound(self) -> NDArray | JAXArray:
@@ -719,10 +719,10 @@ class Pressure(GaussianProcessSurrogate):
         if self.is_gp_model:
             mean, var = self.predict(predictor=predictor,
                                      compute_var=self.use_active_learning or compute_var)
-            self.__field.p = mean
-            self.__field_variance.p = var
+            self.__field.pg = mean
+            self.__field_variance.pg = var
         else:
-            self.__field.p = eos_pressure(self.solution[0], self.prop)
+            self.__field.pg = eos_pressure(self.solution[0], self.prop)
 
     def build_grad(self) -> None:
         if self.is_gp_model:
@@ -750,7 +750,7 @@ class Viscosity():
     @property
     def shear_viscosity(self) -> NDArray:
         """Shear viscosity field."""
-        return self.__field.p
+        return self.__field.pg
 
     def update(self,
                pressure: NDArray,
@@ -784,11 +784,11 @@ class Viscosity():
 
         # Handle scalar case (constant viscosity)
         if np.isscalar(shear_viscosity):
-            self.__field.p[:] = shear_viscosity
+            self.__field.pg[:] = shear_viscosity
         else:
-            self.__field.p = shear_viscosity
+            self.__field.pg = shear_viscosity
 
     @property
     def eta(self) -> NDArray:
         """Alias for shear_viscosity for cleaner access."""
-        return self.__field.p
+        return self.__field.pg
