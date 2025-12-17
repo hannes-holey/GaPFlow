@@ -26,7 +26,7 @@ import warnings
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
-from typing import Tuple, List
+from typing import Tuple
 
 import jax
 import jax.numpy as jnp
@@ -39,55 +39,6 @@ with warnings.catch_warnings():
 from tinygp import GaussianProcess, kernels, transforms
 
 JAXArray = jax.Array
-
-
-class MultiOutputKernel(kernels.Kernel):
-    """
-    Multi-output Gaussian process kernel.
-
-    Combines multiple latent kernels and a projection matrix to handle
-    vector-valued (multi-output) functions.
-
-    Parameters
-    ----------
-    kernels : list of tinygp.kernels.Kernel or tinygp.transforms.Linear
-        List of kernels corresponding to latent GPs.
-    projection : jax.Array, shape (num_outputs, num_latents)
-        Projection matrix mapping latent processes to outputs.
-
-    Methods
-    -------
-    evaluate(X1, X2)
-        Evaluate the kernel covariance between input sets `X1` and `X2`.
-    """
-
-    kernels: List[kernels.Kernel | transforms.Linear]
-    projection: JAXArray  # shape = (num_outputs, num_latents)
-
-    def evaluate(self,
-                 X1: Tuple[JAXArray, JAXArray],
-                 X2: Tuple[JAXArray, JAXArray],
-                 ) -> JAXArray:
-        """
-        Compute the covariance matrix between two sets of inputs.
-
-        Parameters
-        ----------
-        X1 : tuple
-            Tuple `(t1, idx1)` where `t1` is input array and `idx1`
-            indexes the corresponding outputs.
-        X2 : tuple
-            Tuple `(t2, idx2)` analogous to `X1`.
-
-        Returns
-        -------
-        jax.Array
-            Covariance matrix computed via the kernel projections.
-        """
-        t1, idx1 = X1
-        t2, idx2 = X2
-        latents = jnp.stack([k.evaluate(t1, t2) for k in self.kernels])
-        return (self.projection[idx1] * self.projection[idx2]) @ latents
 
 
 class GaussianProcessSurrogate:
@@ -107,7 +58,6 @@ class GaussianProcessSurrogate:
     is_gp_model: bool
     active_dims: list[int]
     use_active_learning: bool
-    build_gp: callable
     rtol: float
     atol: float
     max_steps: int
@@ -279,9 +229,14 @@ class GaussianProcessSurrogate:
             self.extra
         ]).reshape(self._database.num_features, -1).T
 
+    @property
+    def has_multi_output(self):
+        return self.Ytrain.ndim > 1
+
     # ------------------------------------------------------------------
     # Logging and summary
     # ------------------------------------------------------------------
+
     def write(self) -> None:
         """Log current GP hyperparameters and diagnostics."""
         if self.is_gp_model:
@@ -308,6 +263,28 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Training and Inference
     # ------------------------------------------------------------------
+    def build_gp(self,
+                 params: dict,
+                 X: JAXArray,
+                 yerr: float | JAXArray) -> GaussianProcess:
+        """Default GP build method.
+
+        Parameters
+        ----------
+        params : dict
+            Dictionary with hyperparameters
+        X : jax.Array
+            Input data.
+        yerr : jax.Array
+            Observation noise (standard deviation).
+
+        Returns
+        -------
+        tinygp.GaussianProcess
+            Single-output GP model.
+        """
+        return multi_in_single_out(params, X, yerr)
+
     def _train(self, reason: int = 0) -> None:
         """
         Train the Gaussian process model via marginal likelihood maximization.
@@ -326,15 +303,24 @@ class GaussianProcessSurrogate:
         print('# Database size:', self._database.size)
 
         @jax.jit
-        def loss(params, X, yerr):
-            return -self.build_gp(params, X, yerr).log_probability(self.Ytrain)
+        def loss_so(params, X, Y, yerr):
+            gp = self.build_gp(params, X, yerr)
+            return -gp.log_probability(Y)
 
-        solver = jaxopt.ScipyMinimize(fun=loss)
-        soln = solver.run(self.params_init, X=self.Xtrain, yerr=self.Yerr)
-        self.params = soln.params
-        self.gp = self.build_gp(self.params, self.Xtrain, self.Yerr)
+        @jax.jit
+        def loss_mo(params, X, Y, yerr):
+            gp = self.build_gp(params, X, yerr)
+            obj = 0.
+            for Yi in Y.T:
+                obj -= gp.log_probability(Yi)
+            return obj
 
-        obj = -self.gp.log_probability(self.Ytrain)
+        solver = jaxopt.ScipyMinimize(fun=loss_mo if self.has_multi_output else loss_so)
+        soln = solver.run(self.params_init, X=self.Xtrain, Y=self.Ytrain, yerr=self.Yerr)
+
+        self.gp = self.build_gp(soln.params, self.Xtrain, self.Yerr)
+
+        obj = soln.state.fun_val
         self._print_opt_summary(obj)
 
         if self._step > 0:
@@ -345,6 +331,12 @@ class GaussianProcessSurrogate:
 
         # Delete cache to force inference step with new training data
         self._cache = None
+
+    def _predict(self):
+        if self.has_multi_output:
+            return _predict_multi_output(self.gp, self.Ytrain, self.Xtest)
+        else:
+            return _predict_single_output(self.gp, self.Ytrain, self.Xtest)
 
     def _infer_mean(self) -> JAXArray:
         """Infer mean for new test inputs.
@@ -358,7 +350,7 @@ class GaussianProcessSurrogate:
         """
 
         if self._cache is None:
-            m, _, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
+            m, _, alpha, noise = self._predict()
             self._cache = (alpha, noise)
         else:
             m = _repredict_mean(self.gp, self._cache, self.Xtest)
@@ -381,7 +373,7 @@ class GaussianProcessSurrogate:
         """
 
         if self._cache is None:
-            m, v, alpha, noise = _predict(self.gp, self.Ytrain, self.Xtest)
+            m, v, alpha, noise = self._predict()
             self._cache = (alpha, noise)
         else:
             m, v = _repredict_mean_var(self.gp, self._cache, self.Xtest)
@@ -525,7 +517,7 @@ def _repredict_mean_var(gp: GaussianProcess,
     Kss = gp.kernel(Xtest) + noise
     var = Kss - jnp.sum(v**2, axis=0)
 
-    return mean, var
+    return mean.T, var
 
 
 @jax.jit
@@ -538,17 +530,42 @@ def _repredict_mean(gp: GaussianProcess,
     Ks = gp.kernel(gp.X, Xtest)
     mean = Ks.T @ alpha
 
-    return mean
+    return mean.T
 
 
 @jax.jit
-def _predict(gp: GaussianProcess,
-             Ytrain: JAXArray,
-             Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
+def _predict_multi_output(gp: GaussianProcess,
+                          Ytrain: JAXArray,
+                          Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
+
+    Ytest = []
+    alpha = []
+
+    for Yi in Ytrain.T:
+        cond_gp = gp.condition(Yi, Xtest).gp
+        Ytest.append(cond_gp.loc)
+        alpha.append(cond_gp.mean_function.alpha)
+
+    Ytest = jnp.array(Ytest)
+    alpha = jnp.array(alpha).T
+    noise = cond_gp.noise.diag
+    Yvar = cond_gp.variance
+
+    return Ytest, Yvar, alpha, noise
+
+
+@jax.jit
+def _predict_single_output(gp: GaussianProcess,
+                           Ytrain: JAXArray,
+                           Xtest: JAXArray) -> Tuple[JAXArray, JAXArray, GaussianProcess]:
 
     cond_gp = gp.condition(Ytrain, Xtest).gp
+    alpha = cond_gp.mean_function.alpha
+    noise = cond_gp.noise.diag
+    Ytest = cond_gp.loc
+    Yvar = cond_gp.variance
 
-    return cond_gp.loc, cond_gp.variance, cond_gp.mean_function.alpha, cond_gp.noise.diag
+    return Ytest, Yvar, alpha, noise
 
 
 # ----------------------------------------------------------------------
@@ -580,36 +597,5 @@ def multi_in_single_out(params: dict,
         jnp.exp(-params["log_scale"]),
         kernels.stationary.Matern32(distance=kernels.distance.L2Distance()),
     )
-    return GaussianProcess(kernel, X, diag=yerr**2)
 
-
-def multi_in_multi_out(params: dict,
-                       X: JAXArray,
-                       yerr: float | JAXArray) -> GaussianProcess:
-    """
-    Build a multi-output GP with anisotropic Matérn kernel.
-
-    Parameters
-    ----------
-    params : dict
-        Dictionary with kernel hyperparameters (same as for single-output).
-    X : jax.Array
-        Input data.
-    yerr : float or jax.Array
-        Observation noise standard deviation.
-
-    Returns
-    -------
-    tinygp.GaussianProcess
-        Multi-output Gaussian process using `MultiOutputKernel`.
-    """
-    k = [
-        jnp.exp(params["log_amp"]) * transforms.Linear(
-            jnp.exp(-params["log_scale"]),
-            kernels.stationary.Matern32(distance=kernels.distance.L2Distance()),
-        )
-        for _ in range(2)
-    ]
-
-    kernel = MultiOutputKernel(kernels=k, projection=jnp.eye(2))
     return GaussianProcess(kernel, X, diag=yerr**2)
