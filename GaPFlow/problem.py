@@ -130,10 +130,10 @@ class Problem:
                 from .solver_fem import FEMSolver1D
                 self.solver = FEMSolver1D(self)
             else:
-                raise NotImplementedError("FEM solver only implemented for 1D problems in x.")
+                from .solver_fem_2d import FEMSolver2D
+                self.solver = FEMSolver2D(self.fem_solver, self)
 
         # Initialize domain decomposition and field collection
-        # Use DomainDecomposition for MPI-parallel runs, simple GlobalFieldCollection for serial
         self.decomp = DomainDecomposition(grid)
         self.fc = self.decomp.get_fc()
 
@@ -161,7 +161,7 @@ class Problem:
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
         self.viscosity = Viscosity(self.fc, prop)
-        self.topo = Topography(self.fc, self.grid, geo, prop)
+        self.topo = Topography(self.fc, self.grid, geo, prop, decomp=self.decomp)
 
         self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
         if self.bEnergy:

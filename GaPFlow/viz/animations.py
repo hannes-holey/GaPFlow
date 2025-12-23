@@ -186,7 +186,10 @@ def _create_animation_1d(filename_sol: str,
     topo_nc = np.asarray(data_topo.variables['topography'])
 
     nt, nc, _, nx, ny = q_nc.shape
-    x = np.linspace(0, 1, nx - 2)
+    # NetCDF stores interior-only data (no ghost cells), so use nx directly
+    x = np.linspace(0, 1, nx)
+    # For 1D problems (ny=1), use index 0; otherwise compute centerline
+    ci = 0 if ny == 1 else ny // 2
 
     plot_topo = True if topo_nc.shape[0] > 1 else False
     col_topo = 3 if not plot_energy else 4
@@ -209,24 +212,24 @@ def _create_animation_1d(filename_sol: str,
     if plot_topo:
         (line_h,) = ax[0, col_topo].plot([], [], color=color_h)
         (line_def,) = ax[1, col_topo].plot([], [], color=color_h)
-        ax[0, col_topo].plot(x, topo_nc[0, 0, 0, 1:-1, ny // 2], color=color_h,
+        ax[0, col_topo].plot(x, topo_nc[0, 0, 0, :, ci], color=color_h,
                              linestyle='--', label='Initial')
         ax[0, col_topo].legend(loc='upper center')
 
-    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    set_axes_limits(ax[1, 0], p_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, :, ci], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, :, ci], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, :, ci], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 0], p_nc[1:, :, ci], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 1], tau_nc[1:, 4, 0, :, ci], x=(0, 1), rel_tol=0.05)
+    set_axes_limits(ax[1, 2], tau_nc[1:, 10, 0, :, ci], x=(0, 1), rel_tol=0.05)
 
     if plot_energy:
-        set_axes_limits(ax[0, 3], energy_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-        set_axes_limits(ax[1, 3], temperature_nc[1:, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[0, 3], energy_nc[1:, :, ci], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, 3], temperature_nc[1:, :, ci], x=(0, 1), rel_tol=0.05)
 
     if plot_topo:
-        set_axes_limits(ax[0, col_topo], topo_nc[:, 0, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
-        set_axes_limits(ax[1, col_topo], topo_nc[:, 3, 0, 1:-1, ny // 2], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[0, col_topo], topo_nc[:, 0, 0, :, ci], x=(0, 1), rel_tol=0.05)
+        set_axes_limits(ax[1, col_topo], topo_nc[:, 3, 0, :, ci], x=(0, 1), rel_tol=0.05)
 
     set_axes_labels(ax, plot_energy, plot_topo)
 
@@ -251,22 +254,22 @@ def _create_animation_1d(filename_sol: str,
         return lines
 
     def update(i):
-        line_rho.set_data(x, q_nc[i, 0, 0, 1:-1, ny // 2])
-        line_jx.set_data(x, q_nc[i, 1, 0, 1:-1, ny // 2])
-        line_jy.set_data(x, q_nc[i, 2, 0, 1:-1, ny // 2])
-        line_p.set_data(x, p_nc[i, 1:-1, ny // 2])
-        line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, 1:-1, ny // 2])
-        line_tauxz_top.set_data(x, tau_nc[i, 10, 0, 1:-1, ny // 2])
+        line_rho.set_data(x, q_nc[i, 0, 0, :, ci])
+        line_jx.set_data(x, q_nc[i, 1, 0, :, ci])
+        line_jy.set_data(x, q_nc[i, 2, 0, :, ci])
+        line_p.set_data(x, p_nc[i, :, ci])
+        line_tauxz_bot.set_data(x, tau_nc[i, 4, 0, :, ci])
+        line_tauxz_top.set_data(x, tau_nc[i, 10, 0, :, ci])
         lines = (line_rho, line_jx, line_jy, line_p, line_tauxz_bot, line_tauxz_top)
 
         if plot_energy:
-            line_E.set_data(x, energy_nc[i, 1:-1, ny // 2])
-            line_T.set_data(x, temperature_nc[i, 1:-1, ny // 2])
+            line_E.set_data(x, energy_nc[i, :, ci])
+            line_T.set_data(x, temperature_nc[i, :, ci])
             lines += (line_E, line_T)
 
         if plot_topo:
-            line_h.set_data(x, topo_nc[i, 0, 0, 1:-1, ny // 2])
-            line_def.set_data(x, topo_nc[i, 3, 0, 1:-1, ny // 2])
+            line_h.set_data(x, topo_nc[i, 0, 0, :, ci])
+            line_def.set_data(x, topo_nc[i, 3, 0, :, ci])
             lines += (line_h, line_def)
         return lines
 
@@ -299,25 +302,25 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
 
     def update_lines(i, q, p, vp, tau, vt):
 
-        ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, 1:-1, ny // 2])
-        ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, 1:-1, ny // 2])
-        ax[0, 2].get_lines()[0].set_ydata(q[i, 2, 0, 1:-1, ny // 2])
+        ax[0, 0].get_lines()[0].set_ydata(q[i, 0, 0, :, ci])
+        ax[0, 1].get_lines()[0].set_ydata(q[i, 1, 0, :, ci])
+        ax[0, 2].get_lines()[0].set_ydata(q[i, 2, 0, :, ci])
 
         ax[1, 0].cla()
         ax[1, 1].cla()
         ax[1, 2].cla()
 
         # Pressure
-        _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=tol_p[i], color=color_p)
+        _plot_gp(ax[1, 0], x, p[i, :, ci], vp[i, :, ci], tol=tol_p[i], color=color_p)
 
         # Shear stress
-        _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
-        _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
+        _plot_gp(ax[1, 1], x, tau[i, 4, 0, :, ci], vt[i, :, ci], tol=tol_t[i], color=color_t)
+        _plot_gp(ax[1, 2], x, tau[i, 10, 0, :, ci], vt[i, :, ci], tol=tol_t[i], color=color_t)
 
         set_axes_labels(ax)
-        set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2], tol=1.96 * tol_p_max)
-        set_axes_limits(ax[1, 1], tau[1:, 4, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
-        set_axes_limits(ax[1, 2], tau[1:, 10, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
+        set_axes_limits(ax[1, 0], p[1:, :, ci], tol=1.96 * tol_p_max)
+        set_axes_limits(ax[1, 1], tau[1:, 4, 0, :, ci], tol=1.96 * tol_t_max)
+        set_axes_limits(ax[1, 2], tau[1:, 10, 0, :, ci], tol=1.96 * tol_t_max)
 
     # adaptive_ylim(ax)
 
@@ -330,9 +333,10 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
     tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
 
     nt, nc, _, nx, ny = q_nc.shape
-
-    x = np.arange(nx - 2) / (nx - 2)
-    x += x[1] / 2.
+    # NetCDF stores interior-only data (no ghost cells), so use nx directly
+    x = np.linspace(0, 1, nx)
+    # For 1D problems (ny=1), use index 0; otherwise compute centerline
+    ci = 0 if ny == 1 else ny // 2
 
     fig, ax = plt.subplots(2, 3, figsize=(12, 6))
 
@@ -340,17 +344,17 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
     color_p = 'C1'
     color_t = 'C2'
 
-    ax[0, 0].plot(x, q_nc[0, 0, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 1].plot(x, q_nc[0, 1, 0, 1:-1, ny // 2], color=color_q)
-    ax[0, 2].plot(x, q_nc[0, 2, 0, 1:-1, ny // 2], color=color_q)
+    ax[0, 0].plot(x, q_nc[0, 0, 0, :, ci], color=color_q)
+    ax[0, 1].plot(x, q_nc[0, 1, 0, :, ci], color=color_q)
+    ax[0, 2].plot(x, q_nc[0, 2, 0, :, ci], color=color_q)
 
     update_lines(0, q_nc, p_nc, pvar_nc, tau_nc, tauvar_nc)
 
     set_axes_labels(ax)
 
-    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, 1:-1, ny // 2])
-    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, 1:-1, ny // 2])
-    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, 1:-1, ny // 2])
+    set_axes_limits(ax[0, 0], q_nc[:, 0, 0, :, ci])
+    set_axes_limits(ax[0, 1], q_nc[:, 1, 0, :, ci])
+    set_axes_limits(ax[0, 2], q_nc[:, 2, 0, :, ci])
 
     ani = animation.FuncAnimation(fig,
                                   update_lines,
@@ -363,46 +367,47 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
 
 
 def _create_animation_2d(filename):
+    # NetCDF stores interior-only data (no ghost cells)
 
     def update_fields(i, q, p, tau):
 
-        # firstr row (q)
+        # first row (q)
         im, = ax[0, 0].get_images()
-        im.set_array(q[i, 0, 0, 1:-1, 1:-1].T)
+        im.set_array(q[i, 0, 0, :, :].T)
         im.set_clim(vmin=q[:, 0].min(), vmax=q[:, 0].max())
 
         im, = ax[0, 1].get_images()
-        im.set_array(q[i, 1, 0, 1:-1, 1:-1].T)
+        im.set_array(q[i, 1, 0, :, :].T)
         im.set_clim(vmin=q[:, 1].min(), vmax=q[:, 1].max())
 
         im, = ax[0, 2].get_images()
-        im.set_array(q[i, 2, 0, 1:-1, 1:-1].T)
+        im.set_array(q[i, 2, 0, :, :].T)
         im.set_clim(vmin=q[:, 2].min(), vmax=q[:, 2].max())
 
         # second row (p, tau_xz)
         im, = ax[1, 0].get_images()
-        im.set_array(p[i, 1:-1, 1:-1].T)
+        im.set_array(p[i, :, :].T)
         im.set_clim(vmin=p.min(), vmax=p.max())
 
         im, = ax[1, 1].get_images()
-        im.set_array(tau[i, 4, 0, 1:-1, 1:-1].T)
+        im.set_array(tau[i, 4, 0, :, :].T)
         im.set_clim(vmin=tau[:, 4].min(), vmax=tau[:, 4].max())
 
         im, = ax[1, 2].get_images()
-        im.set_array(tau[i, 10, 0, 1:-1, 1:-1].T)
+        im.set_array(tau[i, 10, 0, :, :].T)
         im.set_clim(vmin=tau[:, 10].min(), vmax=tau[:, 10].max())
 
         # third row (p, tau_yz)
         im, = ax[2, 0].get_images()
-        im.set_array(p[i, 1:-1, 1:-1].T)
+        im.set_array(p[i, :, :].T)
         im.set_clim(vmin=p.min(), vmax=p.max())
 
         im, = ax[2, 1].get_images()
-        im.set_array(tau[i, 3, 0, 1:-1, 1:-1].T)
+        im.set_array(tau[i, 3, 0, :, :].T)
         im.set_clim(vmin=tau[:, 3].min(), vmax=tau[:, 3].max())
 
         im, = ax[2, 2].get_images()
-        im.set_array(tau[i, 9, 0, 1:-1, 1:-1].T)
+        im.set_array(tau[i, 9, 0, :, :].T)
         im.set_clim(vmin=tau[:, 9].min(), vmax=tau[:, 9].max())
 
     data = netCDF4.Dataset(filename)
@@ -418,17 +423,17 @@ def _create_animation_2d(filename):
 
     imshow_args = {'origin': 'lower', 'extent': (0., 1., 0., 1.)}
 
-    ax[0, 0].imshow(q_nc[0, 0, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[0, 1].imshow(q_nc[0, 1, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[0, 2].imshow(q_nc[0, 2, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[0, 0].imshow(q_nc[0, 0, 0, :, :].T, **imshow_args)
+    ax[0, 1].imshow(q_nc[0, 1, 0, :, :].T, **imshow_args)
+    ax[0, 2].imshow(q_nc[0, 2, 0, :, :].T, **imshow_args)
 
-    ax[1, 0].imshow(p_nc[0, 1:-1, 1:-1].T, **imshow_args)
-    ax[1, 1].imshow(tau_nc[0, 4, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[1, 2].imshow(tau_nc[0, 10, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[1, 0].imshow(p_nc[0, :, :].T, **imshow_args)
+    ax[1, 1].imshow(tau_nc[0, 4, 0, :, :].T, **imshow_args)
+    ax[1, 2].imshow(tau_nc[0, 10, 0, :, :].T, **imshow_args)
 
-    ax[2, 0].imshow(p_nc[0, 1:-1, 1:-1].T, **imshow_args)
-    ax[2, 1].imshow(tau_nc[0, 3, 0, 1:-1, 1:-1].T, **imshow_args)
-    ax[2, 2].imshow(tau_nc[0, 9, 0, 1:-1, 1:-1].T, **imshow_args)
+    ax[2, 0].imshow(p_nc[0, :, :].T, **imshow_args)
+    ax[2, 1].imshow(tau_nc[0, 3, 0, :, :].T, **imshow_args)
+    ax[2, 2].imshow(tau_nc[0, 9, 0, :, :].T, **imshow_args)
 
     titles = [r'$\rho$', r'$j_x$', r'$j_y$',
               r'$p$', r'$\tau_{xz}^\text{bot}$', r'$\tau_{xz}^\text{top}$',

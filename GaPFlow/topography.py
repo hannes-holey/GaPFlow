@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-#import ContactMechanics as CM
+import ContactMechanics as CM
 import numpy as np
 import copy
 
@@ -34,11 +34,17 @@ import warnings
 NDArray = npt.NDArray[np.floating]
 
 
-def create_midpoint_grid(disc):
-    Lx = disc['Lx']
-    Ly = disc['Ly']
-    Nx = disc['Nx']
-    Ny = disc['Ny']
+def create_midpoint_grid(grid, decomp=None):
+    """Create cell-center coordinate arrays (xx, yy) for the grid."""
+    if decomp is not None:
+        # MPI-aware: use decomposition to get local coordinates
+        return decomp.local_coordinates_midpoint(grid['dx'], grid['dy'])
+
+    # Legacy global grid (backward compatibility)
+    Lx = grid['Lx']
+    Ly = grid['Ly']
+    Nx = grid['Nx']
+    Ny = grid['Ny']
 
     dx = Lx / Nx
     ix = np.arange(-1, Nx + 1)
@@ -180,7 +186,8 @@ class Topography:
                  fc: Any,
                  grid: dict,
                  geo: dict,
-                 prop: dict) -> None:
+                 prop: dict,
+                 decomp: Any = None) -> None:
         """Constructor
 
         Parameters
@@ -193,9 +200,11 @@ class Topography:
             Geometry settings.
         prop : dict
             Material properties.
+        decomp : DomainDecomposition
+            Domain decomposition for MPI-parallel coordinate creation.
         """
 
-        xx, yy = create_midpoint_grid(grid)
+        xx, yy = create_midpoint_grid(grid, decomp)
 
         self.__field = fc.get_real_field('topography')
         self._x = fc.get_real_field('x')

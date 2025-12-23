@@ -93,6 +93,8 @@ class Energy():
         self.bc_xE = energy_spec.get('bc_xE', 'P')
         self.T_bc_xW = energy_spec.get('T_bc_xW', self.T_wall)
         self.T_bc_xE = energy_spec.get('T_bc_xE', self.T_wall)
+        self.T_bc_yS = energy_spec.get('T_bc_yS', self.T_wall)
+        self.T_bc_yN = energy_spec.get('T_bc_yN', self.T_wall)
 
         self.__solution = fc.get_real_field('solution')
         self.__x = fc.get_real_field('x')

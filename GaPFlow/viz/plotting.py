@@ -227,23 +227,24 @@ def _plot_height_1d_from_field(topo,
     """
 
     nx, ny = topo.shape[-2:]
-    centerline_index = max(1, (ny - 2) // 2)
+    # For 1D problems (ny=1), use index 0; otherwise compute centerline
+    centerline_index = 0 if ny == 1 else ny // 2
 
-    x = np.linspace(0, 1, nx - 2)
+    x = np.linspace(0, 1, nx)
 
     if len(topo.shape) == 5:
-        h0 = topo[0, 0, 0, 1:-1, centerline_index]
-        h = topo[-1, 0, 0, 1:-1, centerline_index]
-        u = topo[-1, 3, 0, 1:-1:, centerline_index]
+        h0 = topo[0, 0, 0, :, centerline_index]
+        h = topo[-1, 0, 0, :, centerline_index]
+        u = topo[-1, 3, 0, :, centerline_index]
     elif len(topo.shape) == 3:
-        h = topo[0, 1:-1, centerline_index]
-        u = topo[3, 1:-1:, centerline_index]
+        h = topo[0, :, centerline_index]
+        u = topo[3, :, centerline_index]
         h0 = h - u
 
     if len(pressure.shape) == 3:
-        p = pressure[-1, 1:-1, centerline_index]
+        p = pressure[-1, :, centerline_index]
     elif len(pressure.shape) == 2:
-        p = pressure[1:-1, centerline_index]
+        p = pressure[:, centerline_index]
 
     columns = 1
     u_col = 0
@@ -370,10 +371,18 @@ def _plot_sol_from_field_1d(q,
     if ax is None:
         fig, ax = plt.subplots(2, col, figsize=(1.7 * col, 3), sharex=True)
     nx, ny = q.shape[-2:]
-    ci = max(1, (ny - 2) // 2)
-    s = [slice(1, -1), ci]
 
-    x = np.linspace(0., 1., nx - 2)
+    # Handle both live data (with ghosts, ny >= 3) and NetCDF data (interior only, ny=1 for 1D)
+    if ny == 1:
+        # NetCDF data: interior only, no slicing needed
+        ci = 0
+        s = [slice(None), ci]
+        x = np.linspace(0., 1., nx)
+    else:
+        # Live data: includes ghosts, need to slice them out
+        ci = max(1, (ny - 2) // 2)
+        s = [slice(1, -1), ci]
+        x = np.linspace(0., 1., nx - 2)
 
     color_q = 'C0'
     color_p = 'C1'
