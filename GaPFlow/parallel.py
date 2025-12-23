@@ -197,6 +197,28 @@ class DomainDecomposition:
         local_interior_y = self.nb_subdomain_grid_pts[1]
         return (loc_y + local_interior_y) >= self._Ny
 
+    @property
+    def periodic_x(self) -> bool:
+        """True if the x-boundaries are periodic."""
+        grid = self.grid
+        return all(grid["bc_xW_P"]) and all(grid["bc_xE_P"])
+
+    @property
+    def periodic_y(self) -> bool:
+        """True if the y-boundaries are periodic."""
+        grid = self.grid
+        return all(grid["bc_yS_P"]) and all(grid["bc_yN_P"])
+
+    @property
+    def has_full_x(self) -> bool:
+        """True if the full x-boundary is owned by this rank."""
+        return self.is_at_xW and self.is_at_xE
+    
+    @property
+    def has_full_y(self) -> bool:
+        """True if the full y-boundary is owned by this rank."""
+        return self.is_at_yS and self.is_at_yN
+
     # ---------------------------
     # Ghost cell handling
     # ---------------------------

@@ -30,7 +30,7 @@ from .fem.utils2d import (
 )
 from .fem.utils2d import *
 
-from functools import cached_property
+from functools import cached_property, lru_cache
 import numpy as np
 import time
 
@@ -87,6 +87,7 @@ class FEMSolver2D:
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
 
+        self.decomp = p.decomp
         self.global_coords = p.decomp.icoordsg  # shape (2, Nx_padded, Ny_padded)
 
         nb_subdomain_pts = p.decomp.nb_subdomain_grid_pts
@@ -106,9 +107,11 @@ class FEMSolver2D:
 
         self.variables = ['rho', 'jx', 'jy']
         self.residuals = ['mass', 'momentum_x', 'momentum_y']
+        self.field_map = {'rho': p.q[0], 'jx': p.q[1], 'jy': p.q[2]}
         if self.energy:
             self.variables.append('E')
             self.residuals.append('energy')
+            self.field_map['E'] = p.energy.energy
 
         self.nb_inner_pts = self.Nx_inner * self.Ny_inner
         self.res_size = len(self.residuals) * self.nb_inner_pts
@@ -116,12 +119,18 @@ class FEMSolver2D:
 
         self.mat_size = (self.res_size, self.var_size)
 
-        assert self.nb_inner_pts == len(self.indices_inner_local)
-        assert self.nb_contributors == len(self.indices_padded_local)
-
         self.sq_per_row = self.Nx_inner + 1
         self.sq_per_col = self.Ny_inner + 1
         self.nb_sq = self.sq_per_row * self.sq_per_col
+
+        # Test function values for FEM assembly
+        self.test_fun_vals_left = get_N_left_test_vals()
+        self.test_fun_vals_right = get_N_right_test_vals()
+        self.test_fun_vals_left_dx = get_N_left_test_vals_dx(self.dx)
+        self.test_fun_vals_right_dx = get_N_right_test_vals_dx(self.dx)
+        self.test_fun_vals_left_dy = get_N_left_test_vals_dy(self.dy)
+        self.test_fun_vals_right_dy = get_N_right_test_vals_dy(self.dy)
+        self.quad_weights = get_quad_weights()
 
     def _get_active_terms(self) -> None:
         """Initialize list of active terms from problem fem_solver config."""
@@ -321,220 +330,64 @@ class FEMSolver2D:
     # Solution Vector Management
     # =========================================================================
 
-    def isBC(self, i: int, j: int) -> bool:
-        """Check if the point at (i, j) is a boundary condition point."""
-        if (i == 0 and self.bc_at_S) or (i == self.Ny_padded - 1 and self.bc_at_N):
+    def isBC(self, x: int, y: int) -> bool:
+        """Check if the point at (x, y) is a boundary condition point."""
+        if (x == 0 and self.bc_at_W) or (x == self.Nx_padded - 1 and self.bc_at_E):
             return True
-        if (j == 0 and self.bc_at_W) or (j == self.Nx_padded - 1 and self.bc_at_E):
+        if (y == 0 and self.bc_at_S) or (y == self.Ny_padded - 1 and self.bc_at_N):
             return True
         return False
 
     @cached_property
     def index_mask_inner_local(self) -> NDArray:
-        """2D Index mask for inner points with local indices."""
-        mask = np.full((self.Ny_padded, self.Nx_padded), -1, dtype=int)
-        inner_shape = (self.Ny_inner, self.Nx_inner)
-        mask[1:-1, 1:-1] = np.arange(np.prod(inner_shape)).reshape(inner_shape)
-        return mask
-
-    @cached_property
-    def index_mask_inner_with_periodic(self) -> NDArray:
-        """2D Index mask for inner points including periodic ghost mappings.
-
-        For periodic BCs, ghost positions map to the corresponding inner node
-        on the opposite boundary (all variables have the same periodic BCs).
-        Only applies if there's 1 process in that direction (local wrapping).
-        Used for test function handling in Jacobian/residual assembly.
-        """
-        mask = self.index_mask_inner_local.copy()
-
-        # Add periodic ghost mappings (using var 0 as reference - all vars same)
-        # Only if there's 1 process in that direction (local wrapping possible)
-        # Decomposition is (1, size) - always 1 in x, size in y
-        p = self.problem
-        decomp = p.decomp
-
-        # X direction: always 1 process, so local wrapping valid
-        local_periodic_x = True
-        # Y direction: local wrapping only if single rank
-        local_periodic_y = (decomp.size == 1)
-
-        # South periodic: y=0 maps to y=Ny_padded-2 (top inner row)
-        if p.grid['bc_yS_P'][0] and local_periodic_y:
-            mask[0, 1:-1] = mask[self.Ny_padded - 2, 1:-1]
-        # North periodic: y=Ny_padded-1 maps to y=1 (bottom inner row)
-        if p.grid['bc_yN_P'][0] and local_periodic_y:
-            mask[self.Ny_padded - 1, 1:-1] = mask[1, 1:-1]
-        # West periodic: x=0 maps to x=Nx_padded-2 (right inner column)
-        if p.grid['bc_xW_P'][0] and local_periodic_x:
-            mask[1:-1, 0] = mask[1:-1, self.Nx_padded - 2]
-        # East periodic: x=Nx_padded-1 maps to x=1 (left inner column)
-        if p.grid['bc_xE_P'][0] and local_periodic_x:
-            mask[1:-1, self.Nx_padded - 1] = mask[1:-1, 1]
-
-        # Handle corners for fully periodic cases (both directions must be local)
-        if p.grid['bc_yS_P'][0] and p.grid['bc_xW_P'][0] and local_periodic_y and local_periodic_x:
-            mask[0, 0] = mask[self.Ny_padded - 2, self.Nx_padded - 2]
-        if p.grid['bc_yS_P'][0] and p.grid['bc_xE_P'][0] and local_periodic_y and local_periodic_x:
-            mask[0, self.Nx_padded - 1] = mask[self.Ny_padded - 2, 1]
-        if p.grid['bc_yN_P'][0] and p.grid['bc_xW_P'][0] and local_periodic_y and local_periodic_x:
-            mask[self.Ny_padded - 1, 0] = mask[1, self.Nx_padded - 2]
-        if p.grid['bc_yN_P'][0] and p.grid['bc_xE_P'][0] and local_periodic_y and local_periodic_x:
-            mask[self.Ny_padded - 1, self.Nx_padded - 1] = mask[1, 1]
-
-        return mask
-
-    @cached_property
-    def indices_inner_local(self) -> NDArray:
-        """1D index list for inner points with local indices"""
+        """Only residual (TO) points, local indices, with periodic wrapping"""
+        mask = np.full((self.Nx_padded, self.Ny_padded), -1, dtype=int)
         inner_shape = (self.Nx_inner, self.Ny_inner)
-        return np.arange(np.prod(inner_shape))
+        mask[1:-1, 1:-1] = np.arange(np.prod(inner_shape)).reshape(inner_shape, order='F')
 
-    @cached_property
-    def index_mask_padded_local(self) -> NDArray:
-        """2D Index mask for padded points with local indices"""
+        if self.decomp.periodic_x and self.decomp.has_full_x:
+            mask[0, :] = mask[self.Nx_padded - 2, :]
+            mask[self.Nx_padded - 1, :] = mask[1, :]
+
+        if self.decomp.periodic_y and self.decomp.has_full_y:
+            mask[:, 0] = mask[:, self.Ny_padded - 2]
+            mask[:, self.Ny_padded - 1] = mask[:, 1]
+
+        return mask
+
+    @lru_cache(maxsize=None)
+    def index_mask_padded_local(self, var: str = '') -> NDArray:
+        """All non-BC points, local indices, with periodic wrapping, with Neumann forwarding."""
         mask = self.index_mask_inner_local.copy()
         cur_val = self.Nx_inner * self.Ny_inner
-        for i in range(self.Ny_padded):
-            for j in range(self.Nx_padded):
-                if mask[i, j] == -1 and not self.isBC(i, j):
-                    mask[i, j] = cur_val
+        for x in range(self.Nx_padded):
+            for y in range(self.Ny_padded):
+                if mask[x, y] == -1 and not self.isBC(x, y):
+                    mask[x, y] = cur_val
                     cur_val += 1
+        # Neumann BC forwarding (only if var specified)
+        if var:
+            var_idx = self.variables.index(var)
+            if self.bc_at_W and self.problem.grid['bc_xW_N'][var_idx]:
+                mask[0, :] = mask[1, :]
+            if self.bc_at_E and self.problem.grid['bc_xE_N'][var_idx]:
+                mask[self.Nx_padded - 1, :] = mask[self.Nx_padded - 2, :]
+            if self.bc_at_S and self.problem.grid['bc_yS_N'][var_idx]:
+                mask[:, 0] = mask[:, 1]
+            if self.bc_at_N and self.problem.grid['bc_yN_N'][var_idx]:
+                mask[:, self.Ny_padded - 1] = mask[:, self.Ny_padded - 2]
         return mask
-
-    @cached_property
-    def indices_padded_local(self) -> NDArray:
-        """1D index list for padded points with local indices"""
-        indices = self.index_mask_padded_local.copy()
-        return indices[indices != -1]
-
-    @cached_property
-    def index_mask_all_global(self) -> NDArray:
-        """2D Index mask for all points with global indices"""
-        mask = np.zeros((self.Ny_padded, self.Nx_padded), dtype=int)
-        mask = self.global_coords[1, :] * self.Ny_inner + self.global_coords[0, :]
-        return mask
-
-    @cached_property
-    def index_mask_inner_global(self) -> NDArray:
-        """2D Index mask for inner points with global indices"""
-        mask = self.index_mask_all_global.copy()
-        mask[[0, -1], :] = -1
-        mask[:, [0, -1]] = -1
-        return mask
-
-    @cached_property
-    def indices_inner_global(self) -> NDArray:
-        """1D index list for inner points with global indices"""
-        indices = self.index_mask_inner_global.copy()
-        return indices[indices != -1]
-
-    @cached_property
-    def index_mask_padded_global(self) -> NDArray:
-        """2D Index mask for padded points with global indices"""
-        mask = self.index_mask_all_global.copy()
-        if self.bc_at_W:
-            mask[:, 0] = -1
-        if self.bc_at_E:
-            mask[:, -1] = -1
-        if self.bc_at_S:
-            mask[0, :] = -1
-        if self.bc_at_N:
-            mask[-1, :] = -1
-        return mask
-
-    @cached_property
-    def indices_padded_global(self) -> NDArray:
-        """1D index list for padded points with global indices"""
-        indices = self.index_mask_padded_global.copy()
-        return indices[indices != -1]
-
-    def _build_neumann_mask(self, var_idx: int) -> NDArray:
-        """Build Neumann mask for variable at index var_idx.
-
-        Returns bool array of shape (Ny_padded, Nx_padded) where True indicates
-        a Neumann boundary for this variable.
-        """
-        p = self.problem
-        mask = np.zeros((self.Ny_padded, self.Nx_padded), dtype=bool)
-
-        if p.grid['bc_xW_N'][var_idx]:
-            mask[:, 0] = True           # West column
-        if p.grid['bc_xE_N'][var_idx]:
-            mask[:, -1] = True          # East column
-        if p.grid['bc_yS_N'][var_idx]:
-            mask[0, :] = True           # South row
-        if p.grid['bc_yN_N'][var_idx]:
-            mask[-1, :] = True          # North row
-
-        return mask
-
-    @cached_property
-    def index_mask_Neumann_rho(self) -> NDArray:
-        """Neumann BC mask for rho: True at Neumann boundaries, False elsewhere."""
-        return self._build_neumann_mask(0)
-
-    @cached_property
-    def index_mask_Neumann_jx(self) -> NDArray:
-        """Neumann BC mask for jx: True at Neumann boundaries, False elsewhere."""
-        return self._build_neumann_mask(1)
-
-    @cached_property
-    def index_mask_Neumann_jy(self) -> NDArray:
-        """Neumann BC mask for jy: True at Neumann boundaries, False elsewhere."""
-        return self._build_neumann_mask(2)
-
-    @cached_property
-    def index_mask_Neumann_E(self) -> NDArray:
-        """Neumann BC mask for E: True at Neumann boundaries, False elsewhere."""
-        return self._build_neumann_mask(3)
-
-    @cached_property
-    def neumann_masks(self) -> list:
-        """List of Neumann masks in variable order [rho, jx, jy] or [rho, jx, jy, E]."""
-        masks = [self.index_mask_Neumann_rho,
-                 self.index_mask_Neumann_jx,
-                 self.index_mask_Neumann_jy]
-        if self.energy:
-            masks.append(self.index_mask_Neumann_E)
-        return masks
-
-    def _build_periodic_mask(self, var_idx: int) -> NDArray:
-        """Build periodic mask for variable at index var_idx.
-
-        Returns bool array of shape (Ny_padded, Nx_padded) where True indicates
-        a periodic boundary for this variable.
-        """
-        p = self.problem
-        mask = np.zeros((self.Ny_padded, self.Nx_padded), dtype=bool)
-
-        if p.grid['bc_xW_P'][var_idx]:
-            mask[:, 0] = True           # West column
-        if p.grid['bc_xE_P'][var_idx]:
-            mask[:, -1] = True          # East column
-        if p.grid['bc_yS_P'][var_idx]:
-            mask[0, :] = True           # South row
-        if p.grid['bc_yN_P'][var_idx]:
-            mask[-1, :] = True          # North row
-
-        return mask
-
-    @cached_property
-    def periodic_masks(self) -> list:
-        """List of periodic masks in variable order [rho, jx, jy] or [rho, jx, jy, E]."""
-        masks = [self._build_periodic_mask(i) for i in range(len(self.variables))]
-        return masks
 
     @cached_property
     def nb_contributors(self) -> int:
         """Number of contributors (inner + non-BC padded points)"""
         count = self.Nx_inner * self.Ny_inner
         # Count non-BC padded points
-        for i in range(self.Ny_padded):
-            for j in range(self.Nx_padded):
-                if (i == 0 or i == self.Ny_padded - 1 or
-                    j == 0 or j == self.Nx_padded - 1):
-                    if not self.isBC(i, j):
+        for x in range(self.Nx_padded):
+            for y in range(self.Ny_padded):
+                if (x == 0 or x == self.Nx_padded - 1 or
+                    y == 0 or y == self.Ny_padded - 1):
+                    if not self.isBC(x, y):
                         count += 1
         return count
 
@@ -553,176 +406,27 @@ class FEMSolver2D:
     # Matrix and Residual Assembly
     # =========================================================================
 
-    def get_neumann_adjacent_inner(self, x: int, y: int, var_idx: int) -> int:
-        """Get the inner node index that a Neumann ghost at (x, y) copies from.
-
-        For Neumann BC, ghost = adjacent inner value. This returns the inner node
-        index that the ghost at position (x, y) would copy from.
-
-        For corners with mixed BCs (one direction periodic, other Neumann),
-        only shift in the Neumann direction - the periodic direction is handled
-        by index_mask_inner_with_periodic.
-
-        Returns -1 if position is not a Neumann ghost for this variable.
-        """
-        masks = self.neumann_masks
-        if not masks[var_idx][y, x]:
-            return -1  # Not a Neumann ghost
-
-        # Determine which boundaries this position is on
-        is_west = (x == 0)
-        is_east = (x == self.Nx_padded - 1)
-        is_south = (y == 0)
-        is_north = (y == self.Ny_padded - 1)
-
-        # Check which directions are truly Neumann (not periodic)
-        p = self.problem
-        x_is_neumann = not (is_west and p.grid['bc_xW_P'][var_idx]) and \
-                       not (is_east and p.grid['bc_xE_P'][var_idx])
-        y_is_neumann = not (is_south and p.grid['bc_yS_P'][var_idx]) and \
-                       not (is_north and p.grid['bc_yN_P'][var_idx])
-
-        # Calculate the target position - only shift in Neumann directions
-        target_x = x
-        target_y = y
-
-        if x_is_neumann:
-            if is_west:
-                target_x = 1
-            elif is_east:
-                target_x = self.Nx_padded - 2
-
-        if y_is_neumann:
-            if is_south:
-                target_y = 1
-            elif is_north:
-                target_y = self.Ny_padded - 2
-
-        # If position didn't change, it's not a boundary ghost (or purely periodic)
-        if target_x == x and target_y == y:
-            return -1
-
-        # Use index_mask_inner_with_periodic to handle cases where the target
-        # position is on a periodic boundary
-        return self.index_mask_inner_with_periodic[target_y, target_x]
-
-    def get_periodic_adjacent_inner(self, x: int, y: int, var_idx: int) -> int:
-        """Get the inner node index that a periodic ghost at (x, y) maps to.
-
-        For periodic BC, ghost at one boundary maps to inner node at opposite boundary.
-        - South ghost (y=0) maps to inner node at y=Ny_padded-2 (top inner row)
-        - North ghost (y=Ny_padded-1) maps to inner node at y=1 (bottom inner row)
-        - West ghost (x=0) maps to inner node at x=Nx_padded-2 (right inner column)
-        - East ghost (x=Nx_padded-1) maps to inner node at x=1 (left inner column)
-
-        For corners where one direction is periodic and the other is not (e.g., Dirichlet),
-        returns -1 since the contribution should be handled by the non-periodic BC.
-
-        Returns -1 if position is not a periodic ghost for this variable,
-        or if the target position is not an inner node.
-        """
-        masks = self.periodic_masks
-        if not masks[var_idx][y, x]:
-            return -1  # Not a periodic ghost
-
-        # Determine which boundaries this position is on
-        is_west = (x == 0)
-        is_east = (x == self.Nx_padded - 1)
-        is_south = (y == 0)
-        is_north = (y == self.Ny_padded - 1)
-
-        # Calculate the target position (wrap to opposite side ONLY in periodic direction)
-        target_x = x
-        target_y = y
-
-        # Only wrap x if x boundary is periodic for this variable
-        p = self.problem
-        if is_west and p.grid['bc_xW_P'][var_idx]:
-            target_x = self.Nx_padded - 2  # Right inner column
-        elif is_east and p.grid['bc_xE_P'][var_idx]:
-            target_x = 1  # Left inner column
-
-        # Only wrap y if y boundary is periodic for this variable
-        if is_south and p.grid['bc_yS_P'][var_idx]:
-            target_y = self.Ny_padded - 2  # Top inner row
-        elif is_north and p.grid['bc_yN_P'][var_idx]:
-            target_y = 1  # Bottom inner row
-
-        # If position didn't change, it's not a purely periodic boundary ghost
-        if target_x == x and target_y == y:
-            return -1
-
-        # If target is still in ghost region (corner case), return -1
-        target_inner = self.index_mask_inner_local[target_y, target_x]
-        if target_inner == -1:
-            return -1
-
-        return target_inner
-
-    def get_trial_target(self, tr_inner: int, tr_padded: int, tr_neu: tuple,
-                         tr_pos: tuple, var_idx: int) -> int:
-        """Get the target column index for a trial node in Jacobian assembly.
-
-        For inner nodes, returns the inner index.
-        For ghost nodes, redirects based on BC type:
-        - Periodic: redirect to opposite boundary inner node
-        - Neumann: redirect to adjacent inner node
-        - Dirichlet: skip (return -1)
-
-        Args:
-            tr_inner: Inner grid index (-1 for ghost)
-            tr_padded: Padded grid index (-1 for BC ghost)
-            tr_neu: Tuple of Neumann flags per variable
-            tr_pos: Position (x, y) in padded grid
-            var_idx: Variable index
-
-        Returns:
-            Target column index, or -1 to skip
-        """
-        if tr_inner != -1:
-            # Inner node
-            return tr_inner
-
-        # Ghost node - check BC type
-        # 1. Check periodic first
-        target = self.get_periodic_adjacent_inner(*tr_pos, var_idx)
-        if target != -1:
-            return target
-
-        # 2. Check Neumann
-        if tr_neu[var_idx]:
-            return self.get_neumann_adjacent_inner(*tr_pos, var_idx)
-
-        # 3. Padded but not BC (shouldn't happen for boundary ghosts)
-        if tr_padded != -1:
-            return tr_padded
-
-        # 4. Dirichlet - skip
-        return -1
-
-    def get_local_nodes_from_sq(self, idx_sq: int):
+    def get_local_nodes_from_sq(self, idx_sq: int, var: str = ''):
         """Returns node info for each corner of the square.
 
         Returns:
-            a_bl, a_br, a_tl, a_tr: Each is 4-tuple:
-                (inner_idx, padded_idx, neumann_tuple, pos)
-                - inner_idx: int, index in inner grid (-1 for ghost)
-                - padded_idx: int, index in padded grid (-1 for BC)
-                - neumann_tuple: tuple(bool, ...) one per variable
+            a_bl, a_br, a_tl, a_tr: Each is 3-tuple:
+                (inner_idx, padded_idx, pos)
+                - inner_idx: int, residual (TO) nodes with local index
+                - padded_idx: int, all contributor nodes with local index
                 - pos: tuple(x, y) position in padded grid
             sq_x, sq_y: Square position
         """
         sq_x = idx_sq % self.sq_per_row
         sq_y = idx_sq // self.sq_per_row
-        m_inner = self.index_mask_inner_with_periodic
-        m_padded = self.index_mask_padded_local
-        masks = self.neumann_masks
+
+        m_inner = self.index_mask_inner_local
+        m_padded = self.index_mask_padded_local(var)
 
         def node_info(x, y):
-            inner_idx = m_inner[y, x]
-            padded_idx = m_padded[y, x]
-            neumann = tuple(mask[y, x] for mask in masks)
-            return (inner_idx, padded_idx, neumann, (x, y))
+            inner_idx = m_inner[x, y]
+            padded_idx = m_padded[x, y]
+            return (inner_idx, padded_idx, (x, y))
 
         a_bl = node_info(sq_x,     sq_y)
         a_br = node_info(sq_x + 1, sq_y)
@@ -743,41 +447,6 @@ class FEMSolver2D:
         res_vals = term.evaluate(*[dep_var_vals[var] for var in term.dep_vars])
         return res_vals
 
-    @cached_property
-    def test_fun_vals_left(self) -> NDArray:
-        """Test function values at left element quadrature points (3, 3) [bl, tl, br]."""
-        return get_N_left_test_vals()
-
-    @cached_property
-    def test_fun_vals_right(self) -> NDArray:
-        """Test function values at right element quadrature points (3, 3) [tr, br, tl]."""
-        return get_N_right_test_vals()
-
-    @cached_property
-    def test_fun_vals_left_dx(self) -> NDArray:
-        """Test function dx values at left element quadrature points (3, 3) [bl, tl, br]."""
-        return get_N_left_test_vals_dx(self.dx)
-    
-    @cached_property
-    def test_fun_vals_right_dx(self) -> NDArray:
-        """Test function dx values at right element quadrature points (3, 3) [tr, br, tl]."""
-        return get_N_right_test_vals_dx(self.dx)
-
-    @cached_property
-    def test_fun_vals_left_dy(self) -> NDArray:
-        """Test function dy values at left element quadrature points (3, 3) [bl, tl, br]."""
-        return get_N_left_test_vals_dy(self.dy)
-
-    @cached_property
-    def test_fun_vals_right_dy(self) -> NDArray:
-        """Test function dy values at right element quadrature points (3, 3) [tr, br, tl]."""
-        return get_N_right_test_vals_dy(self.dy)
-
-    @cached_property
-    def quad_weights(self) -> NDArray:
-        """Quadrature weights for triangle with 3 quadrature points (3,)."""
-        return get_quad_weights()
-
     def tang_matrix_term(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         """Wrapper for different spatial derivatives (nb_inner_pts, nb_contributors)."""
         if term.d_dx_resfun:
@@ -788,24 +457,12 @@ class FEMSolver2D:
             return self.tang_matrix_term_zero_der(term, dep_var)
 
     def tang_matrix_term_zero_der(self, term: NonLinearTerm, dep_var: str) -> NDArray:
-        """Get tangent matrix for term without derivative in residual function.
-
-        For zero-order terms: R_i = ∫ N_i * F(q) dΩ
-        Jacobian: M[i,j] = ∫ N_i * (dF/dq) * N_j dΩ
-
-        Where N_i is test function, N_j is trial function (same shape functions).
-
-        For boundary ghosts, redirects contributions based on BC type:
-        - Periodic: redirect to opposite boundary inner node
-        - Neumann: redirect to adjacent inner node
-        - Dirichlet: skip
-        """
+        """Get tangent matrix for term without derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
         res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
-        var_idx = self.variables.index(dep_var)
 
         for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
+            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
             res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
 
             # Left triangle: nodes [bl, tl, br]
@@ -813,53 +470,41 @@ class FEMSolver2D:
             test_fun_vals = self.test_fun_vals_left  # (3, 3): [node][quad_pt]
             trial_fun_vals = self.test_fun_vals_left  # Same shape functions for trial
 
-            for pt_idx, (pt_inner, _, _, _) in enumerate(ele_points):
-                if pt_inner not in self.indices_inner_local:
+            for pt_idx, (pt_TO, _, _) in enumerate(ele_points):
+                if pt_TO == -1:
                     continue
                 test_vals = test_fun_vals[pt_idx]  # N_i at quad points (3,)
 
-                for trial_idx, (tr_inner, tr_padded, tr_neu, tr_pos) in enumerate(ele_points):
-                    target = self.get_trial_target(tr_inner, tr_padded, tr_neu, tr_pos, var_idx)
-                    if target == -1:
+                for trial_idx, (_, pt_FROM, _) in enumerate(ele_points):
+                    if pt_FROM == -1:
                         continue
                     trial_vals = trial_fun_vals[trial_idx]  # N_j at quad points (3,)
-
-                    # M[i,j] = ∫ N_i * (dF/dq) * N_j dΩ
                     area = np.sum(test_vals * res_quad[0:3] * trial_vals * self.quad_weights) * self.A
-                    M[pt_inner, target] += area
+                    M[pt_TO, pt_FROM] += area
 
             # Right triangle: nodes [tr, br, tl]
             ele_points = [a_tr, a_br, a_tl]
             test_fun_vals = self.test_fun_vals_right
             trial_fun_vals = self.test_fun_vals_right
 
-            for pt_idx, (pt_inner, _, _, _) in enumerate(ele_points):
-                if pt_inner not in self.indices_inner_local:
+            for pt_idx, (pt_TO, _, _) in enumerate(ele_points):
+                if pt_TO == -1:
                     continue
                 test_vals = test_fun_vals[pt_idx]
 
-                for trial_idx, (tr_inner, tr_padded, tr_neu, tr_pos) in enumerate(ele_points):
-                    target = self.get_trial_target(tr_inner, tr_padded, tr_neu, tr_pos, var_idx)
-                    if target == -1:
+                for trial_idx, (_, pt_FROM, _) in enumerate(ele_points):
+                    if pt_FROM == -1:
                         continue
                     trial_vals = trial_fun_vals[trial_idx]
-
                     area = np.sum(test_vals * res_quad[3:6] * trial_vals * self.quad_weights) * self.A
-                    M[pt_inner, target] += area
+                    M[pt_TO, pt_FROM] += area
 
         return M
 
     def tang_matrix_term_dx(self, term: NonLinearTerm, dep_var: str) -> NDArray:
-        """Get tangent matrix for term with first derivative in residual function.
-
-        For boundary ghosts, redirects contributions based on BC type:
-        - Periodic: redirect to opposite boundary inner node
-        - Neumann: redirect to adjacent inner node
-        - Dirichlet: skip
-        """
+        """Get tangent matrix for term with x-derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
         res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
-        var_idx = self.variables.index(dep_var)
 
         if term.der_testfun:
             test_fun_vals_left = self.test_fun_vals_left_dx
@@ -869,66 +514,41 @@ class FEMSolver2D:
             test_fun_vals_right = self.test_fun_vals_right
 
         for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-
-            # Unpack node info (4-tuple now includes position)
-            bl_inner, bl_padded, bl_neu, bl_pos = a_bl
-            br_inner, br_padded, br_neu, br_pos = a_br
-            tl_inner, tl_padded, tl_neu, tl_pos = a_tl
-            tr_inner, tr_padded, tr_neu, tr_pos = a_tr
-
-            # Field indexing: [:, x, y] to match muGrid's (sub_pts, X, Y) convention
+            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
             res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
 
-            # Left triangle: dx involves bl <-> br
-            bl_target = self.get_trial_target(bl_inner, bl_padded, bl_neu, bl_pos, var_idx)
-            br_target = self.get_trial_target(br_inner, br_padded, br_neu, br_pos, var_idx)
+            # Unpack padded indices for dx derivative (bl <-> br, tl <-> tr)
+            bl_FROM, br_FROM = a_bl[1], a_br[1]
+            tl_FROM, tr_FROM = a_tl[1], a_tr[1]
 
-            ele_points = [(bl_inner, bl_padded, bl_pos), (tl_inner, tl_padded, tl_pos),
-                          (br_inner, br_padded, br_pos)]
-            for (pt_inner, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-
+            # Left triangle: nodes [bl, tl, br], dx involves bl <-> br
+            ele_points = [a_bl, a_tl, a_br]
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
+                if pt_TO == -1:
+                    continue
                 base = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
+                if bl_FROM != -1:
+                    M[pt_TO, bl_FROM] += base * (-1 / self.dx)
+                if br_FROM != -1:
+                    M[pt_TO, br_FROM] += base * (1 / self.dx)
 
-                # dx derivative: d/dx = (br - bl) / dx
-                if bl_target != -1:
-                    M[pt_inner, bl_target] += base * (-1 / self.dx)
-                if br_target != -1:
-                    M[pt_inner, br_target] += base * (1 / self.dx)
-
-            # Right triangle: dx involves tl <-> tr
-            tl_target = self.get_trial_target(tl_inner, tl_padded, tl_neu, tl_pos, var_idx)
-            tr_target = self.get_trial_target(tr_inner, tr_padded, tr_neu, tr_pos, var_idx)
-
-            ele_points = [(tr_inner, tr_padded, tr_pos), (br_inner, br_padded, br_pos),
-                          (tl_inner, tl_padded, tl_pos)]
-            for (pt_inner, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-
+            # Right triangle: nodes [tr, br, tl], dx involves tl <-> tr
+            ele_points = [a_tr, a_br, a_tl]
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
+                if pt_TO == -1:
+                    continue
                 base = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-
-                # dx derivative: d/dx = (tr - tl) / dx
-                if tl_target != -1:
-                    M[pt_inner, tl_target] += base * (-1 / self.dx)
-                if tr_target != -1:
-                    M[pt_inner, tr_target] += base * (1 / self.dx)
+                if tl_FROM != -1:
+                    M[pt_TO, tl_FROM] += base * (-1 / self.dx)
+                if tr_FROM != -1:
+                    M[pt_TO, tr_FROM] += base * (1 / self.dx)
 
         return M
 
     def tang_matrix_term_dy(self, term: NonLinearTerm, dep_var: str) -> NDArray:
-        """Get tangent matrix for term with first derivative in residual function.
-
-        For boundary ghosts, redirects contributions based on BC type:
-        - Periodic: redirect to opposite boundary inner node
-        - Neumann: redirect to adjacent inner node
-        - Dirichlet: skip
-        """
+        """Get tangent matrix for term with y-derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
         res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
-        var_idx = self.variables.index(dep_var)
 
         if term.der_testfun:
             test_fun_vals_left = self.test_fun_vals_left_dy
@@ -938,52 +558,34 @@ class FEMSolver2D:
             test_fun_vals_right = self.test_fun_vals_right
 
         for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-
-            # Unpack node info (4-tuple now includes position)
-            bl_inner, bl_padded, bl_neu, bl_pos = a_bl
-            br_inner, br_padded, br_neu, br_pos = a_br
-            tl_inner, tl_padded, tl_neu, tl_pos = a_tl
-            tr_inner, tr_padded, tr_neu, tr_pos = a_tr
-
-            # Field indexing: [:, x, y] to match muGrid's (sub_pts, X, Y) convention
+            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
             res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
 
-            # Left triangle: dy involves bl <-> tl
-            bl_target = self.get_trial_target(bl_inner, bl_padded, bl_neu, bl_pos, var_idx)
-            tl_target = self.get_trial_target(tl_inner, tl_padded, tl_neu, tl_pos, var_idx)
+            # Unpack padded indices for dy derivative (bl <-> tl, br <-> tr)
+            bl_FROM, tl_FROM = a_bl[1], a_tl[1]
+            br_FROM, tr_FROM = a_br[1], a_tr[1]
 
-            ele_points = [(bl_inner, bl_padded, bl_pos), (tl_inner, tl_padded, tl_pos),
-                          (br_inner, br_padded, br_pos)]
-            for (pt_inner, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-
+            # Left triangle: nodes [bl, tl, br], dy involves bl <-> tl
+            ele_points = [a_bl, a_tl, a_br]
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
+                if pt_TO == -1:
+                    continue
                 base = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
+                if bl_FROM != -1:
+                    M[pt_TO, bl_FROM] += base * (-1 / self.dy)
+                if tl_FROM != -1:
+                    M[pt_TO, tl_FROM] += base * (1 / self.dy)
 
-                # dy derivative: d/dy = (tl - bl) / dy
-                if bl_target != -1:
-                    M[pt_inner, bl_target] += base * (-1 / self.dy)
-                if tl_target != -1:
-                    M[pt_inner, tl_target] += base * (1 / self.dy)
-
-            # Right triangle: dy involves br <-> tr
-            br_target = self.get_trial_target(br_inner, br_padded, br_neu, br_pos, var_idx)
-            tr_target = self.get_trial_target(tr_inner, tr_padded, tr_neu, tr_pos, var_idx)
-
-            ele_points = [(tr_inner, tr_padded, tr_pos), (br_inner, br_padded, br_pos),
-                          (tl_inner, tl_padded, tl_pos)]
-            for (pt_inner, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-
+            # Right triangle: nodes [tr, br, tl], dy involves br <-> tr
+            ele_points = [a_tr, a_br, a_tl]
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
+                if pt_TO == -1:
+                    continue
                 base = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-
-                # dy derivative: d/dy = (tr - br) / dy
-                if br_target != -1:
-                    M[pt_inner, br_target] += base * (-1 / self.dy)
-                if tr_target != -1:
-                    M[pt_inner, tr_target] += base * (1 / self.dy)
+                if br_FROM != -1:
+                    M[pt_TO, br_FROM] += base * (-1 / self.dy)
+                if tr_FROM != -1:
+                    M[pt_TO, tr_FROM] += base * (1 / self.dy)
 
         return M
 
@@ -998,38 +600,34 @@ class FEMSolver2D:
 
     def residual_vector_term_zero_der(self, term: NonLinearTerm) -> NDArray:
         """Get residual vector for term without derivative in residual function."""
-
-        R = np.zeros((self.nb_inner_pts,), dtype=float)  # (nb_inner_pts,)
+        R = np.zeros((self.nb_inner_pts,), dtype=float)
         res_fun_vals = self.get_res_vals(term)  # (6, sq_per_row, sq_per_col)
 
         for idx_sq in range(self.nb_sq):
             a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            # Field indexing: [:, x, y] to match muGrid's (sub_pts, X, Y) convention
             res_quad = res_fun_vals[:, sq_x, sq_y]  # (6,)
 
-            # element 1 (left triangle)
+            # Left triangle: nodes [bl, tl, br]
             ele_points = [a_bl, a_tl, a_br]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, self.test_fun_vals_left):  # test_vals (3,)
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-                area = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
-                R[pt_inner] += area
+            for (pt_TO, _, _), test_vals in zip(ele_points, self.test_fun_vals_left):
+                if pt_TO == -1:
+                    continue
+                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
 
-            # element 2 (right triangle)
+            # Right triangle: nodes [tr, br, tl]
             ele_points = [a_tr, a_br, a_tl]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, self.test_fun_vals_right):  # test_vals (3,)
-                if pt_inner not in self.indices_inner_local:
-                    continue  # not in residual
-                area = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-                R[pt_inner] += area
+            for (pt_TO, _, _), test_vals in zip(ele_points, self.test_fun_vals_right):
+                if pt_TO == -1:
+                    continue
+                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
+
         return R
 
     def residual_vector_term_dx(self, term: NonLinearTerm) -> NDArray:
         """Get residual vector for term with d/dx in residual function."""
-
         R = np.zeros((self.nb_inner_pts,), dtype=float)
 
-        # Shape: (6, sq_per_row, sq_per_col) to match muGrid's (sub_pts, X, Y) convention
+        # Shape: (6, sq_per_row, sq_per_col)
         dF_dx = np.zeros((6, self.sq_per_row, self.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
@@ -1046,33 +644,29 @@ class FEMSolver2D:
 
         for idx_sq in range(self.nb_sq):
             a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            # Field indexing: [:, x, y] to match muGrid's (sub_pts, X, Y) convention
             res_quad = dF_dx[:, sq_x, sq_y]
 
-            # Left triangle
+            # Left triangle: nodes [bl, tl, br]
             ele_points = [a_bl, a_tl, a_br]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_inner not in self.indices_inner_local:
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
+                if pt_TO == -1:
                     continue
-                area = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
-                R[pt_inner] += area
+                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
 
-            # Right triangle
+            # Right triangle: nodes [tr, br, tl]
             ele_points = [a_tr, a_br, a_tl]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_inner not in self.indices_inner_local:
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
+                if pt_TO == -1:
                     continue
-                area = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-                R[pt_inner] += area
+                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
 
         return R
 
     def residual_vector_term_dy(self, term: NonLinearTerm) -> NDArray:
         """Get residual vector for term with d/dy in residual function."""
-
         R = np.zeros((self.nb_inner_pts,), dtype=float)
 
-        # Shape: (6, sq_per_row, sq_per_col) to match muGrid's (sub_pts, X, Y) convention
+        # Shape: (6, sq_per_row, sq_per_col)
         dF_dy = np.zeros((6, self.sq_per_row, self.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
@@ -1089,24 +683,22 @@ class FEMSolver2D:
 
         for idx_sq in range(self.nb_sq):
             a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            # Field indexing: [:, x, y] to match muGrid's (sub_pts, X, Y) convention
             res_quad = dF_dy[:, sq_x, sq_y]
 
-            # Left triangle
+            # Left triangle: nodes [bl, tl, br]
             ele_points = [a_bl, a_tl, a_br]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_inner not in self.indices_inner_local:
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
+                if pt_TO == -1:
                     continue
-                area = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
-                R[pt_inner] += area
+                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
 
-            # Right triangle
+            # Right triangle: nodes [tr, br, tl]
             ele_points = [a_tr, a_br, a_tl]
-            for (pt_inner, _, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_inner not in self.indices_inner_local:
+            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
+                if pt_TO == -1:
                     continue
-                area = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-                R[pt_inner] += area
+                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
+
         return R
 
     def get_tang_matrix(self) -> NDArray:
@@ -1148,22 +740,8 @@ class FEMSolver2D:
         return slice(i * self.nb_inner_pts, (i + 1) * self.nb_inner_pts)
 
     def get_nodal_val(self, field_name: str) -> NDArray:
-        """Returns the inner nodal values of a field in shape (nb_inner_pts,).
-
-        Note: Fields have shape (Nx_padded, Ny_padded) with [X, Y] indexing.
-        The index_mask assigns nodes row-by-row in (Y, X) order, so we need
-        Fortran order (column-major) to match: X varies fastest in the flattened array.
-        """
-        p = self.problem
-        field_map = {
-            'rho': p.q[0],
-            'jx': p.q[1],
-            'jy': p.q[2],
-        }
-        if self.energy:
-            field_map['E'] = p.energy.energy
-        # Extract inner region and flatten with Fortran order to match index_mask node ordering
-        return field_map[field_name][1:-1, 1:-1].flatten(order='F')
+        """Returns the inner nodal values of a field in shape (nb_inner_pts,)."""
+        return self.field_map[field_name][1:-1, 1:-1].flatten(order='F')
 
     def get_q_nodal(self) -> NDArray:
         """Returns the full solution vector q in nodal values shape (nb_vars*nb_inner_pts,)."""
@@ -1174,25 +752,11 @@ class FEMSolver2D:
 
     def set_q_nodal(self, q_nodal: NDArray) -> None:
         """Sets the full solution vector q from nodal values shape (nb_vars*nb_inner_pts,).
-
-        Note: Fields have shape (Nx_padded, Ny_padded) with [X, Y] indexing.
-        The index_mask assigns nodes row-by-row in (Y, X) order, so we need
-        Fortran order (column-major) to match: X varies fastest in the nodal array.
         """
-        p = self.problem
-        field_map = {
-            'rho': p.q[0],
-            'jx': p.q[1],
-            'jy': p.q[2],
-        }
-        if self.energy:
-            field_map['E'] = p.energy.energy
-
         for var in self.variables:
             var_nodal = q_nodal[self._sol_slice(var)]
-            # Reshape with Fortran order to match index_mask node ordering
-            # Field shape is (Nx_padded, Ny_padded)
-            field_map[var][1:-1, 1:-1] = var_nodal.reshape((self.Nx_inner, self.Ny_inner), order='F')
+            self.field_map[var][1:-1, 1:-1] = var_nodal.reshape(
+                (self.Nx_inner, self.Ny_inner), order='F')
 
     # =========================================================================
     # Solver Interface
