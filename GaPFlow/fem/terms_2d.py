@@ -51,6 +51,66 @@ R11y = NonLinearTerm(
     d_dy_resfun=True,
     der_testfun=False)
 
+R11Sx = NonLinearTerm(
+    name='R11Sx',
+    description='flux divergence height source',
+    res='mass',
+    dep_vars=['jx'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx']() * jx,
+    der_funs=[lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R11Sy = NonLinearTerm(
+    name='R11Sy',
+    description='flux divergence height source',
+    res='mass',
+    dep_vars=['jy'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda jy: -1 / ctx['h']() * ctx['dh_dy']() * jy,
+    der_funs=[lambda ctx: lambda jy: -1 / ctx['h']() * ctx['dh_dy']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R1Stabx = NonLinearTerm(
+    name='R1Stabx',
+    description='pressure stabilization x',
+    res='mass',
+    dep_vars=['rho'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho: -ctx['pressure_stab']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['pressure_stab']() * ctx['dp_drho']()],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+R1Staby = NonLinearTerm(
+    name='R1Staby',
+    description='pressure stabilization y',
+    res='mass',
+    dep_vars=['rho'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho: -ctx['pressure_stab']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['pressure_stab']() * ctx['dp_drho']()],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
+R1T = NonLinearTerm(
+    name='R1T',
+    description='time derivative',
+    res='mass',
+    dep_vars=['rho'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho: - (rho - ctx['rho_prev']()) / ctx['dt'],
+    der_funs=[lambda ctx: lambda rho: - np.full_like(rho, 1.0) / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
 R21x = NonLinearTerm(
     name='R21x',
     description='pressure gradient x',
@@ -101,6 +161,30 @@ R24y= NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
-term_list = [R11x, R11y,
-             R21x, R21y,
-             R24x, R24y]
+R2Tx = NonLinearTerm(
+    name='R2Tx',
+    description='time derivative',
+    res='momentum_x',
+    dep_vars=['jx'],
+    dep_vals=[],
+    fun=lambda ctx: lambda jx: - (jx - ctx['jx_prev']()) / ctx['dt'],
+    der_funs=[lambda ctx: lambda jx: - np.full_like(jx, 1.0) / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R2Ty = NonLinearTerm(
+    name='R2Ty',
+    description='time derivative',
+    res='momentum_y',
+    dep_vars=['jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda jy: - (jy - ctx['jy_prev']()) / ctx['dt'],
+    der_funs=[lambda ctx: lambda jy: - np.full_like(jy, 1.0) / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+
+term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
+             R21x, R21y, R24x, R24y, R2Tx, R2Ty]

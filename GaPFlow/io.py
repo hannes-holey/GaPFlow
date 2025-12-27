@@ -26,6 +26,7 @@ import os
 from datetime import datetime
 import yaml
 import polars as pl
+from mpi4py import MPI
 
 
 def print_header(s, n=60, f0='*', f1=' '):
@@ -41,6 +42,8 @@ def print_header(s, n=60, f0='*', f1=' '):
 
 
 def print_dict(d):
+    if MPI.COMM_WORLD.Get_rank() != 0:
+        return
     for k, v in d.items():
         if not isinstance(v, dict):
             print(f'  - {k:<25s}: {v}')
@@ -66,15 +69,22 @@ def _get_output_path(name, use_tstamp=True):
 
 def create_output_directory(name, use_tstamp=True):
 
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
     outdir = _get_output_path(name, use_tstamp)
 
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-    else:
+    # Only rank 0 creates the directory to avoid race conditions
+    if rank == 0:
+        os.makedirs(outdir, exist_ok=True)
         if len(os.listdir(outdir)) > 0:
             raise RuntimeError('Output path exists and is not empty.')
 
-    print_header(f"Writing output into: {outdir}", f0=' ', f1=' ')
+    # Synchronize all ranks before proceeding
+    comm.Barrier()
+
+    if rank == 0:
+        print_header(f"Writing output into: {outdir}", f0=' ', f1=' ')
 
     return outdir
 
@@ -92,7 +102,11 @@ def history_to_csv(fname, out):
 
 def read_yaml_input(file):
 
-    print_header("PROBLEM SETUP")
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    if rank == 0:
+        print_header("PROBLEM SETUP")
 
     # TODO: check if complete
     sanitizing_functions = {'options': sanitize_options,
@@ -112,11 +126,13 @@ def read_yaml_input(file):
     raw_dict = yaml.full_load(file)
 
     for key, func in sanitizing_functions.items():
-        print(f'- {key}:')
+        if rank == 0:
+            print(f'- {key}:')
         val = raw_dict.get(key)
         sanitized_dict[key] = func(val) if val is not None else None
 
-    print_header("PROBLEM SETUP COMPLETED")
+    if rank == 0:
+        print_header("PROBLEM SETUP COMPLETED")
 
     return sanitized_dict
 
@@ -457,6 +473,7 @@ def sanitize_fem_solver(d):
     out['max_iter'] = int(d.get('max_iter', 100))
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
     out['alpha'] = float(d.get('alpha', 1.0))
+    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.0))
 
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', None))
@@ -501,8 +518,12 @@ def sanitize_energy(d):
 
     out['bc_xW'] = str(d.get('bc_xW', 'P')).upper()
     out['bc_xE'] = str(d.get('bc_xE', 'P')).upper()
+    out['bc_yS'] = str(d.get('bc_yS', 'P')).upper()
+    out['bc_yN'] = str(d.get('bc_yN', 'P')).upper()
     out['T_bc_xW'] = float(d.get('T_bc_xW', out['T_wall']))
     out['T_bc_xE'] = float(d.get('T_bc_xE', out['T_wall']))
+    out['T_bc_yS'] = float(d.get('T_bc_yS', out['T_wall']))
+    out['T_bc_yN'] = float(d.get('T_bc_yN', out['T_wall']))
 
     print_dict(out)
 

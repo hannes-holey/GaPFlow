@@ -48,6 +48,7 @@ BASE_FIELDS = {
     'U', 'V', 'Ls',
     'dp_drho',
     'rho_prev', 'jx_prev', 'jy_prev',
+    'pressure_stab',
 }
 
 STRESS_XZ_FIELDS = {
@@ -77,17 +78,18 @@ class FEMSolver2D:
         self.num_solver = Solver(problem.fem_solver)
         self.nodal_fields: Dict[str, Any] = {}
         self.quad_fields: Dict[str, Any] = {}
+        self.petsc = None  # Optional PETSc system, enabled via enable_petsc()
 
     def _init_convenience_accessors(self) -> None:
         """Initialize convenience accessors for problem and grid properties."""
         p = self.problem
+        self.decomp = p.decomp
 
-        self.per_x = p.grid['bc_xE_P'][0]  # TODO periodicity information from decomp
-        self.per_y = p.grid['bc_yN_P'][0]
+        self.per_x = p.decomp.periodic_x
+        self.per_y = p.decomp.periodic_y
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
-
-        self.decomp = p.decomp
+        
         self.global_coords = p.decomp.icoordsg  # shape (2, Nx_padded, Ny_padded)
 
         nb_subdomain_pts = p.decomp.nb_subdomain_grid_pts
@@ -96,10 +98,11 @@ class FEMSolver2D:
         self.Nx_padded = self.Nx_inner + 2
         self.Ny_padded = self.Ny_inner + 2
 
-        self.bc_at_W = p.decomp.is_at_xW
-        self.bc_at_E = p.decomp.is_at_xE
-        self.bc_at_S = p.decomp.is_at_yS
-        self.bc_at_N = p.decomp.is_at_yN
+        # BC flags: True only if at domain edge AND not periodic
+        self.bc_at_W = p.decomp.is_at_xW and not self.per_x
+        self.bc_at_E = p.decomp.is_at_xE and not self.per_x
+        self.bc_at_S = p.decomp.is_at_yS and not self.per_y
+        self.bc_at_N = p.decomp.is_at_yN and not self.per_y
 
         self.dx = p.grid['dx']
         self.dy = p.grid['dy']
@@ -131,6 +134,26 @@ class FEMSolver2D:
         self.test_fun_vals_left_dy = get_N_left_test_vals_dy(self.dy)
         self.test_fun_vals_right_dy = get_N_right_test_vals_dy(self.dy)
         self.quad_weights = get_quad_weights()
+
+        # Precomputed element tensors: elem[i,j,q] = N_i[q] * N_j[q] * w[q] * A
+        # For zero-der terms: M[i,j] += sum_q(elem[i,j,q] * res[q])
+        w = self.quad_weights
+        Nl, Nr = self.test_fun_vals_left, self.test_fun_vals_right
+        self.elem_tensor_left = Nl[:, None, :] * Nl[None, :, :] * w * self.A   # (3,3,3)
+        self.elem_tensor_right = Nr[:, None, :] * Nr[None, :, :] * w * self.A  # (3,3,3)
+
+        # Precomputed test function integrals for derivative terms: integral[i,q] = N_i[q] * w[q] * A
+        self.test_wA_left = Nl * w * self.A       # (3, 3)
+        self.test_wA_right = Nr * w * self.A      # (3, 3)
+        self.test_wA_left_dx = self.test_fun_vals_left_dx * w * self.A
+        self.test_wA_right_dx = self.test_fun_vals_right_dx * w * self.A
+        self.test_wA_left_dy = self.test_fun_vals_left_dy * w * self.A
+        self.test_wA_right_dy = self.test_fun_vals_right_dy * w * self.A
+
+        # Precomputed square coordinates
+        sq_idx = np.arange(self.nb_sq)
+        self.sq_x_arr = sq_idx % self.sq_per_row
+        self.sq_y_arr = sq_idx // self.sq_per_row
 
     def _get_active_terms(self) -> None:
         """Initialize list of active terms from problem fem_solver config."""
@@ -286,6 +309,14 @@ class FEMSolver2D:
         # Pressure gradient
         self.quad_fields['dp_drho'].pg = apply(p.pressure.dp_drho, q('rho'))
 
+        # Pressure stabilization parameter: tau = alpha * h_elem^2 / P0
+        # This controls the strength of the Brezzi-Pitkäranta stabilization
+        # Use element size (dx*dy) not gap height for proper scaling
+        alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
+        P0 = p.prop.get('P0', 1.0)
+        h_elem_sq = self.dx * self.dy  # element area as characteristic length squared
+        self.quad_fields['pressure_stab'].pg = np.full_like(q('h'), alpha * h_elem_sq / P0)
+
         # Wall stress xz
         args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'), q('U'), q('V'), q('Ls'))
         for name in ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
@@ -340,11 +371,18 @@ class FEMSolver2D:
 
     @cached_property
     def index_mask_inner_local(self) -> NDArray:
-        """Only residual (TO) points, local indices, with periodic wrapping"""
+        """Residual (TO) points only, local indices, no periodic wrapping."""
         mask = np.full((self.Nx_padded, self.Ny_padded), -1, dtype=int)
         inner_shape = (self.Nx_inner, self.Ny_inner)
         mask[1:-1, 1:-1] = np.arange(np.prod(inner_shape)).reshape(inner_shape, order='F')
+        return mask
 
+    @lru_cache(maxsize=None)
+    def index_mask_padded_local(self, var: str = '') -> NDArray:
+        """All contributor (FROM) points, local indices, with periodic wrapping."""
+        mask = self.index_mask_inner_local.copy()
+
+        # Periodic wrapping for ghost cells when full extent is owned
         if self.decomp.periodic_x and self.decomp.has_full_x:
             mask[0, :] = mask[self.Nx_padded - 2, :]
             mask[self.Nx_padded - 1, :] = mask[1, :]
@@ -353,12 +391,7 @@ class FEMSolver2D:
             mask[:, 0] = mask[:, self.Ny_padded - 2]
             mask[:, self.Ny_padded - 1] = mask[:, 1]
 
-        return mask
-
-    @lru_cache(maxsize=None)
-    def index_mask_padded_local(self, var: str = '') -> NDArray:
-        """All non-BC points, local indices, with periodic wrapping, with Neumann forwarding."""
-        mask = self.index_mask_inner_local.copy()
+        # Assign new indices to remaining ghost cells
         cur_val = self.Nx_inner * self.Ny_inner
         for x in range(self.Nx_padded):
             for y in range(self.Ny_padded):
@@ -380,16 +413,28 @@ class FEMSolver2D:
 
     @cached_property
     def nb_contributors(self) -> int:
-        """Number of contributors (inner + non-BC padded points)"""
-        count = self.Nx_inner * self.Ny_inner
-        # Count non-BC padded points
-        for x in range(self.Nx_padded):
-            for y in range(self.Ny_padded):
-                if (x == 0 or x == self.Nx_padded - 1 or
-                    y == 0 or y == self.Ny_padded - 1):
-                    if not self.isBC(x, y):
-                        count += 1
-        return count
+        """Number of unique contributor indices in index_mask_padded_local.
+
+        This accounts for periodic boundary wrapping where ghost points
+        reuse inner point indices instead of getting new indices.
+        """
+        mask = self.index_mask_padded_local('')
+        valid_indices = mask[mask >= 0]
+        return int(np.max(valid_indices)) + 1 if len(valid_indices) > 0 else 0
+
+    @cached_property
+    def sq_TO_inner(self) -> NDArray:
+        """Precomputed inner indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
+        m = self.index_mask_inner_local
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        return np.column_stack([m[sx, sy], m[sx+1, sy], m[sx, sy+1], m[sx+1, sy+1]])
+
+    @lru_cache(maxsize=None)
+    def sq_FROM_padded(self, var: str) -> NDArray:
+        """Precomputed padded indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
+        m = self.index_mask_padded_local(var)
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        return np.column_stack([m[sx, sy], m[sx+1, sy], m[sx, sy+1], m[sx+1, sy+1]])
 
     def _res_slice(self, res_name) -> slice:
         i = self.residuals.index(res_name)
@@ -459,133 +504,116 @@ class FEMSolver2D:
     def tang_matrix_term_zero_der(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         """Get tangent matrix for term without derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
-        res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
+        res_deriv = self.get_res_deriv_vals(term, dep_var)  # (6, sq_per_row, sq_per_col)
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
-            res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
+        # Get res values at quad points for all squares: (nb_sq, 3) for each triangle
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = res_deriv[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = res_deriv[3:6, sx, sy].T  # (nb_sq, 3)
 
-            # Left triangle: nodes [bl, tl, br]
-            ele_points = [a_bl, a_tl, a_br]
-            test_fun_vals = self.test_fun_vals_left  # (3, 3): [node][quad_pt]
-            trial_fun_vals = self.test_fun_vals_left  # Same shape functions for trial
+        # Compute element contributions: (nb_sq, 3, 3)
+        contrib_left = np.einsum('ijq,sq->sij', self.elem_tensor_left, res_left)
+        contrib_right = np.einsum('ijq,sq->sij', self.elem_tensor_right, res_right)
 
-            for pt_idx, (pt_TO, _, _) in enumerate(ele_points):
-                if pt_TO == -1:
-                    continue
-                test_vals = test_fun_vals[pt_idx]  # N_i at quad points (3,)
+        # Get node indices: sq_TO_inner[:, 0:4] = [bl, br, tl, tr]
+        TO = self.sq_TO_inner                    # (nb_sq, 4)
+        FROM = self.sq_FROM_padded(dep_var)      # (nb_sq, 4)
 
-                for trial_idx, (_, pt_FROM, _) in enumerate(ele_points):
-                    if pt_FROM == -1:
-                        continue
-                    trial_vals = trial_fun_vals[trial_idx]  # N_j at quad points (3,)
-                    area = np.sum(test_vals * res_quad[0:3] * trial_vals * self.quad_weights) * self.A
-                    M[pt_TO, pt_FROM] += area
+        # Left triangle nodes: [bl, tl, br] = columns [0, 2, 1]
+        # Right triangle nodes: [tr, br, tl] = columns [3, 1, 2]
+        TO_left = TO[:, [0, 2, 1]]               # (nb_sq, 3)
+        FROM_left = FROM[:, [0, 2, 1]]
+        TO_right = TO[:, [3, 1, 2]]
+        FROM_right = FROM[:, [3, 1, 2]]
 
-            # Right triangle: nodes [tr, br, tl]
-            ele_points = [a_tr, a_br, a_tl]
-            test_fun_vals = self.test_fun_vals_right
-            trial_fun_vals = self.test_fun_vals_right
-
-            for pt_idx, (pt_TO, _, _) in enumerate(ele_points):
-                if pt_TO == -1:
-                    continue
-                test_vals = test_fun_vals[pt_idx]
-
-                for trial_idx, (_, pt_FROM, _) in enumerate(ele_points):
-                    if pt_FROM == -1:
-                        continue
-                    trial_vals = trial_fun_vals[trial_idx]
-                    area = np.sum(test_vals * res_quad[3:6] * trial_vals * self.quad_weights) * self.A
-                    M[pt_TO, pt_FROM] += area
+        # Scatter-add contributions using loop (np.add.at doesn't support 2D indexing well)
+        for i in range(3):
+            for j in range(3):
+                # Left triangle
+                valid = (TO_left[:, i] != -1) & (FROM_left[:, j] != -1)
+                np.add.at(M, (TO_left[valid, i], FROM_left[valid, j]), contrib_left[valid, i, j])
+                # Right triangle
+                valid = (TO_right[:, i] != -1) & (FROM_right[:, j] != -1)
+                np.add.at(M, (TO_right[valid, i], FROM_right[valid, j]), contrib_right[valid, i, j])
 
         return M
 
     def tang_matrix_term_dx(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         """Get tangent matrix for term with x-derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
-        res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
+        res_deriv = self.get_res_deriv_vals(term, dep_var)  # (6, sq_per_row, sq_per_col)
 
-        if term.der_testfun:
-            test_fun_vals_left = self.test_fun_vals_left_dx
-            test_fun_vals_right = self.test_fun_vals_right_dx
-        else:
-            test_fun_vals_left = self.test_fun_vals_left
-            test_fun_vals_right = self.test_fun_vals_right
+        test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
+        test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
-            res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = res_deriv[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = res_deriv[3:6, sx, sy].T
 
-            # Unpack padded indices for dx derivative (bl <-> br, tl <-> tr)
-            bl_FROM, br_FROM = a_bl[1], a_br[1]
-            tl_FROM, tr_FROM = a_tl[1], a_tr[1]
+        # base[sq, i] = sum_q(N_i[q] * res[q] * w[q]) * A
+        base_left = np.einsum('iq,sq->si', test_wA_left, res_left)    # (nb_sq, 3)
+        base_right = np.einsum('iq,sq->si', test_wA_right, res_right)
 
-            # Left triangle: nodes [bl, tl, br], dx involves bl <-> br
-            ele_points = [a_bl, a_tl, a_br]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_TO == -1:
-                    continue
-                base = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
-                if bl_FROM != -1:
-                    M[pt_TO, bl_FROM] += base * (-1 / self.dx)
-                if br_FROM != -1:
-                    M[pt_TO, br_FROM] += base * (1 / self.dx)
+        TO = self.sq_TO_inner
+        FROM = self.sq_FROM_padded(dep_var)
+        inv_dx = 1.0 / self.dx
 
-            # Right triangle: nodes [tr, br, tl], dx involves tl <-> tr
-            ele_points = [a_tr, a_br, a_tl]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_TO == -1:
-                    continue
-                base = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-                if tl_FROM != -1:
-                    M[pt_TO, tl_FROM] += base * (-1 / self.dx)
-                if tr_FROM != -1:
-                    M[pt_TO, tr_FROM] += base * (1 / self.dx)
+        # Left triangle: TO nodes [bl, tl, br]=[0,2,1], dx derivative: bl(-), br(+)
+        TO_left = TO[:, [0, 2, 1]]
+        FROM_neg, FROM_pos = FROM[:, 0], FROM[:, 1]  # bl, br
+        for i in range(3):
+            valid_neg = (TO_left[:, i] != -1) & (FROM_neg != -1)
+            valid_pos = (TO_left[:, i] != -1) & (FROM_pos != -1)
+            np.add.at(M, (TO_left[valid_neg, i], FROM_neg[valid_neg]), -base_left[valid_neg, i] * inv_dx)
+            np.add.at(M, (TO_left[valid_pos, i], FROM_pos[valid_pos]), base_left[valid_pos, i] * inv_dx)
+
+        # Right triangle: TO nodes [tr, br, tl]=[3,1,2], dx derivative: tl(-), tr(+)
+        TO_right = TO[:, [3, 1, 2]]
+        FROM_neg, FROM_pos = FROM[:, 2], FROM[:, 3]  # tl, tr
+        for i in range(3):
+            valid_neg = (TO_right[:, i] != -1) & (FROM_neg != -1)
+            valid_pos = (TO_right[:, i] != -1) & (FROM_pos != -1)
+            np.add.at(M, (TO_right[valid_neg, i], FROM_neg[valid_neg]), -base_right[valid_neg, i] * inv_dx)
+            np.add.at(M, (TO_right[valid_pos, i], FROM_pos[valid_pos]), base_right[valid_pos, i] * inv_dx)
 
         return M
 
     def tang_matrix_term_dy(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         """Get tangent matrix for term with y-derivative in residual function."""
         M = np.zeros((self.nb_inner_pts, self.nb_contributors), dtype=float)
-        res_deriv_vals = self.get_res_deriv_vals(term, dep_var)  # (6, q_per_row, q_per_col)
+        res_deriv = self.get_res_deriv_vals(term, dep_var)  # (6, sq_per_row, sq_per_col)
 
-        if term.der_testfun:
-            test_fun_vals_left = self.test_fun_vals_left_dy
-            test_fun_vals_right = self.test_fun_vals_right_dy
-        else:
-            test_fun_vals_left = self.test_fun_vals_left
-            test_fun_vals_right = self.test_fun_vals_right
+        test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
+        test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq, dep_var)
-            res_quad = res_deriv_vals[:, sq_x, sq_y]  # (6,)
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = res_deriv[0:3, sx, sy].T
+        res_right = res_deriv[3:6, sx, sy].T
 
-            # Unpack padded indices for dy derivative (bl <-> tl, br <-> tr)
-            bl_FROM, tl_FROM = a_bl[1], a_tl[1]
-            br_FROM, tr_FROM = a_br[1], a_tr[1]
+        base_left = np.einsum('iq,sq->si', test_wA_left, res_left)
+        base_right = np.einsum('iq,sq->si', test_wA_right, res_right)
 
-            # Left triangle: nodes [bl, tl, br], dy involves bl <-> tl
-            ele_points = [a_bl, a_tl, a_br]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_TO == -1:
-                    continue
-                base = np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
-                if bl_FROM != -1:
-                    M[pt_TO, bl_FROM] += base * (-1 / self.dy)
-                if tl_FROM != -1:
-                    M[pt_TO, tl_FROM] += base * (1 / self.dy)
+        TO = self.sq_TO_inner
+        FROM = self.sq_FROM_padded(dep_var)
+        inv_dy = 1.0 / self.dy
 
-            # Right triangle: nodes [tr, br, tl], dy involves br <-> tr
-            ele_points = [a_tr, a_br, a_tl]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_TO == -1:
-                    continue
-                base = np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
-                if br_FROM != -1:
-                    M[pt_TO, br_FROM] += base * (-1 / self.dy)
-                if tr_FROM != -1:
-                    M[pt_TO, tr_FROM] += base * (1 / self.dy)
+        # Left triangle: TO nodes [bl, tl, br]=[0,2,1], dy derivative: bl(-), tl(+)
+        TO_left = TO[:, [0, 2, 1]]
+        FROM_neg, FROM_pos = FROM[:, 0], FROM[:, 2]  # bl, tl
+        for i in range(3):
+            valid_neg = (TO_left[:, i] != -1) & (FROM_neg != -1)
+            valid_pos = (TO_left[:, i] != -1) & (FROM_pos != -1)
+            np.add.at(M, (TO_left[valid_neg, i], FROM_neg[valid_neg]), -base_left[valid_neg, i] * inv_dy)
+            np.add.at(M, (TO_left[valid_pos, i], FROM_pos[valid_pos]), base_left[valid_pos, i] * inv_dy)
+
+        # Right triangle: TO nodes [tr, br, tl]=[3,1,2], dy derivative: br(-), tr(+)
+        TO_right = TO[:, [3, 1, 2]]
+        FROM_neg, FROM_pos = FROM[:, 1], FROM[:, 3]  # br, tr
+        for i in range(3):
+            valid_neg = (TO_right[:, i] != -1) & (FROM_neg != -1)
+            valid_pos = (TO_right[:, i] != -1) & (FROM_pos != -1)
+            np.add.at(M, (TO_right[valid_neg, i], FROM_neg[valid_neg]), -base_right[valid_neg, i] * inv_dy)
+            np.add.at(M, (TO_right[valid_pos, i], FROM_pos[valid_pos]), base_right[valid_pos, i] * inv_dy)
 
         return M
 
@@ -603,23 +631,23 @@ class FEMSolver2D:
         R = np.zeros((self.nb_inner_pts,), dtype=float)
         res_fun_vals = self.get_res_vals(term)  # (6, sq_per_row, sq_per_col)
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            res_quad = res_fun_vals[:, sq_x, sq_y]  # (6,)
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = res_fun_vals[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = res_fun_vals[3:6, sx, sy].T
 
-            # Left triangle: nodes [bl, tl, br]
-            ele_points = [a_bl, a_tl, a_br]
-            for (pt_TO, _, _), test_vals in zip(ele_points, self.test_fun_vals_left):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
+        # contrib[sq, i] = sum_q(N_i[q] * res[sq, q] * w[q]) * A
+        contrib_left = np.einsum('iq,sq->si', self.test_wA_left, res_left)    # (nb_sq, 3)
+        contrib_right = np.einsum('iq,sq->si', self.test_wA_right, res_right)
 
-            # Right triangle: nodes [tr, br, tl]
-            ele_points = [a_tr, a_br, a_tl]
-            for (pt_TO, _, _), test_vals in zip(ele_points, self.test_fun_vals_right):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
+        TO = self.sq_TO_inner
+        TO_left = TO[:, [0, 2, 1]]    # [bl, tl, br]
+        TO_right = TO[:, [3, 1, 2]]   # [tr, br, tl]
+
+        for i in range(3):
+            valid = TO_left[:, i] != -1
+            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
+            valid = TO_right[:, i] != -1
+            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
 
         return R
 
@@ -627,7 +655,7 @@ class FEMSolver2D:
         """Get residual vector for term with d/dx in residual function."""
         R = np.zeros((self.nb_inner_pts,), dtype=float)
 
-        # Shape: (6, sq_per_row, sq_per_col)
+        # Compute dF/dx using chain rule: (6, sq_per_row, sq_per_col)
         dF_dx = np.zeros((6, self.sq_per_row, self.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
@@ -635,30 +663,25 @@ class FEMSolver2D:
             dvar_dx_6 = np.repeat(dvar_dx_2, 3, axis=0)       # expand to (6, X, Y)
             dF_dx += dF_dvar * dvar_dx_6
 
-        if term.der_testfun:
-            test_fun_vals_left = self.test_fun_vals_left_dx
-            test_fun_vals_right = self.test_fun_vals_right_dx
-        else:
-            test_fun_vals_left = self.test_fun_vals_left
-            test_fun_vals_right = self.test_fun_vals_right
+        test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
+        test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            res_quad = dF_dx[:, sq_x, sq_y]
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = dF_dx[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = dF_dx[3:6, sx, sy].T
 
-            # Left triangle: nodes [bl, tl, br]
-            ele_points = [a_bl, a_tl, a_br]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
+        contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
+        contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
 
-            # Right triangle: nodes [tr, br, tl]
-            ele_points = [a_tr, a_br, a_tl]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
+        TO = self.sq_TO_inner
+        TO_left = TO[:, [0, 2, 1]]
+        TO_right = TO[:, [3, 1, 2]]
+
+        for i in range(3):
+            valid = TO_left[:, i] != -1
+            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
+            valid = TO_right[:, i] != -1
+            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
 
         return R
 
@@ -666,7 +689,7 @@ class FEMSolver2D:
         """Get residual vector for term with d/dy in residual function."""
         R = np.zeros((self.nb_inner_pts,), dtype=float)
 
-        # Shape: (6, sq_per_row, sq_per_col)
+        # Compute dF/dy using chain rule: (6, sq_per_row, sq_per_col)
         dF_dy = np.zeros((6, self.sq_per_row, self.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
@@ -674,30 +697,25 @@ class FEMSolver2D:
             dvar_dy_6 = np.repeat(dvar_dy_2, 3, axis=0)       # expand to (6, X, Y)
             dF_dy += dF_dvar * dvar_dy_6
 
-        if term.der_testfun:
-            test_fun_vals_left = self.test_fun_vals_left_dy
-            test_fun_vals_right = self.test_fun_vals_right_dy
-        else:
-            test_fun_vals_left = self.test_fun_vals_left
-            test_fun_vals_right = self.test_fun_vals_right
+        test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
+        test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
 
-        for idx_sq in range(self.nb_sq):
-            a_bl, a_br, a_tl, a_tr, sq_x, sq_y = self.get_local_nodes_from_sq(idx_sq)
-            res_quad = dF_dy[:, sq_x, sq_y]
+        sx, sy = self.sq_x_arr, self.sq_y_arr
+        res_left = dF_dy[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = dF_dy[3:6, sx, sy].T
 
-            # Left triangle: nodes [bl, tl, br]
-            ele_points = [a_bl, a_tl, a_br]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_left):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[0:3] * self.quad_weights) * self.A
+        contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
+        contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
 
-            # Right triangle: nodes [tr, br, tl]
-            ele_points = [a_tr, a_br, a_tl]
-            for (pt_TO, _, _), test_vals in zip(ele_points, test_fun_vals_right):
-                if pt_TO == -1:
-                    continue
-                R[pt_TO] += np.sum(test_vals * res_quad[3:6] * self.quad_weights) * self.A
+        TO = self.sq_TO_inner
+        TO_left = TO[:, [0, 2, 1]]
+        TO_right = TO[:, [3, 1, 2]]
+
+        for i in range(3):
+            valid = TO_left[:, i] != -1
+            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
+            valid = TO_right[:, i] != -1
+            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
 
         return R
 
@@ -779,21 +797,51 @@ class FEMSolver2D:
             p.bulk_stress.update()
 
     def steady_state(self) -> None:
-        """Solve steady-state problem using Newton iteration."""
+        """Solve steady-state problem using PETSc Newton iteration."""
         p = self.problem
+        fem_solver = p.fem_solver
+        rank = p.decomp.rank
 
-        print(61 * '-')
-        print(f"{'Iteration':<10s} {'Residual':<12s}")
-        print(61 * '-')
+        if rank == 0:
+            print(61 * '-')
+            print(f"{'Iteration':<10s} {'Residual':<12s}")
+            print(61 * '-')
 
-        self.num_solver.sol_dict.q0 = self.get_q_nodal()
-        self.num_solver.get_MR_fun = self.solver_step_fun
+        q = self.get_q_nodal().copy()
+        max_iter = fem_solver.get('max_iter', 100)
+        tol = fem_solver.get('R_norm_tol', 1e-6)
+        alpha = fem_solver.get('alpha', 1.0)
 
         tic = time.time()
-        sol_dict = self.num_solver.solve()
+        converged = False
+
+        for it in range(max_iter):
+            M, R = self.solver_step_fun(q)
+            R_norm = np.linalg.norm(R)
+            if rank == 0:
+                print(f"{it:<10d} {R_norm:<12.4e}")
+
+            if R_norm < tol:
+                converged = True
+                break
+
+            # Assemble and solve with PETSc
+            self.petsc.assemble(M, R)
+            dq = self.petsc.solve()
+
+            q = q + alpha * dq
+
+            # Update solver state
+            self.set_q_nodal(q)
+            p.decomp.communicate_ghost_buffers(p)
+            self.update_quad()
+
         toc = time.time()
-        if sol_dict.success:
-            print(f"Converged. Solving took {toc - tic:.2f} seconds.")
+        if rank == 0:
+            if converged:
+                print(f"Converged in {it} iterations. Solving took {toc - tic:.2f} seconds.")
+            else:
+                print(f"Did not converge after {max_iter} iterations.")
 
         # Update output fields for plotting
         self.update_output_fields()
@@ -801,18 +849,39 @@ class FEMSolver2D:
         p._stop = True
 
     def update_dynamic(self) -> None:
-        """Do a single dynamic time step update, then return to problem main loop."""
+        """Do a single dynamic time step update using PETSc."""
         p = self.problem
+        fem_solver = p.fem_solver
         self.update_prev_quad()
 
-        self.num_solver.sol_dict.reset()
-        self.num_solver.sol_dict.q0 = self.get_q_nodal()
-        self.num_solver.get_MR_fun = self.solver_step_fun
-
         tic = time.time()
-        self.num_solver.solve(silent=True)
+
+        q = self.get_q_nodal().copy()
+        max_iter = fem_solver.get('max_iter', 100)
+        tol = fem_solver.get('R_norm_tol', 1e-6)
+        alpha = fem_solver.get('alpha', 1.0)
+
+        for it in range(max_iter):
+            M, R = self.solver_step_fun(q)
+            R_norm = np.linalg.norm(R)
+
+            if R_norm < tol:
+                break
+
+            # Assemble and solve with PETSc
+            self.petsc.assemble(M, R)
+            dq = self.petsc.solve()
+
+            q = q + alpha * dq
+
+            # Update solver state
+            self.set_q_nodal(q)
+            p.decomp.communicate_ghost_buffers(p)
+            self.update_quad()
+
         toc = time.time()
         self.time_inner = toc - tic
+        self.inner_iterations = it + 1  # Store number of iterations
 
         # Update output fields for plotting
         self.update_output_fields()
@@ -829,17 +898,17 @@ class FEMSolver2D:
     def print_status_header(self) -> None:
         """Print header for dynamic simulation status output."""
         p = self.problem
-        if not p.options['silent'] and self.dynamic:
-            print(61 * '-')
-            print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Convergence Time':<18s} {'Residual':<12s}")
-            print(61 * '-')
+        if not p.options['silent'] and self.dynamic and p.decomp.rank == 0:
+            print(75 * '-')
+            print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Iter':<6s} {'Conv. Time':<12s} {'Residual':<12s}")
+            print(75 * '-')
             p.write(params=False)
 
     def print_status(self, scalars=None) -> None:
         """Print status line for dynamic simulation."""
         p = self.problem
-        if not p.options['silent'] and self.dynamic:
-            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.time_inner:<18.4e} {p.residual:<12.4e}")
+        if not p.options['silent'] and self.dynamic and p.decomp.rank == 0:
+            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
 
     def pre_run(self, **kwargs) -> None:
         """Initialize solver before running."""
@@ -849,7 +918,21 @@ class FEMSolver2D:
         self._get_active_terms()
         self._build_jit_functions()
         self._build_terms()
+        self._init_petsc()
 
+        # Initial quad update
+        self.update_quad()
 
-class PETScTranslator():
-    pass
+        if self.dynamic:
+            self.update_prev_quad()
+
+        # Update output fields for initial frame
+        self.update_output_fields()
+
+        self.time_inner = 0.0
+        self.inner_iterations = 0
+
+    def _init_petsc(self):
+        """Initialize PETSc solver for distributed linear solves."""
+        from .fem.petsc_system import PETScSystem
+        self.petsc = PETScSystem(self)

@@ -24,6 +24,7 @@
 import sys
 import numpy as np
 import jax.numpy as jnp
+from jax import jit, vmap
 
 
 def progressbar(it, prefix="", size=40, out=sys.stdout):  # Python3.6+
@@ -77,3 +78,12 @@ def make_dumpable(obj):
     elif isinstance(obj, (bytes, bytearray)):
         return obj.decode("utf-8", errors="replace")
     return obj
+
+
+def vvmap(fn, map_list):
+    return jit(
+        vmap(
+            vmap(fn, in_axes=map_list),
+            in_axes=map_list
+        )
+    )

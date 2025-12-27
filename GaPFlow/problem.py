@@ -388,7 +388,7 @@ class Problem:
     @property
     def converged(self) -> bool:
         """Return True if residuals in the buffer are below tolerance."""
-        return np.all(np.array(self.residual_buffer) < self.tol)
+        return np.all(np.array(self.residual_buffer) < self.numerics['tol'])
 
     # ---------------------------
     # Simulation run utilities
@@ -423,7 +423,7 @@ class Problem:
 
         # Run
         self._tic = datetime.now()
-        while not self.converged and self.step < self.max_it and not self._stop:
+        while not self.converged and self.step < self.numerics['max_it'] and not self._stop:
             self.update()
 
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
@@ -453,6 +453,7 @@ class Problem:
             self.wall_stress_yz.write()
 
         self.step = 0
+        self.dt = self.numerics['dt']
         self.simtime = 0.
         self.residual = 1.
         self.residual_buffer = deque([self.residual, ], 5)
@@ -484,22 +485,23 @@ class Problem:
 
         speed = self.step / walltime.total_seconds()
 
-        # Print runtime
-        print(33 * '=')
-        print("Total walltime   : ", str(walltime).split('.')[0])
-        print(f"({speed:.2f} steps/s)")
+        # Print runtime (only on rank 0)
+        if self.decomp.rank == 0:
+            print(33 * '=')
+            print("Total walltime   : ", str(walltime).split('.')[0])
+            print(f"({speed:.2f} steps/s)")
 
-        if self.pressure.is_gp_model:
-            print(" - GP train (zz) : ", str(self.pressure.cumtime_train).split('.')[0])
-            print(" - GP infer (zz) : ", str(self.pressure.cumtime_infer).split('.')[0])
-        if self.wall_stress_xz.is_gp_model:
-            print(" - GP train (xz) : ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
-            print(" - GP infer (xz) : ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
-        if self.wall_stress_yz.is_gp_model:
-            print(" - GP train (yz) : ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
-            print(" - GP infer (yz) : ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
+            if self.pressure.is_gp_model:
+                print(" - GP train (zz) : ", str(self.pressure.cumtime_train).split('.')[0])
+                print(" - GP infer (zz) : ", str(self.pressure.cumtime_infer).split('.')[0])
+            if self.wall_stress_xz.is_gp_model:
+                print(" - GP train (xz) : ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
+                print(" - GP infer (xz) : ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
+            if self.wall_stress_yz.is_gp_model:
+                print(" - GP train (yz) : ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
+                print(" - GP infer (yz) : ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
 
-        print(33 * '=')
+            print(33 * '=')
 
         if not self.options['silent']:
             history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)

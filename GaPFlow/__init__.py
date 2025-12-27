@@ -21,6 +21,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
+os.environ['JAX_PLATFORMS'] = 'cpu'  # Suppress CUDA warning, use CPU only
+
 from DiscoverVersion import get_version
 from jax import config
 

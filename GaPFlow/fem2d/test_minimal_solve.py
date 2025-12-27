@@ -68,6 +68,7 @@ class Timer:
 timer = Timer()
 
 # Periodic Y with pressure gradient in X
+# Using DYNAMIC mode with time derivative terms for well-posed system
 CONFIG = """
 options:
     output: /tmp/fem2d_minimal
@@ -95,7 +96,7 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1e-8
+    dt: 10.
     tol: 1e-6
     max_it: 100
 
@@ -109,10 +110,13 @@ properties:
 
 fem_solver:
     type: newton_alpha
-    dynamic: False
+    dynamic: True
     equations:
-        term_list: ['R11x', 'R11y', 'R21x', 'R21y', 'R24x', 'R24y']
+        term_list: ['R11x', 'R11y', 'R1T', 'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']
 """
+
+# Number of time steps to reach steady state
+N_STEPS = 10
 
 
 def main():
@@ -120,13 +124,15 @@ def main():
     rank = comm.Get_rank()
 
     print("=" * 70)
-    print("Minimal 2D FEM Solve Test - Periodic Y with Pressure Gradient in X")
+    print("Minimal 2D FEM Solve Test - Dynamic Mode with Time Stepping")
     print("=" * 70)
     print("\nSetup:")
-    print("  - Periodic BCs in Y for jx, jy (well-posed configuration)")
+    print("  - DYNAMIC mode with time derivative terms (R1T, R2Tx, R2Ty)")
+    print("  - Periodic BCs in Y for all variables")
     print("  - Dirichlet rho: xW=1.1, xE=1.0 (pressure gradient in X)")
     print("  - Neumann for jx, jy at xE/xW")
     print("  - Uniform gap height h = 1e-5, no wall velocity")
+    print(f"  - dt = 0.1 s, {N_STEPS} time steps")
 
     # Create problem
     timer.start("Problem.from_string")
@@ -145,36 +151,30 @@ def main():
     print(f"   nb_inner_pts = {solver.nb_inner_pts}")
     print(f"   Variables: {solver.variables}")
     print(f"   Terms: {[t.name for t in solver.terms]}")
+    print(f"   Dynamic mode: {solver.dynamic}")
 
-    # Apply boundary conditions
+    nb = solver.nb_inner_pts
+
+    # Apply boundary conditions and initialize
     print("\n2. Applying boundary conditions...")
     timer.start("communicate_ghost_buffers")
     problem.decomp.communicate_ghost_buffers(problem)
     timer.stop()
 
-    # Get initial solution
-    print("\n3. Initial state...")
     timer.start("update_quad")
     solver.update_quad()
     timer.stop()
-    q0 = solver.get_q_nodal()
-    print(f"   q0 shape: {q0.shape}")
+    solver.update_prev_quad()  # Set previous state for time derivative
 
-    nb = solver.nb_inner_pts
-    rho_init = q0[0:nb]
-    jx_init = q0[nb:2*nb]
-    jy_init = q0[2*nb:3*nb]
-    print(f"   Initial rho: [{rho_init.min():.6f}, {rho_init.max():.6f}]")
-    print(f"   Initial jx:  [{jx_init.min():.6f}, {jx_init.max():.6f}]")
-    print(f"   Initial jy:  [{jy_init.min():.6f}, {jy_init.max():.6f}]")
+    q = solver.get_q_nodal().copy()
+    print(f"   Initial q shape: {q.shape}")
+    print(f"   Initial rho: [{q[0:nb].min():.6f}, {q[0:nb].max():.6f}]")
+    print(f"   Initial jx:  [{q[nb:2*nb].min():.6e}, {q[nb:2*nb].max():.6e}]")
 
-    # Check matrix rank
-    print("\n4. Matrix diagnostics...")
-    timer.start("get_M (Jacobian assembly)")
-    M = solver.get_M()
-    timer.stop()
-    timer.start("get_R (Residual assembly)")
-    R = solver.get_R()
+    # Check matrix rank (with time derivatives, should be full rank)
+    print("\n3. Matrix diagnostics (with time derivative terms)...")
+    timer.start("solver_step_fun")
+    M, R = solver.solver_step_fun(q)
     timer.stop()
     rank_M = np.linalg.matrix_rank(M)
     print(f"   Matrix rank: {rank_M} / {M.shape[0]}")
@@ -182,201 +182,131 @@ def main():
 
     if rank_M < M.shape[0]:
         print(f"   WARNING: Matrix is rank deficient!")
-        U_svd, s, Vh = np.linalg.svd(M)
-        print(f"   Smallest singular values: {s[-5:]}")
         return
+    print(f"   Matrix is FULL RANK - system is well-posed!")
 
-    print(f"   Condition number: {np.linalg.cond(M):.4e}")
-
-    # Check individual term residuals
-    print("\n5. Initial term residuals...")
-    for term in solver.terms:
-        R_term = solver.residual_vector_term(term)
-        print(f"   {term.name}: |R| = {np.linalg.norm(R_term):.4e}")
-
-    # Newton iteration with detailed diagnostics
-    print("\n6. Newton iteration (with detailed diagnostics)...")
+    # Time stepping loop
+    print(f"\n4. Time stepping ({N_STEPS} steps)...")
     print("=" * 70)
 
-    q = solver.get_q_nodal().copy()
-    tol = 1e-8
-    max_iter = 50
-    converged = False
-    alpha = 1.0  # Full Newton step
+    tol = 1e-10
+    dt = problem.numerics['dt']
 
-    # Store history for analysis
-    R_history = []
-    dq_history = []
+    timer.start("Time stepping (total)")
+    for step in range(N_STEPS):
+        # Store previous state for time derivative
+        solver.update_prev_quad()
 
-    timer.start("Newton iteration (total)")
-    for it in range(max_iter):
-        # Compute M and R at current state
-        timer.start("solver_step_fun (M + R)")
-        M, R = solver.solver_step_fun(q)
-        timer.stop()
-        R_norm = np.linalg.norm(R)
-        R_history.append(R_norm)
+        # Newton iteration within time step
+        for it in range(30):
+            timer.start("solver_step_fun")
+            M, R = solver.solver_step_fun(q)
+            timer.stop()
+            R_norm = np.linalg.norm(R)
 
-        # Detailed output for first iterations
-        if it < 10 or it % 10 == 0:
-            print(f"\n--- Iteration {it} ---")
-            print(f"   |R| = {R_norm:.6e}")
+            if R_norm < tol:
+                break
 
-            # Residual by equation type
-            R_mass = R[0:nb]
-            R_momx = R[nb:2*nb]
-            R_momy = R[2*nb:3*nb]
-            print(f"   |R_mass|   = {np.linalg.norm(R_mass):.6e}")
-            print(f"   |R_mom_x|  = {np.linalg.norm(R_momx):.6e}")
-            print(f"   |R_mom_y|  = {np.linalg.norm(R_momy):.6e}")
-
-            # Individual term contributions
-            print(f"   Term contributions:")
-            for term in solver.terms:
-                R_term = solver.residual_vector_term(term)
-                print(f"      {term.name}: |R| = {np.linalg.norm(R_term):.4e}")
-
-        # Check convergence
-        if R_norm < tol:
-            converged = True
-            print(f"\n   CONVERGED at iteration {it}!")
-            break
-
-        # Solve for update
-        try:
             timer.start("np.linalg.solve")
             dq = np.linalg.solve(M, -R)
             timer.stop()
-        except np.linalg.LinAlgError as e:
+
+            q = q + dq
+
+            timer.start("set_q_nodal")
+            solver.set_q_nodal(q)
             timer.stop()
-            print(f"\n   Linear solve FAILED at iteration {it}: {e}")
-            break
+            timer.start("communicate_ghost_buffers")
+            problem.decomp.communicate_ghost_buffers(problem)
+            timer.stop()
+            timer.start("update_quad")
+            solver.update_quad()
+            timer.stop()
 
-        dq_norm = np.linalg.norm(dq)
-        dq_history.append(dq_norm)
+        # Report progress
+        jx_mean = q[nb:2*nb].mean()
+        print(f"   Step {step+1:3d}: t = {(step+1)*dt:.2e} s, |R| = {R_norm:.2e}, "
+              f"Newton its = {it+1}, jx_mean = {jx_mean:.6e}")
 
-        # dq by variable
-        dq_rho = dq[0:nb]
-        dq_jx = dq[nb:2*nb]
-        dq_jy = dq[2*nb:3*nb]
+    timer.stop()  # Time stepping (total)
+    print("=" * 70)
 
-        if it < 10 or it % 10 == 0:
-            print(f"\n   Solution update:")
-            print(f"   |dq| = {dq_norm:.6e}")
-            print(f"   |dq_rho| = {np.linalg.norm(dq_rho):.6e}, range: [{dq_rho.min():.4e}, {dq_rho.max():.4e}]")
-            print(f"   |dq_jx|  = {np.linalg.norm(dq_jx):.6e}, range: [{dq_jx.min():.4e}, {dq_jx.max():.4e}]")
-            print(f"   |dq_jy|  = {np.linalg.norm(dq_jy):.6e}, range: [{dq_jy.min():.4e}, {dq_jy.max():.4e}]")
+    # Final solution
+    print("\n5. Final solution...")
+    rho_final = q[0:nb].reshape((solver.Ny_inner, solver.Nx_inner))
+    jx_final = q[nb:2*nb].reshape((solver.Ny_inner, solver.Nx_inner))
+    jy_final = q[2*nb:3*nb].reshape((solver.Ny_inner, solver.Nx_inner))
 
-            # Current state
-            q_rho = q[0:nb]
-            q_jx = q[nb:2*nb]
-            q_jy = q[2*nb:3*nb]
-            print(f"\n   Current state:")
-            print(f"   rho: [{q_rho.min():.6f}, {q_rho.max():.6f}]")
-            print(f"   jx:  [{q_jx.min():.6e}, {q_jx.max():.6e}]")
-            print(f"   jy:  [{q_jy.min():.6e}, {q_jy.max():.6e}]")
+    print(f"   rho: [{rho_final.min():.6f}, {rho_final.max():.6f}]")
+    print(f"   jx:  [{jx_final.min():.6e}, {jx_final.max():.6e}]")
+    print(f"   jy:  [{jy_final.min():.6e}, {jy_final.max():.6e}]")
 
-        # Line search (simple backtracking if residual increases)
-        alpha_used = alpha
-        q_new = q + alpha_used * dq
+    # Physical analysis with CORRECT expected value
+    print("\n6. Physical analysis...")
 
-        # Update state
-        q = q_new
-
-        # Update solver's internal state for next iteration
-        timer.start("set_q_nodal")
-        solver.set_q_nodal(q)
-        timer.stop()
-        timer.start("communicate_ghost_buffers")
-        problem.decomp.communicate_ghost_buffers(problem)
-        timer.stop()
-        timer.start("update_quad")
-        solver.update_quad()
-        timer.stop()
-
-    timer.stop()  # Newton iteration (total)
-    print("\n" + "=" * 70)
-
-    if converged:
-        print(f"Newton iteration CONVERGED in {it} iterations")
-        print(f"Final |R|: {R_norm:.6e}")
-    else:
-        print(f"Newton iteration did NOT converge in {max_iter} iterations")
-        print(f"Final |R|: {R_norm:.6e}")
-
-    # Show convergence history
-    print("\n7. Convergence history...")
-    print(f"   {'Iter':<6} {'|R|':<14} {'|dq|':<14} {'|R| ratio':<14}")
-    print("   " + "-" * 48)
-    for i in range(min(len(R_history), 20)):
-        ratio = R_history[i] / R_history[i-1] if i > 0 else 0
-        dq_val = dq_history[i] if i < len(dq_history) else 0
-        print(f"   {i:<6} {R_history[i]:<14.6e} {dq_val:<14.6e} {ratio:<14.4f}")
-
-    # Final solution analysis
-    print("\n8. Final solution...")
-    solver.set_q_nodal(q)
-    problem.decomp.communicate_ghost_buffers(problem)
-
-    q_final = solver.get_q_nodal()
-    rho_final = q_final[0:nb].reshape((solver.Ny_inner, solver.Nx_inner))
-    jx_final = q_final[nb:2*nb].reshape((solver.Ny_inner, solver.Nx_inner))
-    jy_final = q_final[2*nb:3*nb].reshape((solver.Ny_inner, solver.Nx_inner))
-
-    print(f"\n   Final rho (grid):")
-    print(f"   {rho_final}")
-    print(f"\n   Final jx (grid):")
-    print(f"   {jx_final}")
-    print(f"\n   Final jy (grid):")
-    print(f"   {jy_final}")
-
-    # Physical analysis
-    print("\n9. Physical analysis...")
-
-    # Access properties (Problem has 'prop' and 'geo' attributes)
     props = problem.prop
     geom = problem.geo
 
-    # Pressure gradient check
-    # With EOS: PL, p = P0 * rho, so dp/dx = P0 * drho/dx
     P0 = props.get('P0', 101325)
-    drho_dx = (rho_final[:, -1] - rho_final[:, 0]).mean() / (solver.dx * (solver.Nx_inner - 1))
-    dp_dx = P0 * drho_dx
-    print(f"   Mean drho/dx: {drho_dx:.4f}")
-    print(f"   Mean dp/dx:   {dp_dx:.2f} Pa/m")
-
-    # Expected flow: with pressure gradient dp/dx and wall stress balance
-    # dp/dx = tau_wall / h = mu/h^2 * jx/rho (for no wall motion)
-    # => jx = rho * h^2 / mu * dp/dx
     mu = props.get('shear', 1e-3)
     h = geom.get('hmax', 1e-5)
+    Lx = problem.grid['Lx']
+
+    # Pressure gradient from boundary conditions
+    drho_dx_bc = (1.0 - 1.1) / Lx  # = -1.0
+    dp_dx_bc = P0 * drho_dx_bc      # = -101325 Pa/m
+
+    # Computed pressure gradient
+    drho_dx = (rho_final[:, -1] - rho_final[:, 0]).mean() / (solver.dx * (solver.Nx_inner - 1))
+    dp_dx = P0 * drho_dx
+
+    # CORRECT expected jx from wall stress model:
+    # At steady state: dp/dx = -12*eta*jx/(rho*h²)
+    # => jx = -dp/dx * rho * h² / (12*eta)
     rho_avg = rho_final.mean()
-    jx_expected = rho_avg * h**2 / mu * dp_dx
-    print(f"\n   Expected jx from pressure-driven flow:")
-    print(f"   jx_expected = rho * h^2 / mu * dp/dx = {jx_expected:.6e}")
-    print(f"   Actual mean jx: {jx_final.mean():.6e}")
+    jx_expected = -dp_dx_bc * rho_avg * h**2 / (12 * mu)
 
-    # Mass conservation check
-    print(f"\n   Mass conservation (∇·j should be ~0):")
-    print(f"   Mean |jx|: {np.abs(jx_final).mean():.6e}")
-    print(f"   Mean |jy|: {np.abs(jy_final).mean():.6e}")
+    # Note: Simple Poiseuille would give jx = -dp/dx * rho * h² / mu (wrong for this model)
+    jx_poiseuille = -dp_dx_bc * rho_avg * h**2 / mu
 
+    jx_mean = jx_final.mean()
+    jx_error = (jx_mean - jx_expected) / jx_expected * 100
+
+    print(f"\n   Boundary conditions:")
+    print(f"     rho_W = 1.1, rho_E = 1.0")
+    print(f"     dp/dx (from BCs) = {dp_dx_bc:.0f} Pa/m")
+
+    print(f"\n   Computed gradients:")
+    print(f"     drho/dx = {drho_dx:.4f} (expected: {drho_dx_bc:.4f})")
+    print(f"     dp/dx   = {dp_dx:.0f} Pa/m")
+
+    print(f"\n   Mass flux jx:")
+    print(f"     Expected (wall stress model): jx = {jx_expected:.6e} kg/(m²·s)")
+    print(f"     Computed:                     jx = {jx_mean:.6e} kg/(m²·s)")
+    print(f"     Error: {jx_error:+.2f}%")
+
+    print(f"\n   Note: Simple Poiseuille would give jx = {jx_poiseuille:.6e}")
+    print(f"         (12x larger - WRONG for this wall stress model)")
+
+    print(f"\n   jy (should be ~0): mean = {jy_final.mean():.2e}, max = {np.abs(jy_final).max():.2e}")
+
+    # Pass/fail check
     print("\n" + "=" * 70)
-    if converged:
-        print("Test PASSED - Newton iteration converged!")
+    if abs(jx_error) < 5:
+        print(f"Test PASSED - Solution within 5% of expected value!")
     else:
-        print("Test FAILED - Newton iteration did not converge")
+        print(f"Test FAILED - Solution error > 5%")
     print("=" * 70)
 
     # Print timing report
     timer.report()
 
     # Generate plots
-    print("\n10. Generating plots...")
-    plot_solution(solver, rho_final, jx_final, jy_final, problem)
+    print("\n7. Generating plots...")
+    plot_solution(solver, rho_final, jx_final, jy_final, problem, jx_expected)
 
 
-def plot_solution(solver, rho, jx, jy, problem):
+def plot_solution(solver, rho, jx, jy, problem, jx_expected):
     """Plot the 2D FEM solution."""
     import matplotlib.pyplot as plt
 
@@ -397,17 +327,17 @@ def plot_solution(solver, rho, jx, jy, problem):
     p = P0 * rho
 
     # Create figure with subplots
-    fig, axes = plt.subplots(2, 2, figsize=(9, 7))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 
     # 1. Density field with flux vectors
     ax1 = axes[0, 0]
     c1 = ax1.contourf(X * 1000, Y * 1000, rho, levels=20, cmap='viridis')
     plt.colorbar(c1, ax=ax1, label=r'$\rho$ [kg/m³]')
     # Quiver plot for flux
-    skip = max(1, Nx // 12)
-    ax1.quiver(X[::skip, ::skip] * 1000, Y[::skip, ::skip] * 1000,
-               jx[::skip, ::skip], jy[::skip, ::skip],
-               color='white', alpha=0.8, scale=0.02)
+    skip = max(1, Nx // 10)
+    ax1.quiver(X[::2, ::skip] * 1000, Y[::2, ::skip] * 1000,
+               jx[::2, ::skip], jy[::2, ::skip],
+               color='white', alpha=0.8, scale=0.015)
     ax1.set_xlabel('x [mm]')
     ax1.set_ylabel('y [mm]')
     ax1.set_title(r'Density $\rho$ with flux vectors $\mathbf{j}$')
@@ -422,19 +352,16 @@ def plot_solution(solver, rho, jx, jy, problem):
     ax2.set_title(r'Pressure field $p = P_0 \rho$')
     ax2.set_aspect('equal')
 
-    # 3. Velocity magnitude with streamlines
+    # 3. Mass flux jx field
     ax3 = axes[1, 0]
-    speed = np.sqrt(u**2 + v**2)
-    c3 = ax3.contourf(X * 1000, Y * 1000, speed * 1000, levels=20, cmap='plasma')
-    plt.colorbar(c3, ax=ax3, label='|u| [mm/s]')
-    # Streamlines
-    ax3.streamplot(X * 1000, Y * 1000, u, v, color='white', linewidth=0.5, density=1.2)
+    c3 = ax3.contourf(X * 1000, Y * 1000, jx * 1000, levels=20, cmap='plasma')
+    plt.colorbar(c3, ax=ax3, label=r'$j_x \times 10^3$')
     ax3.set_xlabel('x [mm]')
     ax3.set_ylabel('y [mm]')
-    ax3.set_title(r'Velocity magnitude $|\mathbf{u}|$ with streamlines')
+    ax3.set_title(r'Mass flux $j_x$')
     ax3.set_aspect('equal')
 
-    # 4. Profiles along centerline: p(x) and jx(x)
+    # 4. Profiles with expected value comparison
     ax4 = axes[1, 1]
     mid_y = rho.shape[0] // 2
     x_line = X[mid_y, :] * 1000
@@ -447,20 +374,23 @@ def plot_solution(solver, rho, jx, jy, problem):
     ax4.plot(x_line, p_line, color=color_p, linewidth=2, label='p(x)')
     ax4.tick_params(axis='y', labelcolor=color_p)
 
-    # Flux on right axis
+    # jx on right axis
     ax4_twin = ax4.twinx()
     color_j = 'tab:blue'
-    ax4_twin.set_ylabel(r'$j_x$ [kg/(m²·s)] $\times 10^{3}$', color=color_j)
-    ax4_twin.plot(x_line, jx[mid_y, :] * 1000, color=color_j, linewidth=2, linestyle='--', label=r'$j_x$(x)')
+    ax4_twin.set_ylabel(r'$j_x \times 10^3$ [kg/(m²·s)]', color=color_j)
+    ax4_twin.axhline(y=jx_expected * 1000, color='green', linestyle=':', linewidth=2,
+                     label=f'Expected jx = {jx_expected*1000:.3f}')
+    ax4_twin.plot(x_line, jx[mid_y, :] * 1000, color=color_j, linewidth=2,
+                  label=f'Computed jx (mean = {jx.mean()*1000:.3f})')
     ax4_twin.tick_params(axis='y', labelcolor=color_j)
 
-    ax4.set_title(f'Profiles along y = {Y[mid_y, 0]*1000:.1f} mm')
+    ax4.set_title('Centerline profiles')
     ax4.grid(True, alpha=0.3)
 
     # Combined legend
     lines1, labels1 = ax4.get_legend_handles_labels()
     lines2, labels2 = ax4_twin.get_legend_handles_labels()
-    ax4.legend(lines1 + lines2, labels1 + labels2, loc='center right')
+    ax4.legend(lines1 + lines2, labels1 + labels2, loc='center right', fontsize=8)
 
     # Add boundary condition annotations
     fig.text(0.5, 0.01,
@@ -468,8 +398,8 @@ def plot_solution(solver, rho, jx, jy, problem):
              r'$\partial j/\partial n = 0$ at E/W (Neumann), Periodic in Y',
              ha='center', fontsize=9, style='italic')
 
-    plt.subplots_adjust(left=0.10, right=0.92, top=0.92, bottom=0.08, hspace=0.30, wspace=0.35)
-    plt.suptitle('2D FEM Solution: Pressure-Driven Flow (Periodic Channel)', fontsize=12)
+    fig.subplots_adjust(left=0.08, right=0.95, top=0.92, bottom=0.06, hspace=0.28, wspace=0.30)
+    plt.suptitle('2D FEM Solution: Dynamic Mode - Pressure-Driven Flow', fontsize=12)
 
     plt.show()
 

@@ -217,7 +217,7 @@ def get_T_z(
     z: NDArray
 ) -> NDArray:
     """
-    Calculate temperature profile in the channel using 2nd order velocity profile.
+    Calculate temperature profile in the channel using Robin BC.
 
     Parameters
     ----------

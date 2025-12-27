@@ -27,6 +27,8 @@ from mpi4py import MPI
 import numpy as np
 import numpy.typing as npt
 
+from functools import cached_property
+
 from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from .problem import Problem
@@ -36,6 +38,8 @@ from muGrid import (
     GlobalFieldCollection,
     Communicator,
 )
+
+NDArray = npt.NDArray[np.floating]
 
 
 class DomainDecomposition:
@@ -128,7 +132,7 @@ class DomainDecomposition:
 
     @property
     def icoordsg(self):
-        """Global coordinate indices for each subdomain point."""
+        """Global coordinate indices for each subdomain point (2, Nx_local+2, Ny_local+2)."""
         return self._decomp.icoordsg
 
     # ---------------------------
@@ -218,6 +222,17 @@ class DomainDecomposition:
     def has_full_y(self) -> bool:
         """True if the full y-boundary is owned by this rank."""
         return self.is_at_yS and self.is_at_yN
+
+    @cached_property
+    def index_mask_padded_global(self) -> NDArray:
+        """GET global index mask for local padded subdomain shape."""
+        mask = np.zeros(self.local_shape_padded, dtype=int)
+        for x in range(self.local_shape_padded[0]):
+            for y in range(self.local_shape_padded[1]):
+                x_global = self.icoordsg[0][x, y]
+                y_global = self.icoordsg[1][x, y]
+                mask[x, y] = x_global + y_global * self._Nx
+        return mask
 
     # ---------------------------
     # Ghost cell handling
