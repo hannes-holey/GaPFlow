@@ -175,6 +175,50 @@ def asperity(xx, yy, grid, geo):
     return h, dh_dx, dh_dy
 
 
+def parabolic_2d(xx, yy, grid, geo):
+    """2D parabolic topography with minimum height at center.
+
+    Creates a paraboloid surface profile where the gap height varies
+    quadratically with radial distance from the domain center.
+
+    Parameters
+    ----------
+    xx : NDArray
+        X-coordinate grid.
+    yy : NDArray
+        Y-coordinate grid.
+    grid : dict
+        Grid parameters with keys 'Lx', 'Ly'.
+    geo : dict
+        Geometry parameters with keys 'hmin', 'hmax'.
+
+    Returns
+    -------
+    h : NDArray
+        Height field [m].
+    dh_dx : NDArray
+        Height gradient in x-direction [1].
+    dh_dy : NDArray
+        Height gradient in y-direction [1].
+    """
+    Lx = grid['Lx']
+    Ly = grid['Ly']
+    hmin = geo['hmin']
+    hmax = geo['hmax']
+
+    x_c = Lx / 2
+    y_c = Ly / 2
+    r_max_sq = (Lx / 2)**2 + (Ly / 2)**2
+
+    r_sq = (xx - x_c)**2 + (yy - y_c)**2
+
+    h = hmin + (hmax - hmin) * r_sq / r_max_sq
+    dh_dx = 2 * (hmax - hmin) * (xx - x_c) / r_max_sq
+    dh_dy = 2 * (hmax - hmin) * (yy - y_c) / r_max_sq
+
+    return h, dh_dx, dh_dy
+
+
 class Topography:
     """Topography container.
 
@@ -231,6 +275,8 @@ class Topography:
         # 2D profiles
         elif geo['type'] == 'asperity':
             h, dh_dx, dh_dy = asperity(xx, yy, grid, geo)
+        elif geo['type'] == 'parabolic_2d':
+            h, dh_dx, dh_dy = parabolic_2d(xx, yy, grid, geo)
 
         ix = 1
         iy = 2

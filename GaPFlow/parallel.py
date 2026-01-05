@@ -52,9 +52,6 @@ class DomainDecomposition:
         Grid configuration containing:
         - Nx, Ny: number of grid points
         - bc_xE, bc_xW, bc_yS, bc_yN: boundary conditions per component
-        - nb_ghost: ghost cell width (default: 1)
-    comm : MPI.Comm, optional
-        MPI communicator (default: MPI.COMM_WORLD)
     """
 
     def __init__(self, grid: dict):
@@ -124,6 +121,14 @@ class DomainDecomposition:
     def subdomain_locations(self) -> tuple:
         """Start position of this subdomain (including ghost offset)."""
         return tuple(self._decomp.subdomain_locations)
+
+    @property
+    def subdomain_info(self) -> str:
+        """Subdomain info string for MPI runs, empty for single rank."""
+        if self.size > 1:
+            sub_x, sub_y = self.nb_subdomain_grid_pts
+            return f" (subdomain: {sub_x}x{sub_y} on {self.size} ranks)"
+        return ""
 
     @property
     def nb_ghost_pts(self) -> int:
@@ -233,6 +238,47 @@ class DomainDecomposition:
                 y_global = self.icoordsg[1][x, y]
                 mask[x, y] = x_global + y_global * self._Nx
         return mask
+
+    # ---------------------------
+    # Global field gathering
+    # ---------------------------
+
+    def gather_global(self, local_field: NDArray) -> NDArray:
+        """Gather local field to global array on rank 0.
+
+        Parameters
+        ----------
+        local_field : NDArray
+            Local 2D field. If shape matches local_shape_padded, ghost cells
+            are excluded. If shape matches local_shape_inner, used directly.
+
+        Returns
+        -------
+        NDArray or None
+            Global field with shape nb_domain_grid_pts on rank 0, None otherwise.
+        """
+        comm = self._mpi_comm
+
+        # extract inner part if field includes ghosts
+        if local_field.shape == self.local_shape_padded:
+            local_inner = local_field[1:-1, 1:-1]
+        elif local_field.shape == self.local_shape_inner:
+            local_inner = local_field
+        else:
+            raise ValueError(f"Field shape {local_field.shape} doesn't match "
+                             f"inner {self.local_shape_inner} or padded {self.local_shape_padded}")
+
+        # gather local fields and their positions
+        all_fields = comm.gather(local_inner, root=0)
+        all_locs = comm.gather(self.subdomain_locations, root=0)
+        all_sizes = comm.gather(self.nb_subdomain_grid_pts, root=0)
+
+        if self.rank == 0:
+            global_field = np.zeros(self.nb_domain_grid_pts, dtype=local_field.dtype)
+            for field, loc, sz in zip(all_fields, all_locs, all_sizes):
+                global_field[loc[0]:loc[0]+sz[0], loc[1]:loc[1]+sz[1]] = field
+            return global_field
+        return None
 
     # ---------------------------
     # Ghost cell handling

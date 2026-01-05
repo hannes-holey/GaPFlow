@@ -8,6 +8,11 @@ Run serial:
 Run with MPI:
     mpirun -n 2 python test_solve.py
 """
+import resource
+# Limit memory to 12GB to prevent OOM crashes in WSL
+_MEM_LIMIT_GB = 12
+resource.setrlimit(resource.RLIMIT_AS, (_MEM_LIMIT_GB * 1024**3, _MEM_LIMIT_GB * 1024**3))
+
 from mpi4py import MPI
 import numpy as np
 import sys
@@ -144,7 +149,7 @@ def main():
     problem = Problem.from_string(CONFIG)
 
     if rank == 0:
-        print(f"\nGrid: {problem.grid['Nx']}x{problem.grid['Ny']}")
+        print(f"\nGrid: {problem.grid['Nx']}x{problem.grid['Ny']}{problem.decomp.subdomain_info}")
         print(f"dt = {problem.numerics['dt']}, max_it = {problem.numerics['max_it']}")
         print(f"Dynamic mode: {problem.fem_solver['dynamic']}")
 

@@ -237,7 +237,7 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity']
+    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d']
     out = {}
 
     out['U'] = float(d.get('U', 1.))
@@ -271,6 +271,9 @@ def sanitize_geometry(d):
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
         out['num'] = int(d.get('num', 1))
+    elif out['type'] == 'parabolic_2d':
+        out['hmin'] = float(d.get('hmin'))
+        out['hmax'] = float(d.get('hmax'))
 
     print_dict(out)
 
