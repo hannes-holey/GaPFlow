@@ -30,63 +30,14 @@ import numpy.typing as npt
 from typing import Tuple, Any
 
 import warnings
-import sys
-import types
-import importlib.util
 
 from .parallel import DomainDecomposition, FFTDomainTranslation
 
-
-def _load_contactmechanics_classes():
-    """
-    Load ContactMechanics FFTElasticHalfSpace classes while bypassing
-    the SurfaceTopography dependency (which uses incompatible muGrid API).
-    """
-    # Mock SurfaceTopography.Support with doi decorator (must be done first)
-    if 'SurfaceTopography.Support' not in sys.modules:
-        mock_st = types.ModuleType('SurfaceTopography')
-        mock_st_support = types.ModuleType('SurfaceTopography.Support')
-        mock_st_support.doi = lambda *args, **kwargs: lambda f: f
-        sys.modules['SurfaceTopography'] = mock_st
-        sys.modules['SurfaceTopography.Support'] = mock_st_support
-
-    # Find ContactMechanics package path without importing it
-    cm_spec = importlib.util.find_spec('ContactMechanics')
-    if cm_spec is None or cm_spec.submodule_search_locations is None:
-        raise ImportError("ContactMechanics package not found")
-    cm_path = cm_spec.submodule_search_locations[0]
-
-    # Load Substrates module first (dependency of FFTElasticHalfSpace)
-    spec_sub = importlib.util.spec_from_file_location(
-        "ContactMechanics.Substrates",
-        f"{cm_path}/Substrates.py"
-    )
-    substrates_module = importlib.util.module_from_spec(spec_sub)
-    sys.modules['ContactMechanics.Substrates'] = substrates_module
-    spec_sub.loader.exec_module(substrates_module)
-
-    # Load FFTElasticHalfSpace module
-    spec_fft = importlib.util.spec_from_file_location(
-        "ContactMechanics.FFTElasticHalfSpace",
-        f"{cm_path}/FFTElasticHalfSpace.py"
-    )
-    fft_module = importlib.util.module_from_spec(spec_fft)
-    sys.modules['ContactMechanics.FFTElasticHalfSpace'] = fft_module
-    spec_fft.loader.exec_module(fft_module)
-
-    return (
-        fft_module.PeriodicFFTElasticHalfSpace,
-        fft_module.FreeFFTElasticHalfSpace,
-        fft_module.SemiPeriodicFFTElasticHalfSpace,
-    )
-
-
-# Load ContactMechanics classes
-(
+from ContactMechanics.FFTElasticHalfSpace import (
     PeriodicFFTElasticHalfSpace,
     FreeFFTElasticHalfSpace,
     SemiPeriodicFFTElasticHalfSpace,
-) = _load_contactmechanics_classes()
+)
 
 NDArray = npt.NDArray[np.floating]
 
