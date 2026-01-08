@@ -23,6 +23,7 @@
 #
 import numpy as np
 from jax import grad
+from muGrid import Field
 
 from .heatflux import heatflux_bot, heatflux_top
 from ..utils import vvmap
@@ -62,11 +63,11 @@ class Energy():
                  ) -> None:
 
         # fields
-        self.__field = fc.register_real_field('total_energy')
-        self.__temperature = fc.register_real_field('temperature')
-        self.__q_wall = fc.register_real_field('q_wall', (2,))
-        self.__Tb_top = fc.register_real_field('Tb_top')
-        self.__Tb_bot = fc.register_real_field('Tb_bot')
+        self.__field = fc.real_field('total_energy')
+        self.__temperature = fc.real_field('temperature')
+        self.__q_wall = fc.real_field('q_wall', components=(2,))
+        self.__Tb_top = fc.real_field('Tb_top')
+        self.__Tb_bot = fc.real_field('Tb_bot')
 
         # initial and boundary conditions
         self.T_0_spec = energy_spec['T0']
@@ -88,9 +89,9 @@ class Energy():
         self.alpha_wall = energy_spec['alpha_wall']
 
         # convenience accessors
-        self.__solution = fc.get_real_field('solution')
-        self.__x = fc.get_real_field('x')
-        self.__y = fc.get_real_field('y')
+        self.__solution = Field(fc.get_real_field('solution'))
+        self.__x = Field(fc.get_real_field('x'))
+        self.__y = Field(fc.get_real_field('y'))
         self.dim = grid['dim']
         self.Lx = grid['Lx']
         self.Ly = grid['Ly']
@@ -109,7 +110,7 @@ class Energy():
     @energy.setter
     def energy(self, value: NDArray) -> None:
         """Set total energy field."""
-        self.__field.pg = value
+        self.__field.pg[:] = value
 
     @property
     def temperature(self) -> NDArray:
@@ -119,7 +120,7 @@ class Energy():
     @temperature.setter
     def temperature(self, value: NDArray) -> None:
         """Set temperature field."""
-        self.__temperature.pg = value
+        self.__temperature.pg[:] = value
 
     def update_temperature(self) -> None:
         """Update temperature field from current solution."""
@@ -135,7 +136,7 @@ class Energy():
     @Tb_top.setter
     def Tb_top(self, value: NDArray) -> None:
         """Set top wall bulk temperature field."""
-        self.__Tb_top.pg = value
+        self.__Tb_top.pg[:] = value
 
     @property
     def Tb_bot(self) -> NDArray:
@@ -145,7 +146,7 @@ class Energy():
     @Tb_bot.setter
     def Tb_bot(self, value: NDArray) -> None:
         """Set bottom wall bulk temperature field."""
-        self.__Tb_bot.pg = value
+        self.__Tb_bot.pg[:] = value
 
     @property
     def solution(self):

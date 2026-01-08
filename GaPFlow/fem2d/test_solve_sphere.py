@@ -11,26 +11,26 @@ Run serial:
 Run with MPI:
     mpirun -n 2 python test_solve_sphere.py
 """
+import os
 import resource
+import sys
+
 # Limit memory to 12GB to prevent OOM crashes in WSL
 _MEM_LIMIT_GB = 12
 resource.setrlimit(resource.RLIMIT_AS, (_MEM_LIMIT_GB * 1024**3, _MEM_LIMIT_GB * 1024**3))
 
-from mpi4py import MPI
-import numpy as np
-import sys
-import os
-
 hans_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, hans_dir)
 
-from GaPFlow.problem import Problem
-from GaPFlow.models.pressure import eos_pressure
+import numpy as np  # noqa: E402
+from mpi4py import MPI  # noqa: E402
+from GaPFlow.problem import Problem  # noqa: E402
+from GaPFlow.models.pressure import eos_pressure  # noqa: E402
 
 
 CONFIG = """
 options:
-    output: /tmp/fem2d_sphere
+    output: data/fem2d_sphere
     write_freq: 1
     silent: False
 
@@ -76,7 +76,8 @@ fem_solver:
     R_norm_tol: 1e-11
     pressure_stab_alpha: 500
     equations:
-        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T', 'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']
+        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
+                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']
 """
 
 
@@ -145,9 +146,7 @@ def main():
         print(f"  jy:  [{jy.min():.6e}, {jy.max():.6e}]")
         print(f"  h:   [{h_global.min():.6e}, {h_global.max():.6e}]")
 
-        print("\n" + "=" * 70)
-        print("Spherical topography - pressure buildup at center expected")
-        print("=" * 70)
+        solver.print_timer_summary()
 
         # Generate plots with full domain
         print("\nGenerating plots...")
@@ -166,8 +165,8 @@ def plot_solution(solver, rho, jx, jy, h, problem, Nx_global=None, Ny_global=Non
     dx, dy = solver.dx, solver.dy
 
     # Grid coordinates (cell centers)
-    x = np.linspace(dx/2, Nx * dx - dx/2, Nx)
-    y = np.linspace(dy/2, Ny * dy - dy/2, Ny)
+    x = np.linspace(dx / 2, Nx * dx - dx / 2, Nx)
+    y = np.linspace(dy / 2, Ny * dy - dy / 2, Ny)
     X, Y = np.meshgrid(x, y)
 
     # Compute pressure from density using the actual EOS from problem
@@ -190,11 +189,15 @@ def plot_solution(solver, rho, jx, jy, h, problem, Nx_global=None, Ny_global=Non
     ax2 = axes[0, 1]
     c2 = ax2.contourf(X * 1000, Y * 1000, rho, levels=20, cmap='viridis')
     plt.colorbar(c2, ax=ax2, label=r'$\rho$ [kg/m³]')
-    # Quiver plot for flux
-    skip = max(1, Nx // 10)
-    ax2.quiver(X[::4, ::skip] * 1000, Y[::4, ::skip] * 1000,
-               jx[::4, ::skip], jy[::4, ::skip],
-               color='white', alpha=0.8, scale=0.02)
+    # Quiver plot for flux - normalize vectors to show direction only
+    skip = max(1, Nx // 12)
+    jx_skip, jy_skip = jx[::skip, ::skip], jy[::skip, ::skip]
+    j_mag = np.sqrt(jx_skip**2 + jy_skip**2)
+    j_mag[j_mag == 0] = 1  # Avoid division by zero
+    jx_norm, jy_norm = jx_skip / j_mag, jy_skip / j_mag
+    ax2.quiver(X[::skip, ::skip] * 1000, Y[::skip, ::skip] * 1000,
+               jx_norm, jy_norm,
+               color='white', alpha=0.9, scale=15, width=0.004, headwidth=3, headlength=4)
     ax2.set_xlabel('x [mm]')
     ax2.set_ylabel('y [mm]')
     ax2.set_title(r'Density $\rho$ with flux vectors $\mathbf{j}$')

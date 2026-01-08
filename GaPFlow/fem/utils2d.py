@@ -22,7 +22,7 @@
 # SOFTWARE.
 #
 import numpy as np
-from muGrid import ConvolutionOperator
+from muGrid import GenericLinearOperator
 
 from typing import Callable
 import numpy.typing as npt
@@ -72,22 +72,25 @@ class NonLinearTerm():
 
 
 def get_N0_left_test_vals():
-    val_1 = 2/3
-    val_2 = 1/6
-    val_3 = 1/6
+    val_1 = 2 / 3
+    val_2 = 1 / 6
+    val_3 = 1 / 6
     return np.array([val_1, val_2, val_3])
+
 
 def get_N1_left_test_vals():
-    val_1 = 1/6
-    val_2 = 1/6
-    val_3 = 2/3
+    val_1 = 1 / 6
+    val_2 = 1 / 6
+    val_3 = 2 / 3
     return np.array([val_1, val_2, val_3])
 
+
 def get_N2_left_test_vals():
-    val_1 = 1/6
-    val_2 = 2/3
-    val_3 = 1/6
+    val_1 = 1 / 6
+    val_2 = 2 / 3
+    val_3 = 1 / 6
     return np.array([val_1, val_2, val_3])
+
 
 def get_N_left_test_vals():
     N0_vals = get_N0_left_test_vals()
@@ -95,27 +98,31 @@ def get_N_left_test_vals():
     N2_vals = get_N2_left_test_vals()
     return np.array([N0_vals, N1_vals, N2_vals])
 
+
 def get_N0_right_test_vals():
-    val_1 = 2/3
-    val_2 = 1/6
-    val_3 = 1/6
+    val_1 = 2 / 3
+    val_2 = 1 / 6
+    val_3 = 1 / 6
     return np.array([val_1, val_2, val_3])
+
 
 def get_N1_right_test_vals():
     # N_br at right triangle quad points (indices 3, 4, 5 in kernel)
     # From kernel: quad3: br=1/6, quad4: br=1/6, quad5: br=2/3
-    val_1 = 1/6
-    val_2 = 1/6
-    val_3 = 2/3
+    val_1 = 1 / 6
+    val_2 = 1 / 6
+    val_3 = 2 / 3
     return np.array([val_1, val_2, val_3])
+
 
 def get_N2_right_test_vals():
     # N_tl at right triangle quad points (indices 3, 4, 5 in kernel)
     # From kernel: quad3: tl=1/6, quad4: tl=2/3, quad5: tl=1/6
-    val_1 = 1/6
-    val_2 = 2/3
-    val_3 = 1/6
+    val_1 = 1 / 6
+    val_2 = 2 / 3
+    val_3 = 1 / 6
     return np.array([val_1, val_2, val_3])
+
 
 def get_N_right_test_vals():
     N0_vals = get_N0_right_test_vals()
@@ -123,45 +130,38 @@ def get_N_right_test_vals():
     N2_vals = get_N2_right_test_vals()
     return np.array([N0_vals, N1_vals, N2_vals])
 
+
 def get_quad_weights():
-    w_1 = 1/6
-    w_2 = 1/6
-    w_3 = 1/6
+    w_1 = 1 / 6
+    w_2 = 1 / 6
+    w_3 = 1 / 6
     return np.array([w_1, w_2, w_3])
+
 
 def get_triangle_3_operator():
     # a_bl, a_tl, a_br, a_tr
     kernel = np.array([
         [
-            [[[2/3, 1/6], [1/6, 0]]],
-            [[[1/6, 1/6], [2/3, 0]]],
-            [[[1/6, 2/3], [1/6, 0]]],
-            [[[0, 1/6], [1/6, 2/3]]],
-            [[[0, 2/3], [1/6, 1/6]]],
-            [[[0, 1/6], [2/3, 1/6]]],
+            [[[2 / 3, 1 / 6], [1 / 6, 0]]],
+            [[[1 / 6, 1 / 6], [2 / 3, 0]]],
+            [[[1 / 6, 2 / 3], [1 / 6, 0]]],
+            [[[0, 1 / 6], [1 / 6, 2 / 3]]],
+            [[[0, 2 / 3], [1 / 6, 1 / 6]]],
+            [[[0, 1 / 6], [2 / 3, 1 / 6]]],
         ]
     ])
-    return ConvolutionOperator([0, 0], kernel)
+    return GenericLinearOperator([0, 0], kernel)
 
 
 def get_triangle_2_operator_dx(dx: float):
-    """Derivative operator d/dx for linear triangular elements.
-
-    Returns ConvolutionOperator producing 2 values per square (one per triangle).
-    Derivative is constant within each linear element.
-
-    muGrid kernel uses (X, Y) convention: kernel[x_offset, y_offset]
-    Node layout in (X, Y): bl=(0,0), br=(1,0), tl=(0,1), tr=(1,1)
-    Left triangle (bl, tl, br):  dF/dx = (F_br - F_bl) / dx
-    Right triangle (tr, br, tl): dF/dx = (F_tr - F_tl) / dx
-    """
+    """Derivative operator d/dx for linear triangular elements."""
     kernel = np.array([
         [
-            [[[-1/dx, 0], [1/dx, 0]]],      # Left: -bl + br
-            [[[0, -1/dx], [0, 1/dx]]],      # Right: -tl + tr
+            [[[-1 / dx, 0], [1 / dx, 0]]],      # Left: -bl + br
+            [[[0, -1 / dx], [0, 1 / dx]]],      # Right: -tl + tr
         ]
     ])
-    return ConvolutionOperator([0, 0], kernel)
+    return GenericLinearOperator([0, 0], kernel)
 
 
 def get_triangle_2_operator_dy(dy: float):
@@ -174,35 +174,40 @@ def get_triangle_2_operator_dy(dy: float):
     """
     kernel = np.array([
         [
-            [[[-1/dy, 1/dy], [0, 0]]],      # Left: -bl + tl
-            [[[0, 0], [-1/dy, 1/dy]]],      # Right: -br + tr
+            [[[-1 / dy, 1 / dy], [0, 0]]],      # Left: -bl + tl
+            [[[0, 0], [-1 / dy, 1 / dy]]],      # Right: -br + tr
         ]
     ])
-    return ConvolutionOperator([0, 0], kernel)
+    return GenericLinearOperator([0, 0], kernel)
+
 
 def get_N_left_test_vals_dx(dx: float):
-    val_1 = np.repeat([-1/dx], 3)  # bl: decrease to right
+    val_1 = np.repeat([-1 / dx], 3)  # bl: decrease to right
     val_2 = np.repeat([0.0], 3)  # tl: constant in x
-    val_3 = np.repeat([1/dx], 3)  # br: increase to right
+    val_3 = np.repeat([1 / dx], 3)  # br: increase to right
     return np.array([val_1, val_2, val_3])
+
 
 def get_N_right_test_vals_dx(dx: float):
-    val_1 = np.repeat([1/dx], 3)  # tr: increase to right
+    val_1 = np.repeat([1 / dx], 3)  # tr: increase to right
     val_2 = np.repeat([0.0], 3)  # br: constant in x
-    val_3 = np.repeat([-1/dx], 3)  # tl: decrease to right
+    val_3 = np.repeat([-1 / dx], 3)  # tl: decrease to right
     return np.array([val_1, val_2, val_3])
+
 
 def get_N_left_test_vals_dy(dy: float):
-    val_1 = np.repeat([ -1/dy], 3)  # bl: decrease upwards
-    val_2 = np.repeat([ 1/dy], 3)  # tl: increase upwards
-    val_3 = np.repeat([ 0.0], 3)  # br: constant in y
+    val_1 = np.repeat([-1 / dy], 3)  # bl: decrease upwards
+    val_2 = np.repeat([1 / dy], 3)  # tl: increase upwards
+    val_3 = np.repeat([0.0], 3)  # br: constant in y
     return np.array([val_1, val_2, val_3])
 
+
 def get_N_right_test_vals_dy(dy: float):
-    val_1 = np.repeat([ 1/dy], 3)  # tr: increase upwards
-    val_2 = np.repeat([-1/dy], 3)  # br: decrease upwards
-    val_3 = np.repeat([ 0.0], 3)  # tl: constant in y
+    val_1 = np.repeat([1 / dy], 3)  # tr: increase upwards
+    val_2 = np.repeat([-1 / dy], 3)  # br: decrease upwards
+    val_3 = np.repeat([0.0], 3)  # tl: constant in y
     return np.array([val_1, val_2, val_3])
+
 
 def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
 

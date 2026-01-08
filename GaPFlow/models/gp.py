@@ -30,6 +30,7 @@ from typing import Tuple, List
 
 import jax
 import jax.numpy as jnp
+from muGrid import Field
 
 # jaxopt is deprecated, may switch to optax or similar
 with warnings.catch_warnings():
@@ -129,9 +130,9 @@ class GaussianProcessSurrogate:
         """
 
         self._step = 0
-        self.__solution = fc.get_real_field('solution')
-        self.__topo = fc.get_real_field('topography')
-        self.__extra = fc.get_real_field('extra')
+        self.__solution = Field(fc.get_real_field('solution'))
+        self.__topo = Field(fc.get_real_field('topography'))
+        self.__extra = Field(fc.get_real_field('extra'))
 
         if self.is_gp_model:
             self._cache = None

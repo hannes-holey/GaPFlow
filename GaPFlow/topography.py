@@ -22,14 +22,71 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-import ContactMechanics as CM
 import numpy as np
 import copy
+from muGrid import Field
 
 import numpy.typing as npt
 from typing import Tuple, Any
 
 import warnings
+import sys
+import types
+import importlib.util
+
+from .parallel import DomainDecomposition, FFTDomainTranslation
+
+
+def _load_contactmechanics_classes():
+    """
+    Load ContactMechanics FFTElasticHalfSpace classes while bypassing
+    the SurfaceTopography dependency (which uses incompatible muGrid API).
+    """
+    # Mock SurfaceTopography.Support with doi decorator (must be done first)
+    if 'SurfaceTopography.Support' not in sys.modules:
+        mock_st = types.ModuleType('SurfaceTopography')
+        mock_st_support = types.ModuleType('SurfaceTopography.Support')
+        mock_st_support.doi = lambda *args, **kwargs: lambda f: f
+        sys.modules['SurfaceTopography'] = mock_st
+        sys.modules['SurfaceTopography.Support'] = mock_st_support
+
+    # Find ContactMechanics package path without importing it
+    cm_spec = importlib.util.find_spec('ContactMechanics')
+    if cm_spec is None or cm_spec.submodule_search_locations is None:
+        raise ImportError("ContactMechanics package not found")
+    cm_path = cm_spec.submodule_search_locations[0]
+
+    # Load Substrates module first (dependency of FFTElasticHalfSpace)
+    spec_sub = importlib.util.spec_from_file_location(
+        "ContactMechanics.Substrates",
+        f"{cm_path}/Substrates.py"
+    )
+    substrates_module = importlib.util.module_from_spec(spec_sub)
+    sys.modules['ContactMechanics.Substrates'] = substrates_module
+    spec_sub.loader.exec_module(substrates_module)
+
+    # Load FFTElasticHalfSpace module
+    spec_fft = importlib.util.spec_from_file_location(
+        "ContactMechanics.FFTElasticHalfSpace",
+        f"{cm_path}/FFTElasticHalfSpace.py"
+    )
+    fft_module = importlib.util.module_from_spec(spec_fft)
+    sys.modules['ContactMechanics.FFTElasticHalfSpace'] = fft_module
+    spec_fft.loader.exec_module(fft_module)
+
+    return (
+        fft_module.PeriodicFFTElasticHalfSpace,
+        fft_module.FreeFFTElasticHalfSpace,
+        fft_module.SemiPeriodicFFTElasticHalfSpace,
+    )
+
+
+# Load ContactMechanics classes
+(
+    PeriodicFFTElasticHalfSpace,
+    FreeFFTElasticHalfSpace,
+    SemiPeriodicFFTElasticHalfSpace,
+) = _load_contactmechanics_classes()
 
 NDArray = npt.NDArray[np.floating]
 
@@ -250,12 +307,12 @@ class Topography:
 
         xx, yy = create_midpoint_grid(grid, decomp)
 
-        self.__field = fc.get_real_field('topography')
-        self._x = fc.get_real_field('x')
-        self._y = fc.get_real_field('y')
+        self.__field = Field(fc.get_real_field('topography'))
+        self._x = Field(fc.get_real_field('x'))
+        self._y = Field(fc.get_real_field('y'))
 
-        self._x.pg = xx
-        self._y.pg = yy
+        self._x.pg[:] = xx
+        self._y.pg[:] = yy
 
         self.dx = grid['dx']
         self.dy = grid['dy']
@@ -291,14 +348,15 @@ class Topography:
         if prop['elastic']['enabled']:
             self.elastic = True
             self.h_undeformed = h.copy()
-            self.__pressure = fc.get_real_field('pressure')
+            self.__pressure = Field(fc.get_real_field('pressure'))
 
             self.ElasticDeformation = ElasticDeformation(
                 E=prop['elastic']['E'],
                 v=prop['elastic']['v'],
                 alpha_underrelax=prop['elastic']['alpha_underrelax'],
                 grid=grid,
-                n_images=prop['elastic']['n_images']
+                n_images=prop['elastic']['n_images'],
+                decomp=decomp
             )
         else:
             self.elastic = False
@@ -382,6 +440,7 @@ class ElasticDeformation:
     """Thin wrapper around the FFTElasticHalfSpace classes from ContactMechanics.
 
     Selects the appropriate Half-Space class based on the periodicity of the problem.
+    Uses FFTDomainTranslation for MPI redistribution between GaPFlow and FFT domains.
     """
 
     def __init__(self,
@@ -389,7 +448,8 @@ class ElasticDeformation:
                  v: float,
                  alpha_underrelax: float,
                  grid: dict,
-                 n_images: int
+                 n_images: int,
+                 decomp: DomainDecomposition
                  ) -> None:
         """Constructor
 
@@ -405,13 +465,22 @@ class ElasticDeformation:
             Parameters controlling spatial discretization.
         n_images : int
             Number of periodic images for semi-periodic grids.
+        decomp : DomainDecomposition
+            Domain decomposition instance (used in both serial and MPI-parallel modes).
         """
 
         self.area_per_cell = grid['dx'] * grid['dy']
-        Nx, Ny = grid['Nx'] + 2, grid['Ny'] + 2
-        self.u_prev = np.zeros((Nx, Ny))
         self.alpha_underrelax = alpha_underrelax
-        n_images = n_images
+        self.decomp = decomp
+
+        # Use inner grid size (without ghost cells) for FFT computation
+        Nx, Ny = grid['Nx'], grid['Ny']
+        self._Nx = Nx
+        self._Ny = Ny
+
+        # For underrelaxation, store previous displacement (with ghost cells)
+        local_shape = decomp.local_shape_padded  # (Nx+2, Ny_local+2)
+        self.u_prev = np.zeros(local_shape)
 
         perX = grid['bc_xE_P'][0]
         perY = grid['bc_yS_P'][0]
@@ -434,27 +503,37 @@ class ElasticDeformation:
                 grid['Lx'] = 1.0
             n_images = 0  # make it effectively non-periodic
 
+        # Create FFTDomainTranslation for MPI redistribution
+        self.fft_translation = FFTDomainTranslation(decomp)
+        fftengine = self.fft_translation.fft_engine
+
         if perX and perY:
             self.periodicity = 'full'
-            self.ElDef = CM.PeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
-                                                        young=young_effective,
-                                                        physical_sizes=(grid['Lx'], grid['Ly']),
-                                                        stiffness_q0=0.0
-                                                        )
+            self.ElDef = PeriodicFFTElasticHalfSpace(
+                nb_grid_pts=(Nx, Ny),
+                young=young_effective,
+                physical_sizes=(grid['Lx'], grid['Ly']),
+                stiffness_q0=0.0,
+                fftengine=fftengine
+            )
         elif (perX != perY):
             self.periodicity = 'half'
-            self.ElDef = CM.SemiPeriodicFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
-                                                            young=young_effective,
-                                                            physical_sizes=(grid['Lx'], grid['Ly']),
-                                                            periodicity=(perX, perY),
-                                                            n_images=n_images
-                                                            )
+            self.ElDef = SemiPeriodicFFTElasticHalfSpace(
+                nb_grid_pts=(Nx, Ny),
+                young=young_effective,
+                physical_sizes=(grid['Lx'], grid['Ly']),
+                periodicity=(perX, perY),
+                n_images=n_images,
+                fftengine=fftengine
+            )
         else:
             self.periodicity = 'none'
-            self.ElDef = CM.FreeFFTElasticHalfSpace(nb_grid_pts=(Nx, Ny),
-                                                    young=young_effective,
-                                                    physical_sizes=(grid['Lx'], grid['Ly'])
-                                                    )
+            self.ElDef = FreeFFTElasticHalfSpace(
+                nb_grid_pts=(Nx, Ny),
+                young=young_effective,
+                physical_sizes=(grid['Lx'], grid['Ly']),
+                fftengine=fftengine
+            )
 
     def get_deformation(self, p: NDArray) -> NDArray:
         """Calculation of the elastic deformation due to given pressure field p.
@@ -463,15 +542,35 @@ class ElasticDeformation:
         Parameters
         ----------
         p : ndarray
-            Pressure array [Pa]
+            Pressure array [Pa]. Expected shape includes ghost cells: (Nx+2, Ny+2)
+            in serial, or (Nx+2, Ny_local+2) in MPI parallel mode.
 
         Returns
         -------
         disp : ndarray
-            Array of resulting displacements [m].
+            Array of resulting displacements [m]. Same shape as input.
         """
-        forces = p * self.area_per_cell
-        disp = -self.ElDef.evaluate_disp(forces)
+        # Extract inner cells (exclude ghost cells)
+        p_inner = p[1:-1, 1:-1]
+
+        # Allocate FFT domain buffer
+        fft_shape = tuple(self.fft_translation.fft_engine.nb_subdomain_grid_pts)
+        p_fft = np.zeros(fft_shape, dtype=p.dtype)
+
+        # Embed into FFT domain (handles MPI redistribution + zero-padding)
+        self.fft_translation.embed(p_inner, p_fft)
+
+        # Compute displacement via ContactMechanics
+        forces_fft = p_fft * self.area_per_cell
+        disp_fft = -self.ElDef.evaluate_disp(forces_fft)
+
+        # Extract back to GaPFlow domain
+        disp_inner = np.zeros_like(p_inner)
+        self.fft_translation.extract(disp_fft, disp_inner)
+
+        # Pad result back to include ghost cells
+        disp = np.zeros_like(p)
+        disp[1:-1, 1:-1] = disp_inner
 
         return disp
 

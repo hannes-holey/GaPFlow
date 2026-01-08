@@ -28,12 +28,22 @@ from .fem.utils2d import (
     get_triangle_2_operator_dx,
     get_triangle_2_operator_dy,
 )
-from .fem.utils2d import *
+from .fem.utils2d import (
+    get_N_left_test_vals,
+    get_N_right_test_vals,
+    get_N_left_test_vals_dx,
+    get_N_right_test_vals_dx,
+    get_N_left_test_vals_dy,
+    get_N_right_test_vals_dy,
+    get_quad_weights,
+    get_active_terms,
+)
 
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 import numpy as np
 import time
+from muGrid import Field, Timer
 
 import numpy.typing as npt
 from typing import TYPE_CHECKING, Tuple, Dict, Any, Optional
@@ -113,6 +123,7 @@ class FEMSolver2D:
         self.nodal_fields: Dict[str, Any] = {}
         self.quad_fields: Dict[str, Any] = {}
         self.petsc = None  # Optional PETSc system, enabled via enable_petsc()
+        self.timer = Timer()
 
     def _init_convenience_accessors(self) -> None:
         """Initialize convenience accessors for problem and grid properties."""
@@ -123,7 +134,7 @@ class FEMSolver2D:
         self.per_y = p.decomp.periodic_y
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
-        
+
         self.global_coords = p.decomp.icoordsg  # shape (2, Nx_padded, Ny_padded)
 
         nb_subdomain_pts = p.decomp.nb_subdomain_grid_pts
@@ -211,8 +222,8 @@ class FEMSolver2D:
             self.nodal_fields[name] = fc.real_field(f'{name}_nodal', 1, 'pixel')
 
         # existing single-component fields
-        self.nodal_fields['p'] = fc.get_real_field('pressure')
-        self.nodal_fields['eta'] = fc.get_real_field('shear_viscosity')
+        self.nodal_fields['p'] = Field(fc.get_real_field('pressure'))
+        self.nodal_fields['eta'] = Field(fc.get_real_field('shear_viscosity'))
 
         # quad output fields
         for name in self._get_needed_quad_fields():
@@ -339,7 +350,7 @@ class FEMSolver2D:
         apply = self._apply_2d_vmap
 
         # Pressure gradient
-        self.quad_fields['dp_drho'].pg = apply(p.pressure.dp_drho, q('rho'))
+        self.quad_fields['dp_drho'].pg[:] = apply(p.pressure.dp_drho, q('rho'))
 
         # Pressure stabilization parameter: tau = alpha * h_elem^2 / P0
         # This controls the strength of the Brezzi-Pitkäranta stabilization
@@ -347,39 +358,42 @@ class FEMSolver2D:
         alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
         P0 = p.prop.get('P0', 1.0)
         h_elem_sq = self.dx * self.dy  # element area as characteristic length squared
-        self.quad_fields['pressure_stab'].pg = np.full_like(q('h'), alpha * h_elem_sq / P0)
+        self.quad_fields['pressure_stab'].pg[:] = np.full_like(q('h'), alpha * h_elem_sq / P0)
 
         # Wall stress xz
         args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'), q('U'), q('V'), q('Ls'))
         for name in ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
                      'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']:
-            self.quad_fields[name].pg = apply(getattr(p.wall_stress_xz, name), *args_xz)
+            self.quad_fields[name].pg[:] = apply(getattr(p.wall_stress_xz, name), *args_xz)
 
         # Wall stress yz
         args_yz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dy'), q('U'), q('V'), q('Ls'))
         for name in ['tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
                      'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy']:
-            self.quad_fields[name].pg = apply(getattr(p.wall_stress_yz, name), *args_yz)
+            self.quad_fields[name].pg[:] = apply(getattr(p.wall_stress_yz, name), *args_yz)
 
         if self.energy:
             # Temperature
             args_T = (q('rho'), q('jx'), q('jy'), q('E'))
             for name, func in [('T', 'T_func'), ('dT_drho', 'T_grad_rho'), ('dT_djx', 'T_grad_jx'),
                                ('dT_djy', 'T_grad_jy'), ('dT_dE', 'T_grad_E')]:
-                self.quad_fields[name].pg = getattr(p.energy, func)(*args_T)
+                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_T)
 
             # Wall heat flux
             args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
                       q('rho'), q('E'), q('jx'), q('jy'), q('U'), q('V'), q('Tb_top'), q('Tb_bot'), None)
             for name, func in [('S', 'q_wall_sum'), ('dS_drho', 'q_wall_grad_rho'), ('dS_djx', 'q_wall_grad_jx'),
                                ('dS_djy', 'q_wall_grad_jy'), ('dS_dE', 'q_wall_grad_E')]:
-                self.quad_fields[name].pg = getattr(p.energy, func)(*args_S)
+                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_S)
 
     def update_quad(self) -> None:
         """Full quadrature update (Steps 1-3)."""
-        self.update_nodal_fields()
-        self.update_quad_nodal()
-        self.update_quad_computed()
+        with self.timer("update_nodal_fields"):
+            self.update_nodal_fields()
+        with self.timer("update_quad_nodal"):
+            self.update_quad_nodal()
+        with self.timer("update_quad_computed"):
+            self.update_quad_computed()
 
     def update_prev_quad(self) -> None:
         """Store current quad values for time derivatives."""
@@ -387,7 +401,7 @@ class FEMSolver2D:
             curr_key = f'{var}'
             prev_key = f'{var}_prev'
             if curr_key in self.quad_fields and prev_key in self.quad_fields:
-                self.quad_fields[prev_key].pg = np.copy(self.quad_fields[curr_key].pg)
+                self.quad_fields[prev_key].pg[:] = np.copy(self.quad_fields[curr_key].pg)
 
     # =========================================================================
     # Index Masks and Grid Topology
@@ -463,14 +477,14 @@ class FEMSolver2D:
         """Precomputed inner indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
         m = self.index_mask_inner_local
         sx, sy = self.sq_x_arr, self.sq_y_arr
-        return np.column_stack([m[sx, sy], m[sx+1, sy], m[sx, sy+1], m[sx+1, sy+1]])
+        return np.column_stack([m[sx, sy], m[sx + 1, sy], m[sx, sy + 1], m[sx + 1, sy + 1]])
 
     @lru_cache(maxsize=None)
     def sq_FROM_padded(self, var: str) -> NDArray:
         """Precomputed padded indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
         m = self.index_mask_padded_local(var)
         sx, sy = self.sq_x_arr, self.sq_y_arr
-        return np.column_stack([m[sx, sy], m[sx+1, sy], m[sx, sy+1], m[sx+1, sy+1]])
+        return np.column_stack([m[sx, sy], m[sx + 1, sy], m[sx, sy + 1], m[sx + 1, sy + 1]])
 
     def _get_stencil_connectivity(self) -> tuple:
         """
@@ -586,12 +600,12 @@ class FEMSolver2D:
                 n = nnz_per_block
 
                 # Global indices (interleaved)
-                mat_rows[idx:idx+n] = global_inner * nb_res + res_idx
-                mat_cols[idx:idx+n] = global_contrib * nb_vars + var_idx
+                mat_rows[idx:idx + n] = global_inner * nb_res + res_idx
+                mat_cols[idx:idx + n] = global_contrib * nb_vars + var_idx
 
                 # Local indices in M_local (block layout)
-                mat_local_idx[idx:idx+n, 0] = row_offset + inner_pts
-                mat_local_idx[idx:idx+n, 1] = col_offset + contrib_pts
+                mat_local_idx[idx:idx + n, 0] = row_offset + inner_pts
+                mat_local_idx[idx:idx + n, 1] = col_offset + contrib_pts
 
                 idx += n
 
@@ -681,7 +695,7 @@ class FEMSolver2D:
         return coo_idx
 
     def _build_term_indices_zero_der(self, term: NonLinearTerm, dep_var: str,
-                                      local_to_coo: NDArray) -> TermIndices:
+                                     local_to_coo: NDArray) -> TermIndices:
         """
         Build indices for zero-derivative term (3×3 contributions per triangle).
 
@@ -783,7 +797,7 @@ class FEMSolver2D:
         )
 
     def _build_term_indices_dx(self, term: NonLinearTerm, dep_var: str,
-                                local_to_coo: NDArray) -> TermIndices:
+                               local_to_coo: NDArray) -> TermIndices:
         """
         Build indices for x-derivative term (±1/dx stencil contributions).
 
@@ -946,7 +960,7 @@ class FEMSolver2D:
         )
 
     def _build_term_indices_dy(self, term: NonLinearTerm, dep_var: str,
-                                local_to_coo: NDArray) -> TermIndices:
+                               local_to_coo: NDArray) -> TermIndices:
         """
         Build indices for y-derivative term (±1/dy stencil contributions).
 
@@ -1131,7 +1145,7 @@ class FEMSolver2D:
         return coo_values
 
     def _accumulate_term_sparse(self, term: NonLinearTerm, dep_var: str,
-                                 coo_values: NDArray):
+                                coo_values: NDArray):
         """Dispatch to appropriate sparse assembly method based on term type."""
         if term.d_dx_resfun:
             self._accumulate_term_dx_sparse(term, dep_var, coo_values)
@@ -1141,7 +1155,7 @@ class FEMSolver2D:
             self._accumulate_term_zero_der_sparse(term, dep_var, coo_values)
 
     def _accumulate_term_zero_der_sparse(self, term: NonLinearTerm, dep_var: str,
-                                          coo_values: NDArray):
+                                         coo_values: NDArray):
         """
         Sparse assembly for zero-derivative term.
 
@@ -1166,7 +1180,7 @@ class FEMSolver2D:
         np.add.at(coo_values, idx.coo_idx, contrib)
 
     def _accumulate_term_dx_sparse(self, term: NonLinearTerm, dep_var: str,
-                                    coo_values: NDArray):
+                                   coo_values: NDArray):
         """
         Sparse assembly for x-derivative term.
 
@@ -1192,7 +1206,7 @@ class FEMSolver2D:
         np.add.at(coo_values, idx.coo_idx, contrib)
 
     def _accumulate_term_dy_sparse(self, term: NonLinearTerm, dep_var: str,
-                                    coo_values: NDArray):
+                                   coo_values: NDArray):
         """
         Sparse assembly for y-derivative term.
 
@@ -1358,6 +1372,22 @@ class FEMSolver2D:
         """Get tangent matrix (COO values for sparse assembly)."""
         return self.get_tang_matrix_sparse()
 
+    def get_M_dense(self) -> NDArray:
+        """
+        Get tangent matrix as dense numpy array.
+
+        For testing/debugging purposes. Converts COO values to dense matrix.
+        Returns matrix of shape (res_size, var_size) in variable-block ordering
+        (matching get_q_nodal/get_R ordering).
+        """
+        coo_values = self.get_tang_matrix_sparse()
+        rows = self.petsc_layout.mat_local_idx[:, 0]
+        cols = self.petsc_layout.mat_local_idx[:, 1]
+
+        M = np.zeros((self.res_size, self.var_size), dtype=np.float64)
+        np.add.at(M, (rows, cols), coo_values)
+        return M
+
     def get_R(self) -> NDArray:
         """Get residual vector."""
         return self.get_residual_vec()
@@ -1397,9 +1427,12 @@ class FEMSolver2D:
     def solver_step_fun(self, q_guess: NDArray) -> Tuple[NDArray, NDArray]:
         """Newton solver step: set guess, update fields, return (M, R)."""
         self.set_q_nodal(q_guess)
-        self.update_quad()
-        M = self.get_M()
-        R = self.get_R()
+        with self.timer("update_quad"):
+            self.update_quad()
+        with self.timer("jacobian"):
+            M = self.get_M()
+        with self.timer("residual"):
+            R = self.get_R()
         return M, R
 
     def update_output_fields(self) -> None:
@@ -1466,39 +1499,46 @@ class FEMSolver2D:
         """Do a single dynamic time step update using PETSc."""
         p = self.problem
         fem_solver = p.fem_solver
-        self.update_prev_quad()
 
-        tic = time.time()
+        with self.timer("timestep"):
+            with self.timer("update_prev_quad"):
+                self.update_prev_quad()
 
-        q = self.get_q_nodal().copy()
-        max_iter = fem_solver.get('max_iter', 100)
-        tol = fem_solver.get('R_norm_tol', 1e-6)
-        alpha = fem_solver.get('alpha', 1.0)
+            tic = time.time()
 
-        for it in range(max_iter):
-            M, R = self.solver_step_fun(q)
-            R_norm = np.linalg.norm(R)
+            q = self.get_q_nodal().copy()
+            max_iter = fem_solver.get('max_iter', 100)
+            tol = fem_solver.get('R_norm_tol', 1e-6)
+            alpha = fem_solver.get('alpha', 1.0)
 
-            if R_norm < tol:
-                break
+            for it in range(max_iter):
+                with self.timer("newton_iteration"):
+                    M, R = self.solver_step_fun(q)
+                    R_norm = np.linalg.norm(R)
 
-            # Assemble and solve with PETSc
-            self.petsc.assemble(M, R)
-            dq = self.petsc.solve()
+                    if R_norm < tol:
+                        break
 
-            q = q + alpha * dq
+                    # Assemble and solve with PETSc
+                    with self.timer("petsc_assemble"):
+                        self.petsc.assemble(M, R)
+                    with self.timer("petsc_solve"):
+                        dq = self.petsc.solve()
 
-            # Update solver state
-            self.set_q_nodal(q)
-            p.decomp.communicate_ghost_buffers(p)
-            self.update_quad()
+                    q = q + alpha * dq
 
-        toc = time.time()
-        self.time_inner = toc - tic
-        self.inner_iterations = it + 1  # Store number of iterations
+                    # Update solver state
+                    self.set_q_nodal(q)
+                    p.decomp.communicate_ghost_buffers(p)
+                    with self.timer("update_quad_post"):
+                        self.update_quad()
 
-        # Update output fields for plotting
-        self.update_output_fields()
+            toc = time.time()
+            self.time_inner = toc - tic
+            self.inner_iterations = it + 1  # Store number of iterations
+
+            with self.timer("update_output_fields"):
+                self.update_output_fields()
 
         p._post_update()
 
@@ -1522,26 +1562,48 @@ class FEMSolver2D:
         """Print status line for dynamic simulation."""
         p = self.problem
         if not p.options['silent'] and self.dynamic and p.decomp.rank == 0:
-            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
+            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
+                  f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
+
+    def print_timer_summary(self, save_json: str = "") -> None:
+        """Print timer summary and optionally save to JSON.
+
+        Parameters
+        ----------
+        save_json : str, optional
+            Path to save JSON output. If empty, no file is written.
+        """
+        if self.problem.decomp.rank == 0:
+            self.timer.print_summary()
+            if save_json:
+                with open(save_json, 'w') as f:
+                    f.write(self.timer.to_json())
 
     def pre_run(self, **kwargs) -> None:
         """Initialize solver before running."""
-        self._init_convenience_accessors()
-        self._init_quad_operator()
-        self._init_quad_fields()
-        self._get_active_terms()
-        self._build_jit_functions()
-        self._build_terms()
-        self._init_petsc()
+        with self.timer("preparation"):
+            self._init_convenience_accessors()
+            with self.timer("init_quad_operator"):
+                self._init_quad_operator()
+            with self.timer("init_quad_fields"):
+                self._init_quad_fields()
+            self._get_active_terms()
+            with self.timer("build_jit_functions"):
+                self._build_jit_functions()
+            with self.timer("build_terms"):
+                self._build_terms()
+            with self.timer("init_petsc"):
+                self._init_petsc()
 
-        # Initial quad update
-        self.update_quad()
+            # Initial quad update
+            with self.timer("initial_update_quad"):
+                self.update_quad()
 
-        if self.dynamic:
-            self.update_prev_quad()
+            if self.dynamic:
+                self.update_prev_quad()
 
-        # Update output fields for initial frame
-        self.update_output_fields()
+            # Update output fields for initial frame
+            self.update_output_fields()
 
         self.time_inner = 0.0
         self.inner_iterations = 0

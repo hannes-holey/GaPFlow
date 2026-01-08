@@ -146,13 +146,13 @@ class Problem:
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = self.fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
-            extra.pg = extra_field
+            extra.pg[:] = extra_field
 
         # Forward declaration of cross-dependent fields
-        self.fc.register_real_field('x')
-        self.fc.register_real_field('y')
-        self.fc.register_real_field('pressure')
-        self.fc.register_real_field('topography', (4,))
+        self.fc.real_field('x')
+        self.fc.real_field('y')
+        self.fc.real_field('pressure')
+        self.fc.real_field('topography', components=(4,))
 
         # Initialize stress and topography models
         gpx, gpy, gpz = self._select_gp_config(gp)
@@ -343,7 +343,7 @@ class Problem:
 
     @q.setter
     def q(self, sol_field: npt.NDArray[np.floating]) -> None:
-        self.__field.pg = sol_field
+        self.__field.pg[:] = sol_field
 
     @property
     def q_has_nan(self) -> bool:

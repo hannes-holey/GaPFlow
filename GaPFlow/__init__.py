@@ -22,10 +22,12 @@
 # SOFTWARE.
 #
 import os
-os.environ['JAX_PLATFORMS'] = 'cpu'  # Suppress CUDA warning, use CPU only
 
 from DiscoverVersion import get_version
-from jax import config
+
+os.environ['JAX_PLATFORMS'] = 'cpu'  # Suppress CUDA warning, use CPU only
+
+from jax import config  # noqa: E402
 
 config.update("jax_enable_x64", True)
 

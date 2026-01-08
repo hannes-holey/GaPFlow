@@ -314,7 +314,7 @@ class FEMSolver1D:
             for name, nodal_vals in nodal_sources.items():
                 if (name, nb_quad) in self.quad_fields:
                     quad_vals = self.quad_fun(nodal_vals, nb_quad)
-                    self.quad_fields[(name, nb_quad)].p = quad_vals.reshape(-1, nb_quad).T
+                    self.quad_fields[(name, nb_quad)].p[:] = quad_vals.reshape(-1, nb_quad).T
 
             # Broadcast constants
             for name, value in constants.items():
@@ -332,7 +332,7 @@ class FEMSolver1D:
 
             # Pressure gradient: dp_drho(rho)
             if ('dp_drho', nb_quad) in self.quad_fields:
-                self.quad_fields[('dp_drho', nb_quad)].p = p.pressure.dp_drho(q('rho'))
+                self.quad_fields[('dp_drho', nb_quad)].p[:] = p.pressure.dp_drho(q('rho'))
 
             # Wall stress xz
             # Args: rho, jx, jy, h, hx, U, V, Ls
@@ -340,17 +340,17 @@ class FEMSolver1D:
                        q('U'), q('V'), q('Ls'))
 
             if ('tau_xz', nb_quad) in self.quad_fields:
-                self.quad_fields[('tau_xz', nb_quad)].p = p.wall_stress_xz.tau_xz(*args_xz)
+                self.quad_fields[('tau_xz', nb_quad)].p[:] = p.wall_stress_xz.tau_xz(*args_xz)
             if ('dtau_xz_drho', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_xz_drho', nb_quad)].p = p.wall_stress_xz.dtau_xz_drho(*args_xz)
+                self.quad_fields[('dtau_xz_drho', nb_quad)].p[:] = p.wall_stress_xz.dtau_xz_drho(*args_xz)
             if ('dtau_xz_djx', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_xz_djx', nb_quad)].p = p.wall_stress_xz.dtau_xz_djx(*args_xz)
+                self.quad_fields[('dtau_xz_djx', nb_quad)].p[:] = p.wall_stress_xz.dtau_xz_djx(*args_xz)
             if ('tau_xz_bot', nb_quad) in self.quad_fields:
-                self.quad_fields[('tau_xz_bot', nb_quad)].p = p.wall_stress_xz.tau_xz_bot(*args_xz)
+                self.quad_fields[('tau_xz_bot', nb_quad)].p[:] = p.wall_stress_xz.tau_xz_bot(*args_xz)
             if ('dtau_xz_bot_drho', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_xz_bot_drho', nb_quad)].p = p.wall_stress_xz.dtau_xz_bot_drho(*args_xz)
+                self.quad_fields[('dtau_xz_bot_drho', nb_quad)].p[:] = p.wall_stress_xz.dtau_xz_bot_drho(*args_xz)
             if ('dtau_xz_bot_djx', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_xz_bot_djx', nb_quad)].p = p.wall_stress_xz.dtau_xz_bot_djx(*args_xz)
+                self.quad_fields[('dtau_xz_bot_djx', nb_quad)].p[:] = p.wall_stress_xz.dtau_xz_bot_djx(*args_xz)
 
             # Wall stress yz (uses dh_dy instead of dh_dx, and U is constant instead of V)
             # Args: rho, jx, jy, h, hy, U, V, Ls
@@ -358,17 +358,17 @@ class FEMSolver1D:
                        q('U'), q('V'), q('Ls'))
 
             if ('tau_yz', nb_quad) in self.quad_fields:
-                self.quad_fields[('tau_yz', nb_quad)].p = p.wall_stress_yz.tau_yz(*args_yz)
+                self.quad_fields[('tau_yz', nb_quad)].p[:] = p.wall_stress_yz.tau_yz(*args_yz)
             if ('dtau_yz_drho', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_yz_drho', nb_quad)].p = p.wall_stress_yz.dtau_yz_drho(*args_yz)
+                self.quad_fields[('dtau_yz_drho', nb_quad)].p[:] = p.wall_stress_yz.dtau_yz_drho(*args_yz)
             if ('dtau_yz_djy', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_yz_djy', nb_quad)].p = p.wall_stress_yz.dtau_yz_djy(*args_yz)
+                self.quad_fields[('dtau_yz_djy', nb_quad)].p[:] = p.wall_stress_yz.dtau_yz_djy(*args_yz)
             if ('tau_yz_bot', nb_quad) in self.quad_fields:
-                self.quad_fields[('tau_yz_bot', nb_quad)].p = p.wall_stress_yz.tau_yz_bot(*args_yz)
+                self.quad_fields[('tau_yz_bot', nb_quad)].p[:] = p.wall_stress_yz.tau_yz_bot(*args_yz)
             if ('dtau_yz_bot_drho', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_yz_bot_drho', nb_quad)].p = p.wall_stress_yz.dtau_yz_bot_drho(*args_yz)
+                self.quad_fields[('dtau_yz_bot_drho', nb_quad)].p[:] = p.wall_stress_yz.dtau_yz_bot_drho(*args_yz)
             if ('dtau_yz_bot_djy', nb_quad) in self.quad_fields:
-                self.quad_fields[('dtau_yz_bot_djy', nb_quad)].p = p.wall_stress_yz.dtau_yz_bot_djy(*args_yz)
+                self.quad_fields[('dtau_yz_bot_djy', nb_quad)].p[:] = p.wall_stress_yz.dtau_yz_bot_djy(*args_yz)
 
             # Energy fields
             if self.energy:
@@ -376,15 +376,15 @@ class FEMSolver1D:
                 args_T = (q('rho'), q('jx'), q('jy'), q('E'))
 
                 if ('T', nb_quad) in self.quad_fields:
-                    self.quad_fields[('T', nb_quad)].p = p.energy.T_func(*args_T)
+                    self.quad_fields[('T', nb_quad)].p[:] = p.energy.T_func(*args_T)
                 if ('dT_drho', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dT_drho', nb_quad)].p = p.energy.T_grad_rho(*args_T)
+                    self.quad_fields[('dT_drho', nb_quad)].p[:] = p.energy.T_grad_rho(*args_T)
                 if ('dT_djx', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dT_djx', nb_quad)].p = p.energy.T_grad_jx(*args_T)
+                    self.quad_fields[('dT_djx', nb_quad)].p[:] = p.energy.T_grad_jx(*args_T)
                 if ('dT_djy', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dT_djy', nb_quad)].p = p.energy.T_grad_jy(*args_T)
+                    self.quad_fields[('dT_djy', nb_quad)].p[:] = p.energy.T_grad_jy(*args_T)
                 if ('dT_dE', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dT_dE', nb_quad)].p = p.energy.T_grad_E(*args_T)
+                    self.quad_fields[('dT_dE', nb_quad)].p[:] = p.energy.T_grad_E(*args_T)
 
                 # Wall heat flux: q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
                 args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
@@ -392,15 +392,15 @@ class FEMSolver1D:
                           q('U'), q('V'), q('Tb_top'), q('Tb_bot'), None)
 
                 if ('S', nb_quad) in self.quad_fields:
-                    self.quad_fields[('S', nb_quad)].p = p.energy.q_wall_sum(*args_S)
+                    self.quad_fields[('S', nb_quad)].p[:] = p.energy.q_wall_sum(*args_S)
                 if ('dS_drho', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dS_drho', nb_quad)].p = p.energy.q_wall_grad_rho(*args_S)
+                    self.quad_fields[('dS_drho', nb_quad)].p[:] = p.energy.q_wall_grad_rho(*args_S)
                 if ('dS_djx', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dS_djx', nb_quad)].p = p.energy.q_wall_grad_jx(*args_S)
+                    self.quad_fields[('dS_djx', nb_quad)].p[:] = p.energy.q_wall_grad_jx(*args_S)
                 if ('dS_djy', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dS_djy', nb_quad)].p = p.energy.q_wall_grad_jy(*args_S)
+                    self.quad_fields[('dS_djy', nb_quad)].p[:] = p.energy.q_wall_grad_jy(*args_S)
                 if ('dS_dE', nb_quad) in self.quad_fields:
-                    self.quad_fields[('dS_dE', nb_quad)].p = p.energy.q_wall_grad_E(*args_S)
+                    self.quad_fields[('dS_dE', nb_quad)].p[:] = p.energy.q_wall_grad_E(*args_S)
 
     def update_quad(self) -> None:
         """Full quadrature update (Steps 1-3)."""
@@ -415,7 +415,7 @@ class FEMSolver1D:
                 curr_key = (var, nb_quad)
                 prev_key = (f'{var}_prev', nb_quad)
                 if curr_key in self.quad_fields and prev_key in self.quad_fields:
-                    self.quad_fields[prev_key].p = np.copy(self.quad_fields[curr_key].p)
+                    self.quad_fields[prev_key].p[:] = np.copy(self.quad_fields[curr_key].p)
 
     # =========================================================================
     # Solution Vector Management

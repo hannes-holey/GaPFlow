@@ -23,13 +23,15 @@
 # SOFTWARE.
 #
 
+# flake8: noqa: W503
+
 from mpi4py import MPI
 import numpy as np
 import numpy.typing as npt
 
 from functools import cached_property
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .problem import Problem
 
@@ -37,6 +39,7 @@ from muGrid import (
     CartesianDecomposition,
     GlobalFieldCollection,
     Communicator,
+    FFTEngine,  # [FFTDomainTranslation] Added for elastic FFT redistribution
 )
 
 NDArray = npt.NDArray[np.floating]
@@ -222,7 +225,7 @@ class DomainDecomposition:
     def has_full_x(self) -> bool:
         """True if the full x-boundary is owned by this rank."""
         return self.is_at_xW and self.is_at_xE
-    
+
     @property
     def has_full_y(self) -> bool:
         """True if the full y-boundary is owned by this rank."""
@@ -276,7 +279,7 @@ class DomainDecomposition:
         if self.rank == 0:
             global_field = np.zeros(self.nb_domain_grid_pts, dtype=local_field.dtype)
             for field, loc, sz in zip(all_fields, all_locs, all_sizes):
-                global_field[loc[0]:loc[0]+sz[0], loc[1]:loc[1]+sz[1]] = field
+                global_field[loc[0]:loc[0] + sz[0], loc[1]:loc[1] + sz[1]] = field
             return global_field
         return None
 
@@ -317,8 +320,8 @@ class DomainDecomposition:
         field = problem.q  # returns the .pg array
 
         # Check if FEM 2D solver is active (nodal discretization)
-        is_fem_2d = (problem.numerics.get('solver') == 'fem' and
-                     grid.get('dim', 1) == 2)
+        is_fem_2d = (problem.numerics.get('solver') == 'fem'
+                     and grid.get('dim', 1) == 2)
 
         # West boundary (x=0, ghost at index 0)
         if self.is_at_xW:
@@ -390,7 +393,7 @@ class DomainDecomposition:
                 energy.energy[-1, :] = rho[-1, :] * (energy.cv * energy.T_bc_xE + kinetic)
             elif energy.bc_xE == 'N':
                 energy.energy[-1, :] = energy.energy[-2, :].copy()
-        
+
         # South boundary (ghost cell at index 0)
         if self.is_at_yS:
             if energy.bc_yS == 'D':
@@ -400,7 +403,7 @@ class DomainDecomposition:
                 energy.energy[:, 0] = rho[:, 0] * (energy.cv * energy.T_bc_yS + kinetic)
             elif energy.bc_yS == 'N':
                 energy.energy[:, 0] = energy.energy[:, 1].copy()
-        
+
         # North boundary (ghost cell at index -1)
         if self.is_at_yN:
             if energy.bc_yN == 'D':
@@ -492,3 +495,203 @@ class DomainDecomposition:
                 Q = ((1.0 - a1) * q1 + a2 * q2) / (a1 - a2)
 
         return Q
+
+
+class FFTDomainTranslation:
+    """
+    Manages data transfer between GaPFlow's DomainDecomposition and
+    the FFT domain used for elastic deformation computation.
+
+    Handles:
+    - FFTEngine instantiation with correct grid size for boundary conditions
+    - MPI redistribution between different domain decompositions
+    - Zero-padding for non-periodic boundaries
+
+    Parameters
+    ----------
+    decomp : DomainDecomposition
+        GaPFlow's domain decomposition instance.
+        Provides: grid, periodic_x, periodic_y, nb_domain_grid_pts,
+                  subdomain_locations, nb_subdomain_grid_pts, communicator
+    """
+
+    def __init__(self, decomp: DomainDecomposition):
+        self.decomp = decomp
+        self.periodic_x = decomp.periodic_x
+        self.periodic_y = decomp.periodic_y
+        self.Nx, self.Ny = decomp.nb_domain_grid_pts
+
+        # Compute FFT grid size based on periodicity
+        self._compute_fft_grid_size()
+
+        # Create FFTEngine with computed size
+        self.fft_engine = FFTEngine(
+            [self.Nx_fft, self.Ny_fft],
+            decomp._comm  # muGrid Communicator
+        )
+
+        # Build exchange plan for MPI redistribution
+        self._build_exchange_plan()
+
+    def _compute_fft_grid_size(self):
+        """Compute FFT grid size based on boundary conditions.
+
+        Periodic: N
+        Semi-periodic (one direction free): 2*N - 1 in free direction
+        Non-periodic (both directions free): 2*N in both directions
+        """
+        self._needs_redistribution = True
+
+        if self.periodic_x and self.periodic_y:
+            # Fully periodic
+            self.Nx_fft = self.Nx
+            self.Ny_fft = self.Ny
+            self._needs_redistribution = False
+        elif self.periodic_x and not self.periodic_y:
+            # Semi-periodic: x periodic, y free
+            self.Nx_fft = self.Nx
+            self.Ny_fft = 2 * self.Ny - 1
+        elif self.periodic_y and not self.periodic_x:
+            # Semi-periodic: x free, y periodic
+            self.Nx_fft = 2 * self.Nx - 1
+            self.Ny_fft = self.Ny
+        else:
+            # Fully non-periodic
+            self.Nx_fft = 2 * self.Nx
+            self.Ny_fft = 2 * self.Ny
+
+    def _build_exchange_plan(self):
+        """Precompute send/recv maps for MPI redistribution."""
+        comm = self.decomp._mpi_comm
+
+        # GaPFlow Y-range for this rank
+        src_y_start = self.decomp.subdomain_locations[1]
+        src_y_size = self.decomp.nb_subdomain_grid_pts[1]
+        src_y_end = src_y_start + src_y_size
+
+        # FFT engine Y-range for this rank
+        dst_y_start = self.fft_engine.subdomain_locations[1]
+        dst_y_size = self.fft_engine.nb_subdomain_grid_pts[1]
+        dst_y_end = dst_y_start + dst_y_size
+
+        # Gather all ranks' Y-ranges
+        src_ranges = comm.allgather((src_y_start, src_y_end))
+        dst_ranges = comm.allgather((dst_y_start, dst_y_end))
+
+        # Compute intersections
+        self.send_map = {}
+        self.recv_map = {}
+
+        for other_rank in range(comm.size):
+            # What I send: intersection of my src with their dst
+            other_dst_start, other_dst_end = dst_ranges[other_rank]
+            send_start = max(src_y_start, other_dst_start)
+            send_end = min(src_y_end, other_dst_end)
+
+            if send_start < send_end:
+                self.send_map[other_rank] = {
+                    'local_slice': slice(send_start - src_y_start,
+                                         send_end - src_y_start),
+                    'size': (self.Nx, send_end - send_start)
+                }
+
+            # What I receive: intersection of their src with my dst
+            other_src_start, other_src_end = src_ranges[other_rank]
+            recv_start = max(dst_y_start, other_src_start)
+            recv_end = min(dst_y_end, other_src_end)
+
+            if recv_start < recv_end:
+                self.recv_map[other_rank] = {
+                    'local_slice': slice(recv_start - dst_y_start,
+                                         recv_end - dst_y_start),
+                    'size': (self.Nx, recv_end - recv_start)
+                }
+
+    def embed(self, src: np.ndarray, dst: np.ndarray):
+        """
+        Transfer data from GaPFlow domain to FFT domain.
+
+        Parameters
+        ----------
+        src : np.ndarray
+            Source array from GaPFlow (local subdomain, shape Nx × Ny_local)
+        dst : np.ndarray
+            Destination array on FFT engine (will be zeroed first for padding)
+        """
+        if not self._needs_redistribution:
+            # Periodic: direct copy
+            dst[:] = src
+            return
+
+        comm = self.decomp._mpi_comm
+
+        # Zero destination (handles padding)
+        dst[:] = 0.0
+
+        # Non-blocking sends
+        send_reqs = []
+        for dest_rank, info in self.send_map.items():
+            data = np.ascontiguousarray(src[:, info['local_slice']])
+            req = comm.Isend(data, dest=dest_rank, tag=100)
+            send_reqs.append(req)
+
+        # Non-blocking receives
+        recv_reqs = []
+        recv_buffers = []
+        for src_rank, info in self.recv_map.items():
+            buf = np.empty(info['size'], dtype=src.dtype)
+            req = comm.Irecv(buf, source=src_rank, tag=100)
+            recv_reqs.append(req)
+            recv_buffers.append((buf, info['local_slice']))
+
+        # Wait and copy (only to first Nx rows, rest is zero padding)
+        MPI.Request.Waitall(recv_reqs)
+        for buf, local_slice in recv_buffers:
+            dst[:self.Nx, local_slice] = buf
+
+        MPI.Request.Waitall(send_reqs)
+
+    def extract(self, src: np.ndarray, dst: np.ndarray):
+        """
+        Transfer data from FFT domain back to GaPFlow domain.
+
+        Parameters
+        ----------
+        src : np.ndarray
+            Source array on FFT engine
+        dst : np.ndarray
+            Destination array on GaPFlow (local subdomain)
+        """
+        if not self._needs_redistribution:
+            # Periodic: direct copy
+            dst[:] = src
+            return
+
+        comm = self.decomp._mpi_comm
+
+        # Reverse of embed: send_map and recv_map roles swap
+        # We send from FFT positions (our recv_map locations) to GaPFlow positions
+
+        # Non-blocking sends (using recv_map since we're going in reverse)
+        # Only read from first Nx rows (discard padding)
+        send_reqs = []
+        for dest_rank, info in self.recv_map.items():
+            data = np.ascontiguousarray(src[:self.Nx, info['local_slice']])
+            req = comm.Isend(data, dest=dest_rank, tag=200)
+            send_reqs.append(req)
+
+        # Non-blocking receives (using send_map since we're going in reverse)
+        recv_reqs = []
+        recv_buffers = []
+        for src_rank, info in self.send_map.items():
+            buf = np.empty(info['size'], dtype=src.dtype)
+            req = comm.Irecv(buf, source=src_rank, tag=200)
+            recv_reqs.append(req)
+            recv_buffers.append((buf, info['local_slice']))
+
+        # Wait and copy
+        MPI.Request.Waitall(recv_reqs)
+        for buf, local_slice in recv_buffers:
+            dst[:, local_slice] = buf
+
+        MPI.Request.Waitall(send_reqs)

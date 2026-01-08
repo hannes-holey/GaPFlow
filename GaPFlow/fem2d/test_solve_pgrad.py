@@ -8,20 +8,20 @@ Run serial:
 Run with MPI:
     mpirun -n 2 python test_solve.py
 """
+import os
 import resource
+import sys
+
 # Limit memory to 12GB to prevent OOM crashes in WSL
 _MEM_LIMIT_GB = 12
 resource.setrlimit(resource.RLIMIT_AS, (_MEM_LIMIT_GB * 1024**3, _MEM_LIMIT_GB * 1024**3))
 
-from mpi4py import MPI
-import numpy as np
-import sys
-import os
-
 hans_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, hans_dir)
 
-from GaPFlow.problem import Problem
+import numpy as np  # noqa: E402
+from mpi4py import MPI  # noqa: E402
+from GaPFlow.problem import Problem  # noqa: E402
 
 
 CONFIG = """
@@ -69,7 +69,8 @@ fem_solver:
     R_norm_tol: 1e-08
     pressure_stab_alpha: 100.0
     equations:
-        term_list: ['R11x', 'R11y', 'R1T', 'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty', 'R1Sx', 'R1Sy', 'R1Stabx', 'R1Staby']
+        term_list: ['R11x', 'R11y', 'R1T', 'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty',
+                    'R1Sx', 'R1Sy', 'R1Stabx', 'R1Staby']
 """
 
 
@@ -96,8 +97,8 @@ def gather_global_solution(problem):
 
     # Local arrays (Ny_local, Nx) - note: reshape is (Ny, Nx) for row-major
     rho_local = q[0:nb].reshape((solver.Ny_inner, solver.Nx_inner))
-    jx_local = q[nb:2*nb].reshape((solver.Ny_inner, solver.Nx_inner))
-    jy_local = q[2*nb:3*nb].reshape((solver.Ny_inner, solver.Nx_inner))
+    jx_local = q[nb:2 * nb].reshape((solver.Ny_inner, solver.Nx_inner))
+    jy_local = q[2 * nb:3 * nb].reshape((solver.Ny_inner, solver.Nx_inner))
 
     # Global dimensions
     Nx_global, Ny_global = decomp.nb_domain_grid_pts
@@ -211,8 +212,8 @@ def plot_solution(solver, rho, jx, jy, problem, jx_expected, Nx_global=None, Ny_
     dx, dy = solver.dx, solver.dy
 
     # Grid coordinates (cell centers)
-    x = np.linspace(dx/2, Nx * dx - dx/2, Nx)
-    y = np.linspace(dy/2, Ny * dy - dy/2, Ny)
+    x = np.linspace(dx / 2, Nx * dx - dx / 2, Nx)
+    y = np.linspace(dy / 2, Ny * dy - dy / 2, Ny)
     X, Y = np.meshgrid(x, y)
 
     # Compute pressure from density (EOS: PL means p = P0 * rho)
@@ -272,9 +273,9 @@ def plot_solution(solver, rho, jx, jy, problem, jx_expected, Nx_global=None, Ny_
     color_j = 'tab:blue'
     ax4_twin.set_ylabel(r'$j_x \times 10^3$ [kg/(m²·s)]', color=color_j)
     ax4_twin.axhline(y=jx_expected * 1000, color='green', linestyle=':', linewidth=2,
-                     label=f'Expected jx = {jx_expected*1000:.3f}')
+                     label=f'Expected jx = {jx_expected * 1000:.3f}')
     ax4_twin.plot(x_line, jx[mid_y, :] * 1000, color=color_j, linewidth=2,
-                  label=f'Computed jx (mean = {jx.mean()*1000:.3f})')
+                  label=f'Computed jx (mean = {jx.mean() * 1000:.3f})')
     ax4_twin.tick_params(axis='y', labelcolor=color_j)
 
     ax4.set_title('Centerline profiles')
