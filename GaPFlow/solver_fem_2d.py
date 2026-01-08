@@ -653,11 +653,11 @@ class FEMSolver2D:
             for dep_var in term.dep_vars:
                 key = (term.name, term.res, dep_var)
                 if term.d_dx_resfun:
-                    layout[key] = self._build_term_indices_dx(
-                        term, dep_var, local_to_coo)
+                    layout[key] = self._build_term_indices_deriv(
+                        term, dep_var, local_to_coo, 'x')
                 elif term.d_dy_resfun:
-                    layout[key] = self._build_term_indices_dy(
-                        term, dep_var, local_to_coo)
+                    layout[key] = self._build_term_indices_deriv(
+                        term, dep_var, local_to_coo, 'y')
                 else:
                     layout[key] = self._build_term_indices_zero_der(
                         term, dep_var, local_to_coo)
@@ -796,13 +796,19 @@ class FEMSolver2D:
             sq_y=np.concatenate(sq_y_list),
         )
 
-    def _build_term_indices_dx(self, term: NonLinearTerm, dep_var: str,
-                               local_to_coo: NDArray) -> TermIndices:
+    def _build_term_indices_deriv(self, term: NonLinearTerm, dep_var: str,
+                                    local_to_coo: NDArray, direction: str) -> TermIndices:
         """
-        Build indices for x-derivative term (±1/dx stencil contributions).
+        Build indices for derivative term (±1/d* stencil contributions).
 
         Each triangle contributes 3×2 = 6 entries (3 test nodes × 2 stencil pts).
-        Left triangle: stencil (bl-, br+), Right triangle: stencil (tl-, tr+).
+
+        Parameters
+        ----------
+        direction : str
+            'x' or 'y' - determines finite difference stencil direction:
+            - 'x': Left uses (bl-, br+), Right uses (tl-, tr+)
+            - 'y': Left uses (bl-, tl+), Right uses (br-, tr+)
         """
         res_idx = self.residuals.index(term.res)
         var_idx = self.variables.index(dep_var)
@@ -812,15 +818,23 @@ class FEMSolver2D:
 
         # Left triangle test nodes [bl, tl, br] = corners [0, 2, 1]
         TO_left = TO[:, [0, 2, 1]]
-        # Left triangle x-stencil: bl (neg), br (pos)
-        FROM_neg_left = FROM[:, 0]  # bl
-        FROM_pos_left = FROM[:, 1]  # br
-
         # Right triangle test nodes [tr, br, tl] = corners [3, 1, 2]
         TO_right = TO[:, [3, 1, 2]]
-        # Right triangle x-stencil: tl (neg), tr (pos)
-        FROM_neg_right = FROM[:, 2]  # tl
-        FROM_pos_right = FROM[:, 3]  # tr
+
+        # Direction-dependent stencil indices and test function weights
+        # Corner indices: bl=0, br=1, tl=2, tr=3
+        if direction == 'x':
+            # x-derivative: horizontal neighbors
+            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 1]    # bl-, br+
+            FROM_neg_right, FROM_pos_right = FROM[:, 2], FROM[:, 3]  # tl-, tr+
+            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
+        else:  # 'y'
+            # y-derivative: vertical neighbors
+            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 2]    # bl-, tl+
+            FROM_neg_right, FROM_pos_right = FROM[:, 1], FROM[:, 3]  # br-, tr+
+            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
 
         coo_idx_list = []
         elem_weights_list = []
@@ -832,276 +846,42 @@ class FEMSolver2D:
         sq_x = self.sq_x_arr
         sq_y = self.sq_y_arr
 
-        # Use appropriate test function weights based on der_testfun
-        if term.der_testfun:
-            test_wA_left = self.test_wA_left_dx
-            test_wA_right = self.test_wA_right_dx
-        else:
-            test_wA_left = self.test_wA_left
-            test_wA_right = self.test_wA_right
+        # Process both triangles with their respective stencils
+        triangle_configs = [
+            # (TO_nodes, FROM_neg, FROM_pos, test_wA, quad_offset)
+            (TO_left, FROM_neg_left, FROM_pos_left, test_wA_left, 0),
+            (TO_right, FROM_neg_right, FROM_pos_right, test_wA_right, 3),
+        ]
 
-        # Left triangle
-        for i in range(3):
-            # Negative contribution (FROM bl)
-            valid_neg = (TO_left[:, i] >= 0) & (FROM_neg_left >= 0)
-            sq_neg = np.where(valid_neg)[0]
+        for TO_tri, FROM_neg, FROM_pos, test_wA, quad_offset in triangle_configs:
+            for i in range(3):  # test function nodes
+                for FROM_pts, sign in [(FROM_neg, -1.0), (FROM_pos, 1.0)]:
+                    valid = (TO_tri[:, i] >= 0) & (FROM_pts >= 0)
+                    sq_valid = np.where(valid)[0]
 
-            if len(sq_neg) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_left[sq_neg, i]
-                col_block = var_idx * self.nb_contributors + FROM_neg_left[sq_neg]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
+                    if len(sq_valid) == 0:
+                        continue
 
-                if np.any(valid_coo):
-                    sq_final = sq_neg[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_left[i, q]
+                    row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
+                    col_block = var_idx * self.nb_contributors + FROM_pts[sq_valid]
+                    coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
+                    valid_coo = coo_idx >= 0
+
+                    if not np.any(valid_coo):
+                        continue
+
+                    sq_final = sq_valid[valid_coo]
+                    for q in range(3):  # quadrature points
+                        weight = test_wA[i, q]
                         coo_idx_list.append(coo_idx[valid_coo])
                         elem_weights_list.append(
                             np.full(len(sq_final), weight, dtype=np.float64))
                         quad_idx_list.append(
-                            np.full(len(sq_final), q, dtype=np.int32))
+                            np.full(len(sq_final), q + quad_offset, dtype=np.int32))
                         sq_x_list.append(sq_x[sq_final])
                         sq_y_list.append(sq_y[sq_final])
                         signs_list.append(
-                            np.full(len(sq_final), -1.0, dtype=np.float64))
-
-            # Positive contribution (FROM br)
-            valid_pos = (TO_left[:, i] >= 0) & (FROM_pos_left >= 0)
-            sq_pos = np.where(valid_pos)[0]
-
-            if len(sq_pos) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_left[sq_pos, i]
-                col_block = var_idx * self.nb_contributors + FROM_pos_left[sq_pos]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_pos[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_left[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), 1.0, dtype=np.float64))
-
-        # Right triangle
-        for i in range(3):
-            # Negative contribution (FROM tl)
-            valid_neg = (TO_right[:, i] >= 0) & (FROM_neg_right >= 0)
-            sq_neg = np.where(valid_neg)[0]
-
-            if len(sq_neg) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_right[sq_neg, i]
-                col_block = var_idx * self.nb_contributors + FROM_neg_right[sq_neg]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_neg[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_right[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q + 3, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), -1.0, dtype=np.float64))
-
-            # Positive contribution (FROM tr)
-            valid_pos = (TO_right[:, i] >= 0) & (FROM_pos_right >= 0)
-            sq_pos = np.where(valid_pos)[0]
-
-            if len(sq_pos) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_right[sq_pos, i]
-                col_block = var_idx * self.nb_contributors + FROM_pos_right[sq_pos]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_pos[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_right[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q + 3, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), 1.0, dtype=np.float64))
-
-        if not coo_idx_list:
-            return TermIndices(
-                coo_idx=np.array([], dtype=np.int32),
-                elem_weights=np.array([], dtype=np.float64),
-                quad_idx=np.array([], dtype=np.int32),
-                sq_x=np.array([], dtype=np.int32),
-                sq_y=np.array([], dtype=np.int32),
-                signs=np.array([], dtype=np.float64),
-            )
-
-        return TermIndices(
-            coo_idx=np.concatenate(coo_idx_list),
-            elem_weights=np.concatenate(elem_weights_list),
-            quad_idx=np.concatenate(quad_idx_list),
-            sq_x=np.concatenate(sq_x_list),
-            sq_y=np.concatenate(sq_y_list),
-            signs=np.concatenate(signs_list),
-        )
-
-    def _build_term_indices_dy(self, term: NonLinearTerm, dep_var: str,
-                               local_to_coo: NDArray) -> TermIndices:
-        """
-        Build indices for y-derivative term (±1/dy stencil contributions).
-
-        Each triangle contributes 3×2 = 6 entries (3 test nodes × 2 stencil pts).
-        Left triangle: stencil (bl-, tl+), Right triangle: stencil (br-, tr+).
-        """
-        res_idx = self.residuals.index(term.res)
-        var_idx = self.variables.index(dep_var)
-
-        TO = self.sq_TO_inner
-        FROM = self.sq_FROM_padded(dep_var)
-
-        # Left triangle test nodes [bl, tl, br] = corners [0, 2, 1]
-        TO_left = TO[:, [0, 2, 1]]
-        # Left triangle y-stencil: bl (neg), tl (pos)
-        FROM_neg_left = FROM[:, 0]  # bl
-        FROM_pos_left = FROM[:, 2]  # tl
-
-        # Right triangle test nodes [tr, br, tl] = corners [3, 1, 2]
-        TO_right = TO[:, [3, 1, 2]]
-        # Right triangle y-stencil: br (neg), tr (pos)
-        FROM_neg_right = FROM[:, 1]  # br
-        FROM_pos_right = FROM[:, 3]  # tr
-
-        coo_idx_list = []
-        elem_weights_list = []
-        quad_idx_list = []
-        sq_x_list = []
-        sq_y_list = []
-        signs_list = []
-
-        sq_x = self.sq_x_arr
-        sq_y = self.sq_y_arr
-
-        # Use appropriate test function weights based on der_testfun
-        if term.der_testfun:
-            test_wA_left = self.test_wA_left_dy
-            test_wA_right = self.test_wA_right_dy
-        else:
-            test_wA_left = self.test_wA_left
-            test_wA_right = self.test_wA_right
-
-        # Left triangle
-        for i in range(3):
-            # Negative contribution (FROM bl)
-            valid_neg = (TO_left[:, i] >= 0) & (FROM_neg_left >= 0)
-            sq_neg = np.where(valid_neg)[0]
-
-            if len(sq_neg) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_left[sq_neg, i]
-                col_block = var_idx * self.nb_contributors + FROM_neg_left[sq_neg]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_neg[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_left[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), -1.0, dtype=np.float64))
-
-            # Positive contribution (FROM tl)
-            valid_pos = (TO_left[:, i] >= 0) & (FROM_pos_left >= 0)
-            sq_pos = np.where(valid_pos)[0]
-
-            if len(sq_pos) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_left[sq_pos, i]
-                col_block = var_idx * self.nb_contributors + FROM_pos_left[sq_pos]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_pos[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_left[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), 1.0, dtype=np.float64))
-
-        # Right triangle
-        for i in range(3):
-            # Negative contribution (FROM br)
-            valid_neg = (TO_right[:, i] >= 0) & (FROM_neg_right >= 0)
-            sq_neg = np.where(valid_neg)[0]
-
-            if len(sq_neg) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_right[sq_neg, i]
-                col_block = var_idx * self.nb_contributors + FROM_neg_right[sq_neg]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_neg[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_right[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q + 3, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), -1.0, dtype=np.float64))
-
-            # Positive contribution (FROM tr)
-            valid_pos = (TO_right[:, i] >= 0) & (FROM_pos_right >= 0)
-            sq_pos = np.where(valid_pos)[0]
-
-            if len(sq_pos) > 0:
-                row_block = res_idx * self.nb_inner_pts + TO_right[sq_pos, i]
-                col_block = var_idx * self.nb_contributors + FROM_pos_right[sq_pos]
-                coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                valid_coo = coo_idx >= 0
-
-                if np.any(valid_coo):
-                    sq_final = sq_pos[valid_coo]
-                    for q in range(3):
-                        weight = test_wA_right[i, q]
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q + 3, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), 1.0, dtype=np.float64))
+                            np.full(len(sq_final), sign, dtype=np.float64))
 
         if not coo_idx_list:
             return TermIndices(
@@ -1148,9 +928,9 @@ class FEMSolver2D:
                                 coo_values: NDArray):
         """Dispatch to appropriate sparse assembly method based on term type."""
         if term.d_dx_resfun:
-            self._accumulate_term_dx_sparse(term, dep_var, coo_values)
+            self._accumulate_term_deriv_sparse(term, dep_var, coo_values, 'x')
         elif term.d_dy_resfun:
-            self._accumulate_term_dy_sparse(term, dep_var, coo_values)
+            self._accumulate_term_deriv_sparse(term, dep_var, coo_values, 'y')
         else:
             self._accumulate_term_zero_der_sparse(term, dep_var, coo_values)
 
@@ -1179,12 +959,17 @@ class FEMSolver2D:
         # Accumulate into COO values
         np.add.at(coo_values, idx.coo_idx, contrib)
 
-    def _accumulate_term_dx_sparse(self, term: NonLinearTerm, dep_var: str,
-                                   coo_values: NDArray):
+    def _accumulate_term_deriv_sparse(self, term: NonLinearTerm, dep_var: str,
+                                      coo_values: NDArray, direction: str):
         """
-        Sparse assembly for x-derivative term.
+        Sparse assembly for derivative term.
 
         Uses precomputed indices with signs (±1) for finite difference stencil.
+
+        Parameters
+        ----------
+        direction : str
+            'x' or 'y' - determines grid spacing divisor (dx or dy).
         """
         key = (term.name, term.res, dep_var)
         idx = self.sparse_layout[key]
@@ -1198,35 +983,9 @@ class FEMSolver2D:
         # Fetch values at quadrature points
         res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
 
-        # Compute contributions: weight * res_val * sign / dx
-        inv_dx = 1.0 / self.dx
-        contrib = idx.elem_weights * res_vals * idx.signs * inv_dx
-
-        # Accumulate into COO values
-        np.add.at(coo_values, idx.coo_idx, contrib)
-
-    def _accumulate_term_dy_sparse(self, term: NonLinearTerm, dep_var: str,
-                                   coo_values: NDArray):
-        """
-        Sparse assembly for y-derivative term.
-
-        Uses precomputed indices with signs (±1) for finite difference stencil.
-        """
-        key = (term.name, term.res, dep_var)
-        idx = self.sparse_layout[key]
-
-        if len(idx.coo_idx) == 0:
-            return
-
-        # Get residual derivative values
-        res_deriv = self.get_res_deriv_vals(term, dep_var)
-
-        # Fetch values at quadrature points
-        res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
-
-        # Compute contributions: weight * res_val * sign / dy
-        inv_dy = 1.0 / self.dy
-        contrib = idx.elem_weights * res_vals * idx.signs * inv_dy
+        # Compute contributions: weight * res_val * sign / d*
+        inv_d = 1.0 / (self.dx if direction == 'x' else self.dy)
+        contrib = idx.elem_weights * res_vals * idx.signs * inv_d
 
         # Accumulate into COO values
         np.add.at(coo_values, idx.coo_idx, contrib)
@@ -1250,9 +1009,9 @@ class FEMSolver2D:
     def residual_vector_term(self, term: NonLinearTerm) -> NDArray:
         """Wrapper for different spatial derivatives (nb_inner_pts,)."""
         if term.d_dx_resfun:
-            return self._residual_vector_term_dx(term)
+            return self._residual_vector_term_deriv(term, 'x')
         elif term.d_dy_resfun:
-            return self._residual_vector_term_dy(term)
+            return self._residual_vector_term_deriv(term, 'y')
         else:
             return self._residual_vector_term_zero_der(term)
 
@@ -1281,58 +1040,37 @@ class FEMSolver2D:
 
         return R
 
-    def _residual_vector_term_dx(self, term: NonLinearTerm) -> NDArray:
-        """Get residual vector for term with d/dx in residual function."""
+    def _residual_vector_term_deriv(self, term: NonLinearTerm, direction: str) -> NDArray:
+        """Get residual vector for term with spatial derivative in residual function.
+
+        Parameters
+        ----------
+        direction : str
+            'x' or 'y' - determines which derivative operator and test weights to use.
+        """
         R = np.zeros((self.nb_inner_pts,), dtype=float)
 
-        # Compute dF/dx using chain rule: (6, sq_per_row, sq_per_col)
-        dF_dx = np.zeros((6, self.sq_per_row, self.sq_per_col))
+        # Select derivative operator and test weights based on direction
+        if direction == 'x':
+            get_field_deriv = self.get_field_deriv_dx
+            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
+        else:  # 'y'
+            get_field_deriv = self.get_field_deriv_dy
+            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
+
+        # Compute dF/d* using chain rule: (6, sq_per_row, sq_per_col)
+        dF = np.zeros((6, self.sq_per_row, self.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
-            dvar_dx_2 = self.get_field_deriv_dx(dep_var)      # (2, X, Y)
-            dvar_dx_6 = np.repeat(dvar_dx_2, 3, axis=0)       # expand to (6, X, Y)
-            dF_dx += dF_dvar * dvar_dx_6
-
-        test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
-        test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
+            dvar_2 = get_field_deriv(dep_var)                 # (2, X, Y)
+            dvar_6 = np.repeat(dvar_2, 3, axis=0)             # expand to (6, X, Y)
+            dF += dF_dvar * dvar_6
 
         sx, sy = self.sq_x_arr, self.sq_y_arr
-        res_left = dF_dx[0:3, sx, sy].T   # (nb_sq, 3)
-        res_right = dF_dx[3:6, sx, sy].T
-
-        contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
-        contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
-
-        TO = self.sq_TO_inner
-        TO_left = TO[:, [0, 2, 1]]
-        TO_right = TO[:, [3, 1, 2]]
-
-        for i in range(3):
-            valid = TO_left[:, i] != -1
-            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
-            valid = TO_right[:, i] != -1
-            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
-
-        return R
-
-    def _residual_vector_term_dy(self, term: NonLinearTerm) -> NDArray:
-        """Get residual vector for term with d/dy in residual function."""
-        R = np.zeros((self.nb_inner_pts,), dtype=float)
-
-        # Compute dF/dy using chain rule: (6, sq_per_row, sq_per_col)
-        dF_dy = np.zeros((6, self.sq_per_row, self.sq_per_col))
-        for dep_var in term.dep_vars:
-            dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
-            dvar_dy_2 = self.get_field_deriv_dy(dep_var)      # (2, X, Y)
-            dvar_dy_6 = np.repeat(dvar_dy_2, 3, axis=0)       # expand to (6, X, Y)
-            dF_dy += dF_dvar * dvar_dy_6
-
-        test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
-        test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
-
-        sx, sy = self.sq_x_arr, self.sq_y_arr
-        res_left = dF_dy[0:3, sx, sy].T   # (nb_sq, 3)
-        res_right = dF_dy[3:6, sx, sy].T
+        res_left = dF[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = dF[3:6, sx, sy].T
 
         contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
         contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
