@@ -39,8 +39,13 @@ from muGrid import (
     CartesianDecomposition,
     GlobalFieldCollection,
     Communicator,
-    FFTEngine,  # [FFTDomainTranslation] Added for elastic FFT redistribution
 )
+try:
+    from muGrid import FFTEngine
+    HAS_FFT_ENGINE = True
+except ImportError:
+    FFTEngine = None
+    HAS_FFT_ENGINE = False
 
 NDArray = npt.NDArray[np.floating]
 
@@ -516,6 +521,12 @@ class FFTDomainTranslation:
     """
 
     def __init__(self, decomp: DomainDecomposition):
+        if not HAS_FFT_ENGINE:
+            raise ImportError(
+                "FFTDomainTranslation requires muGrid built with FFT support. "
+                "Install FFTW (libfftw3-dev) and rebuild muGrid."
+            )
+
         self.decomp = decomp
         self.periodic_x = decomp.periodic_x
         self.periodic_y = decomp.periodic_y

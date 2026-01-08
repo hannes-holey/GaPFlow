@@ -24,93 +24,30 @@
 from .fem.num_solver import Solver
 from .fem.utils2d import (
     NonLinearTerm,
-    get_triangle_3_operator,
-    get_triangle_2_operator_dx,
-    get_triangle_2_operator_dy,
-)
-from .fem.utils2d import (
-    get_N_left_test_vals,
-    get_N_right_test_vals,
-    get_N_left_test_vals_dx,
-    get_N_right_test_vals_dx,
-    get_N_left_test_vals_dy,
-    get_N_right_test_vals_dy,
-    get_quad_weights,
+    TriangleQuadrature,
     get_active_terms,
 )
+from .fem.assembly_layout import (
+    FEMAssemblyLayout,
+    MatrixCOOPattern,
+    RHSPattern,
+    JacobianTermMap,
+    RHSTermMap,
+)
+from .fem.grid_index import GridIndexManager
+from .fem.quad_fields import QuadFieldManager
 
-from dataclasses import dataclass
-from functools import cached_property, lru_cache
+from functools import cached_property
 import numpy as np
 import time
-from muGrid import Field, Timer
+from muGrid import Timer
 
 import numpy.typing as npt
-from typing import TYPE_CHECKING, Tuple, Dict, Any, Optional
+from typing import TYPE_CHECKING, Tuple, Dict
 if TYPE_CHECKING:
     from .problem import Problem
-    from .fem.petsc_system import PETScLayout
 
 NDArray = npt.NDArray[np.floating]
-
-
-BASE_FIELDS = {
-    'rho', 'jx', 'jy',
-    'p', 'h', 'dh_dx', 'dh_dy', 'eta',
-    'U', 'V', 'Ls',
-    'dp_drho',
-    'rho_prev', 'jx_prev', 'jy_prev',
-    'pressure_stab',
-}
-
-STRESS_XZ_FIELDS = {
-    'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
-    'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx',
-}
-
-STRESS_YZ_FIELDS = {
-    'tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
-    'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy',
-}
-
-ENERGY_FIELDS = {
-    'E', 'Tb_top', 'Tb_bot',
-    'T', 'dT_drho', 'dT_djx', 'dT_djy', 'dT_dE',
-    'S', 'dS_drho', 'dS_djx', 'dS_djy', 'dS_dE',
-    'E_prev',
-}
-
-
-@dataclass
-class TermIndices:
-    """
-    Precomputed indices for sparse assembly of a single (term, res, var) block.
-
-    Enables O(nnz) vectorized assembly: values written directly to COO array
-    using precomputed indices, avoiding dense matrix allocation.
-
-    Attributes
-    ----------
-    coo_idx : NDArray
-        COO value array positions to write to, shape (nb_contributions,).
-    elem_weights : NDArray
-        Precomputed FEM weights (N_i * N_j * w * A for zero-der,
-        N_i * w * A for derivative terms), shape (nb_contributions,).
-    quad_idx : NDArray
-        Quadrature point index (0-5, where 0-2=left tri, 3-5=right tri).
-    sq_x : NDArray
-        Square x-index for fetching quadrature values.
-    sq_y : NDArray
-        Square y-index for fetching quadrature values.
-    signs : Optional[NDArray]
-        Sign multipliers for derivative terms (+1/-1), None for zero-der.
-    """
-    coo_idx: NDArray
-    elem_weights: NDArray
-    quad_idx: NDArray
-    sq_x: NDArray
-    sq_y: NDArray
-    signs: Optional[NDArray] = None
 
 
 class FEMSolver2D:
@@ -120,8 +57,7 @@ class FEMSolver2D:
         self.fem_spec = fem_spec
         self.problem = problem
         self.num_solver = Solver(problem.fem_solver)
-        self.nodal_fields: Dict[str, Any] = {}
-        self.quad_fields: Dict[str, Any] = {}
+        self.quad_mgr = None  # QuadFieldManager, initialized via init()
         self.petsc = None  # Optional PETSc system, enabled via enable_petsc()
         self.timer = Timer()
 
@@ -135,19 +71,11 @@ class FEMSolver2D:
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
 
-        self.global_coords = p.decomp.icoordsg  # shape (2, Nx_padded, Ny_padded)
+        self.global_coords = p.decomp.icoordsg
 
         nb_subdomain_pts = p.decomp.nb_subdomain_grid_pts
         self.Nx_inner = nb_subdomain_pts[0]
         self.Ny_inner = nb_subdomain_pts[1]
-        self.Nx_padded = self.Nx_inner + 2
-        self.Ny_padded = self.Ny_inner + 2
-
-        # BC flags: True only if at domain edge AND not periodic
-        self.bc_at_W = p.decomp.is_at_xW and not self.per_x
-        self.bc_at_E = p.decomp.is_at_xE and not self.per_x
-        self.bc_at_S = p.decomp.is_at_yS and not self.per_y
-        self.bc_at_N = p.decomp.is_at_yN and not self.per_y
 
         self.dx = p.grid['dx']
         self.dy = p.grid['dy']
@@ -161,84 +89,62 @@ class FEMSolver2D:
             self.residuals.append('energy')
             self.field_map['E'] = p.energy.energy
 
-        self.nb_inner_pts = self.Nx_inner * self.Ny_inner
+        # Grid index manager (handles masks, connectivity, stencils)
+        bc_neumann = {
+            'xW': p.grid['bc_xW_N'], 'xE': p.grid['bc_xE_N'],
+            'yS': p.grid['bc_yS_N'], 'yN': p.grid['bc_yN_N'],
+        }
+        self.grid_idx = GridIndexManager(
+            Nx_inner=self.Nx_inner, Ny_inner=self.Ny_inner,
+            bc_at_W=p.decomp.is_at_xW and not self.per_x,
+            bc_at_E=p.decomp.is_at_xE and not self.per_x,
+            bc_at_S=p.decomp.is_at_yS and not self.per_y,
+            bc_at_N=p.decomp.is_at_yN and not self.per_y,
+            decomp=p.decomp, variables=self.variables, bc_neumann=bc_neumann,
+        )
+
+        # Convenience aliases from grid index manager
+        self.nb_inner_pts = self.grid_idx.nb_inner_pts
+        self.sq_per_row = self.grid_idx.sq_per_row
+        self.sq_per_col = self.grid_idx.sq_per_col
+        self.nb_sq = self.grid_idx.nb_sq
+        self.sq_x_arr = self.grid_idx.sq_x_arr
+        self.sq_y_arr = self.grid_idx.sq_y_arr
+
         self.res_size = len(self.residuals) * self.nb_inner_pts
-        self.var_size = len(self.variables) * self.nb_contributors
+        self.var_size = len(self.variables) * self.grid_idx.nb_contributors
 
-        self.sq_per_row = self.Nx_inner + 1
-        self.sq_per_col = self.Ny_inner + 1
-        self.nb_sq = self.sq_per_row * self.sq_per_col
-
-        # Test function values for FEM assembly
-        self.test_fun_vals_left = get_N_left_test_vals()
-        self.test_fun_vals_right = get_N_right_test_vals()
-        self.test_fun_vals_left_dx = get_N_left_test_vals_dx(self.dx)
-        self.test_fun_vals_right_dx = get_N_right_test_vals_dx(self.dx)
-        self.test_fun_vals_left_dy = get_N_left_test_vals_dy(self.dy)
-        self.test_fun_vals_right_dy = get_N_right_test_vals_dy(self.dy)
-        self.quad_weights = get_quad_weights()
+        # Quadrature data for triangular elements
+        quad = TriangleQuadrature(self.dx, self.dy)
+        w = quad.weights
+        Nl, Nr = quad.N_left, quad.N_right
 
         # Precomputed element tensors: elem[i,j,q] = N_i[q] * N_j[q] * w[q] * A
-        # For zero-der terms: M[i,j] += sum_q(elem[i,j,q] * res[q])
-        w = self.quad_weights
-        Nl, Nr = self.test_fun_vals_left, self.test_fun_vals_right
-        self.elem_tensor_left = Nl[:, None, :] * Nl[None, :, :] * w * self.A   # (3,3,3)
-        self.elem_tensor_right = Nr[:, None, :] * Nr[None, :, :] * w * self.A  # (3,3,3)
+        self.elem_tensor_left = Nl[:, None, :] * Nl[None, :, :] * w * self.A
+        self.elem_tensor_right = Nr[:, None, :] * Nr[None, :, :] * w * self.A
 
-        # Precomputed test function integrals for derivative terms: integral[i,q] = N_i[q] * w[q] * A
-        self.test_wA_left = Nl * w * self.A       # (3, 3)
-        self.test_wA_right = Nr * w * self.A      # (3, 3)
-        self.test_wA_left_dx = self.test_fun_vals_left_dx * w * self.A
-        self.test_wA_right_dx = self.test_fun_vals_right_dx * w * self.A
-        self.test_wA_left_dy = self.test_fun_vals_left_dy * w * self.A
-        self.test_wA_right_dy = self.test_fun_vals_right_dy * w * self.A
-
-        # Precomputed square coordinates
-        sq_idx = np.arange(self.nb_sq)
-        self.sq_x_arr = sq_idx % self.sq_per_row
-        self.sq_y_arr = sq_idx // self.sq_per_row
+        # Precomputed test function integrals: integral[i,q] = N_i[q] * w[q] * A
+        self.test_wA_left = Nl * w * self.A
+        self.test_wA_right = Nr * w * self.A
+        self.test_wA_left_dx = quad.dN_left_dx * w * self.A
+        self.test_wA_right_dx = quad.dN_right_dx * w * self.A
+        self.test_wA_left_dy = quad.dN_left_dy * w * self.A
+        self.test_wA_right_dy = quad.dN_right_dy * w * self.A
 
     def _get_active_terms(self) -> None:
         """Initialize list of active terms from problem fem_solver config."""
         self.terms = get_active_terms(self.fem_spec)
 
-    def _init_quad_operator(self) -> None:
-        """Init quadrature point evaluation and derivative operators."""
-        self.quad_operator = get_triangle_3_operator()
-        self.dx_operator = get_triangle_2_operator_dx(self.dx)
-        self.dy_operator = get_triangle_2_operator_dy(self.dy)
-
     def _init_quad_fields(self) -> None:
-        """Initialize quadrature infrastructure."""
-        fc = self.problem.fc
-        fc.set_nb_sub_pts("quad", 6)
-        fc.set_nb_sub_pts("quad_deriv", 2)  # for derivatives
-
-        # multi-component sources need to be copied to single-component fields
-        nodal_names = ['rho', 'jx', 'jy', 'h', 'dh_dx', 'dh_dy']
-        if self.energy:
-            nodal_names.extend(['E', 'Tb_top', 'Tb_bot'])
-        for name in nodal_names:
-            self.nodal_fields[name] = fc.real_field(f'{name}_nodal', 1, 'pixel')
-
-        # existing single-component fields
-        self.nodal_fields['p'] = Field(fc.get_real_field('pressure'))
-        self.nodal_fields['eta'] = Field(fc.get_real_field('shear_viscosity'))
-
-        # quad output fields
-        for name in self._get_needed_quad_fields():
-            self.quad_fields[name] = fc.real_field(f'{name}_q', 1, 'quad')
-
-        # placeholder field for derivative computation (reused)
-        self.deriv_placeholder = fc.real_field('deriv_placeholder', 1, 'quad_deriv')
-
-    def _get_needed_quad_fields(self) -> set:
-        """Get set of needed quadrature fields based on active terms."""
-        needed = (BASE_FIELDS | STRESS_XZ_FIELDS | STRESS_YZ_FIELDS)
-        if self.energy:
-            needed |= ENERGY_FIELDS
-
-        return needed
+        """Initialize quadrature field manager with operators and fields."""
+        self.quad_mgr = QuadFieldManager(
+            problem=self.problem,
+            energy=self.energy,
+            variables=self.variables,
+        )
+        # Convenience aliases for backward compatibility
+        self.nodal_fields = self.quad_mgr.nodal_fields
+        self.quad_fields = self.quad_mgr.quad_fields
 
     def _build_jit_functions(self) -> None:
         """Build JIT-compiled gradient functions for all physical models."""
@@ -255,14 +161,14 @@ class FEMSolver2D:
         p = self.problem
 
         def make_getter(name):
-            return lambda: self.get_quad(name)
+            return lambda: self.quad_mgr.get(name)
 
-        quad_fields = self._get_needed_quad_fields()
+        quad_field_names = self.quad_mgr.get_needed_fields()
 
         for term in self.terms:
             term_ctx = {
                 name: make_getter(name)
-                for name in quad_fields
+                for name in quad_field_names
             }
 
             # Non-quad values
@@ -274,320 +180,93 @@ class FEMSolver2D:
             term.build(term_ctx)
 
     # =========================================================================
-    # Quadrature Field Access and Update
+    # Quadrature Field Update (delegates to quad_mgr)
     # =========================================================================
 
-    def get_quad(self, name: str) -> NDArray:
-        """Get quadrature field values for internal squares.
-        Returns shape (6, sq_per_row, sq_per_col).
-        """
-        return self.quad_fields[name].pg[..., :-1, :-1]
-
-    def get_field_deriv_dx(self, name: str) -> NDArray:
-        """Compute d(field)/dx at quad points (2, sq_per_row, sq_per_col)."""
-        self.dx_operator.apply(self.nodal_fields[name], self.deriv_placeholder)
-
-        return self.deriv_placeholder.pg[..., :-1, :-1].copy()
-
-    def get_field_deriv_dy(self, name: str) -> NDArray:
-        """Compute d(field)/dy at quad points (2, sq_per_row, sq_per_col)."""
-        self.dy_operator.apply(self.nodal_fields[name], self.deriv_placeholder)
-        return self.deriv_placeholder.pg[..., :-1, :-1].copy()
-
-    def update_nodal_fields(self) -> None:
-        """Step 1: Update nodal fields after q update."""
-        p = self.problem
-
-        p.pressure.update()
-        p.topo.update()
-        dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
-        dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
-        p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy, p.topo.h, p.geo['U'], p.geo['V'])
-        if self.energy:
-            p.energy.update_temperature()
-
-    def update_quad_nodal(self) -> None:
-        """Step 2: Interpolate nodal fields to quadrature points."""
-        p = self.problem
-
-        # copy multi-component sources to single-component fields
-        self.nodal_fields['rho'].pg[0] = p.q[0]
-        self.nodal_fields['jx'].pg[0] = p.q[1]
-        self.nodal_fields['jy'].pg[0] = p.q[2]
-        self.nodal_fields['h'].pg[0] = p.topo.h
-        self.nodal_fields['dh_dx'].pg[0] = p.topo.dh_dx
-        self.nodal_fields['dh_dy'].pg[0] = p.topo.dh_dy
-
-        if self.energy:
-            self.nodal_fields['E'].pg[0] = p.energy.energy
-            self.nodal_fields['Tb_top'].pg[0] = p.energy.Tb_top
-            self.nodal_fields['Tb_bot'].pg[0] = p.energy.Tb_bot
-
-        # interpolate nodal → quad using operator
-        interpolated = ['rho', 'jx', 'jy', 'p', 'h', 'dh_dx', 'dh_dy', 'eta']
-        if self.energy:
-            interpolated.extend(['E', 'Tb_top', 'Tb_bot'])
-        for name in interpolated:
-            self.quad_operator.apply(self.nodal_fields[name], self.quad_fields[name])
-
-        # broadcast constants
-        self.quad_fields['U'].pg[:] = p.geo['U']
-        self.quad_fields['V'].pg[:] = p.geo['V']
-        self.quad_fields['Ls'].pg[:] = p.prop.get('slip_length', 0.0)
-
-    def _apply_2d_vmap(self, func, *args):
-        """Reshape args for 2D vmap application and reshape result back."""
-        shape = args[0].shape  # (6, Ny, Nx)
-        args_2d = [a.reshape(shape[0], -1) for a in args]
-        result_2d = func(*args_2d)  # shape (nb_quad, Ny * Nx)
-
-        return result_2d.reshape(shape)
-
-    def update_quad_computed(self) -> None:
-        """Step 3: Compute derived quantities at quadrature points."""
-        p = self.problem
-        q = lambda name: self.quad_fields[name].pg
-        apply = self._apply_2d_vmap
-
-        # Pressure gradient
-        self.quad_fields['dp_drho'].pg[:] = apply(p.pressure.dp_drho, q('rho'))
-
-        # Pressure stabilization parameter: tau = alpha * h_elem^2 / P0
-        # This controls the strength of the Brezzi-Pitkäranta stabilization
-        # Use element size (dx*dy) not gap height for proper scaling
-        alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
-        P0 = p.prop.get('P0', 1.0)
-        h_elem_sq = self.dx * self.dy  # element area as characteristic length squared
-        self.quad_fields['pressure_stab'].pg[:] = np.full_like(q('h'), alpha * h_elem_sq / P0)
-
-        # Wall stress xz
-        args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'), q('U'), q('V'), q('Ls'))
-        for name in ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
-                     'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']:
-            self.quad_fields[name].pg[:] = apply(getattr(p.wall_stress_xz, name), *args_xz)
-
-        # Wall stress yz
-        args_yz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dy'), q('U'), q('V'), q('Ls'))
-        for name in ['tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
-                     'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy']:
-            self.quad_fields[name].pg[:] = apply(getattr(p.wall_stress_yz, name), *args_yz)
-
-        if self.energy:
-            # Temperature
-            args_T = (q('rho'), q('jx'), q('jy'), q('E'))
-            for name, func in [('T', 'T_func'), ('dT_drho', 'T_grad_rho'), ('dT_djx', 'T_grad_jx'),
-                               ('dT_djy', 'T_grad_jy'), ('dT_dE', 'T_grad_E')]:
-                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_T)
-
-            # Wall heat flux
-            args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
-                      q('rho'), q('E'), q('jx'), q('jy'), q('U'), q('V'), q('Tb_top'), q('Tb_bot'), None)
-            for name, func in [('S', 'q_wall_sum'), ('dS_drho', 'q_wall_grad_rho'), ('dS_djx', 'q_wall_grad_jx'),
-                               ('dS_djy', 'q_wall_grad_jy'), ('dS_dE', 'q_wall_grad_E')]:
-                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_S)
-
     def update_quad(self) -> None:
-        """Full quadrature update (Steps 1-3)."""
-        with self.timer("update_nodal_fields"):
-            self.update_nodal_fields()
-        with self.timer("update_quad_nodal"):
-            self.update_quad_nodal()
-        with self.timer("update_quad_computed"):
-            self.update_quad_computed()
+        """Full quadrature update (nodal fields, interpolation, derived quantities)."""
+        self.quad_mgr.update_nodal_fields()
+        self.quad_mgr.update_quad_nodal()
+        self.quad_mgr.update_quad_computed()
 
     def update_prev_quad(self) -> None:
         """Store current quad values for time derivatives."""
-        for var in self.variables:
-            curr_key = f'{var}'
-            prev_key = f'{var}_prev'
-            if curr_key in self.quad_fields and prev_key in self.quad_fields:
-                self.quad_fields[prev_key].pg[:] = np.copy(self.quad_fields[curr_key].pg)
+        self.quad_mgr.store_prev_values()
 
     # =========================================================================
-    # Index Masks and Grid Topology
-    # =========================================================================
-
-    def isBC(self, x: int, y: int) -> bool:
-        """Check if the point at (x, y) is a boundary condition point."""
-        if (x == 0 and self.bc_at_W) or (x == self.Nx_padded - 1 and self.bc_at_E):
-            return True
-        if (y == 0 and self.bc_at_S) or (y == self.Ny_padded - 1 and self.bc_at_N):
-            return True
-        return False
-
-    @cached_property
-    def index_mask_inner_local(self) -> NDArray:
-        """Residual (TO) points only, local indices, no periodic wrapping."""
-        mask = np.full((self.Nx_padded, self.Ny_padded), -1, dtype=int)
-        inner_shape = (self.Nx_inner, self.Ny_inner)
-        mask[1:-1, 1:-1] = np.arange(np.prod(inner_shape)).reshape(inner_shape, order='F')
-        return mask
-
-    @lru_cache(maxsize=None)
-    def index_mask_padded_local(self, var: str = '') -> NDArray:
-        """All contributor (FROM) points, local indices, with periodic wrapping."""
-        mask = self.index_mask_inner_local.copy()
-
-        # Periodic wrapping for ghost cells when full extent is owned
-        if self.decomp.periodic_x and self.decomp.has_full_x:
-            mask[0, :] = mask[self.Nx_padded - 2, :]
-            mask[self.Nx_padded - 1, :] = mask[1, :]
-
-        if self.decomp.periodic_y and self.decomp.has_full_y:
-            mask[:, 0] = mask[:, self.Ny_padded - 2]
-            mask[:, self.Ny_padded - 1] = mask[:, 1]
-
-        # Assign new indices to remaining ghost cells
-        cur_val = self.Nx_inner * self.Ny_inner
-        for x in range(self.Nx_padded):
-            for y in range(self.Ny_padded):
-                if mask[x, y] == -1 and not self.isBC(x, y):
-                    mask[x, y] = cur_val
-                    cur_val += 1
-        # Neumann BC forwarding (only if var specified)
-        if var:
-            var_idx = self.variables.index(var)
-            if self.bc_at_W and self.problem.grid['bc_xW_N'][var_idx]:
-                mask[0, :] = mask[1, :]
-            if self.bc_at_E and self.problem.grid['bc_xE_N'][var_idx]:
-                mask[self.Nx_padded - 1, :] = mask[self.Nx_padded - 2, :]
-            if self.bc_at_S and self.problem.grid['bc_yS_N'][var_idx]:
-                mask[:, 0] = mask[:, 1]
-            if self.bc_at_N and self.problem.grid['bc_yN_N'][var_idx]:
-                mask[:, self.Ny_padded - 1] = mask[:, self.Ny_padded - 2]
-        return mask
-
-    @cached_property
-    def nb_contributors(self) -> int:
-        """Number of unique contributor indices in index_mask_padded_local.
-
-        This accounts for periodic boundary wrapping where ghost points
-        reuse inner point indices instead of getting new indices.
-        """
-        mask = self.index_mask_padded_local('')
-        valid_indices = mask[mask >= 0]
-        return int(np.max(valid_indices)) + 1 if len(valid_indices) > 0 else 0
-
-    # =========================================================================
-    # Element & Stencil Connectivity
+    # Assembly Layout (unified COO pattern and term mappings)
     # =========================================================================
 
     @cached_property
-    def sq_TO_inner(self) -> NDArray:
-        """Precomputed inner indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
-        m = self.index_mask_inner_local
-        sx, sy = self.sq_x_arr, self.sq_y_arr
-        return np.column_stack([m[sx, sy], m[sx + 1, sy], m[sx, sy + 1], m[sx + 1, sy + 1]])
+    def assembly_layout(self) -> FEMAssemblyLayout:
+        """Precomputed assembly layout for O(nnz) matrix/vector assembly."""
+        return self._build_assembly_layout()
 
-    @lru_cache(maxsize=None)
-    def sq_FROM_padded(self, var: str) -> NDArray:
-        """Precomputed padded indices for all square corners. Shape (nb_sq, 4) for [bl, br, tl, tr]."""
-        m = self.index_mask_padded_local(var)
-        sx, sy = self.sq_x_arr, self.sq_y_arr
-        return np.column_stack([m[sx, sy], m[sx + 1, sy], m[sx, sy + 1], m[sx + 1, sy + 1]])
-
-    def _get_stencil_connectivity(self) -> tuple:
-        """
-        Get FEM stencil connectivity as parallel arrays.
-
-        Returns (inner_pts, contrib_pts) where inner_pts[i] is connected
-        to contrib_pts[i] in the FEM stencil.
-        """
-        m_inner = self.index_mask_inner_local
-        m_padded = self.index_mask_padded_local('')
-
-        inner_list = []
-        contrib_list = []
-
-        inner_pts_2d = np.argwhere(m_inner >= 0)  # Shape: (nb_inner, 2)
-
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                # Neighbor positions
-                nx = inner_pts_2d[:, 0] + dx
-                ny = inner_pts_2d[:, 1] + dy
-
-                # Get indices
-                inner_idx = m_inner[inner_pts_2d[:, 0], inner_pts_2d[:, 1]]
-                contrib_idx = m_padded[nx, ny]
-
-                # Filter valid connections
-                valid = contrib_idx >= 0
-                inner_list.append(inner_idx[valid])
-                contrib_list.append(contrib_idx[valid])
-
-        return np.concatenate(inner_list), np.concatenate(contrib_list)
-
-    # =========================================================================
-    # PETSc Layout (COO → Global Matrix)
-    # =========================================================================
-
-    @cached_property
-    def petsc_layout(self) -> "PETScLayout":
-        """Precomputed PETSc layout for O(nnz) assembly.
-        Implicitly defines mapping from COO to global rows/cols (mat_rows, mat_cols).
-        For consistent mapping of local FEM, mat_local_idx serves as the basis
-        for sparse_layout building.
-        """
-        return self._build_petsc_layout()
-
-    def _build_petsc_layout(self) -> "PETScLayout":
-        """Build all precomputed arrays for PETSc assembly."""
-        from .fem.petsc_system import PETScLayout
-
+    def _build_assembly_layout(self) -> FEMAssemblyLayout:
+        """Build complete assembly layout with COO pattern and term mappings."""
         nb_vars = len(self.variables)
         nb_res = len(self.residuals)
+        Nx, Ny = self.decomp.nb_domain_grid_pts
 
-        # 1. Build l2g_pts from index masks
-        mask_local = self.index_mask_padded_local('')
+        # 1. Build local-to-global point mapping
+        mask_local = self.grid_idx.index_mask_padded_local('')
         mask_global = self.decomp.index_mask_padded_global
-
-        l2g_pts = np.zeros(self.nb_contributors, dtype=np.int32)
+        l2g_pts = np.zeros(self.grid_idx.nb_contributors, dtype=np.int32)
         valid = mask_local >= 0
         l2g_pts[mask_local[valid]] = mask_global[valid]
 
-        # 2. Build matrix assembly indices (vectorized)
-        mat_rows, mat_cols, mat_local_idx = self._build_matrix_indices(
+        # 2. Build matrix COO pattern
+        matrix_coo, local_to_coo = self._build_matrix_coo_pattern(
             l2g_pts, nb_vars, nb_res)
 
-        # 3. Build RHS assembly indices (vectorized)
-        rhs_rows = self._build_rhs_indices(l2g_pts, nb_res)
+        # 3. Build RHS pattern
+        rhs = self._build_rhs_pattern(l2g_pts, nb_res)
 
-        Nx, Ny = self.decomp.nb_domain_grid_pts
+        # 4. Build Jacobian term maps
+        jacobian_terms = {}
+        for term in self.terms:
+            for dep_var in term.dep_vars:
+                key = (term.name, term.res, dep_var)
+                if term.d_dx_resfun:
+                    jacobian_terms[key] = self._build_jacobian_term_deriv(
+                        term, dep_var, local_to_coo, 'x')
+                elif term.d_dy_resfun:
+                    jacobian_terms[key] = self._build_jacobian_term_deriv(
+                        term, dep_var, local_to_coo, 'y')
+                else:
+                    jacobian_terms[key] = self._build_jacobian_term_zero_der(
+                        term, dep_var, local_to_coo)
 
-        return PETScLayout(
+        # 5. Build RHS term maps
+        rhs_terms = {}
+        for term in self.terms:
+            key = (term.name, term.res)
+            rhs_terms[key] = self._build_rhs_term(term)
+
+        return FEMAssemblyLayout(
+            matrix_coo=matrix_coo,
+            rhs=rhs,
+            jacobian_terms=jacobian_terms,
+            rhs_terms=rhs_terms,
+            dx=self.dx,
+            dy=self.dy,
             nb_vars=nb_vars,
             nb_inner_pts=self.nb_inner_pts,
-            nb_contributors=self.nb_contributors,
             nb_global_pts=Nx * Ny,
-            l2g_pts=l2g_pts,
-            mat_rows=mat_rows,
-            mat_cols=mat_cols,
-            mat_local_idx=mat_local_idx,
-            rhs_rows=rhs_rows,
         )
 
-    def _build_matrix_indices(self, l2g_pts: NDArray, nb_vars: int, nb_res: int
-                              ) -> tuple:
-        """
-        Build sparse matrix index arrays (vectorized).
-
-        For each non-zero in the local matrix, compute:
-        - Global row index (interleaved ordering)
-        - Global column index (interleaved ordering)
-        - Local position [row, col] in M_local
-        """
-        inner_pts, contrib_pts = self._get_stencil_connectivity()
+    def _build_matrix_coo_pattern(self, l2g_pts: NDArray, nb_vars: int,
+                                  nb_res: int) -> Tuple[MatrixCOOPattern, dict]:
+        """Build sparse matrix COO pattern and local-to-COO map."""
+        inner_pts, contrib_pts = self.grid_idx.get_stencil_connectivity()
         nnz_per_block = len(inner_pts)
-
-        # Total non-zeros: one block per (residual, variable) combination
         total_nnz = nb_res * nb_vars * nnz_per_block
 
-        mat_rows = np.empty(total_nnz, dtype=np.int32)
-        mat_cols = np.empty(total_nnz, dtype=np.int32)
-        mat_local_idx = np.empty((total_nnz, 2), dtype=np.int32)
+        local_rows = np.empty(total_nnz, dtype=np.int32)
+        local_cols = np.empty(total_nnz, dtype=np.int32)
+        global_rows = np.empty(total_nnz, dtype=np.int32)
+        global_cols = np.empty(total_nnz, dtype=np.int32)
 
-        # Global point indices for connected pairs
         global_inner = l2g_pts[inner_pts]
         global_contrib = l2g_pts[contrib_pts]
 
@@ -595,90 +274,105 @@ class FEMSolver2D:
         for res_idx in range(nb_res):
             row_offset = res_idx * self.nb_inner_pts
             for var_idx in range(nb_vars):
-                col_offset = var_idx * self.nb_contributors
-
+                col_offset = var_idx * self.grid_idx.nb_contributors
                 n = nnz_per_block
 
-                # Global indices (interleaved)
-                mat_rows[idx:idx + n] = global_inner * nb_res + res_idx
-                mat_cols[idx:idx + n] = global_contrib * nb_vars + var_idx
-
-                # Local indices in M_local (block layout)
-                mat_local_idx[idx:idx + n, 0] = row_offset + inner_pts
-                mat_local_idx[idx:idx + n, 1] = col_offset + contrib_pts
+                local_rows[idx:idx + n] = row_offset + inner_pts
+                local_cols[idx:idx + n] = col_offset + contrib_pts
+                global_rows[idx:idx + n] = global_inner * nb_res + res_idx
+                global_cols[idx:idx + n] = global_contrib * nb_vars + var_idx
 
                 idx += n
 
-        return mat_rows, mat_cols, mat_local_idx
+        # Build local-to-COO lookup dictionary
+        local_to_coo = {}
+        for coo_idx in range(total_nnz):
+            key = (int(local_rows[coo_idx]), int(local_cols[coo_idx]))
+            local_to_coo[key] = coo_idx
 
-    def _build_rhs_indices(self, l2g_pts: NDArray, nb_res: int) -> NDArray:
-        """Build RHS vector index arrays (vectorized)."""
+        matrix_coo = MatrixCOOPattern(
+            nnz=total_nnz,
+            local_rows=local_rows,
+            local_cols=local_cols,
+            global_rows=global_rows,
+            global_cols=global_cols,
+        )
+
+        return matrix_coo, local_to_coo
+
+    def _build_rhs_pattern(self, l2g_pts: NDArray, nb_res: int) -> RHSPattern:
+        """Build RHS vector assembly pattern."""
         local_size = nb_res * self.nb_inner_pts
-        rhs_rows = np.empty(local_size, dtype=np.int32)
-
-        # Global point indices for inner points only
+        global_rows = np.empty(local_size, dtype=np.int32)
         global_pts = l2g_pts[:self.nb_inner_pts]
 
         for res_idx in range(nb_res):
             start = res_idx * self.nb_inner_pts
             end = start + self.nb_inner_pts
-            rhs_rows[start:end] = global_pts * nb_res + res_idx
+            global_rows[start:end] = global_pts * nb_res + res_idx
 
-        return rhs_rows
+        return RHSPattern(size=local_size, global_rows=global_rows)
 
-    # =========================================================================
-    # Sparse Assembly Layout (direct COO assembly without dense matrix)
-    # =========================================================================
+    def _build_rhs_term(self, term: NonLinearTerm) -> RHSTermMap:
+        """Build RHS term map for a single term."""
+        TO = self.grid_idx.sq_TO_inner
+        res_idx = self.residuals.index(term.res)
+        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
 
-    @cached_property
-    def sparse_layout(self) -> Dict[Tuple[str, str, str], TermIndices]:
-        """
-        Precomputed sparse assembly indices for O(nnz) matrix construction.
+        # Select test weights based on term type
+        if term.d_dx_resfun:
+            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
+        elif term.d_dy_resfun:
+            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
+            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
+        else:
+            test_wA_left = self.test_wA_left
+            test_wA_right = self.test_wA_right
 
-        Maps (term_name, residual, dep_var) → TermIndices containing all
-        precomputed indices needed for vectorized sparse assembly.
+        # Triangle configs: (TO_indices, test_weights, quad_offset)
+        triangle_configs = [
+            (TO[:, [0, 2, 1]], test_wA_left, 0),   # left: [bl, tl, br], quad 0-2
+            (TO[:, [3, 1, 2]], test_wA_right, 3),  # right: [tr, br, tl], quad 3-5
+        ]
 
-        This eliminates the need for dense matrix allocation.
-        """
-        return self._build_sparse_layout()
+        output_idx_list = []
+        weights_list = []
+        quad_idx_list = []
+        sq_x_list = []
+        sq_y_list = []
 
-    def _build_sparse_layout(self) -> Dict[Tuple[str, str, str], TermIndices]:
-        """Build element-to-COO mapping for all terms."""
-        # Build local-to-COO index map
-        local_to_coo = self._build_local_to_coo_map()
+        for TO_tri, test_wA, quad_offset in triangle_configs:
+            for i in range(3):
+                valid = TO_tri[:, i] >= 0
+                sq_valid = np.where(valid)[0]
+                if len(sq_valid) > 0:
+                    for q in range(3):
+                        output_idx_list.append(
+                            res_idx * self.nb_inner_pts + TO_tri[sq_valid, i])
+                        weights_list.append(
+                            np.full(len(sq_valid), test_wA[i, q], dtype=np.float64))
+                        quad_idx_list.append(
+                            np.full(len(sq_valid), q + quad_offset, dtype=np.int32))
+                        sq_x_list.append(sq_x[sq_valid])
+                        sq_y_list.append(sq_y[sq_valid])
 
-        # Build indices for each (term, var) combination
-        layout = {}
-        for term in self.terms:
-            for dep_var in term.dep_vars:
-                key = (term.name, term.res, dep_var)
-                if term.d_dx_resfun:
-                    layout[key] = self._build_term_indices_deriv(
-                        term, dep_var, local_to_coo, 'x')
-                elif term.d_dy_resfun:
-                    layout[key] = self._build_term_indices_deriv(
-                        term, dep_var, local_to_coo, 'y')
-                else:
-                    layout[key] = self._build_term_indices_zero_der(
-                        term, dep_var, local_to_coo)
+        if not output_idx_list:
+            return RHSTermMap(
+                output_idx=np.array([], dtype=np.int32),
+                weights=np.array([], dtype=np.float64),
+                quad_idx=np.array([], dtype=np.int32),
+                sq_x=np.array([], dtype=np.int32),
+                sq_y=np.array([], dtype=np.int32),
+            )
 
-        return layout
-
-    def _build_local_to_coo_map(self) -> Dict[Tuple[int, int], int]:
-        """
-        Build mapping from local (block_row, block_col) to COO index.
-        Uses petsc_layout.mat_local_idx as basis.
-
-        Returns dictionary {(row, col): coo_idx} for sparse lookup.
-        """
-        L = self.petsc_layout
-        local_to_coo = {}
-
-        for coo_idx in range(len(L.mat_local_idx)):
-            row, col = L.mat_local_idx[coo_idx]
-            local_to_coo[(int(row), int(col))] = coo_idx
-
-        return local_to_coo
+        return RHSTermMap(
+            output_idx=np.concatenate(output_idx_list),
+            weights=np.concatenate(weights_list),
+            quad_idx=np.concatenate(quad_idx_list),
+            sq_x=np.concatenate(sq_x_list),
+            sq_y=np.concatenate(sq_y_list),
+        )
 
     def _lookup_coo_indices(self, local_to_coo: Dict[Tuple[int, int], int],
                             row_block: NDArray, col_block: NDArray) -> NDArray:
@@ -694,167 +388,107 @@ class FEMSolver2D:
                 coo_idx[k] = local_to_coo[key]
         return coo_idx
 
-    def _build_term_indices_zero_der(self, term: NonLinearTerm, dep_var: str,
-                                     local_to_coo: NDArray) -> TermIndices:
-        """
-        Build indices for zero-derivative term (3×3 contributions per triangle).
-
-        Each triangle contributes 9 entries (3 test nodes × 3 trial nodes).
-        """
+    def _build_jacobian_term_zero_der(self, term: NonLinearTerm, dep_var: str,
+                                      local_to_coo: dict) -> JacobianTermMap:
+        """Build Jacobian term map for zero-derivative term (3×3 per triangle)."""
         res_idx = self.residuals.index(term.res)
         var_idx = self.variables.index(dep_var)
+        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
 
-        TO = self.sq_TO_inner                    # (nb_sq, 4) corners [bl, br, tl, tr]
-        FROM = self.sq_FROM_padded(dep_var)      # (nb_sq, 4)
+        TO = self.grid_idx.sq_TO_inner
+        FROM = self.grid_idx.sq_FROM_padded(dep_var)
 
-        # Left triangle: nodes [bl, tl, br] = corners [0, 2, 1]
-        TO_left = TO[:, [0, 2, 1]]               # (nb_sq, 3)
-        FROM_left = FROM[:, [0, 2, 1]]
+        # Triangle configs: (TO_indices, FROM_indices, elem_tensor, quad_offset)
+        triangle_configs = [
+            (TO[:, [0, 2, 1]], FROM[:, [0, 2, 1]], self.elem_tensor_left, 0),
+            (TO[:, [3, 1, 2]], FROM[:, [3, 1, 2]], self.elem_tensor_right, 3),
+        ]
 
-        # Right triangle: nodes [tr, br, tl] = corners [3, 1, 2]
-        TO_right = TO[:, [3, 1, 2]]
-        FROM_right = FROM[:, [3, 1, 2]]
-
-        # Collect all contributions
         coo_idx_list = []
-        elem_weights_list = []
+        weights_list = []
         quad_idx_list = []
         sq_x_list = []
         sq_y_list = []
 
-        sq_x = self.sq_x_arr  # (nb_sq,)
-        sq_y = self.sq_y_arr  # (nb_sq,)
+        for TO_tri, FROM_tri, elem_tensor, quad_offset in triangle_configs:
+            for i in range(3):
+                for j in range(3):
+                    valid = (TO_tri[:, i] >= 0) & (FROM_tri[:, j] >= 0)
+                    sq_valid = np.where(valid)[0]
 
-        # Left triangle (quad points 0, 1, 2)
-        for i in range(3):  # test function node
-            for j in range(3):  # trial function node
-                valid = (TO_left[:, i] >= 0) & (FROM_left[:, j] >= 0)
-                sq_valid = np.where(valid)[0]
+                    if len(sq_valid) > 0:
+                        row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
+                        col_block = var_idx * self.grid_idx.nb_contributors + FROM_tri[sq_valid, j]
+                        coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
+                        valid_coo = coo_idx >= 0
 
-                if len(sq_valid) > 0:
-                    # Block indices
-                    row_block = res_idx * self.nb_inner_pts + TO_left[sq_valid, i]
-                    col_block = var_idx * self.nb_contributors + FROM_left[sq_valid, j]
-
-                    # Get COO indices via dictionary lookup
-                    coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                    valid_coo = coo_idx >= 0
-
-                    if np.any(valid_coo):
-                        sq_final = sq_valid[valid_coo]
-                        # For each quad point
-                        for q in range(3):
-                            weight = self.elem_tensor_left[i, j, q]
-                            coo_idx_list.append(coo_idx[valid_coo])
-                            elem_weights_list.append(
-                                np.full(len(sq_final), weight, dtype=np.float64))
-                            quad_idx_list.append(
-                                np.full(len(sq_final), q, dtype=np.int32))
-                            sq_x_list.append(sq_x[sq_final])
-                            sq_y_list.append(sq_y[sq_final])
-
-        # Right triangle (quad points 3, 4, 5)
-        for i in range(3):
-            for j in range(3):
-                valid = (TO_right[:, i] >= 0) & (FROM_right[:, j] >= 0)
-                sq_valid = np.where(valid)[0]
-
-                if len(sq_valid) > 0:
-                    row_block = res_idx * self.nb_inner_pts + TO_right[sq_valid, i]
-                    col_block = var_idx * self.nb_contributors + FROM_right[sq_valid, j]
-
-                    coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
-                    valid_coo = coo_idx >= 0
-
-                    if np.any(valid_coo):
-                        sq_final = sq_valid[valid_coo]
-                        for q in range(3):
-                            weight = self.elem_tensor_right[i, j, q]
-                            coo_idx_list.append(coo_idx[valid_coo])
-                            elem_weights_list.append(
-                                np.full(len(sq_final), weight, dtype=np.float64))
-                            quad_idx_list.append(
-                                np.full(len(sq_final), q + 3, dtype=np.int32))  # 3-5 for right
-                            sq_x_list.append(sq_x[sq_final])
-                            sq_y_list.append(sq_y[sq_final])
+                        if np.any(valid_coo):
+                            sq_final = sq_valid[valid_coo]
+                            for q in range(3):
+                                coo_idx_list.append(coo_idx[valid_coo])
+                                weights_list.append(np.full(
+                                    len(sq_final), elem_tensor[i, j, q], dtype=np.float64))
+                                quad_idx_list.append(np.full(
+                                    len(sq_final), q + quad_offset, dtype=np.int32))
+                                sq_x_list.append(sq_x[sq_final])
+                                sq_y_list.append(sq_y[sq_final])
 
         if not coo_idx_list:
-            # No valid contributions
-            return TermIndices(
+            return JacobianTermMap(
                 coo_idx=np.array([], dtype=np.int32),
-                elem_weights=np.array([], dtype=np.float64),
+                weights=np.array([], dtype=np.float64),
                 quad_idx=np.array([], dtype=np.int32),
                 sq_x=np.array([], dtype=np.int32),
                 sq_y=np.array([], dtype=np.int32),
             )
 
-        return TermIndices(
+        return JacobianTermMap(
             coo_idx=np.concatenate(coo_idx_list),
-            elem_weights=np.concatenate(elem_weights_list),
+            weights=np.concatenate(weights_list),
             quad_idx=np.concatenate(quad_idx_list),
             sq_x=np.concatenate(sq_x_list),
             sq_y=np.concatenate(sq_y_list),
         )
 
-    def _build_term_indices_deriv(self, term: NonLinearTerm, dep_var: str,
-                                    local_to_coo: NDArray, direction: str) -> TermIndices:
-        """
-        Build indices for derivative term (±1/d* stencil contributions).
-
-        Each triangle contributes 3×2 = 6 entries (3 test nodes × 2 stencil pts).
-
-        Parameters
-        ----------
-        direction : str
-            'x' or 'y' - determines finite difference stencil direction:
-            - 'x': Left uses (bl-, br+), Right uses (tl-, tr+)
-            - 'y': Left uses (bl-, tl+), Right uses (br-, tr+)
-        """
+    def _build_jacobian_term_deriv(self, term: NonLinearTerm, dep_var: str,
+                                   local_to_coo: dict, direction: str) -> JacobianTermMap:
+        """Build Jacobian term map for derivative term (±1/d* stencil)."""
         res_idx = self.residuals.index(term.res)
         var_idx = self.variables.index(dep_var)
 
-        TO = self.sq_TO_inner
-        FROM = self.sq_FROM_padded(dep_var)
+        TO = self.grid_idx.sq_TO_inner
+        FROM = self.grid_idx.sq_FROM_padded(dep_var)
 
-        # Left triangle test nodes [bl, tl, br] = corners [0, 2, 1]
         TO_left = TO[:, [0, 2, 1]]
-        # Right triangle test nodes [tr, br, tl] = corners [3, 1, 2]
         TO_right = TO[:, [3, 1, 2]]
 
-        # Direction-dependent stencil indices and test function weights
-        # Corner indices: bl=0, br=1, tl=2, tr=3
         if direction == 'x':
-            # x-derivative: horizontal neighbors
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 1]    # bl-, br+
-            FROM_neg_right, FROM_pos_right = FROM[:, 2], FROM[:, 3]  # tl-, tr+
+            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 1]
+            FROM_neg_right, FROM_pos_right = FROM[:, 2], FROM[:, 3]
             test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
             test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
-        else:  # 'y'
-            # y-derivative: vertical neighbors
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 2]    # bl-, tl+
-            FROM_neg_right, FROM_pos_right = FROM[:, 1], FROM[:, 3]  # br-, tr+
+        else:
+            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 2]
+            FROM_neg_right, FROM_pos_right = FROM[:, 1], FROM[:, 3]
             test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
             test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
 
         coo_idx_list = []
-        elem_weights_list = []
+        weights_list = []
         quad_idx_list = []
         sq_x_list = []
         sq_y_list = []
         signs_list = []
 
-        sq_x = self.sq_x_arr
-        sq_y = self.sq_y_arr
+        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
 
-        # Process both triangles with their respective stencils
         triangle_configs = [
-            # (TO_nodes, FROM_neg, FROM_pos, test_wA, quad_offset)
             (TO_left, FROM_neg_left, FROM_pos_left, test_wA_left, 0),
             (TO_right, FROM_neg_right, FROM_pos_right, test_wA_right, 3),
         ]
 
         for TO_tri, FROM_neg, FROM_pos, test_wA, quad_offset in triangle_configs:
-            for i in range(3):  # test function nodes
+            for i in range(3):
                 for FROM_pts, sign in [(FROM_neg, -1.0), (FROM_pos, 1.0)]:
                     valid = (TO_tri[:, i] >= 0) & (FROM_pts >= 0)
                     sq_valid = np.where(valid)[0]
@@ -863,7 +497,7 @@ class FEMSolver2D:
                         continue
 
                     row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
-                    col_block = var_idx * self.nb_contributors + FROM_pts[sq_valid]
+                    col_block = var_idx * self.grid_idx.nb_contributors + FROM_pts[sq_valid]
                     coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
                     valid_coo = coo_idx >= 0
 
@@ -871,31 +505,29 @@ class FEMSolver2D:
                         continue
 
                     sq_final = sq_valid[valid_coo]
-                    for q in range(3):  # quadrature points
-                        weight = test_wA[i, q]
+                    for q in range(3):
                         coo_idx_list.append(coo_idx[valid_coo])
-                        elem_weights_list.append(
-                            np.full(len(sq_final), weight, dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_final), q + quad_offset, dtype=np.int32))
+                        weights_list.append(np.full(
+                            len(sq_final), test_wA[i, q], dtype=np.float64))
+                        quad_idx_list.append(np.full(
+                            len(sq_final), q + quad_offset, dtype=np.int32))
                         sq_x_list.append(sq_x[sq_final])
                         sq_y_list.append(sq_y[sq_final])
-                        signs_list.append(
-                            np.full(len(sq_final), sign, dtype=np.float64))
+                        signs_list.append(np.full(len(sq_final), sign, dtype=np.float64))
 
         if not coo_idx_list:
-            return TermIndices(
+            return JacobianTermMap(
                 coo_idx=np.array([], dtype=np.int32),
-                elem_weights=np.array([], dtype=np.float64),
+                weights=np.array([], dtype=np.float64),
                 quad_idx=np.array([], dtype=np.int32),
                 sq_x=np.array([], dtype=np.int32),
                 sq_y=np.array([], dtype=np.int32),
                 signs=np.array([], dtype=np.float64),
             )
 
-        return TermIndices(
+        return JacobianTermMap(
             coo_idx=np.concatenate(coo_idx_list),
-            elem_weights=np.concatenate(elem_weights_list),
+            weights=np.concatenate(weights_list),
             quad_idx=np.concatenate(quad_idx_list),
             sq_x=np.concatenate(sq_x_list),
             sq_y=np.concatenate(sq_y_list),
@@ -907,14 +539,9 @@ class FEMSolver2D:
     # =========================================================================
 
     def get_tang_matrix_sparse(self) -> NDArray:
-        """
-        Assemble tangent matrix directly to COO values - O(nnz) memory.
-
-        Returns array of COO values matching petsc_layout.mat_rows/mat_cols.
-        This eliminates the O(n²) dense matrix allocation.
-        """
-        nnz = len(self.petsc_layout.mat_rows)
-        coo_values = np.zeros(nnz, dtype=np.float64)
+        """Assemble tangent matrix directly to COO values - O(nnz) memory."""
+        layout = self.assembly_layout
+        coo_values = np.zeros(layout.matrix_coo.nnz, dtype=np.float64)
 
         for term in self.terms:
             if (not self.dynamic) and 'T' in term.name:
@@ -936,58 +563,31 @@ class FEMSolver2D:
 
     def _accumulate_term_zero_der_sparse(self, term: NonLinearTerm, dep_var: str,
                                          coo_values: NDArray):
-        """
-        Sparse assembly for zero-derivative term.
-
-        Uses precomputed indices to directly accumulate contributions.
-        """
+        """Sparse assembly for zero-derivative term."""
         key = (term.name, term.res, dep_var)
-        idx = self.sparse_layout[key]  # in which blocks to accumulate
+        idx = self.assembly_layout.jacobian_terms[key]
 
         if len(idx.coo_idx) == 0:
             return
 
-        # Get residual derivative values at quadrature points: (6, sq_x, sq_y)
         res_deriv = self.get_res_deriv_vals(term, dep_var)
-
-        # Fetch values at (quad_idx, sq_x, sq_y) for each contribution
         res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
-
-        # Compute contributions: weight * res_val
-        contrib = idx.elem_weights * res_vals
-
-        # Accumulate into COO values
+        contrib = idx.weights * res_vals
         np.add.at(coo_values, idx.coo_idx, contrib)
 
     def _accumulate_term_deriv_sparse(self, term: NonLinearTerm, dep_var: str,
                                       coo_values: NDArray, direction: str):
-        """
-        Sparse assembly for derivative term.
-
-        Uses precomputed indices with signs (±1) for finite difference stencil.
-
-        Parameters
-        ----------
-        direction : str
-            'x' or 'y' - determines grid spacing divisor (dx or dy).
-        """
+        """Sparse assembly for derivative term with ±1/d* stencil."""
         key = (term.name, term.res, dep_var)
-        idx = self.sparse_layout[key]
+        idx = self.assembly_layout.jacobian_terms[key]
 
         if len(idx.coo_idx) == 0:
             return
 
-        # Get residual derivative values
         res_deriv = self.get_res_deriv_vals(term, dep_var)
-
-        # Fetch values at quadrature points
         res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
-
-        # Compute contributions: weight * res_val * sign / d*
         inv_d = 1.0 / (self.dx if direction == 'x' else self.dy)
-        contrib = idx.elem_weights * res_vals * idx.signs * inv_d
-
-        # Accumulate into COO values
+        contrib = idx.weights * res_vals * idx.signs * inv_d
         np.add.at(coo_values, idx.coo_idx, contrib)
 
     # =========================================================================
@@ -996,15 +596,13 @@ class FEMSolver2D:
 
     def get_res_deriv_vals(self, term: NonLinearTerm, dep_var: str) -> NDArray:
         """Evaluate derivative of residual function w.r.t. dep_var at quadrature points."""
-        dep_var_vals = {dep_var: self.get_quad(dep_var) for dep_var in term.dep_vars}
-        res_deriv_vals = term.evaluate_deriv(dep_var, *[dep_var_vals[dep_var] for dep_var in term.dep_vars])
-        return res_deriv_vals
+        dep_var_vals = {v: self.quad_mgr.get(v) for v in term.dep_vars}
+        return term.evaluate_deriv(dep_var, *[dep_var_vals[v] for v in term.dep_vars])
 
     def get_res_vals(self, term: NonLinearTerm) -> NDArray:
         """Evaluate residual function at quadrature points."""
-        dep_var_vals = {var: self.get_quad(var) for var in term.dep_vars}
-        res_vals = term.evaluate(*[dep_var_vals[var] for var in term.dep_vars])
-        return res_vals
+        dep_var_vals = {v: self.quad_mgr.get(v) for v in term.dep_vars}
+        return term.evaluate(*[dep_var_vals[v] for v in term.dep_vars])
 
     def residual_vector_term(self, term: NonLinearTerm) -> NDArray:
         """Wrapper for different spatial derivatives (nb_inner_pts,)."""
@@ -1015,9 +613,22 @@ class FEMSolver2D:
         else:
             return self._residual_vector_term_zero_der(term)
 
+    def _assemble_residual_contributions(self, contrib_left: NDArray,
+                                         contrib_right: NDArray) -> NDArray:
+        """Assemble triangle contributions into residual vector."""
+        R = np.zeros((self.nb_inner_pts,), dtype=float)
+        TO = self.grid_idx.sq_TO_inner
+
+        # Triangle configs: (TO_indices, contributions)
+        for TO_tri, contrib in [(TO[:, [0, 2, 1]], contrib_left),
+                                (TO[:, [3, 1, 2]], contrib_right)]:
+            for i in range(3):
+                valid = TO_tri[:, i] != -1
+                np.add.at(R, TO_tri[valid, i], contrib[valid, i])
+        return R
+
     def _residual_vector_term_zero_der(self, term: NonLinearTerm) -> NDArray:
         """Get residual vector for term without derivative in residual function."""
-        R = np.zeros((self.nb_inner_pts,), dtype=float)
         res_fun_vals = self.get_res_vals(term)  # (6, sq_per_row, sq_per_col)
 
         sx, sy = self.sq_x_arr, self.sq_y_arr
@@ -1025,38 +636,20 @@ class FEMSolver2D:
         res_right = res_fun_vals[3:6, sx, sy].T
 
         # contrib[sq, i] = sum_q(N_i[q] * res[sq, q] * w[q]) * A
-        contrib_left = np.einsum('iq,sq->si', self.test_wA_left, res_left)    # (nb_sq, 3)
+        contrib_left = np.einsum('iq,sq->si', self.test_wA_left, res_left)
         contrib_right = np.einsum('iq,sq->si', self.test_wA_right, res_right)
 
-        TO = self.sq_TO_inner
-        TO_left = TO[:, [0, 2, 1]]    # [bl, tl, br]
-        TO_right = TO[:, [3, 1, 2]]   # [tr, br, tl]
-
-        for i in range(3):
-            valid = TO_left[:, i] != -1
-            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
-            valid = TO_right[:, i] != -1
-            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
-
-        return R
+        return self._assemble_residual_contributions(contrib_left, contrib_right)
 
     def _residual_vector_term_deriv(self, term: NonLinearTerm, direction: str) -> NDArray:
-        """Get residual vector for term with spatial derivative in residual function.
-
-        Parameters
-        ----------
-        direction : str
-            'x' or 'y' - determines which derivative operator and test weights to use.
-        """
-        R = np.zeros((self.nb_inner_pts,), dtype=float)
-
+        """Get residual vector for term with spatial derivative in residual function."""
         # Select derivative operator and test weights based on direction
         if direction == 'x':
-            get_field_deriv = self.get_field_deriv_dx
+            get_field_deriv = self.quad_mgr.get_deriv_dx
             test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
             test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
         else:  # 'y'
-            get_field_deriv = self.get_field_deriv_dy
+            get_field_deriv = self.quad_mgr.get_deriv_dy
             test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
             test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
 
@@ -1075,17 +668,7 @@ class FEMSolver2D:
         contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
         contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
 
-        TO = self.sq_TO_inner
-        TO_left = TO[:, [0, 2, 1]]
-        TO_right = TO[:, [3, 1, 2]]
-
-        for i in range(3):
-            valid = TO_left[:, i] != -1
-            np.add.at(R, TO_left[valid, i], contrib_left[valid, i])
-            valid = TO_right[:, i] != -1
-            np.add.at(R, TO_right[valid, i], contrib_right[valid, i])
-
-        return R
+        return self._assemble_residual_contributions(contrib_left, contrib_right)
 
     def get_residual_vec(self) -> NDArray:
         """Assemble full residual vector from all terms (res_size,)."""
@@ -1111,16 +694,11 @@ class FEMSolver2D:
         return self.get_tang_matrix_sparse()
 
     def get_M_dense(self) -> NDArray:
-        """
-        Get tangent matrix as dense numpy array.
-
-        For testing/debugging purposes. Converts COO values to dense matrix.
-        Returns matrix of shape (res_size, var_size) in variable-block ordering
-        (matching get_q_nodal/get_R ordering).
-        """
+        """Get tangent matrix as dense array (for testing/debugging)."""
         coo_values = self.get_tang_matrix_sparse()
-        rows = self.petsc_layout.mat_local_idx[:, 0]
-        cols = self.petsc_layout.mat_local_idx[:, 1]
+        layout = self.assembly_layout
+        rows = layout.matrix_coo.local_rows
+        cols = layout.matrix_coo.local_cols
 
         M = np.zeros((self.res_size, self.var_size), dtype=np.float64)
         np.add.at(M, (rows, cols), coo_values)
@@ -1212,7 +790,7 @@ class FEMSolver2D:
 
             # Assemble and solve with PETSc
             self.petsc.assemble(M, R)
-            dq = self.petsc.solve()
+            dq = self.petsc.solve(self.nb_inner_pts, len(self.variables))
 
             q = q + alpha * dq
 
@@ -1261,7 +839,7 @@ class FEMSolver2D:
                     with self.timer("petsc_assemble"):
                         self.petsc.assemble(M, R)
                     with self.timer("petsc_solve"):
-                        dq = self.petsc.solve()
+                        dq = self.petsc.solve(self.nb_inner_pts, len(self.variables))
 
                     q = q + alpha * dq
 
@@ -1321,15 +899,12 @@ class FEMSolver2D:
         """Initialize solver before running."""
         with self.timer("preparation"):
             self._init_convenience_accessors()
-            with self.timer("init_quad_operator"):
-                self._init_quad_operator()
             with self.timer("init_quad_fields"):
                 self._init_quad_fields()
             self._get_active_terms()
             with self.timer("build_jit_functions"):
                 self._build_jit_functions()
-            with self.timer("build_terms"):
-                self._build_terms()
+            self._build_terms()
             with self.timer("init_petsc"):
                 self._init_petsc()
 
@@ -1350,4 +925,5 @@ class FEMSolver2D:
         """Initialize PETSc solver for distributed linear solves."""
         from .fem.petsc_system import PETScSystem
         solver_type = self.problem.fem_solver.get('linear_solver', 'direct')
-        self.petsc = PETScSystem(self.petsc_layout, solver_type=solver_type)
+        petsc_info = self.assembly_layout.get_petsc_info()
+        self.petsc = PETScSystem(petsc_info, solver_type=solver_type)

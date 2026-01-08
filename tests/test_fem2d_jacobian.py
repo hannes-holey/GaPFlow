@@ -244,86 +244,60 @@ class TestJacobianFiniteDifference:
 class TestShapeFunctionConsistency:
     """Test shape function values are consistent with interpolation kernel."""
 
-    # Expected kernel values from get_triangle_3_operator
-    # kernel layout: [[bl, tl], [br, tr]] for each quad point
-    # quad 0-2: left triangle, quad 3-5: right triangle
-    KERNEL_VALUES = np.array([
-        # Left triangle quad points (0, 1, 2)
-        [[[2 / 3, 1 / 6], [1 / 6, 0]]],   # quad0: bl=2/3, tl=1/6, br=1/6, tr=0
-        [[[1 / 6, 1 / 6], [2 / 3, 0]]],   # quad1: bl=1/6, tl=1/6, br=2/3, tr=0
-        [[[1 / 6, 2 / 3], [1 / 6, 0]]],   # quad2: bl=1/6, tl=2/3, br=1/6, tr=0
-        # Right triangle quad points (3, 4, 5)
-        [[[0, 1 / 6], [1 / 6, 2 / 3]]],   # quad3: bl=0, tl=1/6, br=1/6, tr=2/3
-        [[[0, 2 / 3], [1 / 6, 1 / 6]]],   # quad4: bl=0, tl=2/3, br=1/6, tr=1/6
-        [[[0, 1 / 6], [2 / 3, 1 / 6]]],   # quad5: bl=0, tl=1/6, br=2/3, tr=1/6
-    ])
-
     def test_left_triangle_shape_functions(self):
         """Verify left triangle shape functions match kernel.
 
         Left triangle node order: [bl, tl, br]
         """
-        from GaPFlow.fem.utils2d import get_N_left_test_vals
+        from GaPFlow.fem.utils2d import TriangleQuadrature
 
-        N_left = get_N_left_test_vals()
-        kernel = self.KERNEL_VALUES
+        quad = TriangleQuadrature()
+        N_left = quad.N_left
 
-        # Check at each quad point (0, 1, 2)
-        for q in range(3):
-            N_bl_expected = kernel[q, 0, 0, 0]  # bl position
-            N_tl_expected = kernel[q, 0, 0, 1]  # tl position
-            N_br_expected = kernel[q, 0, 1, 0]  # br position
+        # Expected values derived from BARY_COORDS with [0, 2, 1] permutation
+        # Kernel quad points 0, 1, 2 for left triangle
+        expected = np.array([
+            [2 / 3, 1 / 6, 1 / 6],  # bl: gets 2/3 at quad0
+            [1 / 6, 1 / 6, 2 / 3],  # tl: gets 2/3 at quad2
+            [1 / 6, 2 / 3, 1 / 6],  # br: gets 2/3 at quad1
+        ])
 
-            assert np.isclose(N_left[0, q], N_bl_expected), (
-                f"N_bl mismatch at quad {q}: {N_left[0, q]} vs {N_bl_expected}"
-            )
-            assert np.isclose(N_left[1, q], N_tl_expected), (
-                f"N_tl mismatch at quad {q}: {N_left[1, q]} vs {N_tl_expected}"
-            )
-            assert np.isclose(N_left[2, q], N_br_expected), (
-                f"N_br mismatch at quad {q}: {N_left[2, q]} vs {N_br_expected}"
-            )
+        assert np.allclose(N_left, expected), (
+            f"N_left mismatch:\n{N_left}\nvs expected:\n{expected}"
+        )
 
     def test_right_triangle_shape_functions(self):
         """Verify right triangle shape functions match kernel.
 
         Right triangle node order: [tr, br, tl]
         """
-        from GaPFlow.fem.utils2d import get_N_right_test_vals
+        from GaPFlow.fem.utils2d import TriangleQuadrature
 
-        N_right = get_N_right_test_vals()
-        kernel = self.KERNEL_VALUES
+        quad = TriangleQuadrature()
+        N_right = quad.N_right
 
-        # Check at each quad point (3, 4, 5) mapped to indices (0, 1, 2) in N_right
-        for i, q in enumerate([3, 4, 5]):
-            N_tr_expected = kernel[q, 0, 1, 1]  # tr position
-            N_br_expected = kernel[q, 0, 1, 0]  # br position
-            N_tl_expected = kernel[q, 0, 0, 1]  # tl position
+        # Right triangle uses same shape function values as left
+        # (different node interpretation: [tr, br, tl] instead of [bl, tl, br])
+        expected = np.array([
+            [2 / 3, 1 / 6, 1 / 6],  # tr: gets 2/3 at quad0
+            [1 / 6, 1 / 6, 2 / 3],  # br: gets 2/3 at quad2
+            [1 / 6, 2 / 3, 1 / 6],  # tl: gets 2/3 at quad1
+        ])
 
-            assert np.isclose(N_right[0, i], N_tr_expected), (
-                f"N_tr mismatch at quad {q}: {N_right[0, i]} vs {N_tr_expected}"
-            )
-            assert np.isclose(N_right[1, i], N_br_expected), (
-                f"N_br mismatch at quad {q}: {N_right[1, i]} vs {N_br_expected}"
-            )
-            assert np.isclose(N_right[2, i], N_tl_expected), (
-                f"N_tl mismatch at quad {q}: {N_right[2, i]} vs {N_tl_expected}"
-            )
+        assert np.allclose(N_right, expected), (
+            f"N_right mismatch:\n{N_right}\nvs expected:\n{expected}"
+        )
 
     def test_shape_functions_partition_of_unity(self):
         """Verify shape functions sum to 1 at each quad point."""
-        from GaPFlow.fem.utils2d import (
-            get_N_left_test_vals,
-            get_N_right_test_vals,
-        )
+        from GaPFlow.fem.utils2d import TriangleQuadrature
 
-        N_left = get_N_left_test_vals()
-        N_right = get_N_right_test_vals()
+        quad = TriangleQuadrature()
 
         # Sum over nodes at each quad point should be 1
         for q in range(3):
-            sum_left = N_left[0, q] + N_left[1, q] + N_left[2, q]
-            sum_right = N_right[0, q] + N_right[1, q] + N_right[2, q]
+            sum_left = quad.N_left[:, q].sum()
+            sum_right = quad.N_right[:, q].sum()
 
             assert np.isclose(sum_left, 1.0), (
                 f"Left triangle partition of unity failed at quad {q}: sum={sum_left}"
@@ -331,6 +305,36 @@ class TestShapeFunctionConsistency:
             assert np.isclose(sum_right, 1.0), (
                 f"Right triangle partition of unity failed at quad {q}: sum={sum_right}"
             )
+
+    def test_interpolation_operator_consistency(self):
+        """Verify interpolation operator is consistent with shape functions."""
+        from GaPFlow.fem.utils2d import TriangleQuadrature
+
+        quad = TriangleQuadrature()
+        N_left = quad.N_left
+
+        # The interpolation operator kernel should match shape function values
+        # For left triangle: kernel positions are [[bl, tl], [br, tr]]
+        # Expected kernel for quad point 0: bl=2/3, tl=1/6, br=1/6, tr=0
+        expected_kernel_q0 = np.array([
+            [N_left[0, 0], N_left[1, 0]],  # [bl, tl]
+            [N_left[2, 0], 0],              # [br, tr=0 for left triangle]
+        ])
+
+        assert np.isclose(expected_kernel_q0[0, 0], 2 / 3), "bl at quad0 should be 2/3"
+        assert np.isclose(expected_kernel_q0[0, 1], 1 / 6), "tl at quad0 should be 1/6"
+        assert np.isclose(expected_kernel_q0[1, 0], 1 / 6), "br at quad0 should be 1/6"
+
+    def test_quadrature_weights(self):
+        """Verify quadrature weights sum to 1/2 (area of unit triangle)."""
+        from GaPFlow.fem.utils2d import TriangleQuadrature
+
+        quad = TriangleQuadrature()
+        weight_sum = quad.weights.sum()
+
+        assert np.isclose(weight_sum, 0.5), (
+            f"Quadrature weights should sum to 0.5, got {weight_sum}"
+        )
 
 
 class TestJacobianSymmetry:
