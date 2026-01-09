@@ -1,0 +1,67 @@
+name: Test PETSc Installation
+
+on:
+  workflow_dispatch:
+    inputs:
+      petsc_version:
+        description: 'PETSc version to install'
+        required: false
+        default: '3.22.2'
+      python_version:
+        description: 'Python version'
+        required: false
+        default: '3.11'
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Install system prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            openmpi-bin \
+            libopenmpi-dev \
+            wget \
+            make \
+            gcc \
+            g++
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Update pip
+        run: python3 -m pip install --upgrade pip
+
+      - name: Run install_petsc.sh
+        env:
+          PETSC_VERSION: ${{ inputs.petsc_version }}
+        run: |
+          # Override version if specified
+          if [ "$PETSC_VERSION" != "3.22.2" ]; then
+            sed -i "s/^PETSC_VERSION=.*/PETSC_VERSION=$PETSC_VERSION/" install_petsc.sh
+          fi
+          bash install_petsc.sh
+
+      - name: Source PETSc environment
+        run: |
+          echo "PETSC_DIR=$HOME/.local/petsc-${{ inputs.petsc_version }}" >> $GITHUB_ENV
+          echo "PETSC_ARCH=arch-linux-c-opt" >> $GITHUB_ENV
+
+      - name: Verify PETSc installation
+        run: python3 .check_petsc.py
+
+      - name: Install GaPFlow
+        run: |
+          python3 -m pip install --no-cache --no-binary muGrid muGrid
+          python3 -m pip install .[test]
+
+      - name: Run PETSc-dependent tests
+        run: pytest tests/test_fem2d_jacobian.py -v

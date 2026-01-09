@@ -25,6 +25,14 @@ import numpy as np
 import numpy.typing as npt
 from typing import TYPE_CHECKING
 
+from .. import HAS_PETSC
+
+if not HAS_PETSC:
+    raise ImportError(
+        "petsc4py is required for the 2D FEM solver but is not installed.\n"
+        "See README.md for installation instructions."
+    )
+
 from petsc4py import PETSc
 
 if TYPE_CHECKING:

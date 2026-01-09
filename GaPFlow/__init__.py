@@ -33,5 +33,13 @@ config.update("jax_enable_x64", True)
 
 __version__ = get_version("GaPFlow", __file__)
 
+# Optional dependency flags
+try:
+    from petsc4py import PETSc
+    HAS_PETSC = True
+    del PETSc
+except ImportError:
+    HAS_PETSC = False
+
 from .db import Database  # noqa: F401, E402
 from .problem import Problem  # noqa: F401, E402

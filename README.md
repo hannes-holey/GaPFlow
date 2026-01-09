@@ -60,6 +60,28 @@ pip install -e .[test]
 
 5. Make sure that everything works by running the tests with `pytest`.
 
+### Optional: PETSc for 2D FEM solver
+
+The 2D finite element solver requires [PETSc](https://petsc.org/) for distributed linear algebra with MPI. This is **optional** and only needed if you want to run 2D FEM simulations.
+
+We provide an installation script similar to the LAMMPS installation:
+```bash
+bash install_petsc.sh
+```
+
+This script downloads PETSc, builds it with the required dependencies (BLAS, LAPACK, MUMPS), and installs `petsc4py`. The build takes approximately 15-20 minutes.
+
+After installation, set the environment variables as instructed by the script (or add them to your `~/.bashrc`):
+```bash
+export PETSC_DIR="$HOME/.local/petsc-3.22.2"
+export PETSC_ARCH="arch-linux-c-opt"
+```
+
+Verify the installation with:
+```bash
+python3 .check_petsc.py
+```
+
 ## Minimal example
 Simulation inputs are commonly provided in YAML files. A typical input file might look like this:
 
