@@ -34,7 +34,7 @@ dependencies = [
 	"ase", 
 	"moltemplate",
 	"ContactMechanics==1.7.0",
-	"SurfaceTopography==1.19.1", # pinned for compatibility with "old" muGrid
+	# "SurfaceTopography==1.19.1", # pinned for compatibility with "old" muGrid
 	"IPython"]
 
 
@@ -78,11 +78,18 @@ build.verbose = true
 
 [tool.cibuildwheel]
 skip = ["*cp314t*", "*musllinux*"]
-test-command = "pytest -s {project}/tests/test_lammps.py::test_lammps_serial"
+test-command = "pytest -v {project}/tests"
 test-requires = "pytest"
 
+# binary installations of muGrid require at least serial netCDF
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
+before-all = "yum install -y netcdf-devel"
 
+[tool.cibuildwheel.macos]
+archs = ["arm64"]
+before-all = "brew install netcdf"
+
+# excluded (for now)
 [tool.cibuildwheel.windows]
 archs = ["AMD64"]
