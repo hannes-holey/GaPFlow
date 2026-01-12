@@ -67,7 +67,7 @@ class FEMSolver2D:
         self.per_x = p.decomp.periodic_x
         self.per_y = p.decomp.periodic_y
         self.energy = p.fem_solver['equations']['energy']
-        self.dynamic = p.fem_solver['dynamic']
+        self.dynamic = True  # 2D always uses time-stepping
 
         self.global_coords = p.decomp.icoordsg
 
@@ -542,8 +542,6 @@ class FEMSolver2D:
         coo_values = np.zeros(layout.matrix_coo.nnz, dtype=np.float64)
 
         for term in self.terms:
-            if (not self.dynamic) and 'T' in term.name:
-                continue
             for dep_var in term.dep_vars:
                 self._accumulate_term_sparse(term, dep_var, coo_values)
 
@@ -672,8 +670,6 @@ class FEMSolver2D:
         """Assemble full residual vector from all terms (res_size,)."""
         res_vec = np.zeros(self.res_size)
         for term in self.terms:
-            if (not self.dynamic) and 'T' in term.name:
-                continue
             sl = self._res_slice(term.res)
             res_vec[sl] += self.residual_vector_term(term)
         return res_vec
@@ -757,58 +753,6 @@ class FEMSolver2D:
         if hasattr(p, 'bulk_stress'):
             p.bulk_stress.update()
 
-    def steady_state(self) -> None:
-        """Solve steady-state problem using PETSc Newton iteration."""
-        p = self.problem
-        fem_solver = p.fem_solver
-        rank = p.decomp.rank
-
-        if rank == 0:
-            print(61 * '-')
-            print(f"{'Iteration':<10s} {'Residual':<12s}")
-            print(61 * '-')
-
-        q = self.get_q_nodal().copy()
-        max_iter = fem_solver.get('max_iter', 100)
-        tol = fem_solver.get('R_norm_tol', 1e-6)
-        alpha = fem_solver.get('alpha', 1.0)
-
-        tic = time.time()
-        converged = False
-
-        for it in range(max_iter):
-            M, R = self.solver_step_fun(q)
-            R_norm = np.linalg.norm(R)
-            if rank == 0:
-                print(f"{it:<10d} {R_norm:<12.4e}")
-
-            if R_norm < tol:
-                converged = True
-                break
-
-            # Assemble and solve with PETSc
-            self.linear_solver.assemble(M, R)
-            dq = self.linear_solver.solve(self.nb_inner_pts, len(self.variables))
-
-            q = q + alpha * dq
-
-            # Update solver state
-            self.set_q_nodal(q)
-            p.decomp.communicate_ghost_buffers(p)
-            self.update_quad()
-
-        toc = time.time()
-        if rank == 0:
-            if converged:
-                print(f"Converged in {it} iterations. Solving took {toc - tic:.2f} seconds.")
-            else:
-                print(f"Did not converge after {max_iter} iterations.")
-
-        # Update output fields for plotting
-        self.update_output_fields()
-
-        p._stop = True
-
     def update_dynamic(self) -> None:
         """Do a single dynamic time step update using PETSc."""
         p = self.problem
@@ -858,24 +802,21 @@ class FEMSolver2D:
 
     def update(self) -> None:
         """Top-level solver update function."""
-        if self.dynamic:
-            self.update_dynamic()
-        else:
-            self.steady_state()
+        self.update_dynamic()
 
     def print_status_header(self) -> None:
-        """Print header for dynamic simulation status output."""
+        """Print header for simulation status output."""
         p = self.problem
-        if not p.options['silent'] and self.dynamic and p.decomp.rank == 0:
+        if not p.options['silent'] and p.decomp.rank == 0:
             print(75 * '-')
             print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Iter':<6s} {'Conv. Time':<12s} {'Residual':<12s}")
             print(75 * '-')
             p.write(params=False)
 
     def print_status(self, scalars=None) -> None:
-        """Print status line for dynamic simulation."""
+        """Print status line for simulation."""
         p = self.problem
-        if not p.options['silent'] and self.dynamic and p.decomp.rank == 0:
+        if not p.options['silent'] and p.decomp.rank == 0:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
                   f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
 
@@ -910,8 +851,7 @@ class FEMSolver2D:
             with self.timer("initial_update_quad"):
                 self.update_quad()
 
-            if self.dynamic:
-                self.update_prev_quad()
+            self.update_prev_quad()
 
             # Update output fields for initial frame
             self.update_output_fields()
