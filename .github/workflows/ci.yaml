@@ -37,16 +37,20 @@ jobs:
         python3 -m pip install --upgrade pip
         python3 -m pip install .[test,parallel]
 
-    - name: Test with pytest (<3.13)
-      if: matrix.python-version != '3.13'
+    - name: Test with pytest
       run:
         pytest
+
+    # - name: Test with pytest (<3.13)
+    #   if: matrix.python-version != '3.13'
+    #   run:
+    #     pytest
     
-    - name: Test with pytest & coverage (3.13)
-      if: matrix.python-version == '3.13'
-      run: |
-        coverage run -m pytest
-        bash maintenance/update_coverage_badge.sh
+    # - name: Test with pytest & coverage (3.13)
+    #   if: matrix.python-version == '3.13'
+    #   run: |
+    #     coverage run -m pytest
+    #     bash maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
       if: matrix.python-version == '3.13' && github.ref == 'refs/heads/main'

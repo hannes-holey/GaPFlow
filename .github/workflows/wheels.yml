@@ -19,7 +19,7 @@ jobs:
           - ubuntu-latest
           - macos-14
           - macos-14-large
-          - windows-2022
+          # - windows-2022
     steps:
       - uses: actions/checkout@v5
         with:
