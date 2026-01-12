@@ -34,7 +34,6 @@ dependencies = [
 	"ase", 
 	"moltemplate",
 	"ContactMechanics==1.7.0",
-	# "SurfaceTopography==1.19.1", # pinned for compatibility with "old" muGrid
 	"IPython"]
 
 
