@@ -185,13 +185,15 @@ def plot_solution(solver, rho, jx, jy, h, problem, Nx_global=None, Ny_global=Non
     ax1.set_title(r'Gap height $h$ (spherical)')
     ax1.set_aspect('equal')
 
-    # 2. Density field with flux vectors
+    # 2. Density field with flux deviation vectors (relative to mean Couette flow)
     ax2 = axes[0, 1]
     c2 = ax2.contourf(X * 1000, Y * 1000, rho, levels=20, cmap='viridis')
     plt.colorbar(c2, ax=ax2, label=r'$\rho$ [kg/m³]')
-    # Quiver plot for flux - normalize vectors to show direction only
+    # Quiver plot for flux deviation - subtract mean advective flux U/2 * rho
+    U = problem.geo['U']
+    jx_dev = jx - (U / 2) * rho
     skip = max(1, Nx // 12)
-    jx_skip, jy_skip = jx[::skip, ::skip], jy[::skip, ::skip]
+    jx_skip, jy_skip = jx_dev[::skip, ::skip], jy[::skip, ::skip]
     j_mag = np.sqrt(jx_skip**2 + jy_skip**2)
     j_mag[j_mag == 0] = 1  # Avoid division by zero
     jx_norm, jy_norm = jx_skip / j_mag, jy_skip / j_mag
@@ -200,7 +202,7 @@ def plot_solution(solver, rho, jx, jy, h, problem, Nx_global=None, Ny_global=Non
                color='white', alpha=0.9, scale=15, width=0.004, headwidth=3, headlength=4)
     ax2.set_xlabel('x [mm]')
     ax2.set_ylabel('y [mm]')
-    ax2.set_title(r'Density $\rho$ with flux vectors $\mathbf{j}$')
+    ax2.set_title(r'Density $\rho$ with flux deviation $\mathbf{j} - \frac{U}{2}\rho$')
     ax2.set_aspect('equal')
 
     # 3. Pressure field
