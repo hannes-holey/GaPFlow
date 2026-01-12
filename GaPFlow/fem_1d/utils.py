@@ -71,16 +71,43 @@ class NonLinearTerm():
         return self.der_funs[i](*args)
 
 
-def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
+def get_default_terms(fem_solver: dict) -> list[str]:
+    """Determine default 1D term names based on config flags.
 
+    For energy, includes the commonly used terms (R34, R35, R36) but not
+    convection/pressure work (R31, R32) which may need additional setup.
+    Use explicit term_list for full energy equation.
+    """
+    terms = ['R11', 'R11S', 'R21', 'R22', 'R22S', 'R24']  # Base mass + momentum
+
+    if fem_solver['dynamic']:
+        terms.extend(['R1T', 'R2T'])
+
+    if fem_solver['equations']['energy']:
+        # Include commonly used energy terms (wall stress work, diffusion, wall heat)
+        # Convection (R31, R31S) and pressure work (R32, R32S) require explicit term_list
+        terms.extend(['R34', 'R35', 'R36'])
+        if fem_solver['dynamic']:
+            terms.append('R3T')
+
+    return terms
+
+
+def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
+    """Get active terms based on config.
+
+    If user specified explicit term_list, use that.
+    Otherwise, auto-select based on config flags.
+    """
     from .terms import term_list
-    term_list_res = []
-    for term in term_list:
-        if term.name in fem_solver['equations']['term_list']:
-            term_list_res.append(term)
-        else:
-            pass
-    return term_list_res
+
+    user_terms = fem_solver['equations'].get('term_list')
+    if user_terms is not None:
+        requested = set(user_terms)
+    else:
+        requested = set(get_default_terms(fem_solver))
+
+    return [t for t in term_list if t.name in requested]
 
 
 def get_norm_quad_pts(nb_quad_pts: int) -> NDArray:

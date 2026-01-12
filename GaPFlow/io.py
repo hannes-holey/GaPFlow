@@ -479,27 +479,9 @@ def sanitize_fem_solver(d):
     out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.0))
 
     out['equations'] = {}
-    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', None))
+    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
+    # User-provided term_list (None = auto-select in solver based on flags)
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
-
-    # figure out what terms to include, do it here so that it is printed
-    list_energy = ['R11', 'R12', 'R1T', 'R21', 'R24', 'R2T', 'R31',
-                   'R31S', 'R32', 'R32S', 'R34', 'R35', 'R36', 'R3T']
-    list_wo_energy = ['R11', 'R12', 'R1T', 'R21', 'R24', 'R2T']
-
-    if out['equations']['term_list'] is None:  # auto-select terms
-        if out['equations']['energy']:
-            term_list = list_energy
-        else:
-            term_list = list_wo_energy
-        if not out['dynamic']:
-            term_list = [t for t in term_list if 'T' not in t]
-        out['equations']['term_list'] = term_list
-    else:
-        # user-specified term_list overwrites other settings
-        # find out if user included energy terms
-        term_list = out['equations']['term_list']
-        out['equations']['energy'] = any(t[1] == '3' for t in term_list)
 
     print_dict(out)
 

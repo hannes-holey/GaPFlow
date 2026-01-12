@@ -54,7 +54,6 @@ class FEMSolver2D:
     def __init__(self, fem_spec: dict, problem: "Problem") -> None:
         self.fem_spec = fem_spec
         self.problem = problem
-        self.num_solver = Solver(problem.fem_solver)
         self.quad_mgr = None  # QuadFieldManager, initialized via init()
         self.linear_solver = None  # Linear solver (PETSc or SciPy)
         self.timer = Timer()

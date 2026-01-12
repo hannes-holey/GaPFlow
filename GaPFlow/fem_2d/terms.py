@@ -230,14 +230,228 @@ R2Ty = NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
+# -----------------------------------------------------------------------------
+# Energy equation terms (R3*)
+# -----------------------------------------------------------------------------
+
+R31x = NonLinearTerm(
+    name='R31x',
+    description='energy convection x',
+    res='energy',
+    dep_vars=['rho', 'jx', 'E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, E: - (jx / rho) * E,
+    der_funs=[lambda ctx: lambda rho, jx, E: (jx / rho**2) * E,
+              lambda ctx: lambda rho, jx, E: - (1 / rho) * E,
+              lambda ctx: lambda rho, jx, E: - (jx / rho)],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R31y = NonLinearTerm(
+    name='R31y',
+    description='energy convection y',
+    res='energy',
+    dep_vars=['rho', 'jy', 'E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jy, E: - (jy / rho) * E,
+    der_funs=[lambda ctx: lambda rho, jy, E: (jy / rho**2) * E,
+              lambda ctx: lambda rho, jy, E: - (1 / rho) * E,
+              lambda ctx: lambda rho, jy, E: - (jy / rho)],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=False)
+
+R31Sx = NonLinearTerm(
+    name='R31Sx',
+    description='energy convection height source x',
+    res='energy',
+    dep_vars=['rho', 'jx', 'E'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda rho, jx, E: - (jx / rho) * E * (1 / ctx['h']() * ctx['dh_dx']()),
+    der_funs=[lambda ctx: lambda rho, jx, E: (jx / rho**2) * E * (1 / ctx['h']() * ctx['dh_dx']()),
+              lambda ctx: lambda rho, jx, E: - (1 / rho) * E * (1 / ctx['h']() * ctx['dh_dx']()),
+              lambda ctx: lambda rho, jx, E: - (jx / rho) * (1 / ctx['h']() * ctx['dh_dx']())],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R31Sy = NonLinearTerm(
+    name='R31Sy',
+    description='energy convection height source y',
+    res='energy',
+    dep_vars=['rho', 'jy', 'E'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda rho, jy, E: - (jy / rho) * E * (1 / ctx['h']() * ctx['dh_dy']()),
+    der_funs=[lambda ctx: lambda rho, jy, E: (jy / rho**2) * E * (1 / ctx['h']() * ctx['dh_dy']()),
+              lambda ctx: lambda rho, jy, E: - (1 / rho) * E * (1 / ctx['h']() * ctx['dh_dy']()),
+              lambda ctx: lambda rho, jy, E: - (jy / rho) * (1 / ctx['h']() * ctx['dh_dy']())],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R32x = NonLinearTerm(
+    name='R32x',
+    description='pressure work x',
+    res='energy',
+    dep_vars=['rho', 'jx'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx: - ctx['p']() * (jx / rho),
+    der_funs=[lambda ctx: lambda rho, jx: - (ctx['dp_drho']() * (jx / rho) - ctx['p']() * (jx / rho**2)),
+              lambda ctx: lambda rho, jx: - ctx['p']() * (1 / rho)],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R32y = NonLinearTerm(
+    name='R32y',
+    description='pressure work y',
+    res='energy',
+    dep_vars=['rho', 'jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jy: - ctx['p']() * (jy / rho),
+    der_funs=[lambda ctx: lambda rho, jy: - (ctx['dp_drho']() * (jy / rho) - ctx['p']() * (jy / rho**2)),
+              lambda ctx: lambda rho, jy: - ctx['p']() * (1 / rho)],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=False)
+
+R32Sx = NonLinearTerm(
+    name='R32Sx',
+    description='pressure work height source x',
+    res='energy',
+    dep_vars=['rho', 'jx'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda rho, jx: - ctx['p']() * (jx / rho) * (1 / ctx['h']() * ctx['dh_dx']()),
+    der_funs=[lambda ctx: lambda rho, jx: - ((ctx['dp_drho']() * (jx / rho) - ctx['p']() * (jx / rho**2)) * (1 / ctx['h']() * ctx['dh_dx']())),
+              lambda ctx: lambda rho, jx: - ctx['p']() * (1 / rho) * (1 / ctx['h']() * ctx['dh_dx']())],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R32Sy = NonLinearTerm(
+    name='R32Sy',
+    description='pressure work height source y',
+    res='energy',
+    dep_vars=['rho', 'jy'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda rho, jy: - ctx['p']() * (jy / rho) * (1 / ctx['h']() * ctx['dh_dy']()),
+    der_funs=[lambda ctx: lambda rho, jy: - ((ctx['dp_drho']() * (jy / rho) - ctx['p']() * (jy / rho**2)) * (1 / ctx['h']() * ctx['dh_dy']())),
+              lambda ctx: lambda rho, jy: - ctx['p']() * (1 / rho) * (1 / ctx['h']() * ctx['dh_dy']())],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R34 = NonLinearTerm(
+    name='R34',
+    description='wall stress work',
+    res='energy',
+    dep_vars=['rho', 'jx', 'jy'],
+    dep_vals=['h', 'tau_xz_bot', 'tau_yz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx',
+              'dtau_yz_bot_drho', 'dtau_yz_bot_djy', 'U', 'V'],
+    fun=lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * (ctx['tau_xz_bot']() * ctx['U']() + ctx['tau_yz_bot']() * ctx['V']()),
+    der_funs=[lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * (ctx['dtau_xz_bot_drho']() * ctx['U']() + ctx['dtau_yz_bot_drho']() * ctx['V']()),
+              lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dtau_xz_bot_djx']() * ctx['U'](),
+              lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dtau_yz_bot_djy']() * ctx['V']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R35x = NonLinearTerm(
+    name='R35x',
+    description='thermal diffusion x',
+    res='energy',
+    dep_vars=['rho', 'jx', 'jy', 'E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['T'](),
+    der_funs=[lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_drho'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_djx'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_djy'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_dE']()],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+R35y = NonLinearTerm(
+    name='R35y',
+    description='thermal diffusion y',
+    res='energy',
+    dep_vars=['rho', 'jx', 'jy', 'E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['T'](),
+    der_funs=[lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_drho'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_djx'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_djy'](),
+              lambda ctx: lambda rho, jx, jy, E: - ctx['k']() * ctx['dT_dE']()],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
+R36 = NonLinearTerm(
+    name='R36',
+    description='wall heat balance',
+    res='energy',
+    dep_vars=['rho', 'jx', 'jy', 'E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, jy, E: ctx['S'](),
+    der_funs=[lambda ctx: lambda rho, jx, jy, E: ctx['dS_drho'](),
+              lambda ctx: lambda rho, jx, jy, E: ctx['dS_djx'](),
+              lambda ctx: lambda rho, jx, jy, E: ctx['dS_djy'](),
+              lambda ctx: lambda rho, jx, jy, E: ctx['dS_dE']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R3T = NonLinearTerm(
+    name='R3T',
+    description='energy time derivative',
+    res='energy',
+    dep_vars=['E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda E: - (E - ctx['E_prev']()) / ctx['dt'],
+    der_funs=[lambda ctx: lambda E: - np.full_like(E, 1.0) / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
 
 term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
-             R21x, R21y, R24x, R24y, R2Tx, R2Ty]
+             R21x, R21y, R24x, R24y, R2Tx, R2Ty,
+             R31x, R31y, R31Sx, R31Sy, R32x, R32y, R32Sx, R32Sy,
+             R34, R35x, R35y, R36, R3T]
+
+
+def get_default_terms(fem_solver: dict) -> list[str]:
+    """Determine default 2D term names based on config flags."""
+    terms = ['R11x', 'R11y', 'R11Sx', 'R11Sy',   # Mass
+             'R21x', 'R21y', 'R24x', 'R24y']      # Momentum
+
+    if fem_solver['dynamic']:
+        terms.extend(['R1T', 'R2Tx', 'R2Ty'])
+
+    if fem_solver.get('pressure_stab_alpha', 0) > 0:
+        terms.extend(['R1Stabx', 'R1Staby'])
+
+    if fem_solver['equations']['energy']:
+        terms.extend(['R31x', 'R31y', 'R31Sx', 'R31Sy',
+                      'R32x', 'R32y', 'R32Sx', 'R32Sy',
+                      'R34', 'R35x', 'R35y', 'R36'])
+        if fem_solver['dynamic']:
+            terms.append('R3T')
+
+    return terms
 
 
 def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
-    term_list_res = []
-    for term in term_list:
-        if term.name in fem_solver['equations']['term_list']:
-            term_list_res.append(term)
-    return term_list_res
+    """Get active terms based on config.
+
+    If user specified explicit term_list, use that.
+    Otherwise, auto-select based on config flags.
+    """
+    user_terms = fem_solver['equations'].get('term_list')
+    if user_terms is not None:
+        requested = set(user_terms)
+    else:
+        requested = set(get_default_terms(fem_solver))
+
+    return [t for t in term_list if t.name in requested]
