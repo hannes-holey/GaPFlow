@@ -29,7 +29,14 @@ import numpy as np
 from copy import deepcopy
 from datetime import datetime
 from collections import deque
-from muGrid import GlobalFieldCollection, FileIONetCDF, OpenMode
+from muGrid import GlobalFieldCollection, FileIONetCDF
+
+try:
+    from muGrid import OpenMode
+    open_mode = OpenMode.Overwrite
+except ImportError:
+    open_mode = "overwrite"
+
 
 from typing import Type
 import numpy.typing as npt
@@ -180,15 +187,14 @@ class Problem:
             # Write gap height and gradients
             # No elastic deformation - write once and close
             # Elastic deformation - write initial topo and keep open
-            self.topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), OpenMode.Overwrite)
+            self.topofile = FileIONetCDF(os.path.join(self.outdir, 'topo.nc'), open_mode=open_mode)
             self.topofile.register_field_collection(fc, field_names=['topography'])
             self.topofile.append_frame().write()
             if not self.prop['elastic']['enabled']:
                 self.topofile.close()
 
             # Solution fields
-            self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
-                                     OpenMode.Overwrite)
+            self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'), open_mode=open_mode)
 
             field_names = ['solution', 'pressure', 'wall_stress_xz', 'wall_stress_yz']
 

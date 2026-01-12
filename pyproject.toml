@@ -1,6 +1,8 @@
 [build-system]
-requires = ["flit_core>=3.2", "DiscoverVersion"]
-build-backend = "flit_core.buildapi"
+requires = [
+  "scikit-build-core>=0.8",
+]
+build-backend = "scikit_build_core.build"
 
 [project]
 name = "GaPFlow"
@@ -19,7 +21,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"DiscoverVersion",
-	"muGrid>=0.95.0",
+	"muGrid==0.95.0",
 	"tinygp>=0.3.0",
 	"jax",
 	"jaxopt==0.8.5",
@@ -30,12 +32,15 @@ dependencies = [
 	"polars",
 	"ruamel.yaml",
 	"ase", 
-	"mpi4py",
 	"moltemplate",
-	"ContactMechanics>=1.7.0",
+	"ContactMechanics==1.7.0",
+	"SurfaceTopography==1.19.1", # pinned for compatibility with "old" muGrid
 	"IPython"]
 
+
 [project.optional-dependencies]
+parallel = ['mpi4py']
+
 test = ['pytest',
 		'coverage']
 
@@ -46,6 +51,7 @@ doc = ['sphinx',
 	   'sympy']
 
 [project.scripts]
+gpf_info="GaPFlow:info.main"
 gpf_plot_height="GaPFlow.cli:plot_height.main"
 gpf_plot_history="GaPFlow.cli:plot_history.main"
 gpf_plot_frame="GaPFlow.cli:plot_frame.main"
@@ -63,3 +69,20 @@ filterwarnings = "ignore::DeprecationWarning"
 
 [tool.coverage.run]
 source = ["GaPFlow"]
+
+[tool.scikit-build]
+# experimental = "true"
+# metadata.version.provider = "DiscoverVersion.scikit_build_core"
+build-dir = "build/{wheel_tag}"
+build.verbose = true
+
+[tool.cibuildwheel]
+skip = ["*cp314t*", "*musllinux*"]
+test-command = "pytest -s {project}/tests/test_lammps.py::test_lammps_serial"
+test-requires = "pytest"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]

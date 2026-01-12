@@ -21,13 +21,22 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from ..utils import bordered_text, make_dumpable
+from .utils import read_output_files
+from .moltemplate import write_template, build_template
+from ..models.viscous import stress_bottom, stress_top
+from ..models.pressure import eos_pressure
+from ._lammps import lammps
+
+import numpy as np
+import jax.numpy as jnp
+import jax.random as jr
 import os
 import sys
 import abc
 import shutil
 import warnings
 import dtoolcore
-from mpi4py import MPI
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from ruamel.yaml import YAML
@@ -36,20 +45,13 @@ from socket import gethostname
 import scipy.constants as sci
 from copy import deepcopy
 
+PARALLEL = True
+
 try:
-    from lammps import lammps
+    from mpi4py import MPI
 except ImportError:
-    warnings.warn('Failed to import lammps. Only Mock MD object available.')
+    PARALLEL = False
 
-import jax.random as jr
-import jax.numpy as jnp
-import numpy as np
-
-from ..models.pressure import eos_pressure
-from ..models.viscous import stress_bottom, stress_top
-from .moltemplate import write_template, build_template
-from .utils import read_output_files
-from ..utils import bordered_text, make_dumpable
 
 yaml = YAML()
 yaml.explicit_start = True
@@ -68,21 +70,26 @@ def main():
 
 def run_parallel(fname, nworker):
 
-    worker_file = os.path.abspath(__file__)
+    if PARALLEL:
+        worker_file = os.path.abspath(__file__)
 
-    sub_comm = MPI.COMM_SELF.Spawn(sys.executable,
-                                   args=[worker_file, fname],
-                                   maxprocs=nworker)
+        sub_comm = MPI.COMM_SELF.Spawn(sys.executable,
+                                       args=[worker_file, fname],
+                                       maxprocs=nworker)
 
-    # Wait for MD to complete and free spawned communicator
-    sub_comm.Barrier()
-    sub_comm.Free()
+        # Wait for MD to complete and free spawned communicator
+        sub_comm.Barrier()
+        sub_comm.Free()
+
+    else:
+        warnings.warn("GaPFlow has been installed without parallel MD. Run serial instead...")
+        run_serial(fname)
 
 
 def run_serial(fname):
 
     nargs = ["-log", "log.lammps"]
-    lmp = lammps(name='mpi', cmdargs=nargs)
+    lmp = lammps.lammps(name='mpi', cmdargs=nargs)
     assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
 
     lmp.file(fname)

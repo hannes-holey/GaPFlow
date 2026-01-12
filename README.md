@@ -15,50 +15,33 @@ The code uses [µGrid](https://muspectre.github.io/muGrid/) for handling macrosc
 
 ## Installation
 
-A minimal version can be installed via
+`GaPFlow` can be installed via
 ```
 pip install GaPFlow
 ```
-The published wheels are currently not built with LAMMPS.
-Thus, running multiscale simulations with molecular dynamics is not possible with this quick installation.
-For the full functionality it is required to build `GaPFlow` from source.
+A serial build of LAMMPS is provided for most platforms which allows testing all of `GaPFlow`'s functionality.
+For production simulations it is however recommended to build GaPFlow with parallel LAMMPS on your system.
+You need to have MPI installed (e.g. via `apt install openmpi-bin libopenmpi-dev` on Debian-based systems).
+To compile for your specific platform, run
+```
+pip install --no-binary GaPFlow GaPFlow.[parallel]
+```
 
-### Building from source
-
-When building from source follow these steps:
-
-0. Make sure you have MPI installed, e.g. on Debian-based systems `openmpi-bin` and `libopenmpi-dev` should be installed on your system.
-
-1. The multiscale framework depends on LAMMPS which is contained as a Git submodule in this repository. After cloning the repository initialize the submodule with
+You can check your installation by running `gpf_info`
 ```
-git submodule update --init
-```
-2. Install LAMMPS and mpi4py. We provide a script to build LAMMPS via `cmake` and install the Python package in your local environment. 
-```
-bash install_lammps.sh
-```
-Alternatively, follow the equivalent steps in the LAMMPS documentation with a complete list of build options. Make sure that you have the optional LAMMPS packages `MANYBODY`, `MOLECULES` and `ÈXTRA-FIX` installed. To make sure that everything is correctly installed run `python .check_lammps.py`. The last three lines should look similar to these:
-```
+==========
+LAMMPS
+==========
+...
 MPI:  True
 mpi4py:  True
-Installed packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+packages:  ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+==========
+muGrid
+==========
+MPI:  False
 ```
-3. Build [µGrid](https://muspectre.github.io/muGrid/GettingStarted.html)'s Python bindings
-```
-pip install -v --force-reinstall --no-cache --no-binary muGrid muGrid
-```
-and make sure MPI and PnetCDF get detected. For manual installations of PnetCDF (recommended), you may need to tell `pkg_config` where to find it, e.g.
-```
-export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
-```
-for instalations under `$HOME/.local/`.
-
-4. Finally, install the package with its remaining dependencies and testing capabilities
-```
-pip install -e .[test]
-```
-
-5. Make sure that everything works by running the tests with `pytest`.
+The last line should not worry you, because we currently do not use parallel functionalities of µGrid. 
 
 ## Minimal example
 Simulation inputs are commonly provided in YAML files. A typical input file might look like this:
