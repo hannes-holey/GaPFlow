@@ -19,7 +19,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"DiscoverVersion",
-	"muGrid>=0.103.0",
+	"muGrid==0.105.1",
 	"tinygp>=0.3.0",
 	"jax",
 	"jaxopt==0.8.5",
