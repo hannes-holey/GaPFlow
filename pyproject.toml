@@ -19,7 +19,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"DiscoverVersion",
-	"muGrid>=0.95.0",
+	"muGrid>=0.105.0",
 	"tinygp>=0.3.0",
 	"jax",
 	"jaxopt==0.8.5",
@@ -32,7 +32,7 @@ dependencies = [
 	"ase", 
 	"mpi4py",
 	"moltemplate",
-	"ContactMechanics>=1.7.0",
+	"ContactMechanics @ git+https://github.com/ContactEngineering/ContactMechanics.git@MAINT/muGrid_muFFT_api-changes",
 	"IPython"]
 
 [project.optional-dependencies]

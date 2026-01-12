@@ -131,7 +131,7 @@ class Problem:
         num_extra_features = 1 if database is None else database.num_features - 6
         extra = fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
-            extra.p = extra_field
+            extra.p[...] = extra_field
 
         # Forward declaration of cross-dependent fields
         fc.register_real_field('x')
@@ -546,12 +546,12 @@ class Problem:
                 self.wall_stress_xz.upper + self.wall_stress_yz.upper,
             )
 
-            self.__field.p = self.__field.p - dt * (fX / dx + fY / dy - src)
+            self.__field.p[...] = self.__field.p - dt * (fX / dx + fY / dy - src)
 
             self._communicate_ghost_buffers()
 
         # second-order temporal averaging
-        self.__field.p = (self.__field.p + q0) / 2.0
+        self.__field.p[...] = (self.__field.p + q0) / 2.0
 
         if self.q_is_valid:
             self.topo.update()
@@ -591,7 +591,7 @@ class Problem:
         elif self.q_has_negative_density:
             print('Negative density detected.', end=' ')
 
-        self.__field.p = q0
+        self.__field.p[...] = q0
         self.pressure.update(predictor=False, compute_var=True)
         self.wall_stress_xz.update(predictor=False, compute_var=True)
         self.wall_stress_yz.update(predictor=False, compute_var=True)
