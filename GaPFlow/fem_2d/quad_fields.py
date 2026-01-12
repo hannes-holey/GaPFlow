@@ -32,7 +32,7 @@ import numpy as np
 import numpy.typing as npt
 from muGrid import Field
 
-from .utils2d import TriangleQuadrature
+from .elements import TriangleQuadrature
 
 if TYPE_CHECKING:
     from ..problem import Problem

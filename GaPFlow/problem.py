@@ -127,7 +127,7 @@ class Problem:
             self.solver = ExplicitSolver(self)
         elif self.numerics['solver'] == 'fem':
             if self.grid['Ny'] == 1:
-                from .solver_fem import FEMSolver1D
+                from .solver_fem_1d import FEMSolver1D
                 self.solver = FEMSolver1D(self)
             else:
                 from .solver_fem_2d import FEMSolver2D

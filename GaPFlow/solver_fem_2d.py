@@ -21,21 +21,19 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from .fem.num_solver import Solver
-from .fem.utils2d import (
-    NonLinearTerm,
-    TriangleQuadrature,
-    get_active_terms,
-)
-from .fem.assembly_layout import (
+from . import HAS_PETSC
+from .fem_1d.num_solver import Solver
+from .fem_2d.elements import TriangleQuadrature
+from .fem_2d.terms import NonLinearTerm, get_active_terms
+from .fem_2d.assembly_layout import (
     FEMAssemblyLayout,
     MatrixCOOPattern,
     RHSPattern,
     JacobianTermMap,
     RHSTermMap,
 )
-from .fem.grid_index import GridIndexManager
-from .fem.quad_fields import QuadFieldManager
+from .fem_2d.grid_index import GridIndexManager
+from .fem_2d.quad_fields import QuadFieldManager
 
 from functools import cached_property
 import numpy as np
@@ -58,7 +56,7 @@ class FEMSolver2D:
         self.problem = problem
         self.num_solver = Solver(problem.fem_solver)
         self.quad_mgr = None  # QuadFieldManager, initialized via init()
-        self.petsc = None  # Optional PETSc system, enabled via enable_petsc()
+        self.linear_solver = None  # Linear solver (PETSc or SciPy)
         self.timer = Timer()
 
     def _init_convenience_accessors(self) -> None:
@@ -789,8 +787,8 @@ class FEMSolver2D:
                 break
 
             # Assemble and solve with PETSc
-            self.petsc.assemble(M, R)
-            dq = self.petsc.solve(self.nb_inner_pts, len(self.variables))
+            self.linear_solver.assemble(M, R)
+            dq = self.linear_solver.solve(self.nb_inner_pts, len(self.variables))
 
             q = q + alpha * dq
 
@@ -837,9 +835,9 @@ class FEMSolver2D:
 
                     # Assemble and solve with PETSc
                     with self.timer("petsc_assemble"):
-                        self.petsc.assemble(M, R)
+                        self.linear_solver.assemble(M, R)
                     with self.timer("petsc_solve"):
-                        dq = self.petsc.solve(self.nb_inner_pts, len(self.variables))
+                        dq = self.linear_solver.solve(self.nb_inner_pts, len(self.variables))
 
                     q = q + alpha * dq
 
@@ -906,7 +904,7 @@ class FEMSolver2D:
                 self._build_jit_functions()
             self._build_terms()
             with self.timer("init_petsc"):
-                self._init_petsc()
+                self._init_linear_solver()
 
             # Initial quad update
             with self.timer("initial_update_quad"):
@@ -921,9 +919,22 @@ class FEMSolver2D:
         self.time_inner = 0.0
         self.inner_iterations = 0
 
-    def _init_petsc(self):
-        """Initialize PETSc solver for distributed linear solves."""
-        from .fem.petsc_system import PETScSystem
+    def _init_linear_solver(self):
+        """Initialize linear solver for sparse system solves."""
         solver_type = self.problem.fem_solver.get('linear_solver', 'direct')
         petsc_info = self.assembly_layout.get_petsc_info()
-        self.petsc = PETScSystem(petsc_info, solver_type=solver_type)
+
+        if HAS_PETSC:
+            from .fem_2d.petsc_system import PETScSystem
+            self.linear_solver = PETScSystem(petsc_info, solver_type=solver_type)
+        else:
+            from mpi4py import MPI
+            if MPI.COMM_WORLD.size > 1:
+                raise RuntimeError(
+                    "PETSc is required for parallel execution. "
+                    "Install petsc4py or run in serial mode."
+                )
+            from .fem_2d.scipy_system import ScipySystem
+            self.linear_solver = ScipySystem(petsc_info, solver_type=solver_type)
+            print("Note: Using SciPy sparse solver (PETSc not available). "
+                  "Install petsc4py for better performance and parallel support.")

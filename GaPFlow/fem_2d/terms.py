@@ -24,8 +24,53 @@
 
 # flake8: noqa: E501
 
-from .utils2d import NonLinearTerm
+from typing import Callable
 import numpy as np
+import numpy.typing as npt
+
+NDArray = npt.NDArray[np.floating]
+
+
+class NonLinearTerm():
+    def __init__(self,
+                 name: str,
+                 description: str,
+                 res: str,
+                 dep_vars: list[str],
+                 dep_vals: list[str],
+                 fun: Callable,
+                 der_funs: list[Callable],
+                 d_dx_resfun: bool = False,
+                 d_dy_resfun: bool = False,
+                 der_testfun: bool = False):
+        self.name = name
+        self.description = description
+        self.res = res
+        self.dep_vars = dep_vars
+        self.dep_vals = dep_vals
+        self.fun_ = fun
+        self.der_funs_ = der_funs
+        self.d_dx_resfun = d_dx_resfun
+        self.d_dy_resfun = d_dy_resfun
+        self.der_testfun = der_testfun
+        self.built = False
+
+    def build(self, ctx: dict) -> None:
+        self.fun = self.fun_(ctx)
+        self.der_funs = [der_fun_(ctx) for der_fun_ in self.der_funs_]
+        self.built = True
+
+    def evaluate(self, *args) -> NDArray:
+        if not self.built:
+            raise Exception("Term not built")
+        return self.fun(*args)
+
+    def evaluate_deriv(self, dep_var: str, *args) -> NDArray:
+        if not self.built:
+            raise Exception("Term not built")
+        i = self.dep_vars.index(dep_var)
+        return self.der_funs[i](*args)
+
 
 R11x = NonLinearTerm(
     name='R11x',
@@ -188,3 +233,11 @@ R2Ty = NonLinearTerm(
 
 term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
              R21x, R21y, R24x, R24y, R2Tx, R2Ty]
+
+
+def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
+    term_list_res = []
+    for term in term_list:
+        if term.name in fem_solver['equations']['term_list']:
+            term_list_res.append(term)
+    return term_list_res

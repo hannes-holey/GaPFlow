@@ -251,7 +251,7 @@ class TestShapeFunctionConsistency:
 
         Left triangle node order: [bl, tl, br]
         """
-        from GaPFlow.fem.utils2d import TriangleQuadrature
+        from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
         N_left = quad.N_left
@@ -273,7 +273,7 @@ class TestShapeFunctionConsistency:
 
         Right triangle node order: [tr, br, tl]
         """
-        from GaPFlow.fem.utils2d import TriangleQuadrature
+        from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
         N_right = quad.N_right
@@ -292,7 +292,7 @@ class TestShapeFunctionConsistency:
 
     def test_shape_functions_partition_of_unity(self):
         """Verify shape functions sum to 1 at each quad point."""
-        from GaPFlow.fem.utils2d import TriangleQuadrature
+        from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
 
@@ -310,7 +310,7 @@ class TestShapeFunctionConsistency:
 
     def test_interpolation_operator_consistency(self):
         """Verify interpolation operator is consistent with shape functions."""
-        from GaPFlow.fem.utils2d import TriangleQuadrature
+        from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
         N_left = quad.N_left
@@ -329,7 +329,7 @@ class TestShapeFunctionConsistency:
 
     def test_quadrature_weights(self):
         """Verify quadrature weights sum to 1/2 (area of unit triangle)."""
-        from GaPFlow.fem.utils2d import TriangleQuadrature
+        from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
         weight_sum = quad.weights.sum()

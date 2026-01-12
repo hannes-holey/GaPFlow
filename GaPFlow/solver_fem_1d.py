@@ -21,8 +21,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from .fem.num_solver import Solver
-from .fem.utils import (
+from .fem_1d.num_solver import Solver
+from .fem_1d.utils import (
     NonLinearTerm,
     get_active_terms,
     get_norm_quad_pts,

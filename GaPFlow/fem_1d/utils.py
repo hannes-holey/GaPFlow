@@ -73,7 +73,7 @@ class NonLinearTerm():
 
 def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
 
-    from .terms_1d import term_list
+    from .terms import term_list
     term_list_res = []
     for term in term_list:
         if term.name in fem_solver['equations']['term_list']:
