@@ -1,6 +1,7 @@
 [build-system]
 requires = [
   "scikit-build-core>=0.8",
+  "setuptools-scm>=8"
 ]
 build-backend = "scikit_build_core.build"
 
@@ -20,7 +21,6 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-	"DiscoverVersion",
 	"muGrid==0.96.0",
 	"tinygp>=0.3.0",
 	"jax",
@@ -69,11 +69,15 @@ filterwarnings = "ignore::DeprecationWarning"
 [tool.coverage.run]
 source = ["GaPFlow"]
 
+
 [tool.scikit-build]
-# experimental = "true"
-# metadata.version.provider = "DiscoverVersion.scikit_build_core"
+metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 build-dir = "build/{wheel_tag}"
 build.verbose = true
+
+[tool.setuptools_scm]
+version_scheme = "guess-next-dev"
+local_scheme = "dirty-tag"
 
 [tool.cibuildwheel]
 skip = ["*cp314t*", "*musllinux*"]
