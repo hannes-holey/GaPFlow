@@ -5,6 +5,6 @@
 #
 """Utility functions for tutorials."""
 
-from .analytic import heat_equation_1d
+from .plotting import animate_comparison
 
-__all__ = ['heat_equation_1d']
+__all__ = ['animate_comparison']

@@ -121,6 +121,9 @@ class Problem:
         self.fem_solver = fem_solver
         self.energy_spec = energy_spec
 
+        # Callback functions called after each time step
+        self._callbacks = []
+
         # Initialize solver
         if self.numerics['solver'] == 'explicit':
             from .solver_explicit import ExplicitSolver
@@ -421,6 +424,10 @@ class Problem:
 
         self.solver.print_status_header()
 
+        # Call callbacks once before the main loop to capture initial state (t=0)
+        for callback in self._callbacks:
+            callback()
+
         # Run
         self._tic = datetime.now()
         while not self.converged and self.step < self.numerics['max_it'] and not self._stop:
@@ -522,6 +529,20 @@ class Problem:
                     print(self.wall_stress_yz.gp, file=f)
 
     # ---------------------------
+    # Callbacks
+    # ---------------------------
+
+    def add_callback(self, fun) -> None:
+        """Add a callback function to be called after each time step.
+
+        Parameters
+        ----------
+        fun : callable
+            Function with no arguments, called after each time step completes.
+        """
+        self._callbacks.append(fun)
+
+    # ---------------------------
     # Single time step (update)
     # ---------------------------
 
@@ -530,6 +551,8 @@ class Problem:
         Single update iteration delegated to the solver.
         """
         self.solver.update()
+        for callback in self._callbacks:
+            callback()
 
     def _post_update(self) -> None:
         """

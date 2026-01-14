@@ -156,13 +156,6 @@ class Energy():
     def initialize(self) -> None:
         """Initialize energy field from initial temperature specification."""
 
-        # check dimensionality for non-uniform profiles
-        if self.T_0_spec[0] in ('half_sine', 'block') and self.dim != 1:
-            raise ValueError(
-                f"Temperature profile '{self.T_0_spec[0]}' is only supported for 1D problems. "
-                f"Got dim={self.dim}. Use 'uniform' profile for 2D problems."
-            )
-
         # initial energy from initial temperature profile
         ux = self.solution[1] / self.solution[0]
         uy = self.solution[2] / self.solution[0]
@@ -183,6 +176,13 @@ class Energy():
             x_norm = (x - self.dx / 2) / (self.Lx - self.dx)
             return T_min + (T_max - T_min) * np.sin(np.pi * x_norm)
 
+        elif self.T_0_spec[0] == 'half_sine_ghost':
+            # T=0 at ghost cell centers (x = -dx/2 and x = Lx + dx/2)
+            # Used by FEM 2D which enforces Dirichlet BC at ghost cell centers
+            T_min, T_max = self.T_0_spec[1], self.T_0_spec[2]
+            x_norm = (x + self.dx / 2) / (self.Lx + self.dx)
+            return T_min + (T_max - T_min) * np.sin(np.pi * x_norm)
+
         elif self.T_0_spec[0] == 'block':
             T_min, T_max = self.T_0_spec[1], self.T_0_spec[2]
             x_norm = (x - self.dx / 2) / (self.Lx - self.dx)
@@ -195,25 +195,27 @@ class Energy():
         """Build JIT-compiled gradient functions for temperature and q_wall."""
 
         if self.wall_flux_model == 'Tz_Robin':
-            # h_Robin, k, cv, A are constants (None in map_list)
-            # h, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot are arrays (0 in map_list)
-            map_list = (0, None, None, None, 0, 0, 0, 0, 0, 0, 0, 0, 0, None)
+            # Capture constants in closure (like wall stress does)
+            h_Robin = self.h_Robin
+            k = self.k
+            cv = self.cv
 
-            def q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A):
-                q_top = heatflux_top(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
-                q_bot = heatflux_bot(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+            # All args are now arrays that get mapped
+            map_list = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+
+            def q_wall_sum(h, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot):
+                q_top = heatflux_top(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, None)
+                q_bot = heatflux_bot(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, None)
                 return -(q_top + q_bot) / h
 
             # wall heat fluxes
-            self.q_wall_top = vvmap(heatflux_top, map_list)  # W/m^2
-            self.q_wall_bot = vvmap(heatflux_bot, map_list)  # W/m^2
             self.q_wall_sum = vvmap(q_wall_sum, map_list)    # W/m^3
 
-            # gradients w.r.t. solution variables
-            self.q_wall_grad_rho = vvmap(grad(q_wall_sum, argnums=5), map_list)
-            self.q_wall_grad_E = vvmap(grad(q_wall_sum, argnums=6), map_list)
-            self.q_wall_grad_jx = vvmap(grad(q_wall_sum, argnums=7), map_list)
-            self.q_wall_grad_jy = vvmap(grad(q_wall_sum, argnums=8), map_list)
+            # gradients w.r.t. solution variables (argnums shifted due to removed args)
+            self.q_wall_grad_rho = vvmap(grad(q_wall_sum, argnums=2), map_list)
+            self.q_wall_grad_E = vvmap(grad(q_wall_sum, argnums=3), map_list)
+            self.q_wall_grad_jx = vvmap(grad(q_wall_sum, argnums=4), map_list)
+            self.q_wall_grad_jy = vvmap(grad(q_wall_sum, argnums=5), map_list)
 
     def T_func(self, rho, jx, jy, E):
         """Compute temperature from solution variables."""

@@ -98,6 +98,7 @@ class PETScSystem:
             pc.setFactorLevels(fill_level)
         else:
             # MUMPS direct solver (default)
+            print("Using MUMPS direct solver for PETSc KSP.")
             self.ksp.setType('preonly')
             pc = self.ksp.getPC()
             pc.setType('lu')

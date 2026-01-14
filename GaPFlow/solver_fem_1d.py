@@ -386,10 +386,9 @@ class FEMSolver1D:
                 if ('dT_dE', nb_quad) in self.quad_fields:
                     self.quad_fields[('dT_dE', nb_quad)].p[:] = p.energy.T_grad_E(*args_T)
 
-                # Wall heat flux: q_wall_sum(h, h_Robin, k, cv, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
-                args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
-                          q('rho'), q('E'), q('jx'), q('jy'),
-                          q('U'), q('V'), q('Tb_top'), q('Tb_bot'), None)
+                # Wall heat flux (constants captured in closure, only arrays passed)
+                args_S = (q('h'), q('eta'), q('rho'), q('E'), q('jx'), q('jy'),
+                          q('U'), q('V'), q('Tb_top'), q('Tb_bot'))
 
                 if ('S', nb_quad) in self.quad_fields:
                     self.quad_fields[('S', nb_quad)].p[:] = p.energy.q_wall_sum(*args_S)

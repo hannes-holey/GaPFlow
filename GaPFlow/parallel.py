@@ -373,7 +373,10 @@ class DomainDecomposition:
         Apply boundary conditions to energy field ghost cells.
 
         Only applies BCs if this rank owns the corresponding boundary.
+        If the grid uses periodic BCs (all components), the energy field
+        uses the periodic ghost values from communicate_ghosts() instead.
         """
+        grid = self.grid
         energy = problem.energy
         rho = problem.q[0]
         jx = problem.q[1]
@@ -381,43 +384,47 @@ class DomainDecomposition:
 
         # West boundary (ghost cell at index 0)
         if self.is_at_xW:
-            if energy.bc_xW == 'D':
-                ux = jx[0, :] / rho[0, :]
-                uy = jy[0, :] / rho[0, :]
-                kinetic = 0.5 * (ux**2 + uy**2)
-                energy.energy[0, :] = rho[0, :] * (energy.cv * energy.T_bc_xW + kinetic)
-            elif energy.bc_xW == 'N':
-                energy.energy[0, :] = energy.energy[1, :].copy()
+            if not all(grid["bc_xW_P"]):
+                if energy.bc_xW == 'D':
+                    ux = jx[0, :] / rho[0, :]
+                    uy = jy[0, :] / rho[0, :]
+                    kinetic = 0.5 * (ux**2 + uy**2)
+                    energy.energy[0, :] = rho[0, :] * (energy.cv * energy.T_bc_xW + kinetic)
+                elif energy.bc_xW == 'N':
+                    energy.energy[0, :] = energy.energy[1, :].copy()
 
         # East boundary (ghost cell at index -1)
         if self.is_at_xE:
-            if energy.bc_xE == 'D':
-                ux = jx[-1, :] / rho[-1, :]
-                uy = jy[-1, :] / rho[-1, :]
-                kinetic = 0.5 * (ux**2 + uy**2)
-                energy.energy[-1, :] = rho[-1, :] * (energy.cv * energy.T_bc_xE + kinetic)
-            elif energy.bc_xE == 'N':
-                energy.energy[-1, :] = energy.energy[-2, :].copy()
+            if not all(grid["bc_xE_P"]):
+                if energy.bc_xE == 'D':
+                    ux = jx[-1, :] / rho[-1, :]
+                    uy = jy[-1, :] / rho[-1, :]
+                    kinetic = 0.5 * (ux**2 + uy**2)
+                    energy.energy[-1, :] = rho[-1, :] * (energy.cv * energy.T_bc_xE + kinetic)
+                elif energy.bc_xE == 'N':
+                    energy.energy[-1, :] = energy.energy[-2, :].copy()
 
         # South boundary (ghost cell at index 0)
         if self.is_at_yS:
-            if energy.bc_yS == 'D':
-                ux = jx[:, 0] / rho[:, 0]
-                uy = jy[:, 0] / rho[:, 0]
-                kinetic = 0.5 * (ux**2 + uy**2)
-                energy.energy[:, 0] = rho[:, 0] * (energy.cv * energy.T_bc_yS + kinetic)
-            elif energy.bc_yS == 'N':
-                energy.energy[:, 0] = energy.energy[:, 1].copy()
+            if not all(grid["bc_yS_P"]):
+                if energy.bc_yS == 'D':
+                    ux = jx[:, 0] / rho[:, 0]
+                    uy = jy[:, 0] / rho[:, 0]
+                    kinetic = 0.5 * (ux**2 + uy**2)
+                    energy.energy[:, 0] = rho[:, 0] * (energy.cv * energy.T_bc_yS + kinetic)
+                elif energy.bc_yS == 'N':
+                    energy.energy[:, 0] = energy.energy[:, 1].copy()
 
         # North boundary (ghost cell at index -1)
         if self.is_at_yN:
-            if energy.bc_yN == 'D':
-                ux = jx[:, -1] / rho[:, -1]
-                uy = jy[:, -1] / rho[:, -1]
-                kinetic = 0.5 * (ux**2 + uy**2)
-                energy.energy[:, -1] = rho[:, -1] * (energy.cv * energy.T_bc_yN + kinetic)
-            elif energy.bc_yN == 'N':
-                energy.energy[:, -1] = energy.energy[:, -2].copy()
+            if not all(grid["bc_yN_P"]):
+                if energy.bc_yN == 'D':
+                    ux = jx[:, -1] / rho[:, -1]
+                    uy = jy[:, -1] / rho[:, -1]
+                    kinetic = 0.5 * (ux**2 + uy**2)
+                    energy.energy[:, -1] = rho[:, -1] * (energy.cv * energy.T_bc_yN + kinetic)
+                elif energy.bc_yN == 'N':
+                    energy.energy[:, -1] = energy.energy[:, -2].copy()
 
     @staticmethod
     def _get_ghost_cell_values(field: npt.NDArray[np.floating],

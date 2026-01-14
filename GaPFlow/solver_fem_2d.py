@@ -88,9 +88,14 @@ class FEMSolver2D:
 
         # Grid index manager (handles masks, connectivity, stencils)
         bc_neumann = {
-            'xW': p.grid['bc_xW_N'], 'xE': p.grid['bc_xE_N'],
-            'yS': p.grid['bc_yS_N'], 'yN': p.grid['bc_yN_N'],
+            'xW': list(p.grid['bc_xW_N']), 'xE': list(p.grid['bc_xE_N']),
+            'yS': list(p.grid['bc_yS_N']), 'yN': list(p.grid['bc_yN_N']),
         }
+        if self.energy:
+            bc_neumann['xW'].append(p.energy_spec['bc_xW'] == 'N')
+            bc_neumann['xE'].append(p.energy_spec['bc_xE'] == 'N')
+            bc_neumann['yS'].append(p.energy_spec['bc_yS'] == 'N')
+            bc_neumann['yN'].append(p.energy_spec['bc_yN'] == 'N')
         self.grid_idx = GridIndexManager(
             Nx_inner=self.Nx_inner, Ny_inner=self.Ny_inner,
             bc_at_W=p.decomp.is_at_xW and not self.per_x,
@@ -582,6 +587,7 @@ class FEMSolver2D:
         res_deriv = self.get_res_deriv_vals(term, dep_var)
         res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
         inv_d = 1.0 / (self.dx if direction == 'x' else self.dy)
+
         contrib = idx.weights * res_vals * idx.signs * inv_d
         np.add.at(coo_values, idx.coo_idx, contrib)
 

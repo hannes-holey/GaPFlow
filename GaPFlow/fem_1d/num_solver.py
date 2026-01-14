@@ -40,7 +40,6 @@ class SolutionDict:
 def newton_alpha_solver(fem_solver,
                         sol: SolutionDict,
                         get_MR: Callable,
-                        callback: Callable,
                         **kwargs
                         ):
 
@@ -63,7 +62,6 @@ def newton_alpha_solver(fem_solver,
             break
 
         sol.delta_q = np.linalg.solve(M, -R)
-        callback(sol)
 
         sol.q += sol.alpha * sol.delta_q
         sol.iter += 1
@@ -72,7 +70,6 @@ def newton_alpha_solver(fem_solver,
 class Solver():
     def __init__(self, fem_solver: dict):
         self.get_MR_fun = None
-        self.callback_fun = lambda sol: None
 
         self.sol_dict = SolutionDict()
         self.fem_solver = fem_solver
@@ -85,6 +82,5 @@ class Solver():
         self.solve_fun(self.fem_solver,
                        self.sol_dict,
                        self.get_MR_fun,
-                       self.callback_fun,
                        **kwargs)
         return self.sol_dict

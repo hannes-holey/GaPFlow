@@ -185,6 +185,13 @@ class GridIndexManager:
 
         Returns shape (nb_sq, 4) for corners [bl, br, tl, tr].
         Value is -1 for corners outside inner domain.
+
+        Note: Periodic BCs are handled implicitly via muGrid ghost cell
+        communication, NOT through index wrapping here. Ghost cells at
+        periodic boundaries receive values from the opposite domain side
+        before field interpolation/derivatives are computed. We only
+        assemble residuals for inner points; ghost points provide neighbor
+        information for derivative computations, not residual equations.
         """
         m = self.index_mask_inner_local
         sx, sy = self.sq_x_arr, self.sq_y_arr

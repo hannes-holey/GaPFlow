@@ -220,6 +220,7 @@ class QuadFieldManager:
         self.quad_fields['V'].pg[:] = p.geo['V']
         self.quad_fields['Ls'].pg[:] = p.prop.get('slip_length', 0.0)
 
+
     def _apply_2d_vmap(self, func, *args):
         """Reshape args for 2D vmap application and reshape result back."""
         shape = args[0].shape  # (6, Ny, Nx)
@@ -228,19 +229,25 @@ class QuadFieldManager:
         return result_2d.reshape(shape)
 
     def update_quad_computed(self) -> None:
-        """Compute derived quantities at quadrature points."""
+        """Compute derived quantities at quadrature points.
+
+        Only computes on interior cells (excludes last row/column) where
+        interpolation produced valid data. Ghost cells are left as zero.
+        """
         p = self.problem
-        q = lambda name: self.quad_fields[name].pg
+        # Interior slice accessor (excludes ghost cells at x=Nx+1, y=Ny+1)
+        s = np.s_[..., :-1, :-1]
+        q = lambda name: self.quad_fields[name].pg[s]
         apply = self._apply_2d_vmap
 
         # Pressure gradient
-        self.quad_fields['dp_drho'].pg[:] = apply(p.pressure.dp_drho, q('rho'))
+        self.quad_fields['dp_drho'].pg[s] = apply(p.pressure.dp_drho, q('rho'))
 
         # Pressure stabilization parameter: tau = alpha * h_elem^2 / P0
         alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
         P0 = p.prop.get('P0', 1.0)
         h_elem_sq = self.dx * self.dy
-        self.quad_fields['pressure_stab'].pg[:] = np.full_like(
+        self.quad_fields['pressure_stab'].pg[s] = np.full_like(
             q('h'), alpha * h_elem_sq / P0)
 
         # Wall stress xz
@@ -248,7 +255,7 @@ class QuadFieldManager:
                    q('U'), q('V'), q('Ls'))
         for name in ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
                      'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']:
-            self.quad_fields[name].pg[:] = apply(
+            self.quad_fields[name].pg[s] = apply(
                 getattr(p.wall_stress_xz, name), *args_xz)
 
         # Wall stress yz
@@ -256,7 +263,7 @@ class QuadFieldManager:
                    q('U'), q('V'), q('Ls'))
         for name in ['tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
                      'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy']:
-            self.quad_fields[name].pg[:] = apply(
+            self.quad_fields[name].pg[s] = apply(
                 getattr(p.wall_stress_yz, name), *args_yz)
 
         if self.energy:
@@ -265,17 +272,17 @@ class QuadFieldManager:
             for name, func in [('T', 'T_func'), ('dT_drho', 'T_grad_rho'),
                                ('dT_djx', 'T_grad_jx'), ('dT_djy', 'T_grad_jy'),
                                ('dT_dE', 'T_grad_E')]:
-                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_T)
+                self.quad_fields[name].pg[s] = getattr(p.energy, func)(*args_T)
 
-            # Wall heat flux
-            args_S = (q('h'), p.energy.h_Robin, p.energy.k, p.energy.cv, q('eta'),
-                      q('rho'), q('E'), q('jx'), q('jy'), q('U'), q('V'),
-                      q('Tb_top'), q('Tb_bot'), None)
+            # Wall heat flux (constants captured in closure, only arrays passed)
+            args_S = (q('h'), q('eta'), q('rho'), q('E'), q('jx'), q('jy'),
+                      q('U'), q('V'), q('Tb_top'), q('Tb_bot'))
             for name, func in [('S', 'q_wall_sum'), ('dS_drho', 'q_wall_grad_rho'),
                                ('dS_djx', 'q_wall_grad_jx'),
                                ('dS_djy', 'q_wall_grad_jy'),
                                ('dS_dE', 'q_wall_grad_E')]:
-                self.quad_fields[name].pg[:] = getattr(p.energy, func)(*args_S)
+                self.quad_fields[name].pg[s] = apply(
+                    getattr(p.energy, func), *args_S)
 
     def store_prev_values(self) -> None:
         """Store current quad values for time derivatives."""
