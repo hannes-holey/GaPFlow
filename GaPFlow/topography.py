@@ -28,6 +28,7 @@ import copy
 
 import numpy.typing as npt
 from typing import Tuple, Any
+from muGrid.Field import wrap_field
 
 import warnings
 
@@ -197,12 +198,12 @@ class Topography:
 
         xx, yy = create_midpoint_grid(grid)
 
-        self.__field = fc.get_real_field('topography')
-        self._x = fc.get_real_field('x')
-        self._y = fc.get_real_field('y')
+        self.__field = wrap_field(fc.get_real_field('topography'))
+        self._x = wrap_field(fc.get_real_field('x'))
+        self._y = wrap_field(fc.get_real_field('y'))
 
-        self._x.p = xx
-        self._y.p = yy
+        self._x.p[...] = xx
+        self._y.p[...] = yy
 
         self.dx = grid['dx']
         self.dy = grid['dy']
@@ -236,7 +237,7 @@ class Topography:
         if prop['elastic']['enabled']:
             self.elastic = True
             self.h_undeformed = h.copy()
-            self.__pressure = fc.get_real_field('pressure')
+            self.__pressure = wrap_field(fc.get_real_field('pressure'))
 
             self.ElasticDeformation = ElasticDeformation(
                 E=prop['elastic']['E'],
