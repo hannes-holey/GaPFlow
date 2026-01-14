@@ -32,7 +32,7 @@ dependencies = [
 	"ase", 
 	"mpi4py",
 	"moltemplate",
-	"ContactMechanics @ git+https://github.com/ContactEngineering/ContactMechanics.git@MAINT/muGrid_muFFT_api-changes",
+	"ContactMechanics>=1.8.0",
 	"IPython"]
 
 [project.optional-dependencies]
