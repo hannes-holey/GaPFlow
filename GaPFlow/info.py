@@ -32,29 +32,28 @@ def show_info():
     print('GaPFlow')
     print(10 * "=")
 
-    print("Version: ", GaPFlow.__version__)
+    print("Version:", GaPFlow.__version__)
 
+    print()
     print(10 * "=")
     print('LAMMPS')
     print(10 * "=")
 
     lmp = lammps.lammps(name='mpi', cmdargs=['-log', 'none', "-screen", 'none'])
+    print('Version:', lmp.version())
+    print('Shared lib:', lmp.lib._name)
+    print('MPI:', lmp.has_mpi_support)
+    print('mpi4py:', lmp.has_mpi4py)
+    print('Packages:', lmp.installed_packages)
 
-    print('OS:', lmp.get_os_info())
-    print('Shared lib: ', lmp.lib._name)
-    print('Version: ', lmp.version())
-    print('MPI: ', lmp.has_mpi_support)
-    print('mpi4py: ', lmp.has_mpi4py)
-    print('Packages: ', lmp.installed_packages)
-
+    print()
     print(10 * "=")
     print('muGrid')
     print(10 * "=")
 
-    print("Version: ", muGrid.__version__)
-    print('MPI: ', muGrid.has_mpi)
-    # print('NetCDF4: ' muGrid.has_netcdf) # >= 0.97.0
-    # print('GPU: ', muGrid.has_gpu)
+    print("Version:", muGrid.__version__)
+    print('NetCDF4:', muGrid.has_netcdf)
+    print('MPI:', muGrid.has_mpi)
 
 
 def main():

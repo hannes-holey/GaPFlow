@@ -40,20 +40,22 @@ You can check your installation by running `gpf_info` from the command line.
 GaPFlow
 ==========
 Version:  ...
+
 ==========
 LAMMPS
 ==========
-OS: ...
+Version: ...
 Shared lib: <path-to-your-python-env>/lib/pythonX.Y/site-packages/GaPFlow/_vendor/lammps/liblammps_mpi[.so, .dylib]
-
 MPI:  True
 mpi4py:  True
 packages:  ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+
 ==========
 muGrid
 ==========
 Version:  ...
-MPI:  False
+NetCDF4: True
+MPI: False
 ```
 We currently do not use parallel functionalities of µGrid, so MPI support is not
 required.
