@@ -45,7 +45,9 @@ jobs:
     - name: Test with pytest & coverage (3.13)
       if: matrix.python-version == '3.13'
       run: |
-        coverage run -m pytest
+        cd tests
+        pytest --cov=GaPFlow .
+        cd ..
         bash maintenance/update_coverage_badge.sh
 
     - name: Upload coverage badge
