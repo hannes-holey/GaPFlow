@@ -329,10 +329,7 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#building-from-source">Building from source</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#minimal-example">Minimal example</a></li>
 </ul>
             </nav>
@@ -349,72 +346,41 @@ document.write(`
 <h1>Quick start<a class="headerlink" href="#quick-start" title="Link to this heading">#</a></h1>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">#</a></h2>
-<p>A minimal version can be installed via</p>
+<p><code class="docutils literal notranslate"><span class="pre">GaPFlow</span></code> can be installed via</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">GaPFlow</span>
 </pre></div>
 </div>
-<p>The published wheels are currently not built with LAMMPS. Thus, running
-multiscale simulations with molecular dynamics is not possible with this
-quick installation. For the full functionality it is required to build
-<code class="docutils literal notranslate"><span class="pre">GaPFlow</span></code> from source.</p>
-<section id="building-from-source">
-<h3>Building from source<a class="headerlink" href="#building-from-source" title="Link to this heading">#</a></h3>
-<p>When building from source follow these steps:</p>
-<ol class="arabic simple" start="0">
-<li><p>Make sure you have MPI installed, e.g. on Debian-based systems
-<code class="docutils literal notranslate"><span class="pre">openmpi-bin</span></code> and <code class="docutils literal notranslate"><span class="pre">libopenmpi-dev</span></code> should be installed on your
-system.</p></li>
-<li><p>The multiscale framework depends on LAMMPS which is contained as a
-Git submodule in this repository. After cloning the repository
-initialize the submodule with</p></li>
-</ol>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">submodule</span> <span class="n">update</span> <span class="o">--</span><span class="n">init</span>
+<p>A serial build of LAMMPS is provided for most platforms which allows testing all of <code class="docutils literal notranslate"><span class="pre">GaPFlow</span></code>’s functionality.
+For production simulations it is however recommended to build GaPFlow with parallel LAMMPS on your system.
+You need to have MPI installed (e.g. via <code class="docutils literal notranslate"><span class="pre">apt</span> <span class="pre">install</span> <span class="pre">openmpi-bin</span> <span class="pre">libopenmpi-dev</span></code> on Debian-based systems).</p>
+<p>To compile for your specific platform, run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">binary</span> <span class="n">GaPFlow</span> <span class="n">GaPFlow</span><span class="o">.</span><span class="p">[</span><span class="n">parallel</span><span class="p">]</span>
 </pre></div>
 </div>
-<ol class="arabic simple" start="2">
-<li><p>Install LAMMPS and mpi4py. We provide a script to build LAMMPS via
-<code class="docutils literal notranslate"><span class="pre">cmake</span></code> and install the Python package in your local environment.</p></li>
-</ol>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">install_lammps</span><span class="o">.</span><span class="n">sh</span>
+<p>You can check your installation by running <code class="docutils literal notranslate"><span class="pre">gpf_info</span></code> from the command line.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">==========</span>
+<span class="n">GaPFlow</span>
+<span class="o">==========</span>
+<span class="n">Version</span><span class="p">:</span> <span class="o">...</span>
+
+<span class="o">==========</span>
+<span class="n">LAMMPS</span>
+<span class="o">==========</span>
+<span class="n">Version</span><span class="p">:</span> <span class="o">...</span>
+<span class="n">Shared</span> <span class="n">lib</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">path</span><span class="o">-</span><span class="n">to</span><span class="o">-</span><span class="n">your</span><span class="o">-</span><span class="n">python</span><span class="o">-</span><span class="n">env</span><span class="o">&gt;/</span><span class="n">lib</span><span class="o">/</span><span class="n">python3</span><span class="o">.</span><span class="n">X</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span><span class="o">/</span><span class="n">GaPFlow</span><span class="o">/</span><span class="n">_vendor</span><span class="o">/</span><span class="n">lammps</span><span class="o">/</span><span class="n">liblammps_mpi</span><span class="o">.</span><span class="p">[</span><span class="n">so</span><span class="p">,</span><span class="n">dylib</span><span class="p">]</span>
+<span class="n">MPI</span><span class="p">:</span> <span class="kc">True</span>
+<span class="n">mpi4py</span><span class="p">:</span> <span class="kc">True</span>
+<span class="n">packages</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;EXTRA-FIX&#39;</span><span class="p">,</span> <span class="s1">&#39;MANYBODY&#39;</span><span class="p">,</span> <span class="s1">&#39;MOLECULE&#39;</span><span class="p">]</span>
+
+<span class="o">==========</span>
+<span class="n">muGrid</span>
+<span class="o">==========</span>
+<span class="n">Version</span><span class="p">:</span>  <span class="o">...</span>
+<span class="n">NetCDF4</span><span class="p">:</span> <span class="kc">True</span>
+<span class="n">MPI</span><span class="p">:</span> <span class="kc">False</span>
 </pre></div>
 </div>
-<p>Alternatively, follow the equivalent steps in the LAMMPS documentation
-with a complete list of build options. Make sure that you have the
-optional LAMMPS packages <code class="docutils literal notranslate"><span class="pre">MANYBODY</span></code>, <code class="docutils literal notranslate"><span class="pre">MOLECULES</span></code> and <code class="docutils literal notranslate"><span class="pre">ÈXTRA-FIX</span></code>
-installed. To make sure that everything is correctly installed run
-<code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">.check_lammps.py</span></code>. The last three lines should look similar to
-these:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">MPI</span><span class="p">:</span>  <span class="kc">True</span>
-<span class="n">mpi4py</span><span class="p">:</span>  <span class="kc">True</span>
-<span class="n">Installed</span> <span class="n">packages</span><span class="p">:</span> <span class="p">[</span><span class="s1">&#39;EXTRA-FIX&#39;</span><span class="p">,</span> <span class="s1">&#39;MANYBODY&#39;</span><span class="p">,</span> <span class="s1">&#39;MOLECULE&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="3">
-<li><p>Build
-<a class="reference external" href="https://muspectre.github.io/muGrid/GettingStarted.html">µGrid</a>’s
-Python bindings</p></li>
-</ol>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">v</span> <span class="o">--</span><span class="n">force</span><span class="o">-</span><span class="n">reinstall</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">cache</span> <span class="o">--</span><span class="n">no</span><span class="o">-</span><span class="n">binary</span> <span class="n">muGrid</span> <span class="n">muGrid</span>
-</pre></div>
-</div>
-<p>and make sure MPI and PnetCDF get detected. For manual installations of
-PnetCDF (recommended), you may need to tell <code class="docutils literal notranslate"><span class="pre">pkg_config</span></code> where to find
-it, e.g.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$HOME/.local/lib64/pkgconfig:$PKG_CONFIG_PATH
-</pre></div>
-</div>
-<p>for instalations under <code class="docutils literal notranslate"><span class="pre">$HOME/.local/</span></code>.</p>
-<ol class="arabic simple" start="4">
-<li><p>Finally, install the package with its remaining dependencies and
-testing capabilities</p></li>
-</ol>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span><span class="p">[</span><span class="n">test</span><span class="p">]</span>
-</pre></div>
-</div>
-<ol class="arabic simple" start="5">
-<li><p>Make sure that everything works by running the tests with <code class="docutils literal notranslate"><span class="pre">pytest</span></code>.</p></li>
-</ol>
-</section>
+<p>We currently do not use parallel functionalities of µGrid, so MPI support is not required.</p>
 </section>
 <section id="minimal-example">
 <h2>Minimal example<a class="headerlink" href="#minimal-example" title="Link to this heading">#</a></h2>
@@ -535,10 +501,7 @@ learning of the underlying constitutive behavior.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a><ul class="nav section-nav flex-column">
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#building-from-source">Building from source</a></li>
-</ul>
-</li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#installation">Installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#minimal-example">Minimal example</a></li>
 </ul>
   </nav></div>
