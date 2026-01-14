@@ -28,6 +28,7 @@ import jax.numpy as jnp
 from jax import vmap, grad
 from jax import Array
 from typing import Optional, Tuple, Any
+from muGrid.Field import wrap_field
 
 from .gp import GaussianProcessSurrogate
 from .gp import multi_in_single_out, multi_in_multi_out
@@ -78,9 +79,9 @@ class WallStress(GaussianProcessSurrogate):
         """
 
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
-        self.__pressure = fc.get_real_field('pressure')
-        self.__x = fc.get_real_field('x')
-        self.__y = fc.get_real_field('y')
+        self.__pressure = wrap_field(fc.get_real_field('pressure'))
+        self.__x = wrap_field(fc.get_real_field('x'))
+        self.__y = wrap_field(fc.get_real_field('y'))
 
         self.geo = geo
         self.prop = prop
@@ -381,7 +382,7 @@ class WallStress(GaussianProcessSurrogate):
 
             self.__field.p[self._out_index] = mean[0, :, :]
             self.__field.p[self._out_index + 6] = mean[1, :, :]
-            self.__field_variance.p = var[0, :, :]
+            self.__field_variance.p[...] = var[0, :, :]
         else:
             self.__field.p[self._out_index] = s_bot[self._out_index]
             self.__field.p[self._out_index + 6] = s_top[self._out_index]
@@ -419,9 +420,9 @@ class BulkStress(GaussianProcessSurrogate):
         """
 
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
-        self.__pressure = fc.get_real_field('pressure')
-        self.__x = fc.get_real_field('x')
-        self.__y = fc.get_real_field('y')
+        self.__pressure = wrap_field(fc.get_real_field('pressure'))
+        self.__x = wrap_field(fc.get_real_field('x'))
+        self.__y = wrap_field(fc.get_real_field('y'))
 
         self.geo = geo
         self.prop = prop
@@ -474,14 +475,14 @@ class BulkStress(GaussianProcessSurrogate):
         else:
             shear_viscosity = mu0
 
-        self.__field.p = stress_avg(self.solution,
-                                    self.height_and_slopes,
-                                    self.geo['U'],
-                                    self.geo['V'],
-                                    shear_viscosity,
-                                    self.prop['bulk'],
-                                    self.extra  # e.g. slip length
-                                    )
+        self.__field.p[...] = stress_avg(self.solution,
+                                         self.height_and_slopes,
+                                         self.geo['U'],
+                                         self.geo['V'],
+                                         shear_viscosity,
+                                         self.prop['bulk'],
+                                         self.extra  # e.g. slip length
+                                         )
 
 
 class Pressure(GaussianProcessSurrogate):
@@ -515,7 +516,7 @@ class Pressure(GaussianProcessSurrogate):
             GP configuration dictionary (if using GP surrogates).
         """
 
-        self.__field = fc.get_real_field('pressure')
+        self.__field = wrap_field(fc.get_real_field('pressure'))
         self.geo = geo
         self.prop = prop
 
@@ -642,7 +643,7 @@ class Pressure(GaussianProcessSurrogate):
         if self.is_gp_model:
             mean, var = self.predict(predictor=predictor,
                                      compute_var=self.use_active_learning or compute_var)
-            self.__field.p = mean
-            self.__field_variance.p = var
+            self.__field.p[...] = mean
+            self.__field_variance.p[...] = var
         else:
-            self.__field.p = eos_pressure(self.solution[0], self.prop)
+            self.__field.p[...] = eos_pressure(self.solution[0], self.prop)

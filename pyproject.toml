@@ -21,7 +21,7 @@ classifiers = [
 requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
-	"muGrid==0.96.0",
+	"muGrid>=0.105.0",
 	"tinygp>=0.3.0",
 	"jax",
 	"jaxopt==0.8.5",
@@ -33,7 +33,7 @@ dependencies = [
 	"ruamel.yaml",
 	"ase", 
 	"moltemplate",
-	"ContactMechanics==1.7.0",
+	"ContactMechanics>=1.8.0",
 	"IPython"]
 
 [project.optional-dependencies]
