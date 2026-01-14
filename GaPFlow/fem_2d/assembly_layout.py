@@ -34,18 +34,19 @@ Architecture:
     PETScAssemblyInfo     - Extracted info for PETSc (references, not copies)
 """
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
 
 NDArray = npt.NDArray[np.floating]
 IntArray = npt.NDArray[np.signedinteger]
+Int8Array = npt.NDArray[np.int8]
 
 
 @dataclass
 class MatrixCOOPattern:
-    """Sparse matrix COO structure.
+    """Sparse matrix COO structure with block metadata for scaling.
 
     Attributes
     ----------
@@ -55,17 +56,23 @@ class MatrixCOOPattern:
         Local indices for each COO entry. Used for dense reconstruction.
     global_rows, global_cols : IntArray
         Global indices for PETSc preallocation.
+    res_block_idx : Int8Array
+        Residual block index for each entry (0=mass, 1=mom_x, 2=mom_y, 3=energy).
+    var_block_idx : Int8Array
+        Variable block index for each entry (0=rho, 1=jx, 2=jy, 3=E).
     """
     nnz: int
     local_rows: IntArray
     local_cols: IntArray
     global_rows: IntArray
     global_cols: IntArray
+    res_block_idx: Int8Array
+    var_block_idx: Int8Array
 
 
 @dataclass
 class RHSPattern:
-    """RHS vector assembly structure.
+    """RHS vector structure with block metadata for scaling.
 
     Attributes
     ----------
@@ -73,9 +80,12 @@ class RHSPattern:
         Local RHS size (nb_vars * nb_inner_pts).
     global_rows : IntArray
         Global row indices for PETSc assembly.
+    res_block_idx : Int8Array
+        Residual block index for each entry (0=mass, 1=mom_x, 2=mom_y, 3=energy).
     """
     size: int
     global_rows: IntArray
+    res_block_idx: Int8Array
 
 
 @dataclass
@@ -131,6 +141,69 @@ RHSTermKey = Tuple[str, str]            # (term_name, residual)
 
 
 @dataclass
+class ScalingInfo:
+    """Precomputed scaling factors for linear system conditioning.
+
+    Transforms the linear system J·dq = -R into a well-conditioned
+    scaled system J*·dq* = -R* where all matrix entries are O(1).
+
+    The transformation is:
+        J*[i,j] = J[i,j] · D_q[j] / D_R[i]
+        R*[i] = R[i] / D_R[i]
+        dq[j] = dq*[j] · D_q[j]
+
+    Attributes
+    ----------
+    coo_scale : NDArray
+        Scale factors for COO values, shape (nnz,).
+    rhs_scale : NDArray
+        Scale factors for residual vector, shape (rhs_size,).
+    sol_scale : NDArray
+        Scale factors for solution vector, shape (sol_size,).
+    char_scales : dict
+        Original characteristic scales for reference.
+    """
+    coo_scale: NDArray
+    rhs_scale: NDArray
+    sol_scale: NDArray
+    char_scales: Dict[str, float]
+
+    def scale_system(self, M_coo: NDArray, R: NDArray) -> Tuple[NDArray, NDArray]:
+        """Scale Jacobian COO values and residual vector.
+
+        Parameters
+        ----------
+        M_coo : NDArray, shape (nnz,)
+            Unscaled Jacobian in COO value format.
+        R : NDArray, shape (n,)
+            Unscaled residual vector.
+
+        Returns
+        -------
+        M_scaled : NDArray, shape (nnz,)
+            Scaled Jacobian COO values.
+        R_scaled : NDArray, shape (n,)
+            Scaled residual vector.
+        """
+        return M_coo * self.coo_scale, R / self.rhs_scale
+
+    def unscale_solution(self, dq_scaled: NDArray) -> NDArray:
+        """Recover physical solution increment from scaled solution.
+
+        Parameters
+        ----------
+        dq_scaled : NDArray, shape (n,)
+            Solution of the scaled system.
+
+        Returns
+        -------
+        dq : NDArray, shape (n,)
+            Physical solution increment.
+        """
+        return dq_scaled * self.sol_scale
+
+
+@dataclass
 class FEMAssemblyLayout:
     """Complete precomputed layout for FEM assembly.
 
@@ -173,6 +246,61 @@ class FEMAssemblyLayout:
             mat_global_rows=self.matrix_coo.global_rows,
             mat_global_cols=self.matrix_coo.global_cols,
             rhs_global_rows=self.rhs.global_rows,
+        )
+
+    def build_scaling(self, char_scales: Dict[str, float],
+                      variables: List[str]) -> ScalingInfo:
+        """Build scaling factors from characteristic scales.
+
+        Uses the block indices stored in matrix_coo and rhs patterns
+        to efficiently compute per-entry scale factors.
+
+        Parameters
+        ----------
+        char_scales : dict
+            Characteristic scale for each variable: {'rho': ρ_ref, 'jx': j_ref, ...}
+        variables : list
+            Variable names in block order: ['rho', 'jx', 'jy'] or with 'E'.
+
+        Returns
+        -------
+        ScalingInfo
+            Precomputed scaling factors for COO values, RHS, and solution.
+
+        Raises
+        ------
+        ValueError
+            If char_scales is missing entries or contains non-positive values.
+        """
+        # Validation
+        for var in variables:
+            if var not in char_scales:
+                raise ValueError(f"Missing characteristic scale for '{var}'")
+            if char_scales[var] <= 0:
+                raise ValueError(
+                    f"Characteristic scale for '{var}' must be positive, "
+                    f"got {char_scales[var]}"
+                )
+
+        # Per-block scale arrays
+        q_scales = np.array([char_scales[v] for v in variables], dtype=np.float64)
+        r_scales = q_scales  # Residual scales match corresponding variable
+
+        # COO scaling factors: J*[k] = J[k] * D_q[var_idx] / D_R[res_idx]
+        coo_scale = (q_scales[self.matrix_coo.var_block_idx] /
+                     r_scales[self.matrix_coo.res_block_idx])
+
+        # RHS scaling factors
+        rhs_scale = r_scales[self.rhs.res_block_idx]
+
+        # Solution scaling factors (same block structure as RHS)
+        sol_scale = q_scales[self.rhs.res_block_idx]
+
+        return ScalingInfo(
+            coo_scale=coo_scale,
+            rhs_scale=rhs_scale,
+            sol_scale=sol_scale,
+            char_scales=char_scales,
         )
 
 

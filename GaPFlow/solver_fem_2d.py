@@ -268,6 +268,9 @@ class FEMSolver2D:
         local_cols = np.empty(total_nnz, dtype=np.int32)
         global_rows = np.empty(total_nnz, dtype=np.int32)
         global_cols = np.empty(total_nnz, dtype=np.int32)
+        # Block indices for scaling
+        res_block_idx = np.empty(total_nnz, dtype=np.int8)
+        var_block_idx = np.empty(total_nnz, dtype=np.int8)
 
         global_inner = l2g_pts[inner_pts]
         global_contrib = l2g_pts[contrib_pts]
@@ -283,6 +286,9 @@ class FEMSolver2D:
                 local_cols[idx:idx + n] = col_offset + contrib_pts
                 global_rows[idx:idx + n] = global_inner * nb_res + res_idx
                 global_cols[idx:idx + n] = global_contrib * nb_vars + var_idx
+                # Store block indices for scaling (no additional iteration cost)
+                res_block_idx[idx:idx + n] = res_idx
+                var_block_idx[idx:idx + n] = var_idx
 
                 idx += n
 
@@ -298,6 +304,8 @@ class FEMSolver2D:
             local_cols=local_cols,
             global_rows=global_rows,
             global_cols=global_cols,
+            res_block_idx=res_block_idx,
+            var_block_idx=var_block_idx,
         )
 
         return matrix_coo, local_to_coo
@@ -306,14 +314,21 @@ class FEMSolver2D:
         """Build RHS vector assembly pattern."""
         local_size = nb_res * self.nb_inner_pts
         global_rows = np.empty(local_size, dtype=np.int32)
+        # Block indices for scaling
+        res_block_idx = np.empty(local_size, dtype=np.int8)
         global_pts = l2g_pts[:self.nb_inner_pts]
 
         for res_idx in range(nb_res):
             start = res_idx * self.nb_inner_pts
             end = start + self.nb_inner_pts
             global_rows[start:end] = global_pts * nb_res + res_idx
+            res_block_idx[start:end] = res_idx
 
-        return RHSPattern(size=local_size, global_rows=global_rows)
+        return RHSPattern(
+            size=local_size,
+            global_rows=global_rows,
+            res_block_idx=res_block_idx,
+        )
 
     def _build_rhs_term(self, term: NonLinearTerm) -> RHSTermMap:
         """Build RHS term map for a single term."""
@@ -782,11 +797,20 @@ class FEMSolver2D:
                     if R_norm < tol:
                         break
 
-                    # Assemble and solve with PETSc
+                    # Scale system for better conditioning
+                    with self.timer("scaling"):
+                        M_scaled, R_scaled = self.scaling.scale_system(M, R)
+
+                    # Assemble and solve
                     with self.timer("petsc_assemble"):
-                        self.linear_solver.assemble(M, R)
+                        self.linear_solver.assemble(M_scaled, R_scaled)
                     with self.timer("petsc_solve"):
-                        dq = self.linear_solver.solve(self.nb_inner_pts, len(self.variables))
+                        dq_scaled = self.linear_solver.solve(
+                            self.nb_inner_pts, len(self.variables))
+
+                    # Unscale solution
+                    with self.timer("unscaling"):
+                        dq = self.scaling.unscale_solution(dq_scaled)
 
                     q = q + alpha * dq
 
@@ -864,8 +888,38 @@ class FEMSolver2D:
         self.time_inner = 0.0
         self.inner_iterations = 0
 
+    def _get_characteristic_scales(self) -> Dict[str, float]:
+        """Derive characteristic scales from problem specification.
+
+        These scales are used to condition the linear system by normalizing
+        variables to O(1) magnitudes.
+
+        Returns
+        -------
+        dict
+            Characteristic scale for each variable: {'rho': ρ_ref, 'jx': j_ref, ...}
+        """
+        p = self.problem
+
+        rho_ref = p.prop['rho0']
+        U_ref = max(abs(p.geo['U']), abs(p.geo['V']), 1e-10)
+        j_ref = rho_ref * U_ref
+
+        scales = {'rho': rho_ref, 'jx': j_ref, 'jy': j_ref}
+
+        if self.energy:
+            cv = p.energy_spec['cv']
+            # Handle both tuple format ('uniform', T) and direct value
+            T0 = p.energy_spec['T0']
+            T_ref = T0[1] if isinstance(T0, tuple) else T0
+            T_ref = p.energy_spec.get('T_wall', T_ref)
+            E_ref = rho_ref * cv * T_ref
+            scales['E'] = E_ref
+
+        return scales
+
     def _init_linear_solver(self):
-        """Initialize linear solver for sparse system solves."""
+        """Initialize linear solver and scaling for sparse system solves."""
         solver_type = self.problem.fem_solver.get('linear_solver', 'direct')
         petsc_info = self.assembly_layout.get_petsc_info()
 
@@ -883,3 +937,7 @@ class FEMSolver2D:
             self.linear_solver = ScipySystem(petsc_info, solver_type=solver_type)
             print("Note: Using SciPy sparse solver (PETSc not available). "
                   "Install petsc4py for better performance and parallel support.")
+
+        # Build scaling for linear system conditioning
+        char_scales = self._get_characteristic_scales()
+        self.scaling = self.assembly_layout.build_scaling(char_scales, self.variables)

@@ -477,6 +477,7 @@ def sanitize_fem_solver(d):
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
     out['alpha'] = float(d.get('alpha', 1.0))
     out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.0))
+    out['linear_solver'] = str(d.get('linear_solver', 'direct'))
 
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
