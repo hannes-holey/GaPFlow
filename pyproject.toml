@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "GaPFlow"
-description = "Gap-averaged flow simulations with Gaussian Process regression."
+description = "Gap-averaged flow simulations with Gaussian process regression."
 readme = "README.md"
 authors = [
     { name = "Hannes Holey", email = "hannes.holey@unimi.it" },
@@ -15,7 +15,15 @@ authors = [
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License"
+]
+
+license = "GPL-2.0"
+
+license-files = [
+	"COPYING",
+	"LICENSES/*.txt",
+	"lammps/LICENSE",
+	"GaPFlow/_vendor/lammps/LICENSE",
 ]
 
 requires-python = ">=3.10"
@@ -24,6 +32,8 @@ dependencies = [
 	"muGrid>=0.105.0",
 	"tinygp>=0.3.0",
 	"jax",
+	"numpy",
+	"scipy",
 	"jaxopt==0.8.5",
 	"netCDF4>=1.7.2",
 	"dtoolcore>=3.19.0",
@@ -34,19 +44,22 @@ dependencies = [
 	"ase", 
 	"moltemplate",
 	"ContactMechanics>=1.8.0",
-	"IPython"]
+	"IPython"
+]
 
 [project.optional-dependencies]
 parallel = ['mpi4py']
-
-test = ['pytest',
-		'pytest-cov']
-
-doc = ['sphinx',
-	   'sphinx_book_theme',
-	   'myst-nb',
-	   'jupytext',
-	   'sympy']
+test = [
+	'pytest',
+	'pytest-cov'
+]
+doc = [
+	'sphinx',
+	'sphinx_book_theme',
+	'myst-nb',
+	'jupytext',
+	'sympy'
+]
 
 [project.scripts]
 gpf_info="GaPFlow:info.main"
@@ -70,7 +83,7 @@ metadata.version.provider = "scikit_build_core.metadata.setuptools_scm"
 build-dir = "build/{wheel_tag}"
 build.verbose = true
 sdist.exclude = [
-  "lammps/**"
+  "lammps/**",
 ]
 sdist.include = [
   "lammps/src/**",
@@ -78,6 +91,7 @@ sdist.include = [
   "lammps/doc/**",
   "lammps/bench/**",
   "lammps/potentials/**",
+  "lammps/LICENSE",
 ]
 
 [tool.setuptools_scm]
