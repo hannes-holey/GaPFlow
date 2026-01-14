@@ -1,0 +1,59 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 0
+        submodules: 'true'
+
+    - name: Install MPI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install GaPFlow
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -v .[test,parallel]
+
+    - name: Test with pytest (!=3.13)
+      if: matrix.python-version != '3.13'
+      run:
+        pytest
+    
+    - name: Test with pytest & coverage (3.13)
+      if: matrix.python-version == '3.13'
+      run: |
+        cd tests
+        pytest --cov=GaPFlow .
+        cd ..
+        bash maintenance/update_coverage_badge.sh
+
+    - name: Upload coverage badge
+      if: matrix.python-version == '3.13' && github.ref == 'refs/heads/main'
+      uses: exuanbo/actions-deploy-gist@v1
+      with:
+        token: ${{ secrets.GIST_SECRET }}
+        gist_id: fac7fa61e1899b1e74b3bab598fe6513
+        file_path: badge.svg

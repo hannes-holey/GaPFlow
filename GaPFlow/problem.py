@@ -1,6 +1,6 @@
 #
-# Copyright 2025 Hannes Holey
-#           2025 Christoph Huber
+# Copyright 2025-2026 Hannes Holey
+#           2025-2026 Christoph Huber
 #
 # ### MIT License
 #
@@ -187,8 +187,7 @@ class Problem:
                 self.topofile.close()
 
             # Solution fields
-            self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'),
-                                     OpenMode.Overwrite)
+            self.file = FileIONetCDF(os.path.join(self.outdir, 'sol.nc'), OpenMode.Overwrite)
 
             field_names = ['solution', 'pressure', 'wall_stress_xz', 'wall_stress_yz']
 
