@@ -1,5 +1,6 @@
 #
-# Copyright 2025 Hannes Holey
+# Copyright 2026 Christoph Huber
+#           2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -30,6 +31,7 @@ from typing import Tuple
 
 import jax
 import jax.numpy as jnp
+from muGrid.Field import wrap_field
 
 # jaxopt is deprecated, may switch to optax or similar
 with warnings.catch_warnings():
@@ -79,9 +81,9 @@ class GaussianProcessSurrogate:
         """
 
         self._step = 0
-        self.__solution = fc.get_real_field('solution')
-        self.__topo = fc.get_real_field('topography')
-        self.__extra = fc.get_real_field('extra')
+        self.__solution = wrap_field(fc.get_real_field('solution'))
+        self.__topo = wrap_field(fc.get_real_field('topography'))
+        self.__extra = wrap_field(fc.get_real_field('extra'))
 
         if self.is_gp_model:
             self._cache = None

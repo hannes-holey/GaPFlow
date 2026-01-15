@@ -1,5 +1,5 @@
 #
-# Copyright 2025 Hannes Holey
+# Copyright 2025-2026 Hannes Holey
 #
 # ### MIT License
 #
@@ -21,12 +21,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-from DiscoverVersion import get_version
+from importlib.metadata import version, PackageNotFoundError
 from jax import config
 
 config.update("jax_enable_x64", True)
 
-__version__ = get_version("GaPFlow", __file__)
+try:
+    __version__ = version("GaPFlow")
+except PackageNotFoundError:
+    # package is not installed
+    pass
+
 
 from .db import Database  # noqa: F401, E402
 from .problem import Problem  # noqa: F401, E402

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOTAL=$(coverage report | awk 'END{print $4}' | sed 's/%//')
+TOTAL=$(coverage report --data-file=tests/.coverage | awk 'END{print $4}' | sed 's/%//')
 
 if (( $(echo "$TOTAL <= 50" | bc -l) )) ; then
     COLOR=red
