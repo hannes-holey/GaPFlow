@@ -107,13 +107,13 @@ def sanitize_num_cpus(n, max_cpu):
 
         if _is_prime(m):
             continue
-        if m > 13 and m % 2 == 0 and _is_prime(m//2):
+        if m > 13 and m % 2 == 0 and _is_prime(m // 2):
             continue
-        if m > 14 and m % 3 == 0 and _is_prime(m//3):
+        if m > 14 and m % 3 == 0 and _is_prime(m // 3):
             continue
-        if m > 24 and m % 5 == 0 and _is_prime(m//5):
+        if m > 24 and m % 5 == 0 and _is_prime(m // 5):
             continue
-        if m > 48 and m % 7 == 0 and _is_prime(m//7):
+        if m > 48 and m % 7 == 0 and _is_prime(m // 7):
             continue
 
         return m

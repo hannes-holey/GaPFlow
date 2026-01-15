@@ -1,5 +1,5 @@
 #
-# Copyright 2025-2026 Hannes Holey
+# Copyright 2026 Hannes Holey
 #
 # ### MIT License
 #
@@ -21,56 +21,44 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+from .md._lammps import lammps
+import muGrid
+import GaPFlow
 
-import os
-import sys
-import warnings
 
-PARALLEL = True
+def show_info():
 
-try:
-    from mpi4py import MPI
-except ImportError:
-    PARALLEL = False
+    print(10 * "=")
+    print('GaPFlow')
+    print(10 * "=")
+
+    print("Version:", GaPFlow.__version__)
+
+    print()
+    print(10 * "=")
+    print('LAMMPS')
+    print(10 * "=")
+
+    lmp = lammps.lammps(name='mpi', cmdargs=['-log', 'none', "-screen", 'none'])
+    print('Version:', lmp.version())
+    print('Shared lib:', lmp.lib._name)
+    print('MPI:', lmp.has_mpi_support)
+    print('mpi4py:', lmp.has_mpi4py)
+    print('Packages:', lmp.installed_packages)
+
+    print()
+    print(10 * "=")
+    print('muGrid')
+    print(10 * "=")
+
+    print("Version:", muGrid.__version__)
+    print('NetCDF4:', muGrid.has_netcdf)
+    print('MPI:', muGrid.has_mpi)
 
 
 def main():
-
-    comm = MPI.Comm.Get_parent()
-
-    run_serial(sys.argv[1])
-
-    comm.Barrier()
-    comm.Free()
-
-
-def run_parallel(fname, nworker):
-
-    if PARALLEL:
-        worker_file = os.path.abspath(__file__)
-
-        sub_comm = MPI.COMM_SELF.Spawn(sys.executable,
-                                       args=[worker_file, fname],
-                                       maxprocs=nworker)
-
-        # Wait for MD to complete and free spawned communicator
-        sub_comm.Barrier()
-        sub_comm.Free()
-
-    else:
-        warnings.warn("GaPFlow has been installed without parallel MD. Run serial instead...")
-        run_serial(fname)
-
-
-def run_serial(fname):
-
-    nargs = ["-log", "log.lammps"]
-    lmp = lammps.lammps(name='mpi', cmdargs=nargs)
-    assert lmp.has_package('EXTRA-FIX'), "Lammps needs to be compiled with package 'EXTRA-FIX'"
-
-    lmp.file(fname)
+    show_info()
 
 
 if __name__ == "__main__":
-    # main is called by an individual spawned process for parallel MD runs
     main()

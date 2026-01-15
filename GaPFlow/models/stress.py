@@ -1,6 +1,6 @@
 #
-# Copyright 2025 Hannes Holey
-#           2025 Christoph Huber
+# Copyright 2025-2026 Christoph Huber
+#           2025 Hannes Holey
 #
 # ### MIT License
 #
@@ -27,10 +27,10 @@ import numpy.typing as npt
 import jax.numpy as jnp
 from jax import vmap, grad
 from jax import Array
-from typing import Optional, Tuple, Any
+from typing import Optional, Any
+from muGrid.Field import wrap_field
 
 from .gp import GaussianProcessSurrogate
-from .gp import multi_in_single_out, multi_in_multi_out
 from .pressure import eos_pressure
 from .viscous import stress_bottom, stress_top, stress_avg
 from .sound import eos_sound_velocity
@@ -78,9 +78,9 @@ class WallStress(GaussianProcessSurrogate):
         """
 
         self.__field = fc.real_field(f'wall_stress_{direction}z', (12,))
-        self.__pressure = fc.get_real_field('pressure')
-        self.__x = fc.get_real_field('x')
-        self.__y = fc.get_real_field('y')
+        self.__pressure = wrap_field(fc.get_real_field('pressure'))
+        self.__x = wrap_field(fc.get_real_field('x'))
+        self.__y = wrap_field(fc.get_real_field('y'))
 
         self.geo = geo
         self.prop = prop
@@ -100,7 +100,6 @@ class WallStress(GaussianProcessSurrogate):
             self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
             self.use_active_learning = gp['active_learning']
-            self.build_gp = multi_in_multi_out
         else:
             self.is_gp_model = False
             self.use_active_learning = False
@@ -191,41 +190,14 @@ class WallStress(GaussianProcessSurrogate):
         return np.gradient(self.pressure, self.__y.p[0, :], axis=1)
 
     @property
-    def Xtest(self) -> Tuple[JAXArray, JAXArray]:
-        """
-        Test inputs for GP prediction.
-
-        Returns
-        -------
-        tuple of jax.Array
-            (X, flag) where X contains duplicated and scaled features and flag
-            indicates which output (lower/upper) the sample corresponds to.
-        """
-        X = jnp.concatenate([(self._Xtest / self.database.X_scale)[:, self.active_dims],
-                             (self._Xtest / self.database.X_scale)[:, self.active_dims]])
-
-        flag = jnp.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
-                                jnp.ones(X.shape[0] // 2, dtype=int)])
-
-        return X, flag
+    def Xtest(self) -> JAXArray:
+        """Test inputs for shear stress GP (normalized)."""
+        return (self._Xtest / self.database.X_scale)[:, self.active_dims]
 
     @property
-    def Xtrain(self) -> Tuple[JAXArray, JAXArray]:
-        """
-        Training inputs for GP (duplicated to account for two outputs).
-
-        Returns
-        -------
-        tuple of jax.Array
-            (X, flag) where X contains duplicated input rows and flag labels.
-        """
-        X = jnp.concatenate([self.database.Xtrain[:, self.active_dims],
-                             self.database.Xtrain[:, self.active_dims]])
-
-        flag = jnp.concatenate([jnp.zeros(X.shape[0] // 2, dtype=int),
-                                jnp.ones(X.shape[0] // 2, dtype=int)])
-
-        return X, flag
+    def Xtrain(self) -> JAXArray:
+        """Training inputs for shear stress GP (normalized)."""
+        return self.database.Xtrain[:, self.active_dims]
 
     @property
     def _Ytrain(self) -> JAXArray:
@@ -237,8 +209,8 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Concatenated array of training outputs (lower then upper).
         """
-        return jnp.concatenate([self.database._Ytrain[:self.last_fit_train_size, self._out_index + 1],
-                                self.database._Ytrain[:self.last_fit_train_size, self._out_index + 7]])
+        return jnp.vstack([self.database._Ytrain[:self.last_fit_train_size, self._out_index + 1],
+                           self.database._Ytrain[:self.last_fit_train_size, self._out_index + 7]]).T
 
     @property
     def Ytrain(self) -> JAXArray:
@@ -278,20 +250,20 @@ class WallStress(GaussianProcessSurrogate):
             Observation noise standard deviation normalized by Yscale.
         """
 
-        Yerr_all = jnp.concatenate([self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
-                                    self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 7]])
+        Yerr_all = jnp.vstack([self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 1],
+                               self.database._Ytrain_err[:self.last_fit_train_size, self._out_index + 7]]).T
 
         return jnp.mean(Yerr_all / self.Yscale)
 
     @property
     def kernel_variance(self) -> JAXArray:
         """Return kernel variance (JAX scalar or array)."""
-        return self.gp.kernel.kernels[0].kernel1.value
+        return self.gp.kernel.kernel1.value
 
     @property
     def kernel_lengthscale(self) -> JAXArray:
         """Return kernel lengthscale(s)."""
-        return self.gp.kernel.kernels[0].kernel2.scale
+        return self.gp.kernel.kernel2.scale
 
     @property
     def obs_stddev(self) -> JAXArray:
@@ -306,7 +278,7 @@ class WallStress(GaussianProcessSurrogate):
         if self.is_gp_model:
             self.params_init = {
                 "log_amp": jnp.log(1.),
-                "log_scale": jnp.log(jnp.std(self.Xtrain[0], axis=0))
+                "log_scale": jnp.log(jnp.std(self.Xtrain, axis=0))
             }
 
             self._train()
@@ -381,7 +353,7 @@ class WallStress(GaussianProcessSurrogate):
 
             self.__field.p[self._out_index] = mean[0, :, :]
             self.__field.p[self._out_index + 6] = mean[1, :, :]
-            self.__field_variance.p = var[0, :, :]
+
         else:
             self.__field.p[self._out_index] = s_bot[self._out_index]
             self.__field.p[self._out_index + 6] = s_top[self._out_index]
@@ -419,9 +391,9 @@ class BulkStress(GaussianProcessSurrogate):
         """
 
         self.__field = fc.real_field('bulk_viscous_stress', (3,))
-        self.__pressure = fc.get_real_field('pressure')
-        self.__x = fc.get_real_field('x')
-        self.__y = fc.get_real_field('y')
+        self.__pressure = wrap_field(fc.get_real_field('pressure'))
+        self.__x = wrap_field(fc.get_real_field('x'))
+        self.__y = wrap_field(fc.get_real_field('y'))
 
         self.geo = geo
         self.prop = prop
@@ -474,14 +446,14 @@ class BulkStress(GaussianProcessSurrogate):
         else:
             shear_viscosity = mu0
 
-        self.__field.p = stress_avg(self.solution,
-                                    self.height_and_slopes,
-                                    self.geo['U'],
-                                    self.geo['V'],
-                                    shear_viscosity,
-                                    self.prop['bulk'],
-                                    self.extra  # e.g. slip length
-                                    )
+        self.__field.p[...] = stress_avg(self.solution,
+                                         self.height_and_slopes,
+                                         self.geo['U'],
+                                         self.geo['V'],
+                                         shear_viscosity,
+                                         self.prop['bulk'],
+                                         self.extra  # e.g. slip length
+                                         )
 
 
 class Pressure(GaussianProcessSurrogate):
@@ -515,7 +487,7 @@ class Pressure(GaussianProcessSurrogate):
             GP configuration dictionary (if using GP surrogates).
         """
 
-        self.__field = fc.get_real_field('pressure')
+        self.__field = wrap_field(fc.get_real_field('pressure'))
         self.geo = geo
         self.prop = prop
 
@@ -528,7 +500,6 @@ class Pressure(GaussianProcessSurrogate):
             self.pause_steps = gp['pause_steps']
             self.is_gp_model = True
             self.use_active_learning = gp['active_learning']
-            self.build_gp = multi_in_single_out
         else:
             self.is_gp_model = False
             self.use_active_learning = False
@@ -566,7 +537,7 @@ class Pressure(GaussianProcessSurrogate):
 
     @property
     def Xtest(self) -> JAXArray:
-        """Test inputs for pressure GP (not normalized)."""
+        """Test inputs for pressure GP (normalized)."""
         return (self._Xtest / self.database.X_scale)[:, self.active_dims]
 
     @property
@@ -576,7 +547,7 @@ class Pressure(GaussianProcessSurrogate):
 
     @property
     def _Ytrain(self) -> JAXArray:
-        """Training outputs for pressure GP (normalized)."""
+        """Training outputs for pressure GP (not normalized)."""
         return self.database._Ytrain[:self.last_fit_train_size, 0]
 
     @property
@@ -642,7 +613,7 @@ class Pressure(GaussianProcessSurrogate):
         if self.is_gp_model:
             mean, var = self.predict(predictor=predictor,
                                      compute_var=self.use_active_learning or compute_var)
-            self.__field.p = mean
-            self.__field_variance.p = var
+            self.__field.p[...] = mean
+            self.__field_variance.p[...] = var
         else:
-            self.__field.p = eos_pressure(self.solution[0], self.prop)
+            self.__field.p[...] = eos_pressure(self.solution[0], self.prop)
