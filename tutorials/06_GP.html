@@ -38,11 +38,11 @@
   <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/06_GP';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -498,7 +498,7 @@ As in the previous example, we start with the <em>YAML</em> input file:</p>
 *                  PROBLEM SETUP COMPLETED                  *
 *************************************************************
                                                             
-   Writing output into: data/2026-01-15_091143_journal_gp
+   Writing output into: data/2026-01-15_151147_journal_gp
 </pre></div>
 </div>
 </div>
@@ -587,12 +587,12 @@ The gap-averaged viscous stress components (<code class="docutils literal notran
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;GaPFlow.db.Database object at 0x7f6bc3c85b20&gt;
-&lt;GaPFlow.db.Database object at 0x7f6bc3c85b20&gt;
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;GaPFlow.db.Database object at 0x7f7b3c105460&gt;
+&lt;GaPFlow.db.Database object at 0x7f7b3c105460&gt;
 0
 []
 []
-data/2026-01-15_091143_journal_gp/train
+data/2026-01-15_151147_journal_gp/train
 </pre></div>
 </div>
 </div>
@@ -610,10 +610,10 @@ Usually, this is done automatically when we call <code class="docutils literal n
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Database contains less than 5 MD runs.
-Generate new training data in data/2026-01-15_091143_journal_gp/train
+Generate new training data in data/2026-01-15_151147_journal_gp/train
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091144_mock-001│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151148_mock-001│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -624,7 +624,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +2.243e+01    (jx)                                                                                     │
+│Input 2: +5.641e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +5.433e-07    (h)                                                                                      │
 │Input 5: -2.371e-03    (∂h/∂x)                                                                                  │
@@ -633,7 +633,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091144_mock-002│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151148_mock-002│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -644,7 +644,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +3.498e+01    (jx)                                                                                     │
+│Input 2: +6.464e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +1.281e-06    (h)                                                                                      │
 │Input 5: +6.722e-03    (∂h/∂x)                                                                                  │
@@ -653,7 +653,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091145_mock-003│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151148_mock-003│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -664,7 +664,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +4.628e+01    (jx)                                                                                     │
+│Input 2: +3.251e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +2.679e-06    (h)                                                                                      │
 │Input 5: -1.527e-03    (∂h/∂x)                                                                                  │
@@ -673,7 +673,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091145_mock-004│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151149_mock-004│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -684,7 +684,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +6.407e+01    (jx)                                                                                     │
+│Input 2: +2.850e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +7.559e-07    (h)                                                                                      │
 │Input 5: +4.629e-03    (∂h/∂x)                                                                                  │
@@ -693,7 +693,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091145_mock-005│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151149_mock-005│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -704,7 +704,7 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +5.063e+01    (jx)                                                                                     │
+│Input 2: +3.970e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +1.349e-06    (h)                                                                                      │
 │Input 5: -6.831e-03    (∂h/∂x)                                                                                  │
@@ -715,15 +715,15 @@ Generate new training data in data/2026-01-15_091143_journal_gp/train
 # Timestep     : 0
 # Reason       : DB
 # Database size: 5
-# Objective    : -6.5487
-# Hyperparam   : 8.16854e+06 4.06376e-04 6.23502e+01 1.10649e-14 
+# Objective    : -6.7466
+# Hyperparam   : 1.38824e+06 4.67811e-04 1.74811e+02 1.22402e-13 
 #--------------------------------------------------
 #-----------------GP TRAINING (XZ)-----------------
 # Timestep     : 0
 # Reason       : DB
 # Database size: 5
-# Objective    : 1.5835
-# Hyperparam   : 3.84981e-01 2.77382e-05 1.39097e-01 2.05228e+00 1.06540e-05 
+# Objective    : 3.9171
+# Hyperparam   : 2.08852e-01 3.68668e-05 1.82914e+05 3.90704e+00 8.95558e-01 
 #--------------------------------------------------
 </pre></div>
 </div>
@@ -791,11 +791,11 @@ The individual training data of a single “MD” run is also stored in a local 
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_091144_mock-001
-/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_091144_mock-002
-/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_091145_mock-003
-/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_091145_mock-004
-/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_091145_mock-005
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_151148_mock-001
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_151148_mock-002
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_151148_mock-003
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_151149_mock-004
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260115_151149_mock-005
 </pre></div>
 </div>
 </div>
@@ -809,15 +809,15 @@ The individual training data of a single “MD” run is also stored in a local 
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Loading 5 local datasets in &#39;data/2026-01-15_091143_journal_gp/train&#39;.
-- 78c2b89e-9448-4cd1-89f5-eb7e9b1c95da (20260115_091144_mock-001)
-- 020aff94-7933-4e6a-a889-1e0a333f9d0d (20260115_091145_mock-005)
-- 96e488bf-60d0-4b19-a4fd-5a906d713fce (20260115_091144_mock-002)
-- c84baf7f-5dc6-4293-ad11-cef7b527a9d2 (20260115_091145_mock-003)
-- 639ff401-9e7f-4629-be25-f17806d379d9 (20260115_091145_mock-004)
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Loading 5 local datasets in &#39;data/2026-01-15_151147_journal_gp/train&#39;.
+- b8a63e58-c654-469b-878d-2d15b631b62a (20260115_151148_mock-003)
+- a5027066-4967-4597-9ce3-715cb2a3b074 (20260115_151149_mock-005)
+- 3f56e5ee-e540-4f3d-a05d-20b610664481 (20260115_151148_mock-002)
+- fa0df33a-1ec4-4cff-8df0-bd9e6425ce73 (20260115_151149_mock-004)
+- 040e23d8-373f-4b8b-b980-8132c42e606b (20260115_151148_mock-001)
 </pre></div>
 </div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[169467.04169250393, -0.619900249931894, -0.619900249931894, -0.619900249931894, -0.619900249931894, -36051.324119168734, -0.619900249931894, 19.734013411598056, -12.625085295702881, -12.62508529570288, -1.8387190599359027, 6821.619935066835, -1.8387190599359027]
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[158102.13584805003, -0.619900249931894, -0.619900249931894, -0.619900249931894, -0.619900249931894, -5269.5788875213375, -0.619900249931894, -3.1805701409877982, -1.167793519409955, -1.1677935194099551, -1.8387190599359027, -660.8999751581043, -1.8387190599359027]
 </pre></div>
 </div>
 </div>
@@ -848,7 +848,7 @@ The models are now ready to make a first prediction:</p>
                         <span class="n">shear_predict</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
                         <span class="n">shear_predict</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
                         <span class="n">press_predict</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
-                        <span class="n">shear_predict</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">shear_predict</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
                         <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">variance_tol</span><span class="p">,</span>
                         <span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_xz</span><span class="o">.</span><span class="n">variance_tol</span><span class="p">,</span>
                         <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
@@ -856,7 +856,7 @@ The models are now ready to make a first prediction:</p>
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/6484e38e1868cc06a1bc25f442bdcd63be09c1825ed7888472226e8cd0748edd.png" src="../_images/6484e38e1868cc06a1bc25f442bdcd63be09c1825ed7888472226e8cd0748edd.png" />
+<img alt="../_images/7046b6e6958311717f7af9b732dd79d6e724edac222b4b2ddacd2a76afea342f.png" src="../_images/7046b6e6958311717f7af9b732dd79d6e724edac222b4b2ddacd2a76afea342f.png" />
 </div>
 </div>
 <p>The uncertainty tolerance is controlled via the <code class="docutils literal notranslate"><span class="pre">atol</span></code> and <code class="docutils literal notranslate"><span class="pre">rtol</span></code> parameters.
@@ -870,6 +870,136 @@ However, the shear stress prediction exceeds the uncertainty tolerance, such tha
 </pre></div>
 </div>
 </div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151155_mock-006│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.705e-06    (h)                                                                                      │
+│Input 5: +2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 6
+# Objective    : 3.1418
+# Hyperparam   : 1.95065e-01 3.68668e-05 1.02271e+03 3.45323e+00 9.30728e-01
+# AL  1/ 5     : 7.076 --&gt; 2.966
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151158_mock-007│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +4.780e-07    (h)                                                                                      │
+│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 7
+# Objective    : 2.4812
+# Hyperparam   : 2.47682e-01 3.68668e-05 2.25050e+02 1.84448e+00 1.45626e+00
+# AL  2/ 5     : 7.076 --&gt; 1.893
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151200_mock-008│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.034e-06    (h)                                                                                      │
+│Input 5: -6.424e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 8
+# Objective    : 0.13399
+# Hyperparam   : 2.66431e-01 3.68668e-05 1.15251e+05 1.92010e+00 9.92340e-01
+# AL  3/ 5     : 7.076 --&gt; 0.599
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 2
+# Reason       : DB
+# Database size: 8
+# Objective    : -26.394
+# Hyperparam   : 5.33077e+06 4.67811e-04 8.89985e+01 1.06106e-19 
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151204_mock-009│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.354e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +1.149e-06    (h)                                                                                      │
+│Input 5: +6.424e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 12
+# Reason       : AL
+# Database size: 9
+# Objective    : -2.4883
+# Hyperparam   : 3.58212e-01 3.68668e-05 7.77770e+01 1.34735e+00 1.07503e+00
+# AL  1/ 5     : 1.054 --&gt; 0.230
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 13
+# Reason       : DB
+# Database size: 9
+# Objective    : -32.835
+# Hyperparam   : 8.04543e+06 4.67811e-04 7.24906e+01 4.58642e-18 
+#--------------------------------------------------
+</pre></div>
+</div>
+</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -880,7 +1010,7 @@ However, the shear stress prediction exceeds the uncertainty tolerance, such tha
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Simulation step:  50
-Database size:  5
+Database size:  9
 </pre></div>
 </div>
 </div>
@@ -894,7 +1024,7 @@ Database size:  5
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/b52f9e1b9cf1b446bc5a39a98db6483b4cb98fb94b79c73a99a52491b5a76ef9.png" src="../_images/b52f9e1b9cf1b446bc5a39a98db6483b4cb98fb94b79c73a99a52491b5a76ef9.png" />
+<img alt="../_images/e4ddae0e73b2250532441e2a136c8cbae9738fb54fa3b0e25ab0d996af6fdfe7.png" src="../_images/e4ddae0e73b2250532441e2a136c8cbae9738fb54fa3b0e25ab0d996af6fdfe7.png" />
 </div>
 </div>
 <p>Looks good. We now run the simulation again up to 2500 steps as specified in the input.</p>
@@ -908,12 +1038,11 @@ Database size:  5
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>-------------------------------------------------------------
 Step   Timestep   Time       CFL        Residual  
 -------------------------------------------------------------
-50     1.8984e-10 9.4920e-09 2.5000e-01 9.7889e-03
-100    1.8984e-10 1.8984e-08 2.5000e-01 4.1452e-03
-200    1.8984e-10 3.7968e-08 2.5000e-01 1.2518e-03
+50     1.8984e-10 9.4921e-09 2.5000e-01 9.4169e-03
+100    1.8984e-10 1.8984e-08 2.5000e-01 8.6542e-03
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091205_mock-006│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151216_mock-010│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -924,7 +1053,7 @@ Step   Timestep   Time       CFL        Residual
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +4.466e+01    (jx)                                                                                     │
+│Input 2: +4.394e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +7.559e-07    (h)                                                                                      │
 │Input 5: +4.629e-03    (∂h/∂x)                                                                                  │
@@ -932,151 +1061,23 @@ Step   Timestep   Time       CFL        Residual
 │Input 7: +0.000e+00    (extra_0)                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 #-----------------GP TRAINING (ZZ)-----------------
-# Timestep     : 226
-# Reason       : AL
-# Database size: 6
-# Objective    : -18.686
-# Hyperparam   : 1.08831e+07 7.34191e-05 9.04278e+00 1.25269e-13 
-# AL  1/ 5     : 1.010 --&gt; 0.004
-#--------------------------------------------------
-#-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 226
-# Reason       : DB
-# Database size: 6
-# Objective    : 1.4341
-# Hyperparam   : 4.03833e-01 2.77382e-05 1.44033e+04 1.93329e+00 1.75941e-01 
-#--------------------------------------------------
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091210_mock-007│
-│                                                                                                                │
-│  __  __  ___   ____ _  __                                                                                      │
-│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
-│ | |\/| | | | | |   | &#39; /                                                                                       │
-│ | |  | | |_| | |___| . \                                                                                       │
-│ |_|  |_|\___/ \____|_|\_\                                                                                      │
-│                                                                                                                │
-│                                                                                                                │
-│---                                                                                                             │
-│Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +3.324e+01    (jx)                                                                                     │
-│Input 3: +0.000e+00    (jy)                                                                                     │
-│Input 4: +2.705e-06    (h)                                                                                      │
-│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
-│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
-│Input 7: +0.000e+00    (extra_0)                                                                                │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-#-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 226
-# Reason       : AL
-# Database size: 7
-# Objective    : -0.19658
-# Hyperparam   : 4.26016e-01 2.77382e-05 9.47696e+03 1.82280e+00 2.36211e-01
-# AL  1/ 5     : 2.144 --&gt; 1.529
-#--------------------------------------------------
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091213_mock-008│
-│                                                                                                                │
-│  __  __  ___   ____ _  __                                                                                      │
-│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
-│ | |\/| | | | | |   | &#39; /                                                                                       │
-│ | |  | | |_| | |___| . \                                                                                       │
-│ |_|  |_|\___/ \____|_|\_\                                                                                      │
-│                                                                                                                │
-│                                                                                                                │
-│---                                                                                                             │
-│Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +3.324e+01    (jx)                                                                                     │
-│Input 3: +0.000e+00    (jy)                                                                                     │
-│Input 4: +2.705e-06    (h)                                                                                      │
-│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
-│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
-│Input 7: +0.000e+00    (extra_0)                                                                                │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-#-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 226
-# Reason       : AL
-# Database size: 8
-# Objective    : -18.651
-# Hyperparam   : 4.26012e-01 2.77382e-05 9.47810e+03 1.82282e+00 2.36206e-01
-# AL  2/ 5     : 2.144 --&gt; 1.529
-#--------------------------------------------------
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091216_mock-009│
-│                                                                                                                │
-│  __  __  ___   ____ _  __                                                                                      │
-│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
-│ | |\/| | | | | |   | &#39; /                                                                                       │
-│ | |  | | |_| | |___| . \                                                                                       │
-│ |_|  |_|\___/ \____|_|\_\                                                                                      │
-│                                                                                                                │
-│                                                                                                                │
-│---                                                                                                             │
-│Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +4.356e+01    (jx)                                                                                     │
-│Input 3: +0.000e+00    (jy)                                                                                     │
-│Input 4: +8.038e-07    (h)                                                                                      │
-│Input 5: -4.950e-03    (∂h/∂x)                                                                                  │
-│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
-│Input 7: +0.000e+00    (extra_0)                                                                                │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-#-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 226
-# Reason       : AL
-# Database size: 9
-# Objective    : -23.691
-# Hyperparam   : 4.06468e-01 2.77382e-05 3.89144e+02 1.91970e+00 2.86203e-01
-# AL  3/ 5     : 2.144 --&gt; 0.658
-#--------------------------------------------------
-#-----------------GP TRAINING (ZZ)-----------------
-# Timestep     : 227
-# Reason       : DB
-# Database size: 9
-# Objective    : -40.1
-# Hyperparam   : 1.23996e+06 6.39995e-05 1.71430e+01 3.19732e-21 
-#--------------------------------------------------
-300    1.8983e-10 5.6951e-08 2.5000e-01 7.7151e-04
-400    1.8983e-10 7.5934e-08 2.5000e-01 4.6932e-04
-┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091233_mock-010│
-│                                                                                                                │
-│  __  __  ___   ____ _  __                                                                                      │
-│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
-│ | |\/| | | | | |   | &#39; /                                                                                       │
-│ | |  | | |_| | |___| . \                                                                                       │
-│ |_|  |_|\___/ \____|_|\_\                                                                                      │
-│                                                                                                                │
-│                                                                                                                │
-│---                                                                                                             │
-│Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +2.717e+01    (jx)                                                                                     │
-│Input 3: +0.000e+00    (jy)                                                                                     │
-│Input 4: +2.705e-06    (h)                                                                                      │
-│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
-│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
-│Input 7: +0.000e+00    (extra_0)                                                                                │
-└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
-#-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 437
+# Timestep     : 159
 # Reason       : AL
 # Database size: 10
-# Objective    : -28.334
-# Hyperparam   : 7.53334e-01 2.77382e-05 1.33345e+00 5.85350e-01 7.15067e-01
-# AL  1/ 5     : 1.001 --&gt; 0.896
+# Objective    : -51.444
+# Hyperparam   : 2.56203e+06 8.60759e-05 2.06783e+01 2.67983e-17 
+# AL  1/ 5     : 1.014 --&gt; 0.007
 #--------------------------------------------------
-#-----------------GP TRAINING (ZZ)-----------------
-# Timestep     : 438
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 159
 # Reason       : DB
 # Database size: 10
-# Objective    : -48.886
-# Hyperparam   : 2.08691e+06 6.39995e-05 1.36270e+01 7.40300e-13 
+# Objective    : -5.1079
+# Hyperparam   : 4.21001e-01 3.68668e-05 7.70399e+03 1.21650e+00 9.72670e-01 
 #--------------------------------------------------
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091239_mock-011│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151221_mock-011│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -1087,7 +1088,7 @@ Step   Timestep   Time       CFL        Residual
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +2.600e+01    (jx)                                                                                     │
+│Input 2: +3.218e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +2.034e-06    (h)                                                                                      │
 │Input 5: +6.424e-03    (∂h/∂x)                                                                                  │
@@ -1095,23 +1096,24 @@ Step   Timestep   Time       CFL        Residual
 │Input 7: +0.000e+00    (extra_0)                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 #-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 443
+# Timestep     : 172
 # Reason       : AL
 # Database size: 11
-# Objective    : -31.394
-# Hyperparam   : 8.82987e-01 2.77382e-05 1.56606e-03 5.97837e-01 5.26406e-01
-# AL  1/ 5     : 1.002 --&gt; 0.262
+# Objective    : -7.9394
+# Hyperparam   : 5.02742e-01 3.68668e-05 6.41276e+03 1.06788e+00 8.50128e-01
+# AL  1/ 5     : 1.004 --&gt; 0.390
 #--------------------------------------------------
 #-----------------GP TRAINING (ZZ)-----------------
-# Timestep     : 444
+# Timestep     : 173
 # Reason       : DB
 # Database size: 11
-# Objective    : -56.465
-# Hyperparam   : 4.47951e+06 6.39995e-05 8.69397e+00 5.11349e-17 
+# Objective    : -58.815
+# Hyperparam   : 1.57936e+07 8.60759e-05 8.07489e+00 1.06372e-21 
 #--------------------------------------------------
+200    1.8984e-10 3.7968e-08 2.5000e-01 5.6398e-03
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Run next MD simulation in:                                                                                      │
-│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_091143_journal_gp/train/20260115_091247_mock-012│
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151228_mock-012│
 │                                                                                                                │
 │  __  __  ___   ____ _  __                                                                                      │
 │ |  \/  |/ _ \ / ___| |/ /                                                                                      │
@@ -1122,49 +1124,121 @@ Step   Timestep   Time       CFL        Residual
 │                                                                                                                │
 │---                                                                                                             │
 │Input 1: +8.777e+02    (ρ)                                                                                      │
-│Input 2: +1.390e+01    (jx)                                                                                     │
+│Input 2: +2.475e+01    (jx)                                                                                     │
 │Input 3: +0.000e+00    (jy)                                                                                     │
 │Input 4: +2.705e-06    (h)                                                                                      │
-│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
+│Input 5: +2.199e-04    (∂h/∂x)                                                                                  │
 │Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
 │Input 7: +0.000e+00    (extra_0)                                                                                │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 #-----------------GP TRAINING (XZ)-----------------
-# Timestep     : 462
+# Timestep     : 230
 # Reason       : AL
 # Database size: 12
-# Objective    : -34.345
-# Hyperparam   : 1.17923e+00 2.77382e-05 7.37794e-02 4.21569e-01 5.55287e-01
-# AL  1/ 5     : 1.057 --&gt; 0.254
+# Objective    : -10.874
+# Hyperparam   : 5.94950e-01 3.68668e-05 5.58593e+03 8.64940e-01 8.17230e-01
+# AL  1/ 5     : 1.011 --&gt; 0.500
 #--------------------------------------------------
 #-----------------GP TRAINING (ZZ)-----------------
-# Timestep     : 463
+# Timestep     : 231
 # Reason       : DB
 # Database size: 12
-# Objective    : -65.561
-# Hyperparam   : 6.51658e+06 6.39995e-05 7.47210e+00 6.10443e-12 
+# Objective    : -63.073
+# Hyperparam   : 1.91151e+04 8.60759e-05 1.62314e+02 2.51488e-11 
 #--------------------------------------------------
-500    1.8983e-10 9.4917e-08 2.5000e-01 3.2546e-03
-600    1.8983e-10 1.1390e-07 2.5000e-01 3.1538e-04
-700    1.8983e-10 1.3288e-07 2.5000e-01 1.3810e-04
-800    1.8983e-10 1.5187e-07 2.5000e-01 3.0120e-06
-900    1.8983e-10 1.7085e-07 2.5000e-01 4.6513e-05
-1000   1.8983e-10 1.8983e-07 2.5000e-01 5.5761e-05
-1100   1.8983e-10 2.0881e-07 2.5000e-01 5.2118e-05
-1200   1.8983e-10 2.2780e-07 2.5000e-01 4.4346e-05
-1300   1.8983e-10 2.4678e-07 2.5000e-01 3.6069e-05
-1400   1.8983e-10 2.6576e-07 2.5000e-01 2.8656e-05
-1500   1.8983e-10 2.8474e-07 2.5000e-01 2.2469e-05
-1600   1.8983e-10 3.0373e-07 2.5000e-01 1.7494e-05
-1700   1.8983e-10 3.2271e-07 2.5000e-01 1.3562e-05
-1800   1.8983e-10 3.4169e-07 2.5000e-01 1.0504e-05
-1900   1.8983e-10 3.6068e-07 2.5000e-01 8.1224e-06
-2000   1.8983e-10 3.7966e-07 2.5000e-01 6.2821e-06
-2100   1.8983e-10 3.9864e-07 2.5000e-01 4.8571e-06
-2200   1.8983e-10 4.1762e-07 2.5000e-01 3.7535e-06
-2300   1.8983e-10 4.3661e-07 2.5000e-01 2.9134e-06
-2400   1.8983e-10 4.5559e-07 2.5000e-01 2.2557e-06
-2500   1.8983e-10 4.7457e-07 2.5000e-01 1.7429e-06
+300    1.8982e-10 5.6951e-08 2.5000e-01 3.5665e-03
+400    1.8982e-10 7.5933e-08 2.5000e-01 2.4511e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151240_mock-013│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +2.518e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +1.766e-06    (h)                                                                                      │
+│Input 5: -6.914e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 405
+# Reason       : AL
+# Database size: 13
+# Objective    : -13.647
+# Hyperparam   : 7.48115e-01 3.68668e-05 3.27498e+03 7.26385e-01 7.77279e-01
+# AL  1/ 5     : 1.003 --&gt; 0.586
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 406
+# Reason       : DB
+# Database size: 13
+# Objective    : -68.568
+# Hyperparam   : 1.42679e+05 8.32116e-05 6.43352e+01 9.99500e-16 
+#--------------------------------------------------
+500    1.8982e-10 9.4915e-08 2.5000e-01 1.7546e-03
+600    1.8982e-10 1.1390e-07 2.5000e-01 1.0791e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-01-15_151147_journal_gp/train/20260115_151256_mock-014│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +1.375e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.705e-06    (h)                                                                                      │
+│Input 5: +2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 655
+# Reason       : AL
+# Database size: 14
+# Objective    : -16.618
+# Hyperparam   : 1.19046e+00 3.68668e-05 1.46447e+03 5.15668e-01 7.13936e-01
+# AL  1/ 5     : 1.001 --&gt; 0.565
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 656
+# Reason       : DB
+# Database size: 14
+# Objective    : -79.088
+# Hyperparam   : 4.29567e+06 8.32116e-05 1.40389e+01 4.11052e-13 
+#--------------------------------------------------
+700    1.8983e-10 1.3288e-07 2.5000e-01 3.4867e-04
+800    1.8983e-10 1.5186e-07 2.5000e-01 6.2116e-04
+900    1.8983e-10 1.7085e-07 2.5000e-01 4.1802e-04
+1000   1.8983e-10 1.8983e-07 2.5000e-01 2.8442e-04
+1100   1.8983e-10 2.0881e-07 2.5000e-01 1.9943e-04
+1200   1.8983e-10 2.2779e-07 2.5000e-01 1.4145e-04
+1300   1.8983e-10 2.4678e-07 2.5000e-01 1.0096e-04
+1400   1.8983e-10 2.6576e-07 2.5000e-01 7.2380e-05
+1500   1.8983e-10 2.8474e-07 2.5000e-01 5.2044e-05
+1600   1.8983e-10 3.0373e-07 2.5000e-01 3.7496e-05
+1700   1.8983e-10 3.2271e-07 2.5000e-01 2.7050e-05
+1800   1.8983e-10 3.4169e-07 2.5000e-01 1.9536e-05
+1900   1.8983e-10 3.6067e-07 2.5000e-01 1.4116e-05
+2000   1.8983e-10 3.7966e-07 2.5000e-01 1.0206e-05
+2100   1.8983e-10 3.9864e-07 2.5000e-01 7.3775e-06
+2200   1.8983e-10 4.1762e-07 2.5000e-01 5.3353e-06
+2300   1.8983e-10 4.3661e-07 2.5000e-01 3.8596e-06
+2400   1.8983e-10 4.5559e-07 2.5000e-01 2.7892e-06
+2500   1.8983e-10 4.7457e-07 2.5000e-01 2.0182e-06
 </pre></div>
 </div>
 </div>
@@ -1181,7 +1255,7 @@ Step   Timestep   Time       CFL        Residual
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/b515bc3f39f91a46d09f5b0b55ea4bbc219869ea98f8197cbbe7a9e2d0d0a6fe.png" src="../_images/b515bc3f39f91a46d09f5b0b55ea4bbc219869ea98f8197cbbe7a9e2d0d0a6fe.png" />
+<img alt="../_images/017211bce3361582879a991b704f1d07e463ceecdf066fe86398f38fb890efad.png" src="../_images/017211bce3361582879a991b704f1d07e463ceecdf066fe86398f38fb890efad.png" />
 </div>
 </div>
 <div class="cell docutils container">
@@ -1192,7 +1266,7 @@ Step   Timestep   Time       CFL        Residual
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/d41d40dd9b725dfaf162cf66a60e24402441d35fddb3643089475241a8292ce4.png" src="../_images/d41d40dd9b725dfaf162cf66a60e24402441d35fddb3643089475241a8292ce4.png" />
+<img alt="../_images/0916aa083af8b179a3105968d969136cb30a6fff426a4845f3a1163a7e9a0cad.png" src="../_images/0916aa083af8b179a3105968d969136cb30a6fff426a4845f3a1163a7e9a0cad.png" />
 </div>
 </div>
 <p>After 2500 steps, the simulation results looks close to what we expect for the journal bearing case, but has not yet converged. Feel free to run it for longer (by modifying the <code class="docutils literal notranslate"><span class="pre">max_it</span></code> parameter).</p>

@@ -14,6 +14,7 @@
    .. autosummary::
    
       ~Pressure.__init__
+      ~Pressure.build_gp
       ~Pressure.init
       ~Pressure.init_database
       ~Pressure.predict
@@ -37,6 +38,7 @@
       ~Pressure.cumtime_train
       ~Pressure.database
       ~Pressure.extra
+      ~Pressure.has_multi_output
       ~Pressure.height
       ~Pressure.height_and_slopes
       ~Pressure.kernel_lengthscale
@@ -52,7 +54,6 @@
       ~Pressure.is_gp_model
       ~Pressure.active_dims
       ~Pressure.use_active_learning
-      ~Pressure.build_gp
       ~Pressure.rtol
       ~Pressure.atol
       ~Pressure.max_steps

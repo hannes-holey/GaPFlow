@@ -38,8 +38,8 @@
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/summary/GaPFlow.Database';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -366,7 +366,7 @@ document.write(`
 <h1>GaPFlow.Database<a class="headerlink" href="#gapflow-database" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="GaPFlow.Database">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GaPFlow.</span></span><span class="sig-name descname"><span class="pre">Database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_extra_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.Database" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">GaPFlow.</span></span><span class="sig-name descname"><span class="pre">Database</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">db</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_extra_features</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.Database" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Container for GP training datasets.</p>
 <p>Handles dataset initialization, normalization, data addition,
@@ -461,31 +461,31 @@ and optional dtool integration for persistent dataset storage.</p>
 </div>
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.X_scale">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">X_scale</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">Nfeat'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Database.X_scale" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">X_scale</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">Nfeat'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.Database.X_scale" title="Link to this definition">#</a></dt>
 <dd><p>Normalization constants for input features.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.Xtrain">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Xtrain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">Nfeat'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Database.Xtrain" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Xtrain</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">Nfeat'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.Database.Xtrain" title="Link to this definition">#</a></dt>
 <dd><p>Normalized input features of shape (Ntrain, Nfeat).</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.Y_scale">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Y_scale</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Database.Y_scale" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Y_scale</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.Database.Y_scale" title="Link to this definition">#</a></dt>
 <dd><p>Normalization constants for observations</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.Ytrain">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Ytrain</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Database.Ytrain" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Ytrain</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.Database.Ytrain" title="Link to this definition">#</a></dt>
 <dd><p>Normalized observations of shape (Ntrain, 13).</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.Ytrain_err">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Ytrain_err</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.Database.Ytrain_err" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Ytrain_err</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Float</span><span class="p"><span class="pre">[</span></span><span class="pre">Array</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="s"><span class="pre">'Ntrain</span> <span class="pre">13'</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.Database.Ytrain_err" title="Link to this definition">#</a></dt>
 <dd><p>Normalized observation error of shape (Ntrain, 13).</p>
 </dd></dl>
 
@@ -502,7 +502,7 @@ and optional dtool integration for persistent dataset storage.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.config">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.Database.config" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">config</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></span><a class="headerlink" href="#GaPFlow.Database.config" title="Link to this definition">#</a></dt>
 <dd><p>Configuration parameters of the database object.</p>
 </dd></dl>
 
@@ -540,7 +540,7 @@ query string to select data.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.has_mock_md">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">has_mock_md</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.Database.has_mock_md" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_mock_md</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#GaPFlow.Database.has_mock_md" title="Link to this definition">#</a></dt>
 <dd><p>Flag that indicates whether the attached MD runner is a ‘mock’ object.</p>
 </dd></dl>
 
@@ -560,19 +560,19 @@ query string to select data.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.md_config">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">md_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.Database.md_config" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">md_config</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></span><a class="headerlink" href="#GaPFlow.Database.md_config" title="Link to this definition">#</a></dt>
 <dd><p>Configuration parameters of the attached MD runner object.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.num_features">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">num_features</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.Database.num_features" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">num_features</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#GaPFlow.Database.num_features" title="Link to this definition">#</a></dt>
 <dd><p>Number of possible features, actual ones are selected from GP’s active_dims.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.output_path">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">output_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#GaPFlow.Database.output_path" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">output_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#GaPFlow.Database.output_path" title="Link to this definition">#</a></dt>
 <dd><p>Simulation output path</p>
 </dd></dl>
 
@@ -591,13 +591,13 @@ also for the attached MD runner object.</p>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.size">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.Database.size" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">size</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#GaPFlow.Database.size" title="Link to this definition">#</a></dt>
 <dd><p>Number of training samples currently stored.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.Database.training_path">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">training_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#GaPFlow.Database.training_path" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">training_path</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><a class="headerlink" href="#GaPFlow.Database.training_path" title="Link to this definition">#</a></dt>
 <dd><p>Local storage location of dtool datasets.</p>
 </dd></dl>
 

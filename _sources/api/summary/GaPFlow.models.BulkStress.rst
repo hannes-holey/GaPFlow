@@ -14,6 +14,7 @@
    .. autosummary::
    
       ~BulkStress.__init__
+      ~BulkStress.build_gp
       ~BulkStress.init_database
       ~BulkStress.predict
       ~BulkStress.update
@@ -38,6 +39,7 @@
       ~BulkStress.dp_dx
       ~BulkStress.dp_dy
       ~BulkStress.extra
+      ~BulkStress.has_multi_output
       ~BulkStress.height
       ~BulkStress.height_and_slopes
       ~BulkStress.kernel_lengthscale
@@ -52,7 +54,6 @@
       ~BulkStress.is_gp_model
       ~BulkStress.active_dims
       ~BulkStress.use_active_learning
-      ~BulkStress.build_gp
       ~BulkStress.rtol
       ~BulkStress.atol
       ~BulkStress.max_steps

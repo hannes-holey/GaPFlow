@@ -14,6 +14,7 @@
    .. autosummary::
    
       ~GaussianProcessSurrogate.__init__
+      ~GaussianProcessSurrogate.build_gp
       ~GaussianProcessSurrogate.init_database
       ~GaussianProcessSurrogate.predict
       ~GaussianProcessSurrogate.write
@@ -35,6 +36,7 @@
       ~GaussianProcessSurrogate.cumtime_train
       ~GaussianProcessSurrogate.database
       ~GaussianProcessSurrogate.extra
+      ~GaussianProcessSurrogate.has_multi_output
       ~GaussianProcessSurrogate.height
       ~GaussianProcessSurrogate.height_and_slopes
       ~GaussianProcessSurrogate.kernel_lengthscale
@@ -47,7 +49,6 @@
       ~GaussianProcessSurrogate.is_gp_model
       ~GaussianProcessSurrogate.active_dims
       ~GaussianProcessSurrogate.use_active_learning
-      ~GaussianProcessSurrogate.build_gp
       ~GaussianProcessSurrogate.rtol
       ~GaussianProcessSurrogate.atol
       ~GaussianProcessSurrogate.max_steps

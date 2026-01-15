@@ -38,8 +38,8 @@
   <script src="../../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
 
     <script src="../../_static/documentation_options.js?v=9eb32ce0"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script>DOCUMENTATION_OPTIONS.pagename = 'api/summary/GaPFlow.models.BulkStress';</script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -338,7 +338,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.Ytrain"><code class="docutils literal notranslate"><span class="pre">BulkStress.Ytrain</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.active_dims"><code class="docutils literal notranslate"><span class="pre">BulkStress.active_dims</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.atol"><code class="docutils literal notranslate"><span class="pre">BulkStress.atol</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.build_gp"><code class="docutils literal notranslate"><span class="pre">BulkStress.build_gp</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.build_gp"><code class="docutils literal notranslate"><span class="pre">BulkStress.build_gp()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.cumtime_infer"><code class="docutils literal notranslate"><span class="pre">BulkStress.cumtime_infer</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.cumtime_train"><code class="docutils literal notranslate"><span class="pre">BulkStress.cumtime_train</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.database"><code class="docutils literal notranslate"><span class="pre">BulkStress.database</span></code></a></li>
@@ -346,6 +346,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.dp_dy"><code class="docutils literal notranslate"><span class="pre">BulkStress.dp_dy</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.extra"><code class="docutils literal notranslate"><span class="pre">BulkStress.extra</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.geo"><code class="docutils literal notranslate"><span class="pre">BulkStress.geo</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.has_multi_output"><code class="docutils literal notranslate"><span class="pre">BulkStress.has_multi_output</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.height"><code class="docutils literal notranslate"><span class="pre">BulkStress.height</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.height_and_slopes"><code class="docutils literal notranslate"><span class="pre">BulkStress.height_and_slopes</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.init_database"><code class="docutils literal notranslate"><span class="pre">BulkStress.init_database()</span></code></a></li>
@@ -386,7 +387,7 @@ document.write(`
 <h1>GaPFlow.models.BulkStress<a class="headerlink" href="#gapflow-models-bulkstress" title="Link to this heading">#</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">GaPFlow.models.</span></span><span class="sig-name descname"><span class="pre">BulkStress</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.models.BulkStress" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">GaPFlow.models.</span></span><span class="sig-name descname"><span class="pre">BulkStress</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prop</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">geo</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gp</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.models.BulkStress" title="Link to this definition">#</a></dt>
 <dd><p>Bases: <a class="reference internal" href="GaPFlow.models.gp.GaussianProcessSurrogate.html#GaPFlow.models.gp.GaussianProcessSurrogate" title="GaPFlow.models.gp.GaussianProcessSurrogate"><code class="xref py py-class docutils literal notranslate"><span class="pre">GaussianProcessSurrogate</span></code></a></p>
 <p>Bulk (gap-averaged) viscous stress model.</p>
 <p>This model currently operates deterministically (no GP surrogate).</p>
@@ -413,16 +414,19 @@ document.write(`
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.__init__" title="GaPFlow.models.BulkStress.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(fc, prop, geo[, data, gp])</p></td>
 <td><p>Constructor</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.init_database" title="GaPFlow.models.BulkStress.init_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_database</span></code></a>(dim)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.build_gp" title="GaPFlow.models.BulkStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a>(params, X, yerr)</p></td>
+<td><p>Default GP build method.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.init_database" title="GaPFlow.models.BulkStress.init_database"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_database</span></code></a>(dim)</p></td>
 <td><p>Triggers the first database initialization.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.predict" title="GaPFlow.models.BulkStress.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>([predictor, compute_var])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.predict" title="GaPFlow.models.BulkStress.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>([predictor, compute_var])</p></td>
 <td><p>Perform GP prediction, optionally updating the model via active learning (only in predictor step of the predictor-corrector time integration scheme)</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.update" title="GaPFlow.models.BulkStress.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.update" title="GaPFlow.models.BulkStress.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
 <td><p>Compute and store bulk viscous stress using viscous model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.write" title="GaPFlow.models.BulkStress.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.write" title="GaPFlow.models.BulkStress.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
 <td><p>Log current GP hyperparameters and diagnostics.</p></td>
 </tr>
 </tbody>
@@ -464,49 +468,49 @@ document.write(`
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.extra" title="GaPFlow.models.BulkStress.extra"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extra</span></code></a></p></td>
 <td><p>Return constant extra field, which can be used as additional input.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.height" title="GaPFlow.models.BulkStress.height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.has_multi_output" title="GaPFlow.models.BulkStress.has_multi_output"><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_multi_output</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.height" title="GaPFlow.models.BulkStress.height"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height</span></code></a></p></td>
 <td><p>Return the gap height field.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.height_and_slopes" title="GaPFlow.models.BulkStress.height_and_slopes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height_and_slopes</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.height_and_slopes" title="GaPFlow.models.BulkStress.height_and_slopes"><code class="xref py py-obj docutils literal notranslate"><span class="pre">height_and_slopes</span></code></a></p></td>
 <td><p>Return the topography (height and gradients).</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.kernel_lengthscale" title="GaPFlow.models.BulkStress.kernel_lengthscale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_lengthscale</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.kernel_lengthscale" title="GaPFlow.models.BulkStress.kernel_lengthscale"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_lengthscale</span></code></a></p></td>
 <td><p>Kernel lengthscale(s).</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.kernel_variance" title="GaPFlow.models.BulkStress.kernel_variance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_variance</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.kernel_variance" title="GaPFlow.models.BulkStress.kernel_variance"><code class="xref py py-obj docutils literal notranslate"><span class="pre">kernel_variance</span></code></a></p></td>
 <td><p>Kernel variance.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.last_fit_train_size" title="GaPFlow.models.BulkStress.last_fit_train_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">last_fit_train_size</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.last_fit_train_size" title="GaPFlow.models.BulkStress.last_fit_train_size"><code class="xref py py-obj docutils literal notranslate"><span class="pre">last_fit_train_size</span></code></a></p></td>
 <td><p>Size of the training database at the last fit.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.name" title="GaPFlow.models.BulkStress.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.name" title="GaPFlow.models.BulkStress.name"><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.obs_stddev" title="GaPFlow.models.BulkStress.obs_stddev"><code class="xref py py-obj docutils literal notranslate"><span class="pre">obs_stddev</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.obs_stddev" title="GaPFlow.models.BulkStress.obs_stddev"><code class="xref py py-obj docutils literal notranslate"><span class="pre">obs_stddev</span></code></a></p></td>
 <td><p>Observation noise standard deviation.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.pressure" title="GaPFlow.models.BulkStress.pressure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pressure</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.pressure" title="GaPFlow.models.BulkStress.pressure"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pressure</span></code></a></p></td>
 <td><p>Return the pressure field.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.solution" title="GaPFlow.models.BulkStress.solution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solution</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.solution" title="GaPFlow.models.BulkStress.solution"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solution</span></code></a></p></td>
 <td><p>Return full solution field.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.stress" title="GaPFlow.models.BulkStress.stress"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stress</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.stress" title="GaPFlow.models.BulkStress.stress"><code class="xref py py-obj docutils literal notranslate"><span class="pre">stress</span></code></a></p></td>
 <td><p>Return the bulk viscous stress field.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.trusted" title="GaPFlow.models.BulkStress.trusted"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trusted</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.trusted" title="GaPFlow.models.BulkStress.trusted"><code class="xref py py-obj docutils literal notranslate"><span class="pre">trusted</span></code></a></p></td>
 <td><p>Return True if model predictive variance is below tolerance.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.is_gp_model" title="GaPFlow.models.BulkStress.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.is_gp_model" title="GaPFlow.models.BulkStress.is_gp_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_gp_model</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.active_dims" title="GaPFlow.models.BulkStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.active_dims" title="GaPFlow.models.BulkStress.active_dims"><code class="xref py py-obj docutils literal notranslate"><span class="pre">active_dims</span></code></a></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.use_active_learning" title="GaPFlow.models.BulkStress.use_active_learning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">use_active_learning</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.build_gp" title="GaPFlow.models.BulkStress.build_gp"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_gp</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.use_active_learning" title="GaPFlow.models.BulkStress.use_active_learning"><code class="xref py py-obj docutils literal notranslate"><span class="pre">use_active_learning</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.models.BulkStress.rtol" title="GaPFlow.models.BulkStress.rtol"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rtol</span></code></a></p></td>
@@ -538,99 +542,120 @@ document.write(`
 </div>
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.Xtest">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Xtest</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Xtest" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Xtest</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Xtest" title="Link to this definition">#</a></dt>
 <dd><p>Test inputs.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.Xtrain">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Xtrain</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Xtrain" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Xtrain</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Xtrain" title="Link to this definition">#</a></dt>
 <dd><p>Training inputs (only active dimensions.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.Yerr">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Yerr</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Yerr" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Yerr</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Yerr" title="Link to this definition">#</a></dt>
 <dd><p>Observations standard error.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.Yscale">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Yscale</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Yscale" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Yscale</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Yscale" title="Link to this definition">#</a></dt>
 <dd><p>Observations scaling factor.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.Ytrain">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Ytrain</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Ytrain" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">Ytrain</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.Ytrain" title="Link to this definition">#</a></dt>
 <dd><p>Training observations (only active dimensions, scaled).</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.active_dims">
-<span class="sig-name descname"><span class="pre">active_dims</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.active_dims" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">active_dims</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.active_dims" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.atol">
-<span class="sig-name descname"><span class="pre">atol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.atol" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">atol</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.atol" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
-<dl class="py attribute">
+<dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.build_gp">
-<span class="sig-name descname"><span class="pre">build_gp</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">callable</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.build_gp" title="Link to this definition">#</a></dt>
-<dd></dd></dl>
+<span class="sig-name descname"><span class="pre">build_gp</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">X</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yerr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Array</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">GaussianProcess</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.build_gp" title="Link to this definition">#</a></dt>
+<dd><p>Default GP build method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>params</strong> (<em>dict</em>) – Dictionary with hyperparameters</p></li>
+<li><p><strong>X</strong> (<em>jax.Array</em>) – Input data.</p></li>
+<li><p><strong>yerr</strong> (<em>jax.Array</em>) – Observation noise (standard deviation).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Single-output GP model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tinygp.GaussianProcess</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.cumtime_infer">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cumtime_infer</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.cumtime_infer" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cumtime_infer</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.cumtime_infer" title="Link to this definition">#</a></dt>
 <dd><p>Cumulative time spent for inference from the GP (making predictions)</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.cumtime_train">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cumtime_train</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.cumtime_train" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">cumtime_train</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.cumtime_train" title="Link to this definition">#</a></dt>
 <dd><p>Cumulative time spent for training of the GP (fitting hyperparameters)</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.database">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">database</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.database" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">database</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.database" title="Link to this definition">#</a></dt>
 <dd><p>The database holding the training data for the GP surrogate model.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.dp_dx">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dp_dx</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.dp_dx" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">dp_dx</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.dp_dx" title="Link to this definition">#</a></dt>
 <dd><p>Return ∂p/∂x.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.dp_dy">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dp_dy</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.dp_dy" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">dp_dy</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.dp_dy" title="Link to this definition">#</a></dt>
 <dd><p>Return ∂p/∂y.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.extra">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">extra</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.extra" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">extra</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.extra" title="Link to this definition">#</a></dt>
 <dd><p>Return constant extra field, which can be used as additional input.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.geo">
-<span class="sig-name descname"><span class="pre">geo</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.geo" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">geo</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.geo" title="Link to this definition">#</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="GaPFlow.models.BulkStress.has_multi_output">
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">has_multi_output</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.has_multi_output" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.height">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">height</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.height" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">height</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.height" title="Link to this definition">#</a></dt>
 <dd><p>Return the gap height field.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.height_and_slopes">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">height_and_slopes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.height_and_slopes" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">height_and_slopes</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Array</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.height_and_slopes" title="Link to this definition">#</a></dt>
 <dd><p>Return the topography (height and gradients).</p>
 </dd></dl>
 
@@ -647,56 +672,56 @@ document.write(`
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.is_gp_model">
-<span class="sig-name descname"><span class="pre">is_gp_model</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.is_gp_model" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">is_gp_model</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.is_gp_model" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.kernel_lengthscale">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kernel_lengthscale</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.kernel_lengthscale" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kernel_lengthscale</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.kernel_lengthscale" title="Link to this definition">#</a></dt>
 <dd><p>Kernel lengthscale(s).</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.kernel_variance">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">kernel_variance</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.kernel_variance" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">kernel_variance</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.kernel_variance" title="Link to this definition">#</a></dt>
 <dd><p>Kernel variance.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.last_fit_train_size">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">last_fit_train_size</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.last_fit_train_size" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">last_fit_train_size</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.last_fit_train_size" title="Link to this definition">#</a></dt>
 <dd><p>Size of the training database at the last fit.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.max_steps">
-<span class="sig-name descname"><span class="pre">max_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.max_steps" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">max_steps</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.max_steps" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.name">
-<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bulk'</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.name" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">name</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'bulk'</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.name" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.noise">
-<span class="sig-name descname"><span class="pre">noise</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.noise" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">noise</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">float</span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.noise" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.obs_stddev">
-<em class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">obs_stddev</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.obs_stddev" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">abstract</span></span><span class="w"> </span><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">obs_stddev</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.obs_stddev" title="Link to this definition">#</a></dt>
 <dd><p>Observation noise standard deviation.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.params_init">
-<span class="sig-name descname"><span class="pre">params_init</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.params_init" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">params_init</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.params_init" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.pause_steps">
-<span class="sig-name descname"><span class="pre">pause_steps</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.pause_steps" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">pause_steps</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.pause_steps" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -723,35 +748,35 @@ document.write(`
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.pressure">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">pressure</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.pressure" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">pressure</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.pressure" title="Link to this definition">#</a></dt>
 <dd><p>Return the pressure field.</p>
 </dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.prop">
-<span class="sig-name descname"><span class="pre">prop</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.prop" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">prop</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">dict</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.prop" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.rtol">
-<span class="sig-name descname"><span class="pre">rtol</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.rtol" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">rtol</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.rtol" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.solution">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">solution</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.solution" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">solution</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.solution" title="Link to this definition">#</a></dt>
 <dd><p>Return full solution field.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.stress">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">stress</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.stress" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stress</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ndarray</span><span class="p"><span class="pre">[</span></span><span class="pre">tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">dtype</span><span class="p"><span class="pre">[</span></span><span class="pre">floating</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.stress" title="Link to this definition">#</a></dt>
 <dd><p>Return the bulk viscous stress field.</p>
 </dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.trusted">
-<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">trusted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.trusted" title="Link to this definition">#</a></dt>
+<span class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">trusted</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.trusted" title="Link to this definition">#</a></dt>
 <dd><p>Return True if model predictive variance is below tolerance.</p>
 </dd></dl>
 
@@ -763,7 +788,7 @@ document.write(`
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="GaPFlow.models.BulkStress.use_active_learning">
-<span class="sig-name descname"><span class="pre">use_active_learning</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#GaPFlow.models.BulkStress.use_active_learning" title="Link to this definition">#</a></dt>
+<span class="sig-name descname"><span class="pre">use_active_learning</span></span><span class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></span><a class="headerlink" href="#GaPFlow.models.BulkStress.use_active_learning" title="Link to this definition">#</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -830,7 +855,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.Ytrain"><code class="docutils literal notranslate"><span class="pre">BulkStress.Ytrain</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.active_dims"><code class="docutils literal notranslate"><span class="pre">BulkStress.active_dims</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.atol"><code class="docutils literal notranslate"><span class="pre">BulkStress.atol</span></code></a></li>
-<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.build_gp"><code class="docutils literal notranslate"><span class="pre">BulkStress.build_gp</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.build_gp"><code class="docutils literal notranslate"><span class="pre">BulkStress.build_gp()</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.cumtime_infer"><code class="docutils literal notranslate"><span class="pre">BulkStress.cumtime_infer</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.cumtime_train"><code class="docutils literal notranslate"><span class="pre">BulkStress.cumtime_train</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.database"><code class="docutils literal notranslate"><span class="pre">BulkStress.database</span></code></a></li>
@@ -838,6 +863,7 @@ document.write(`
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.dp_dy"><code class="docutils literal notranslate"><span class="pre">BulkStress.dp_dy</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.extra"><code class="docutils literal notranslate"><span class="pre">BulkStress.extra</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.geo"><code class="docutils literal notranslate"><span class="pre">BulkStress.geo</span></code></a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.has_multi_output"><code class="docutils literal notranslate"><span class="pre">BulkStress.has_multi_output</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.height"><code class="docutils literal notranslate"><span class="pre">BulkStress.height</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.height_and_slopes"><code class="docutils literal notranslate"><span class="pre">BulkStress.height_and_slopes</span></code></a></li>
 <li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#GaPFlow.models.BulkStress.init_database"><code class="docutils literal notranslate"><span class="pre">BulkStress.init_database()</span></code></a></li>

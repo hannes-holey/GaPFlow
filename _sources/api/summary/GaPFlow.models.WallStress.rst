@@ -14,6 +14,7 @@
    .. autosummary::
    
       ~WallStress.__init__
+      ~WallStress.build_gp
       ~WallStress.init
       ~WallStress.init_database
       ~WallStress.predict
@@ -40,6 +41,7 @@
       ~WallStress.dp_dy
       ~WallStress.extra
       ~WallStress.full
+      ~WallStress.has_multi_output
       ~WallStress.height
       ~WallStress.height_and_slopes
       ~WallStress.kernel_lengthscale
@@ -56,7 +58,6 @@
       ~WallStress.is_gp_model
       ~WallStress.active_dims
       ~WallStress.use_active_learning
-      ~WallStress.build_gp
       ~WallStress.rtol
       ~WallStress.atol
       ~WallStress.max_steps
