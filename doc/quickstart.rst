@@ -19,7 +19,7 @@ To compile for your specific platform, run
 
 ::
 
-    pip install --no-binary GaPFlow GaPFlow.[parallel]
+    pip install --no-binary GaPFlow GaPFlow[parallel]
 
 You can check your installation by running ``gpf_info`` from the command line.
 

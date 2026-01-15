@@ -31,7 +31,7 @@ recommended to build GaPFlow with parallel LAMMPS on your system.
 You need to have MPI installed (e.g. via `apt install openmpi-bin libopenmpi-dev`
 on Debian-based systems). To compile for your specific platform, run
 ```
-pip install --no-binary GaPFlow GaPFlow.[parallel]
+pip install --no-binary GaPFlow GaPFlow[parallel]
 ```
 
 You can check your installation by running `gpf_info` from the command line.
