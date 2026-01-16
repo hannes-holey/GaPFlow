@@ -41,5 +41,3 @@ properties:
 fem_solver:
     type: newton_alpha
     R_norm_tol: 1e-10
-    pressure_stab_alpha: {pressure_stab_alpha}
-    momentum_stab_alpha: {momentum_stab_alpha}

@@ -1,0 +1,54 @@
+options:
+    output: data/parabolic_slider_2d
+    write_freq: 1
+    silent: False
+
+grid:
+    Lx: 0.1
+    Ly: 0.1
+    Nx: 50
+    Ny: 50
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['D', 'N', 'N']
+    yN: ['D', 'N', 'N']
+    xE_D: 1.1853
+    xW_D: 1.1853
+    yS_D: 1.1853
+    yN_D: 1.1853
+
+geometry:
+    type: parabolic_2d
+    hmax: 6.6e-5
+    hmin: 1.0e-5
+    U: 50.
+    V: 0.
+
+numerics:
+    solver: fem
+    dt: 0.1
+    tol: 1e-10
+    max_it: 50
+
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 1.1853
+    alpha: 0.
+    elastic:
+        E: 1e07
+        v: 0.3
+        alpha_underrelax: 0.01
+
+fem_solver:
+    type: newton_alpha
+    linear_solver: direct
+    dynamic: True
+    R_norm_tol: 1e-09
+    pressure_stab_alpha: 2500
+    momentum_stab_alpha: 25000
+    equations:
+        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
+                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty', 'R2Stabx', 'R2Staby']

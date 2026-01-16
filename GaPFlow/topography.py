@@ -42,7 +42,7 @@ from ContactMechanics.FFTElasticHalfSpace import (
 NDArray = npt.NDArray[np.floating]
 
 
-def create_midpoint_grid(grid, decomp=None):
+def create_midpoint_grid(grid, decomp: DomainDecomposition|None = None) -> Tuple[NDArray, NDArray]:
     """Create cell-center coordinate arrays (xx, yy) for the grid."""
     if decomp is not None:
         # MPI-aware: use decomposition to get local coordinates
@@ -268,6 +268,10 @@ class Topography:
         self.dx = grid['dx']
         self.dy = grid['dy']
 
+        # Store for MPI communication
+        self._decomp = decomp
+        self._topo_field = fc.get_real_field('topography')
+
         # TODO: height profiles via callable passed to topography (next to implemented ones)
 
         # 1D profiles
@@ -334,13 +338,52 @@ class Topography:
             pass
 
     def _update_gradients(self) -> None:
-        """Updates gradient arrays using second-order central differences.
+        """Update gradients with proper MPI ghost cell handling.
+
+        Steps:
+        1. Sync h ghost cells from MPI neighbors
+        2. At domain boundaries (non-periodic): linear extrapolation of h
+        3. Compute gradients on inner points using central differences
+        4. Sync gradient ghost cells from MPI neighbors
+        5. At domain boundaries: copy gradient from first inner line
         """
-        h = self.__field.pg[0]
-        dh_dx = np.gradient(h, axis=0) / self.dx
-        dh_dy = np.gradient(h, axis=1) / self.dy
-        self.__field.pg[1] = dh_dx
-        self.__field.pg[2] = dh_dy
+        d = self._decomp
+
+        # 1. Sync h ghost cells from MPI neighbors
+        d._decomp.communicate_ghosts(self._topo_field)
+
+        # 2. At domain boundaries: linear extrapolation of h (overrides periodic wrap)
+        if d.is_at_xW and not d.periodic_x:
+            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+        if d.is_at_xE and not d.periodic_x:
+            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+        if d.is_at_yS and not d.periodic_y:
+            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+        if d.is_at_yN and not d.periodic_y:
+            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+
+        # 3. Compute gradients on inner points (ghost h is now correct)
+        self.dh_dx[:] = 0.0
+        self.dh_dy[:] = 0.0
+        self.dh_dx[1:-1, 1:-1] = (self.h[2:, 1:-1] - self.h[:-2, 1:-1]) / (2 * self.dx)
+        self.dh_dy[1:-1, 1:-1] = (self.h[1:-1, 2:] - self.h[1:-1, :-2]) / (2 * self.dy)
+
+        # 4. Sync gradient ghost cells from MPI neighbors
+        d._decomp.communicate_ghosts(self._topo_field)
+
+        # 5. At domain boundaries: copy gradient from first inner line
+        if d.is_at_xW and not d.periodic_x:
+            self.dh_dx[0, :] = self.dh_dx[1, :]
+            self.dh_dy[0, :] = self.dh_dy[1, :]
+        if d.is_at_xE and not d.periodic_x:
+            self.dh_dx[-1, :] = self.dh_dx[-2, :]
+            self.dh_dy[-1, :] = self.dh_dy[-2, :]
+        if d.is_at_yS and not d.periodic_y:
+            self.dh_dx[:, 0] = self.dh_dx[:, 1]
+            self.dh_dy[:, 0] = self.dh_dy[:, 1]
+        if d.is_at_yN and not d.periodic_y:
+            self.dh_dx[:, -1] = self.dh_dx[:, -2]
+            self.dh_dy[:, -1] = self.dh_dy[:, -2]
 
     @property
     def full(self) -> NDArray:
@@ -493,13 +536,14 @@ class ElasticDeformation:
         Parameters
         ----------
         p : ndarray
-            Pressure array [Pa]. Expected shape includes ghost cells: (Nx+2, Ny+2)
+            Pressure array with ghost cells [Pa]. Expected shape includes ghost cells: (Nx+2, Ny+2)
             in serial, or (Nx+2, Ny_local+2) in MPI parallel mode.
 
         Returns
         -------
         disp : ndarray
-            Array of resulting displacements [m]. Same shape as input.
+            Array of resulting displacements [m]. Same shape as input. Includes ghost cells
+            with zero displacement.
         """
         # Extract inner cells (exclude ghost cells)
         p_inner = p[1:-1, 1:-1]

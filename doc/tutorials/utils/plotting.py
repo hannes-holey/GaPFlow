@@ -101,6 +101,56 @@ def animate_comparison(x_vec, t_vec, T_numeric, T_analytic, L):
     return HTML(ani.to_jshtml())
 
 
+def plot_solver_comparison_rho_jx(results, title):
+    """Plot density and momentum profiles comparing different solvers.
+
+    Creates a side-by-side comparison of density (rho) and x-momentum (jx)
+    profiles from multiple solver results.
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with solver names as keys and result dicts as values.
+        Each result dict must contain 'rho' and 'jx' arrays.
+        Expected keys: 'explicit', 'fem_1d', 'fem_2d'
+    title : str
+        Title for the figure
+
+    Example
+    -------
+    >>> results = {
+    ...     'explicit': {'rho': rho_exp, 'jx': jx_exp, 'time': t_exp},
+    ...     'fem_1d': {'rho': rho_1d, 'jx': jx_1d, 'time': t_1d},
+    ...     'fem_2d': {'rho': rho_2d, 'jx': jx_2d, 'time': t_2d},
+    ... }
+    >>> plot_solver_comparison_rho_jx(results, 'Inclined Slider')
+    """
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    colors = {'explicit': 'C0', 'fem_1d': 'C1', 'fem_2d': 'C2'}
+    labels = {'explicit': 'Explicit', 'fem_1d': 'FEM 1D', 'fem_2d': 'FEM 2D'}
+
+    Nx = len(list(results.values())[0]['rho'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        axes[0].plot(x, res['rho'], color=colors[name], label=labels[name], lw=1.5)
+        axes[1].plot(x, res['jx'], color=colors[name], label=labels[name], lw=1.5)
+
+    axes[0].set_xlabel('x / L')
+    axes[0].set_ylabel(r'$\rho$ [kg/m³]')
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3)
+
+    axes[1].set_xlabel('x / L')
+    axes[1].set_ylabel(r'$j_x$ [kg/(m²s)]')
+    axes[1].legend()
+    axes[1].grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
 def animate_advection(x_vec, t_vec, T_numeric, L, U_avg, T_min=None, T_max=None):
     """Animated visualization of temperature advection.
 

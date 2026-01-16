@@ -178,10 +178,29 @@ class DomainDecomposition:
         return np.ones(shape)
 
     def local_coordinates_midpoint(self, dx, dy):
-        """Compute cell-center coordinates (xx, yy) for local subdomain."""
+        """Compute cell-center coordinates (xx, yy) for local subdomain.
+
+        Note: muGrid's icoordsg uses wrapped/periodic indices for ghost cells,
+        which gives incorrect coordinates for non-periodic topography profiles.
+        This method corrects ghost cell coordinates to proper extrapolated values.
+        """
         icoords = self.icoordsg
         xx = icoords[0] * dx + dx / 2.0
         yy = icoords[1] * dy + dy / 2.0
+
+        # Fix wrapped ghost cell coordinates
+        Lx = self._Nx * dx
+        Ly = self._Ny * dy
+
+        if self.is_at_xW and not self.periodic_x:
+            xx[0, :] = -dx / 2.0
+        if self.is_at_xE and not self.periodic_x:
+            xx[-1, :] = Lx + dx / 2.0
+        if self.is_at_yS and not self.periodic_y:
+            yy[:, 0] = -dy / 2.0
+        if self.is_at_yN and not self.periodic_y:
+            yy[:, -1] = Ly + dy / 2.0
+
         return xx, yy
 
     # ---------------------------
