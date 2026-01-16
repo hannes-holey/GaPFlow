@@ -384,6 +384,7 @@ def sanitize_properties(d):
         out['elastic']['v'] = float(d['elastic'].get('v', 0.3))
         out['elastic']['alpha_underrelax'] = float(d['elastic'].get('alpha_underrelax', 1e-03))
         out['elastic']['n_images'] = int(d['elastic'].get('n_images', 10))
+        out['elastic']['reference_point'] = d['elastic'].get('reference_point', 'corner')
     else:
         out['elastic'] = {}
         out['elastic']['enabled'] = False

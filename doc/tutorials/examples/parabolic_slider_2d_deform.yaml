@@ -26,7 +26,7 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 0.1
+    dt: 1e-04
     tol: 1e-10
     max_it: 50
 
@@ -40,14 +40,16 @@ properties:
     elastic:
         E: 1e07
         v: 0.3
-        alpha_underrelax: 0.01
+        alpha_underrelax: 0.02
+        reference_point: [0,25]
 
 fem_solver:
     type: newton_alpha
     linear_solver: direct
+    max_iter: 50
     dynamic: True
     R_norm_tol: 1e-09
-    pressure_stab_alpha: 2500
+    pressure_stab_alpha: 4500
     momentum_stab_alpha: 25000
     equations:
         term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',

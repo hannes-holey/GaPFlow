@@ -42,7 +42,7 @@ from ContactMechanics.FFTElasticHalfSpace import (
 NDArray = npt.NDArray[np.floating]
 
 
-def create_midpoint_grid(grid, decomp: DomainDecomposition|None = None) -> Tuple[NDArray, NDArray]:
+def create_midpoint_grid(grid, decomp: DomainDecomposition | None = None) -> Tuple[NDArray, NDArray]:
     """Create cell-center coordinate arrays (xx, yy) for the grid."""
     if decomp is not None:
         # MPI-aware: use decomposition to get local coordinates
@@ -316,6 +316,11 @@ class Topography:
         else:
             self.elastic = False
 
+        # Parse reference point for elastic deformation
+        if self.elastic:
+            self._ref_point = self._parse_reference_point(
+                prop['elastic'].get('reference_point', 'corner'), grid)
+
         self.__field.pg[0] = h
         self.__field.pg[ix] = dh_dx
         self.__field.pg[iy] = dh_dy
@@ -326,9 +331,11 @@ class Topography:
         """
         if self.elastic:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
-                p = self.__pressure.pg - self.__pressure.pg[0, 0]  # reference pressure
+                p_ref = self.get_reference_pressure()
+                p = self.__pressure.pg - p_ref
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
-                deformation = deformation - deformation[0, 0]  # reference deformation
+                d_ref = self.get_reference_displacement(deformation)
+                deformation = deformation - d_ref
             else:
                 p = self.__pressure.pg
                 deformation = self.ElasticDeformation.get_deformation_underrelax(p)
@@ -336,6 +343,74 @@ class Topography:
             self.h = self.h_undeformed + deformation
         else:
             pass
+
+    def _parse_reference_point(self, ref_cfg, grid: dict) -> tuple:
+        """Convert reference_point config to (owns, local_i, local_j).
+
+        Parameters
+        ----------
+        ref_cfg : str or list
+            "corner", "center", or [i, j] explicit inner grid indices
+        grid : dict
+            Grid configuration with Nx, Ny
+
+        Returns
+        -------
+        tuple
+            (owns, local_i, local_j) where owns indicates if this rank owns
+            the reference point, and local indices include +1 ghost offset
+        """
+        Nx, Ny = grid['Nx'], grid['Ny']
+
+        if ref_cfg == 'corner':
+            gi, gj = 0, 0
+        elif ref_cfg == 'center':
+            gi, gj = Nx // 2, Ny // 2
+        elif isinstance(ref_cfg, (list, tuple)):
+            gi, gj = int(ref_cfg[0]), int(ref_cfg[1])
+        else:
+            raise ValueError(f"Invalid reference_point: {ref_cfg}")
+
+        # Handle MPI decomposition (only for FEM 2D parallel runs)
+        d = self._decomp
+        if d is not None and d.size > 1:
+            y_start = d.subdomain_locations[1]
+            y_end = y_start + d.nb_subdomain_grid_pts[1]
+            owns = (gj >= y_start and gj < y_end)
+            local_j = (gj - y_start) + 1
+        else:
+            # Single rank: always owns the point
+            owns = True
+            local_j = gj + 1
+
+        local_i = gi + 1  # +1 ghost offset (X not decomposed)
+        return (owns, local_i, local_j)
+
+    def get_reference_pressure(self) -> float:
+        """Get reference pressure at configured point. MPI-safe."""
+        owns, i, j = self._ref_point
+        d = self._decomp
+
+        if d is not None and d.size > 1:
+            val = self.__pressure.pg[i, j] if owns else None
+            comm = d._mpi_comm
+            root = comm.allgather(owns).index(True)
+            return float(comm.bcast(val, root=root))
+        else:
+            return float(self.__pressure.pg[i, j])
+
+    def get_reference_displacement(self, deformation) -> float:
+        """Get reference displacement at configured point. MPI-safe."""
+        owns, i, j = self._ref_point
+        d = self._decomp
+
+        if d is not None and d.size > 1:
+            val = deformation[i, j] if owns else None
+            comm = d._mpi_comm
+            root = comm.allgather(owns).index(True)
+            return float(comm.bcast(val, root=root))
+        else:
+            return float(deformation[i, j])
 
     def _update_gradients(self) -> None:
         """Update gradients with proper MPI ghost cell handling.

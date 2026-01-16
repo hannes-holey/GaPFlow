@@ -222,7 +222,6 @@ class QuadFieldManager:
         self.quad_fields['V'].pg[:] = p.geo['V']
         self.quad_fields['Ls'].pg[:] = p.prop.get('slip_length', 0.0)
 
-
     def _apply_2d_vmap(self, func, *args):
         """Reshape args for 2D vmap application and reshape result back."""
         shape = args[0].shape  # (6, Ny, Nx)

@@ -211,7 +211,7 @@ def animate_advection(x_vec, t_vec, T_numeric, L, U_avg, T_min=None, T_max=None)
         # Account for periodic wrapping
         distance_wrapped = distance % L
         time_text.set_text(f't = {t:.4f} s')
-        dist_text.set_text(f'Δx = {distance_wrapped:.4f} m ({distance/L:.2f} periods)')
+        dist_text.set_text(f'Δx = {distance_wrapped:.4f} m ({distance / L:.2f} periods)')
         return line_T, time_text, dist_text
 
     ani = animation.FuncAnimation(fig, animate, init_func=init, frames=len(t_vec),

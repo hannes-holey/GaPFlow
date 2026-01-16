@@ -22,7 +22,6 @@
 # SOFTWARE.
 #
 from . import HAS_PETSC
-from .fem_1d.num_solver import Solver
 from .fem_2d.elements import TriangleQuadrature
 from .fem_2d.terms import NonLinearTerm, get_active_terms
 from .fem_2d.assembly_layout import (

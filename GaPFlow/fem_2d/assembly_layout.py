@@ -21,6 +21,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+# flake8: noqa: W503
+
 """
 FEM Assembly Layout - Precomputed index structures for O(nnz) assembly.
 
@@ -287,8 +290,8 @@ class FEMAssemblyLayout:
         r_scales = q_scales  # Residual scales match corresponding variable
 
         # COO scaling factors: J*[k] = J[k] * D_q[var_idx] / D_R[res_idx]
-        coo_scale = (q_scales[self.matrix_coo.var_block_idx] /
-                     r_scales[self.matrix_coo.res_block_idx])
+        coo_scale = (q_scales[self.matrix_coo.var_block_idx]
+                     / r_scales[self.matrix_coo.res_block_idx])
 
         # RHS scaling factors
         rhs_scale = r_scales[self.rhs.res_block_idx]
