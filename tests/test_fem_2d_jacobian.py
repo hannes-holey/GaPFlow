@@ -30,7 +30,6 @@ for various grid sizes and boundary condition configurations.
 import pytest
 import numpy as np
 from GaPFlow.problem import Problem
-from GaPFlow import HAS_PETSC
 
 from GaPFlow.solver_fem_2d import FEMSolver2D  # type: ignore
 
@@ -159,7 +158,6 @@ GRID_SIZES = [
 ]
 
 
-@pytest.mark.skipif(not HAS_PETSC, reason="PETSc not installed")
 class TestJacobianFiniteDifference:
     """Test Jacobian assembly against finite differences."""
 
@@ -339,7 +337,6 @@ class TestShapeFunctionConsistency:
         )
 
 
-@pytest.mark.skipif(not HAS_PETSC, reason="PETSc not installed")
 class TestJacobianSymmetry:
     """Test expected symmetry properties of Jacobian blocks."""
 

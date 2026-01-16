@@ -239,7 +239,7 @@ class Topography:
                  grid: dict,
                  geo: dict,
                  prop: dict,
-                 decomp: Any = None) -> None:
+                 decomp: DomainDecomposition = None) -> None:
         """Constructor
 
         Parameters
