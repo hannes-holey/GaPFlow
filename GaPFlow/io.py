@@ -471,13 +471,17 @@ def sanitize_md(d):
 def sanitize_fem_solver(d):
 
     out = {}
-    out['dynamic'] = bool(d.get('dynamic', False))
+    out['dynamic'] = bool(d.get('dynamic', True))
     out['type'] = str(d.get('type', 'newton_alpha'))
     out['max_iter'] = int(d.get('max_iter', 100))
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
     out['alpha'] = float(d.get('alpha', 1.0))
-    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.0))
     out['linear_solver'] = str(d.get('linear_solver', 'direct'))
+
+    # Stabilization parameters
+    out['tau_mode'] = str(d.get('tau_mode', 'physics'))  # 'physics' or 'constant'
+    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.))
+    out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 0.))
 
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))

@@ -1,0 +1,45 @@
+options:
+    output: /tmp/comparison_test
+    write_freq: 1000
+    silent: True
+
+grid:
+    Lx: 0.1
+    Ly: 0.1
+    Nx: 100
+    Ny: {Ny}
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 1.1853
+    xW_D: 1.1853
+
+geometry:
+    type: inclined
+    hmax: 6.6e-5
+    hmin: 1.0e-5
+    U: 50.
+    V: 0.
+
+numerics:
+    solver: {solver}
+    dt: {dt}
+    tol: 1e-08
+    max_it: {max_it}
+    adaptive: {adaptive}
+    CFL: {CFL}
+
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 1.1853
+    alpha: 0.
+
+fem_solver:
+    type: newton_alpha
+    R_norm_tol: 1e-10
+    pressure_stab_alpha: {pressure_stab_alpha}
+    momentum_stab_alpha: {momentum_stab_alpha}

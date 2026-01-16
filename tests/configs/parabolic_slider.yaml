@@ -1,0 +1,48 @@
+options:
+    output: /tmp/parabolic_test_{solver}
+    write_freq: 1000
+    use_tstamp: True
+    silent: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.01
+    Nx: 100
+    Ny: {Ny}
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: {rho_bc}
+    xW_D: {rho_bc}
+
+geometry:
+    type: parabolic
+    hmin: 2.54e-5
+    hmax: 5.08e-5
+    U: 4.57
+    V: 0.
+
+numerics:
+    solver: {solver}
+    dt: {dt}
+    tol: 1e-08
+    max_it: {max_it}
+    adaptive: {adaptive}
+    CFL: {CFL}
+
+properties:
+    EOS: DH
+    shear: 0.039
+    bulk: 0.
+    P0: 101325
+    rho0: 850.
+    C1: 3.5e10
+    C2: 1.23
+
+fem_solver:
+    type: newton_alpha
+    R_norm_tol: 1e-04
+    max_iter: 10
+    pressure_stab_alpha: {pressure_stab_alpha}
+    momentum_stab_alpha: {momentum_stab_alpha}

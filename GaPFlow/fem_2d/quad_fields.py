@@ -47,7 +47,9 @@ BASE_FIELDS = {
     'U', 'V', 'Ls',
     'dp_drho',
     'rho_prev', 'jx_prev', 'jy_prev',
-    'pressure_stab',
+    'tau_pspg',  # PSPG stabilization for mass equation (constant)
+    'tau_supg',  # SUPG stabilization for momentum equations (physics-based)
+    'u_mag',     # Velocity magnitude for stabilization
 }
 
 STRESS_XZ_FIELDS = {
@@ -228,6 +230,55 @@ class QuadFieldManager:
         result_2d = func(*args_2d)
         return result_2d.reshape(shape)
 
+    def _compute_tau_stabilization(self, s, q) -> None:
+        """Compute stabilization parameters at quadrature points.
+
+        Computes two separate stabilization parameters:
+        - tau_pspg: Constant for mass equation (PSPG), τ = α * h² / P₀
+        - tau_supg: Physics-based for momentum equations (SUPG/Tezduyar)
+            τ = [ (2/Δt)² + (2|u|/h)² + (4ν/h²)² ]^(-1/2)
+
+        Parameters
+        ----------
+        s : slice
+            Interior slice for field arrays.
+        q : callable
+            Lambda to access quadrature field values.
+        """
+        p = self.problem
+        alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
+
+        rho = q('rho')
+        jx = q('jx')
+        jy = q('jy')
+
+        # Velocity magnitude
+        u_mag = np.sqrt((jx / rho)**2 + (jy / rho)**2)
+        self.quad_fields['u_mag'].pg[s] = u_mag
+
+        # PSPG: constant tau for mass equation stabilization
+        P0 = p.prop.get('P0', 1.0)
+        h_sq = self.dx * self.dy
+        tau_pspg = alpha * h_sq / P0
+        self.quad_fields['tau_pspg'].pg[s] = np.full_like(rho, tau_pspg)
+
+        # SUPG: physics-based Tezduyar tau for momentum stabilization
+        # Optional scaling via momentum_stab_alpha (default 1.0)
+        supg_alpha = p.fem_solver.get('momentum_stab_alpha', 1.0)
+
+        dt = p.numerics['dt']
+        h = np.sqrt(h_sq)
+
+        eta = q('eta')
+        nu = eta / rho  # Kinematic viscosity
+
+        term1 = (2.0 / dt)**2
+        term2 = (2.0 * u_mag / h)**2
+        term3 = (4.0 * nu / h**2)**2
+        tau_supg = supg_alpha / np.sqrt(term1 + term2 + term3)
+
+        self.quad_fields['tau_supg'].pg[s] = tau_supg
+
     def update_quad_computed(self) -> None:
         """Compute derived quantities at quadrature points.
 
@@ -243,12 +294,8 @@ class QuadFieldManager:
         # Pressure gradient
         self.quad_fields['dp_drho'].pg[s] = apply(p.pressure.dp_drho, q('rho'))
 
-        # Pressure stabilization parameter: tau = alpha * h_elem^2 / P0
-        alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
-        P0 = p.prop.get('P0', 1.0)
-        h_elem_sq = self.dx * self.dy
-        self.quad_fields['pressure_stab'].pg[s] = np.full_like(
-            q('h'), alpha * h_elem_sq / P0)
+        # Stabilization parameter computation
+        self._compute_tau_stabilization(s, q)
 
         # Wall stress xz
         args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'),

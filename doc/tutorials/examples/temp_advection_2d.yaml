@@ -1,0 +1,55 @@
+options:
+    output: data/temp_advection_2d
+    write_freq: 20
+    silent: False
+
+grid:
+    Lx: 1.0
+    Ly: 0.1
+    Nx: 128
+    Ny: 4
+    xE: ['P', 'P', 'P']
+    xW: ['P', 'P', 'P']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+
+geometry:
+    type: inclined
+    hmax: 1.0e-2
+    hmin: 1.0e-2
+    U: 0.1
+    V: 0.
+
+numerics:
+    solver: fem
+    dt: 1e-01
+    tol: 0
+    max_it: 400
+
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 10.0
+    alpha: 0.
+
+fem_solver:
+    type: newton_alpha
+    linear_solver: direct
+    dynamic: True
+    R_norm_tol: 1e-5
+    equations:
+        energy: True
+        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1T',
+                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty',
+                    'R31x', 'R31y', 'R3T']
+
+energy_spec:
+    cv: 718.0
+    k: 0.0
+    T0: [half_sine, 200.0, 300.0]
+    bc_xW: 'P'
+    bc_xE: 'P'
+    bc_yS: 'P'
+    bc_yN: 'P'

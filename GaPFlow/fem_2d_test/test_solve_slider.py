@@ -69,9 +69,11 @@ fem_solver:
     dynamic: True
     R_norm_tol: 1e-11
     pressure_stab_alpha: 500
+    momentum_stab: True
+    momentum_stab_alpha: 10000.0
     equations:
         term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
-                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']
+                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty', 'R2Stabx', 'R2Staby']
 """
 
 

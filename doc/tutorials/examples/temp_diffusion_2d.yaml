@@ -1,0 +1,59 @@
+options:
+    output: data/temp_diffusion_2d
+    write_freq: 10
+    silent: False
+
+grid:
+    Lx: 1.0
+    Ly: 0.1
+    Nx: 100
+    Ny: 10
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 1.0
+    xW_D: 1.0
+
+geometry:
+    type: inclined
+    hmax: 1.0e-2
+    hmin: 1.0e-2
+    U: 0.
+    V: 0.
+
+numerics:
+    solver: fem
+    dt: 0.002
+    tol: 0
+    max_it: 200
+
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 1.0
+    alpha: 0.
+
+fem_solver:
+    type: newton_alpha
+    linear_solver: direct
+    dynamic: True
+    R_norm_tol: 1e-8
+    equations:
+        energy: True
+        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1T',
+                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty',
+                    'R35x', 'R35y', 'R3T']
+
+energy_spec:
+    cv: 1.0
+    k: 1.0
+    T0: [half_sine_ghost, 0.0, 1.0]
+    bc_xW: D
+    bc_xE: D
+    bc_yS: P
+    bc_yN: P
+    T_bc_xW: 0.0
+    T_bc_xE: 0.0

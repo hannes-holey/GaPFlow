@@ -1,0 +1,44 @@
+options:
+    output: /tmp/journal_test
+    write_freq: 1000
+    silent: False
+
+grid:
+    dx: 1.e-5
+    dy: 1.e-5
+    Nx: 100
+    Ny: {Ny}
+    xE: ['P', 'P', 'P']
+    xW: ['P', 'P', 'P']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+
+geometry:
+    type: journal
+    CR: 1.e-2
+    eps: 0.7
+    U: 0.1
+    V: 0.
+
+numerics:
+    solver: {solver}
+    dt: {dt}
+    tol: 1e-08
+    max_it: {max_it}
+    adaptive: {adaptive}
+    CFL: {CFL}
+
+properties:
+    EOS: DH
+    shear: 0.0794
+    bulk: 0.
+    P0: 101325
+    rho0: 877.7007
+    T0: 323.15
+    C1: 3.5e10
+    C2: 1.23
+
+fem_solver:
+    type: newton_alpha
+    R_norm_tol: 1e-04
+    max_iter: 10
