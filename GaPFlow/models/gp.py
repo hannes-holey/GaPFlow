@@ -24,7 +24,6 @@
 #
 import abc
 import warnings
-import numpy as np
 from copy import deepcopy
 from datetime import datetime
 from typing import Tuple
@@ -418,20 +417,67 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     def _active_learning(self, var: JAXArray) -> None:
         """
-        Select new training point using maximum variance criterion.
+        Apply active learning by adding new point to the training database.
 
         Parameters
         ----------
         var : jax.Array
             Predictive variance field.
         """
-        imax = np.argmax(var)
-        Xnew = self._Xtest[imax, :][None, :]
-        self._database.add_data(Xnew)
+
+        next_train_index = self._select_next_point(var)
+        _Xnew = self._Xtest[next_train_index, :][None, :]
+        self._database.add_data(_Xnew)
+
+    def _select_next_point(self,
+                           var: JAXArray,
+                           similarity_check: bool = True) -> int:
+        """
+        Select new training point using maximum variance criterion.
+        Returns flattened index
+
+        Parameters
+        ----------
+        var : jax.Array
+            Predictive variance field.
+        similarity_check : bool, optional
+            If true, check similarity between existing and new training points 
+            (and avoid too similar points). The default is True. 
+        """
+
+        # from large to small
+        sorted_indices = jnp.argsort(var, axis=None)[::-1]
+
+        # start with largest variance (currently only implemented strategy)
+        imax = sorted_indices[0]
+
+        if similarity_check:
+            skipped = 0
+            min_similarity = 1.
+
+            for i in sorted_indices:
+                Xnew = self.Xtest[i][None, :]
+                similarity_score = self.gp.kernel(Xnew, self.Xtrain) / self.kernel_variance
+                print(similarity_score)
+                if jnp.any(jnp.isclose(similarity_score, 1., rtol=0., atol=1e-8)):
+                    # Too similar point exists
+                    skipped += 1
+                    min_similarity = min(min_similarity, jnp.min(similarity_score))
+                    continue
+                else:
+                    # Found suitable test point
+                    imax = i
+                    break
+
+            if skipped > 0 and skipped < var.size:
+                print(f"Skipped {skipped} largest variance points ({min_similarity})")
+
+        return imax
 
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
     # ------------------------------------------------------------------
+
     def predict(self,
                 predictor: bool = True,
                 compute_var: bool = True) -> Tuple[JAXArray, JAXArray]:
