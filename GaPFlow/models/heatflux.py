@@ -367,3 +367,44 @@ def get_T_z_at_cell(problem, i: int, j: int, z: NDArray) -> NDArray:
         T_bulk_bot=problem.energy.Tb_bot[i, j],
         z=z,
     )
+
+
+def get_heatflux_2d(problem) -> tuple[NDArray, NDArray]:
+    """
+    Calculate 2D heat flux fields at top and bottom walls.
+
+    Convenience wrapper that extracts state variables from the Problem
+    and calls heatflux_top() and heatflux_bot() for the entire domain.
+
+    Parameters
+    ----------
+    problem : Problem
+        GaPFlow Problem instance with energy enabled.
+
+    Returns
+    -------
+    q_top : ndarray
+        Heat flux at top wall [W/m²], shape (Nx+2, Ny+2).
+    q_bot : ndarray
+        Heat flux at bottom wall [W/m²], shape (Nx+2, Ny+2).
+    """
+    # Extract fields from problem
+    h = problem.topo.h
+    h_eff = problem.energy.h_Robin
+    k = problem.energy.k
+    c_v = problem.energy.cv
+    eta = problem.prop['shear']
+    rho = problem.q[0]
+    E = problem.energy.energy
+    jx = problem.q[1]
+    jy = problem.q[2]
+    U = problem.geo['U']
+    V = problem.geo['V']
+    Tb_top = problem.energy.Tb_top
+    Tb_bot = problem.energy.Tb_bot
+    A = 1.0  # Not used in flux calculation
+
+    q_top = heatflux_top(h, h_eff, k, c_v, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+    q_bot = heatflux_bot(h, h_eff, k, c_v, eta, rho, E, jx, jy, U, V, Tb_top, Tb_bot, A)
+
+    return q_top, q_bot

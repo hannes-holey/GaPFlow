@@ -234,6 +234,9 @@ class Topography:
     due to the fluid pressure field.
     """
 
+    # Timer attribute for profiling (set externally after solver init)
+    timer = None
+
     def __init__(self,
                  fc: Any,
                  grid: dict,
@@ -319,7 +322,7 @@ class Topography:
         # Parse reference point for elastic deformation
         if self.elastic:
             self._ref_point = self._parse_reference_point(
-                prop['elastic'].get('reference_point', 'corner'), grid)
+                prop['elastic']['reference_point'], grid)
 
         self.__field.pg[0] = h
         self.__field.pg[ix] = dh_dx
@@ -333,16 +336,24 @@ class Topography:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
                 p_ref = self.get_reference_pressure()
                 p = self.__pressure.pg - p_ref
-                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+                deformation = self._timed_deformation_calc(p)
                 d_ref = self.get_reference_displacement(deformation)
                 deformation = deformation - d_ref
             else:
                 p = self.__pressure.pg
-                deformation = self.ElasticDeformation.get_deformation_underrelax(p)
+                deformation = self._timed_deformation_calc(p)
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
         else:
             pass
+
+    def _timed_deformation_calc(self, p):
+        """Wrapper for deformation calculation with optional timing."""
+        if self.timer is not None:
+            with self.timer("elastic_deformation_calc"):
+                return self.ElasticDeformation.get_deformation_underrelax(p, self.timer)
+        else:
+            return self.ElasticDeformation.get_deformation_underrelax(p)
 
     def _parse_reference_point(self, ref_cfg, grid: dict) -> tuple:
         """Convert reference_point config to (owns, local_i, local_j).
@@ -473,7 +484,11 @@ class Topography:
     @h.setter
     def h(self, value: NDArray) -> None:
         self.__field.pg[0] = value
-        self._update_gradients()
+        if self.timer is not None:
+            with self.timer("elastic_gradient_update"):
+                self._update_gradients()
+        else:
+            self._update_gradients()
 
     @property
     def deformation(self) -> NDArray:
@@ -604,7 +619,7 @@ class ElasticDeformation:
                 fftengine=fftengine
             )
 
-    def get_deformation(self, p: NDArray) -> NDArray:
+    def get_deformation(self, p: NDArray, timer=None) -> NDArray:
         """Calculation of the elastic deformation due to given pressure field p.
         Convention: positive displacement for positive pressure.
 
@@ -613,6 +628,8 @@ class ElasticDeformation:
         p : ndarray
             Pressure array with ghost cells [Pa]. Expected shape includes ghost cells: (Nx+2, Ny+2)
             in serial, or (Nx+2, Ny_local+2) in MPI parallel mode.
+        timer : muGrid.Timer, optional
+            Timer instance for profiling internal operations.
 
         Returns
         -------
@@ -628,15 +645,27 @@ class ElasticDeformation:
         p_fft = np.zeros(fft_shape, dtype=p.dtype)
 
         # Embed into FFT domain (handles MPI redistribution + zero-padding)
-        self.fft_translation.embed(p_inner, p_fft)
+        if timer is not None:
+            with timer("elastic_domain_embed"):
+                self.fft_translation.embed(p_inner, p_fft)
+        else:
+            self.fft_translation.embed(p_inner, p_fft)
 
         # Compute displacement via ContactMechanics
         forces_fft = p_fft * self.area_per_cell
-        disp_fft = -self.ElDef.evaluate_disp(forces_fft)
+        if timer is not None:
+            with timer("elastic_fft_disp"):
+                disp_fft = -self.ElDef.evaluate_disp(forces_fft)
+        else:
+            disp_fft = -self.ElDef.evaluate_disp(forces_fft)
 
         # Extract back to GaPFlow domain
         disp_inner = np.zeros_like(p_inner)
-        self.fft_translation.extract(disp_fft, disp_inner)
+        if timer is not None:
+            with timer("elastic_domain_extract"):
+                self.fft_translation.extract(disp_fft, disp_inner)
+        else:
+            self.fft_translation.extract(disp_fft, disp_inner)
 
         # Pad result back to include ghost cells
         disp = np.zeros_like(p)
@@ -644,20 +673,22 @@ class ElasticDeformation:
 
         return disp
 
-    def get_deformation_underrelax(self, p: NDArray) -> NDArray:
+    def get_deformation_underrelax(self, p: NDArray, timer=None) -> NDArray:
         """Updates elastic deformation using underrelaxation
 
         Parameters
         ----------
         p : ndarray of shape (M, N)
             Pressure field.
+        timer : muGrid.Timer, optional
+            Timer instance for profiling internal operations.
 
         Returns
         -------
         u_relaxed : ndarray of shape (M, N)
             Updated, underrelaxed deformation field.
         """
-        u_computed = self.get_deformation(p)
+        u_computed = self.get_deformation(p, timer)
         u_relaxed = (1 - self.alpha_underrelax) * self.u_prev + self.alpha_underrelax * u_computed
         self.u_prev = u_relaxed.copy()
 

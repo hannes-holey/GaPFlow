@@ -440,36 +440,61 @@ R3T = NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
+# Energy stabilization terms (Laplacian-type diffusion on E)
+# Same pattern as PSPG/SUPG: -τ * ∫ (∂ψ/∂x) * (∂E/∂x) dΩ
+R3Stabx = NonLinearTerm(
+    name='R3Stabx',
+    description='energy stabilization x',
+    res='energy',
+    dep_vars=['E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda E: -ctx['tau_energy']() * E,
+    der_funs=[lambda ctx: lambda E: -ctx['tau_energy']() * np.ones_like(E)],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+R3Staby = NonLinearTerm(
+    name='R3Staby',
+    description='energy stabilization y',
+    res='energy',
+    dep_vars=['E'],
+    dep_vals=[],
+    fun=lambda ctx: lambda E: -ctx['tau_energy']() * E,
+    der_funs=[lambda ctx: lambda E: -ctx['tau_energy']() * np.ones_like(E)],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
 
 term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
              R21x, R21y, R24x, R24y, R2Tx, R2Ty, R2Stabx, R2Staby,
              R31x, R31y, R31Sx, R31Sy, R32x, R32y, R32Sx, R32Sy,
-             R34, R35x, R35y, R36, R3T]
+             R34, R35x, R35y, R36, R3T, R3Stabx, R3Staby]
 
 
 def get_default_terms(fem_solver: dict) -> list[str]:
     """Determine default 2D term names based on config flags."""
     terms = ['R11x', 'R11y', 'R11Sx', 'R11Sy',   # Mass
-             'R21x', 'R21y', 'R24x', 'R24y']      # Momentum
-
-    if fem_solver['dynamic']:
-        terms.extend(['R1T', 'R2Tx', 'R2Ty'])
+             'R21x', 'R21y', 'R24x', 'R24y',      # Momentum
+             'R1T', 'R2Tx', 'R2Ty']               # Time derivatives
 
     # Pressure stabilization (PSPG): enabled when alpha > 0
-    alpha = fem_solver.get('pressure_stab_alpha', 0)
-    if alpha > 0:
+    if fem_solver['pressure_stab_alpha'] > 0:
         terms.extend(['R1Stabx', 'R1Staby'])
 
     # Momentum stabilization (SUPG): enabled when alpha > 0
-    if fem_solver.get('momentum_stab_alpha', 0) > 0:
+    if fem_solver['momentum_stab_alpha'] > 0:
         terms.extend(['R2Stabx', 'R2Staby'])
 
     if fem_solver['equations']['energy']:
         terms.extend(['R31x', 'R31y', 'R31Sx', 'R31Sy',
                       'R32x', 'R32y', 'R32Sx', 'R32Sy',
-                      'R34', 'R35x', 'R35y', 'R36'])
-        if fem_solver['dynamic']:
-            terms.append('R3T')
+                      'R34', 'R35x', 'R35y', 'R36', 'R3T'])
+
+        # Energy stabilization: enabled when alpha > 0
+        if fem_solver['energy_stab_alpha'] > 0:
+            terms.extend(['R3Stabx', 'R3Staby'])
 
     return terms
 

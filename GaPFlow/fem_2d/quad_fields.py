@@ -67,6 +67,7 @@ ENERGY_FIELDS = {
     'T', 'dT_drho', 'dT_djx', 'dT_djy', 'dT_dE',
     'S', 'dS_drho', 'dS_djx', 'dS_djy', 'dS_dE',
     'E_prev',
+    'tau_energy',  # Energy stabilization parameter
 }
 
 
@@ -183,13 +184,16 @@ class QuadFieldManager:
     def update_nodal_fields(self) -> None:
         """Update nodal fields from problem state (pressure, viscosity, etc.)."""
         p = self.problem
+        timer = p.solver.timer
 
         p.pressure.update()
-        p.topo.update()
+        with timer("topography_update"):
+            p.topo.update()
         dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
         dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
-        p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy,
-                           p.topo.h, p.geo['U'], p.geo['V'])
+        with timer("viscosity_update"):
+            p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy,
+                               p.topo.h, p.geo['U'], p.geo['V'])
         if self.energy:
             p.energy.update_temperature()
 
@@ -245,7 +249,7 @@ class QuadFieldManager:
             Lambda to access quadrature field values.
         """
         p = self.problem
-        alpha = p.fem_solver.get('pressure_stab_alpha', 0.0)
+        alpha = p.fem_solver['pressure_stab_alpha']
 
         rho = q('rho')
         jx = q('jx')
@@ -262,8 +266,7 @@ class QuadFieldManager:
         self.quad_fields['tau_pspg'].pg[s] = np.full_like(rho, tau_pspg)
 
         # SUPG: physics-based Tezduyar tau for momentum stabilization
-        # Optional scaling via momentum_stab_alpha (default 1.0)
-        supg_alpha = p.fem_solver.get('momentum_stab_alpha', 1.0)
+        supg_alpha = p.fem_solver['momentum_stab_alpha']
 
         dt = p.numerics['dt']
         h = np.sqrt(h_sq)
@@ -329,6 +332,13 @@ class QuadFieldManager:
                                ('dS_dE', 'q_wall_grad_E')]:
                 self.quad_fields[name].pg[s] = apply(
                     getattr(p.energy, func), *args_S)
+
+            # Energy stabilization parameter (constant, same formula as PSPG)
+            energy_alpha = p.fem_solver['energy_stab_alpha']
+            P0 = p.prop.get('P0', 1.0)
+            h_sq = self.dx * self.dy
+            tau_energy = energy_alpha * h_sq / P0
+            self.quad_fields['tau_energy'].pg[s] = np.full_like(q('rho'), tau_energy)
 
     def store_prev_values(self) -> None:
         """Store current quad values for time derivatives."""

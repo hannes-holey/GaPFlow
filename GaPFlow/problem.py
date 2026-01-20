@@ -533,12 +533,12 @@ class Problem:
     # ---------------------------
 
     def add_callback(self, fun) -> None:
-        """Add a callback function to be called after each time step.
+        """Add a callback function to be called after initialization and after each time step.
 
         Parameters
         ----------
         fun : callable
-            Function with no arguments, called after each time step completes.
+            Function with no arguments.
         """
         self._callbacks.append(fun)
 

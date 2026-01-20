@@ -65,7 +65,6 @@ class FEMSolver2D:
         self.per_x = p.decomp.periodic_x
         self.per_y = p.decomp.periodic_y
         self.energy = p.fem_solver['equations']['energy']
-        self.dynamic = True  # 2D always uses time-stepping
 
         self.global_coords = p.decomp.icoordsg
 
@@ -778,15 +777,14 @@ class FEMSolver2D:
         fem_solver = p.fem_solver
 
         with self.timer("timestep"):
-            with self.timer("update_prev_quad"):
-                self.update_prev_quad()
+            self.update_prev_quad()
 
             tic = time.time()
 
             q = self.get_q_nodal().copy()
-            max_iter = fem_solver.get('max_iter', 100)
-            tol = fem_solver.get('R_norm_tol', 1e-6)
-            alpha = fem_solver.get('alpha', 1.0)
+            max_iter = fem_solver['max_iter']
+            tol = fem_solver['R_norm_tol']
+            alpha = fem_solver['alpha']
 
             for it in range(max_iter):
                 with self.timer("newton_iteration"):
@@ -797,8 +795,7 @@ class FEMSolver2D:
                         break
 
                     # Scale system for better conditioning
-                    with self.timer("scaling"):
-                        M_scaled, R_scaled = self.scaling.scale_system(M, R)
+                    M_scaled, R_scaled = self.scaling.scale_system(M, R)
 
                     # Assemble and solve
                     with self.timer("petsc_assemble"):
@@ -808,23 +805,19 @@ class FEMSolver2D:
                             self.nb_inner_pts, len(self.variables))
 
                     # Unscale solution
-                    with self.timer("unscaling"):
-                        dq = self.scaling.unscale_solution(dq_scaled)
+                    dq = self.scaling.unscale_solution(dq_scaled)
 
                     q = q + alpha * dq
 
                     # Update solver state
                     self.set_q_nodal(q)
                     p.decomp.communicate_ghost_buffers(p)
-                    with self.timer("update_quad_post"):
-                        self.update_quad()
 
             toc = time.time()
             self.time_inner = toc - tic
             self.inner_iterations = it + 1  # Store number of iterations
 
-            with self.timer("update_output_fields"):
-                self.update_output_fields()
+            self.update_output_fields()
 
         p._post_update()
 
@@ -866,18 +859,19 @@ class FEMSolver2D:
         """Initialize solver before running."""
         with self.timer("preparation"):
             self._init_convenience_accessors()
-            with self.timer("init_quad_fields"):
-                self._init_quad_fields()
+
+            # Pass timer to topography for elastic deformation profiling
+            self.problem.topo.timer = self.timer
+
+            self._init_quad_fields()
             self._get_active_terms()
-            with self.timer("build_jit_functions"):
-                self._build_jit_functions()
+            self._build_jit_functions()
             self._build_terms()
             with self.timer("init_petsc"):
                 self._init_linear_solver()
 
             # Initial quad update
-            with self.timer("initial_update_quad"):
-                self.update_quad()
+            self.update_quad()
 
             self.update_prev_quad()
 
@@ -911,7 +905,7 @@ class FEMSolver2D:
             # Handle both tuple format ('uniform', T) and direct value
             T0 = p.energy_spec['T0']
             T_ref = T0[1] if isinstance(T0, tuple) else T0
-            T_ref = p.energy_spec.get('T_wall', T_ref)
+            T_ref = p.energy_spec['T_wall']
             E_ref = rho_ref * cv * T_ref
             scales['E'] = E_ref
 
@@ -919,7 +913,7 @@ class FEMSolver2D:
 
     def _init_linear_solver(self):
         """Initialize linear solver and scaling for sparse system solves."""
-        solver_type = self.problem.fem_solver.get('linear_solver', 'direct')
+        solver_type = self.problem.fem_solver['linear_solver']
         petsc_info = self.assembly_layout.get_petsc_info()
 
         if HAS_PETSC:

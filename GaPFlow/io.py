@@ -481,8 +481,9 @@ def sanitize_fem_solver(d):
 
     # Stabilization parameters
     out['tau_mode'] = str(d.get('tau_mode', 'physics'))  # 'physics' or 'constant'
-    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 500.))
+    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 1000.))
     out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 10000.))
+    out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 10000.))
 
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))

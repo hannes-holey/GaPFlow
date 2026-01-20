@@ -345,7 +345,7 @@ class DomainDecomposition:
 
         # Check if FEM 2D solver is active (nodal discretization)
         is_fem_2d = (problem.numerics.get('solver') == 'fem'
-                     and grid.get('dim', 1) == 2)
+                     and grid['dim'] == 2)
 
         # West boundary (x=0, ghost at index 0)
         if self.is_at_xW:
