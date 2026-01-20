@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 
+from ._lammps import lammps
 import os
 import sys
 import warnings
