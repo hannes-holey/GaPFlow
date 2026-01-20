@@ -71,6 +71,9 @@ class NonLinearTerm():
         i = self.dep_vars.index(dep_var)
         return self.der_funs[i](*args)
 
+# -----------------------------------------------------------------------------
+# Mass equation terms (R1*)
+# -----------------------------------------------------------------------------
 
 R11x = NonLinearTerm(
     name='R11x',
@@ -122,24 +125,24 @@ R11Sy = NonLinearTerm(
 
 R1Stabx = NonLinearTerm(
     name='R1Stabx',
-    description='pressure stabilization x (PSPG)',
+    description='pressure stabilization x',
     res='mass',
     dep_vars=['rho'],
     dep_vals=[],
-    fun=lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['p'](),
-    der_funs=[lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['dp_drho']()],
+    fun=lambda ctx: lambda rho: -ctx['tau_mass']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['tau_mass']() * ctx['dp_drho']()],
     d_dx_resfun=True,
     d_dy_resfun=False,
     der_testfun=True)
 
 R1Staby = NonLinearTerm(
     name='R1Staby',
-    description='pressure stabilization y (PSPG)',
+    description='pressure stabilization y',
     res='mass',
     dep_vars=['rho'],
     dep_vals=[],
-    fun=lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['p'](),
-    der_funs=[lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['dp_drho']()],
+    fun=lambda ctx: lambda rho: -ctx['tau_mass']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['tau_mass']() * ctx['dp_drho']()],
     d_dx_resfun=False,
     d_dy_resfun=True,
     der_testfun=True)
@@ -155,6 +158,10 @@ R1T = NonLinearTerm(
     d_dx_resfun=False,
     d_dy_resfun=False,
     der_testfun=False)
+
+# -----------------------------------------------------------------------------
+# Momentum equation terms (R2*)
+# -----------------------------------------------------------------------------
 
 R21x = NonLinearTerm(
     name='R21x',
@@ -230,28 +237,26 @@ R2Ty = NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
-# Momentum stabilization terms (Laplacian-type diffusion)
-# Matches PSPG pattern: -τ * ∫ (∂ψ/∂x) * (∂jx/∂x) dΩ
 R2Stabx = NonLinearTerm(
     name='R2Stabx',
-    description='momentum stabilization x (SUPG)',
+    description='momentum stabilization x',
     res='momentum_x',
     dep_vars=['jx'],
     dep_vals=[],
-    fun=lambda ctx: lambda jx: -ctx['tau_supg']() * jx,
-    der_funs=[lambda ctx: lambda jx: -ctx['tau_supg']() * np.ones_like(jx)],
+    fun=lambda ctx: lambda jx: -ctx['tau_mom']() * jx,
+    der_funs=[lambda ctx: lambda jx: -ctx['tau_mom']() * np.ones_like(jx)],
     d_dx_resfun=True,
     d_dy_resfun=False,
     der_testfun=True)
 
 R2Staby = NonLinearTerm(
     name='R2Staby',
-    description='momentum stabilization y (SUPG)',
+    description='momentum stabilization y',
     res='momentum_y',
     dep_vars=['jy'],
     dep_vals=[],
-    fun=lambda ctx: lambda jy: -ctx['tau_supg']() * jy,
-    der_funs=[lambda ctx: lambda jy: -ctx['tau_supg']() * np.ones_like(jy)],
+    fun=lambda ctx: lambda jy: -ctx['tau_mom']() * jy,
+    der_funs=[lambda ctx: lambda jy: -ctx['tau_mom']() * np.ones_like(jy)],
     d_dx_resfun=False,
     d_dy_resfun=True,
     der_testfun=True)
@@ -440,8 +445,6 @@ R3T = NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
-# Energy stabilization terms (Laplacian-type diffusion on E)
-# Same pattern as PSPG/SUPG: -τ * ∫ (∂ψ/∂x) * (∂E/∂x) dΩ
 R3Stabx = NonLinearTerm(
     name='R3Stabx',
     description='energy stabilization x',
@@ -476,17 +479,18 @@ term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
 def get_default_terms(fem_solver: dict) -> list[str]:
     """Determine default 2D term names based on config flags."""
     terms = ['R11x', 'R11y', 'R11Sx', 'R11Sy',   # Mass
-             'R21x', 'R21y', 'R24x', 'R24y',      # Momentum
-             'R1T', 'R2Tx', 'R2Ty']               # Time derivatives
+             'R21x', 'R21y', 'R24x', 'R24y',     # Momentum
+             'R1T', 'R2Tx', 'R2Ty']              # Time derivatives
 
-    # Pressure stabilization (PSPG): enabled when alpha > 0
+    # Pressure stabilization
     if fem_solver['pressure_stab_alpha'] > 0:
         terms.extend(['R1Stabx', 'R1Staby'])
 
-    # Momentum stabilization (SUPG): enabled when alpha > 0
+    # Momentum stabilization
     if fem_solver['momentum_stab_alpha'] > 0:
         terms.extend(['R2Stabx', 'R2Staby'])
 
+    # Energy
     if fem_solver['equations']['energy']:
         terms.extend(['R31x', 'R31y', 'R31Sx', 'R31Sy',
                       'R32x', 'R32y', 'R32Sx', 'R32Sy',

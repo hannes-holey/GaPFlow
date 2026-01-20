@@ -19,8 +19,8 @@ from mpi4py import MPI
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
-from GaPFlow.problem import Problem
-from GaPFlow.viz.plotting import _plot_sol_from_field_2d
+from GaPFlow.problem import Problem  # noqa: E402
+from GaPFlow.viz.plotting import _plot_sol_from_field_2d  # noqa: E402
 
 
 # YAML configuration for parabolic slider + elastic deformation + energy

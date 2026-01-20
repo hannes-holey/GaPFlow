@@ -26,7 +26,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
-from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (required for 3d projection)
 from IPython.display import HTML
 
 
@@ -301,8 +301,8 @@ def animate_3d_surface(x_vec, y_vec, t_vec, T_field, Lx=1.0, Ly=1.0,
 
     # Initial surface with facecolors based on Z values
     fcolors = colormap(norm(T_field[0]))
-    surf = ax.plot_surface(X, Y, T_field[0], facecolors=fcolors,
-                           linewidth=0, antialiased=True, shade=True)
+    ax.plot_surface(X, Y, T_field[0], facecolors=fcolors,
+                    linewidth=0, antialiased=True, shade=True)
 
     # Set axis properties
     ax.set_xlim(x_vec.min(), x_vec.max())
