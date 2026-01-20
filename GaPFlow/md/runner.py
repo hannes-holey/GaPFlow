@@ -22,7 +22,6 @@
 # SOFTWARE.
 #
 
-from ._lammps import lammps
 import os
 import sys
 import warnings
@@ -33,6 +32,8 @@ try:
     from mpi4py import MPI
 except ImportError:
     PARALLEL = False
+
+from GaPFlow.md._lammps import lammps  # noqa
 
 
 def main():
