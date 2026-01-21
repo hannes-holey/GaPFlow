@@ -441,8 +441,8 @@ class GaussianProcessSurrogate:
         var : jax.Array
             Predictive variance field.
         similarity_check : bool, optional
-            If true, check similarity between existing and new training points 
-            (and avoid too similar points). The default is True. 
+            If true, check similarity between existing and new training points
+            (and avoid too similar points). The default is True.
         """
 
         # from large to small
