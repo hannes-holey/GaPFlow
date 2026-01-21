@@ -243,6 +243,9 @@ class MolecularDynamics:
                                                   base_uri=self.dtool_basepath)
         proto_ds_path = urlparse(proto_ds.uri).path
 
+        if os.name == 'nt':
+            proto_ds_path = proto_ds_path[1:]
+
         return proto_ds, proto_ds_path
 
     def run(self, X, tag):
