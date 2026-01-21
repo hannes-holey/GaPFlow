@@ -458,7 +458,6 @@ class GaussianProcessSurrogate:
             for i in sorted_indices:
                 Xnew = self.Xtest[i][None, :]
                 similarity_score = self.gp.kernel(Xnew, self.Xtrain) / self.kernel_variance
-                print(similarity_score)
                 if jnp.any(jnp.isclose(similarity_score, 1., rtol=0., atol=1e-8)):
                     # Too similar point exists
                     skipped += 1

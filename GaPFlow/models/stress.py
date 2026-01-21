@@ -353,6 +353,7 @@ class WallStress(GaussianProcessSurrogate):
 
             self.__field.p[self._out_index] = mean[0, :, :]
             self.__field.p[self._out_index + 6] = mean[1, :, :]
+            self.__field_variance.p[...] = var
 
         else:
             self.__field.p[self._out_index] = s_bot[self._out_index]

@@ -24,7 +24,6 @@
 #
 import os
 import io
-import signal
 import numpy as np
 from copy import deepcopy
 from datetime import datetime
@@ -44,6 +43,7 @@ from . import __version__
 from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
+from .utils import handle_signals, get_termination_signals
 from .models import WallStress, BulkStress, Pressure
 from .integrate import predictor_corrector, source
 from .md import Mock, LennardJones, GoldAlkane
@@ -402,7 +402,7 @@ class Problem:
             if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
                 self.write()
 
-            _handle_signals(self._receive_signal)
+            handle_signals(self._receive_signal)
 
         if not keep_open:
             self._post_run()
@@ -444,7 +444,7 @@ class Problem:
         """
         Signal handler: set the `_stop` flag on termination signals.
         """
-        signals = [signal.SIGINT, signal.SIGTERM, signal.SIGHUP, signal.SIGUSR1]
+        signals = get_termination_signals()
         if signum in signals:
             self._stop = True
 
@@ -864,22 +864,3 @@ class Problem:
             return animate_2d(filename_sol,
                               seconds=seconds,
                               save=save)
-
-# ---------------------------
-# Helper functions
-# ---------------------------
-
-
-def _handle_signals(func) -> None:
-    """
-    Register a function as the handler for common termination signals.
-    """
-    for s in [
-        signal.SIGHUP,
-        signal.SIGINT,
-        signal.SIGHUP,
-        signal.SIGTERM,
-        signal.SIGUSR1,
-        signal.SIGUSR2,
-    ]:
-        signal.signal(s, func)
