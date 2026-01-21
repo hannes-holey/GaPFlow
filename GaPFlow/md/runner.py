@@ -41,7 +41,7 @@ from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
 from ruamel.yaml import YAML
 from getpass import getuser
-from socket import gethostname
+from urllib.parse import urlparse
 import scipy.constants as sci
 from copy import deepcopy
 
@@ -241,8 +241,10 @@ class MolecularDynamics:
 
         proto_ds = dtoolcore.create_proto_dataset(name=ds_name,
                                                   base_uri=self.dtool_basepath)
+        proto_ds_path = urlparse(proto_ds.uri).path
 
-        proto_ds_path = proto_ds.uri.removeprefix('file://' + gethostname())
+        if os.name == 'nt':
+            proto_ds_path = proto_ds_path[1:]
 
         return proto_ds, proto_ds_path
 
