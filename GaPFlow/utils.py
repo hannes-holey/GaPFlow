@@ -22,6 +22,7 @@
 # SOFTWARE.
 #
 import sys
+import signal
 import numpy as np
 import jax.numpy as jnp
 
@@ -77,3 +78,27 @@ def make_dumpable(obj):
     elif isinstance(obj, (bytes, bytearray)):
         return obj.decode("utf-8", errors="replace")
     return obj
+
+
+def get_termination_signals():
+
+    signals = [signal.SIGINT]
+
+    if hasattr(signal, "SIGTERM"):
+        signals.append(signal.SIGTERM)
+    if hasattr(signal, "SIGHUP"):
+        signals.append(signal.SIGHUP)
+    if hasattr(signal, "SIGUSR1"):
+        signals.append(signal.SIGUSR1)
+    if hasattr(signal, "SIGBREAK"):  # Windows Ctrl+Break
+        signals.append(signal.SIGBREAK)
+
+    return signals
+
+
+def handle_signals(func) -> None:
+    """
+    Register a function as the handler for common termination signals.
+    """
+    for s in get_termination_signals():
+        signal.signal(s, func)
