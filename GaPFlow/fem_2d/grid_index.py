@@ -33,7 +33,7 @@ import numpy as np
 import numpy.typing as npt
 
 if TYPE_CHECKING:
-    from ..domain_decomposition import DomainDecomposition
+    from ..parallel import DomainDecomposition
 
 NDArray = npt.NDArray[np.floating]
 IntArray = npt.NDArray[np.signedinteger]
@@ -46,19 +46,17 @@ class GridIndexManager:
     - Index masks for inner (residual) and padded (contributor) grids
     - Square element coordinates and corner connectivity
     - 7-point stencil connectivity for sparse matrix pattern
+    - Boundary condition handling (Dirichlet removal, Neumann forwarding)
 
     Parameters
     ----------
-    Nx_inner, Ny_inner : int
-        Number of inner grid points (excluding ghost cells).
-    bc_at_W, bc_at_E, bc_at_S, bc_at_N : bool
-        True if subdomain is at domain boundary AND not periodic.
     decomp : DomainDecomposition
-        Domain decomposition object for periodic/MPI info.
+        Domain decomposition object containing grid info and BC configuration.
     variables : list of str
-        Variable names ['rho', 'jx', 'jy', ...] for Neumann BC lookup.
-    bc_neumann : dict
-        Neumann BC flags per boundary, e.g. {'xW': [F,T,T], 'xE': [F,T,T], ...}.
+        Variable names ['rho', 'jx', 'jy'] or ['rho', 'jx', 'jy', 'E'].
+    energy_spec : dict, optional
+        Energy specification dict with BC info (bc_xW, bc_xE, etc.).
+        Required if 'E' is in variables.
     """
 
     # 7-point stencil offsets (excludes main diagonal corners)
@@ -69,23 +67,40 @@ class GridIndexManager:
         (-1, 1), (1, -1),  # anti-diagonal (connected via triangles)
     ]
 
-    def __init__(self, Nx_inner: int, Ny_inner: int,
-                 bc_at_W: bool, bc_at_E: bool, bc_at_S: bool, bc_at_N: bool,
-                 decomp: "DomainDecomposition",
-                 variables: List[str], bc_neumann: dict):
+    def __init__(self, decomp: "DomainDecomposition", variables: List[str],
+                 energy_spec: dict = None):
+        self._decomp = decomp
+        self._variables = variables
+        grid = decomp.grid
+
+        # Grid dimensions from decomp
+        Nx_inner, Ny_inner = decomp.nb_subdomain_grid_pts
         self.Nx_inner = Nx_inner
         self.Ny_inner = Ny_inner
         self.Nx_padded = Nx_inner + 2
         self.Ny_padded = Ny_inner + 2
 
-        self.bc_at_W = bc_at_W
-        self.bc_at_E = bc_at_E
-        self.bc_at_S = bc_at_S
-        self.bc_at_N = bc_at_N
+        # Determine if subdomain is at domain boundary AND not periodic
+        self.bc_at_W = decomp.is_at_xW and not decomp.periodic_x
+        self.bc_at_E = decomp.is_at_xE and not decomp.periodic_x
+        self.bc_at_S = decomp.is_at_yS and not decomp.periodic_y
+        self.bc_at_N = decomp.is_at_yN and not decomp.periodic_y
 
-        self._decomp = decomp
-        self._variables = variables
-        self._bc_neumann = bc_neumann
+        # Build Neumann BC flags from grid config
+        self._bc_neumann = {
+            'xW': [b == 'N' for b in grid['bc_xW']],
+            'xE': [b == 'N' for b in grid['bc_xE']],
+            'yS': [b == 'N' for b in grid['bc_yS']],
+            'yN': [b == 'N' for b in grid['bc_yN']],
+        }
+        # Append energy BC flags if energy variable present
+        if 'E' in variables:
+            if energy_spec is None:
+                raise ValueError("energy_spec required when 'E' in variables")
+            self._bc_neumann['xW'].append(energy_spec['bc_xW'] == 'N')
+            self._bc_neumann['xE'].append(energy_spec['bc_xE'] == 'N')
+            self._bc_neumann['yS'].append(energy_spec['bc_yS'] == 'N')
+            self._bc_neumann['yN'].append(energy_spec['bc_yN'] == 'N')
 
         # Derived quantities
         self.nb_inner_pts = Nx_inner * Ny_inner

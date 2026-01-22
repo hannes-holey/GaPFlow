@@ -163,20 +163,6 @@ class DomainDecomposition:
         inner = self.nb_subdomain_grid_pts
         return (inner[0] + 2, inner[1] + 2)
 
-    def local_zeros(self, components=None):
-        """Create zero array with local padded shape."""
-        shape = self.local_shape_padded
-        if components is not None:
-            shape = (components,) + shape
-        return np.zeros(shape)
-
-    def local_ones(self, components=None):
-        """Create ones array with local padded shape."""
-        shape = self.local_shape_padded
-        if components is not None:
-            shape = (components,) + shape
-        return np.ones(shape)
-
     def local_coordinates_midpoint(self, dx, dy):
         """Compute cell-center coordinates (xx, yy) for local subdomain.
 
@@ -237,13 +223,13 @@ class DomainDecomposition:
     def periodic_x(self) -> bool:
         """True if the x-boundaries are periodic."""
         grid = self.grid
-        return all(grid["bc_xW_P"]) and all(grid["bc_xE_P"])
+        return all(b == 'P' for b in grid["bc_xW"]) and all(b == 'P' for b in grid["bc_xE"])
 
     @property
     def periodic_y(self) -> bool:
         """True if the y-boundaries are periodic."""
         grid = self.grid
-        return all(grid["bc_yS_P"]) and all(grid["bc_yN_P"])
+        return all(b == 'P' for b in grid["bc_yS"]) and all(b == 'P' for b in grid["bc_yN"])
 
     @property
     def has_full_x(self) -> bool:
@@ -334,58 +320,69 @@ class DomainDecomposition:
         if problem.bEnergy:
             self._apply_energy_bcs(problem)
 
+    def _owns_boundary(self, bnd: str) -> bool:
+        """Check if this rank owns the specified boundary."""
+        return {'W': self.is_at_xW, 'E': self.is_at_xE,
+                'S': self.is_at_yS, 'N': self.is_at_yN}[bnd]
+
+    def _get_bc_slices(self, bnd: str):
+        """Return (ghost_slice, interior_slice) for the specified boundary."""
+        slices = {
+            'W': ((slice(0, 1), slice(None)), (slice(1, 2), slice(None))),
+            'E': ((slice(-1, None), slice(None)), (slice(-2, -1), slice(None))),
+            'S': ((slice(None), slice(0, 1)), (slice(None), slice(1, 2))),
+            'N': ((slice(None), slice(-1, None)), (slice(None), slice(-2, -1))),
+        }
+        return slices[bnd]
+
     def _apply_solution_bcs(self, problem: "Problem") -> None:
         """
         Apply boundary conditions to solution field ghost cells.
 
         Only applies BCs if this rank owns the corresponding boundary.
+        Iterates through boundaries and variables to apply Dirichlet/Neumann BCs.
         """
         grid = self.grid
-        field = problem.q  # returns the .pg array
+        field = problem.q  # shape: (num_vars, Nx_padded, Ny_padded)
 
         # Check if FEM 2D solver is active (nodal discretization)
-        is_fem_2d = (problem.numerics.get('solver') == 'fem'
-                     and grid['dim'] == 2)
+        is_nodal = (problem.numerics.get('solver') == 'fem' and grid['dim'] == 2)
 
-        # West boundary (x=0, ghost at index 0)
-        if self.is_at_xW:
-            if not all(grid["bc_xW_P"]):
-                if any(grid["bc_xW_D"]):
-                    field[grid["bc_xW_D"], :1, :] = self._get_ghost_cell_values(
-                        field, grid, "D", axis=0, direction=-1, nodal=is_fem_2d)
-                if any(grid["bc_xW_N"]):
-                    field[grid["bc_xW_N"], :1, :] = self._get_ghost_cell_values(
-                        field, grid, "N", axis=0, direction=-1, nodal=is_fem_2d)
+        # Map boundary name to grid key prefix
+        bnd_to_key = {'W': 'xW', 'E': 'xE', 'S': 'yS', 'N': 'yN'}
 
-        # East boundary (x=Lx, ghost at index -1)
-        if self.is_at_xE:
-            if not all(grid["bc_xE_P"]):
-                if any(grid["bc_xE_D"]):
-                    field[grid["bc_xE_D"], -1:, :] = self._get_ghost_cell_values(
-                        field, grid, "D", axis=0, direction=1, nodal=is_fem_2d)
-                if any(grid["bc_xE_N"]):
-                    field[grid["bc_xE_N"], -1:, :] = self._get_ghost_cell_values(
-                        field, grid, "N", axis=0, direction=1, nodal=is_fem_2d)
+        for bnd in ['W', 'E', 'S', 'N']:
+            if not self._owns_boundary(bnd):
+                continue
 
-        # South boundary (y=0, ghost at index 0)
-        if self.is_at_yS:
-            if not all(grid["bc_yS_P"]):
-                if any(grid["bc_yS_D"]):
-                    field[grid["bc_yS_D"], :, :1] = self._get_ghost_cell_values(
-                        field, grid, "D", axis=1, direction=-1, nodal=is_fem_2d)
-                if any(grid["bc_yS_N"]):
-                    field[grid["bc_yS_N"], :, :1] = self._get_ghost_cell_values(
-                        field, grid, "N", axis=1, direction=-1, nodal=is_fem_2d)
+            key = bnd_to_key[bnd]
+            bc_types = grid[f'bc_{key}']  # e.g., ['P', 'D', 'N']
 
-        # North boundary (y=Ly, ghost at index -1)
-        if self.is_at_yN:
-            if not all(grid["bc_yN_P"]):
-                if any(grid["bc_yN_D"]):
-                    field[grid["bc_yN_D"], :, -1:] = self._get_ghost_cell_values(
-                        field, grid, "D", axis=1, direction=1, nodal=is_fem_2d)
-                if any(grid["bc_yN_N"]):
-                    field[grid["bc_yN_N"], :, -1:] = self._get_ghost_cell_values(
-                        field, grid, "N", axis=1, direction=1, nodal=is_fem_2d)
+            # Skip if all periodic (handled by ghost communication)
+            if all(b == 'P' for b in bc_types):
+                continue
+
+            ghost, interior = self._get_bc_slices(bnd)
+
+            for var_idx, bc_type in enumerate(bc_types):
+                if bc_type == 'P':
+                    continue
+
+                elif bc_type == 'D':
+                    bc_vals = grid.get(f'bc_{key}_D_val')
+                    target = bc_vals[var_idx] if isinstance(bc_vals, list) else bc_vals
+
+                    if is_nodal:
+                        field[(var_idx,) + ghost] = target
+                    else:
+                        # Cell-centered: ghost = 2*target - interior
+                        field[(var_idx,) + ghost] = (
+                            2.0 * target - field[(var_idx,) + interior]
+                        )
+
+                elif bc_type == 'N':
+                    # Neumann: zero normal gradient (ghost = interior)
+                    field[(var_idx,) + ghost] = field[(var_idx,) + interior]
 
     def _apply_energy_bcs(self, problem: "Problem") -> None:
         """
@@ -401,131 +398,31 @@ class DomainDecomposition:
         jx = problem.q[1]
         jy = problem.q[2]
 
-        # West boundary (ghost cell at index 0)
-        if self.is_at_xW:
-            if not all(grid["bc_xW_P"]):
-                if energy.bc_xW == 'D':
-                    ux = jx[0, :] / rho[0, :]
-                    uy = jy[0, :] / rho[0, :]
-                    kinetic = 0.5 * (ux**2 + uy**2)
-                    energy.energy[0, :] = rho[0, :] * (energy.cv * energy.T_bc_xW + kinetic)
-                elif energy.bc_xW == 'N':
-                    energy.energy[0, :] = energy.energy[1, :].copy()
+        # Map boundary name to grid key prefix
+        bnd_to_key = {'W': 'xW', 'E': 'xE', 'S': 'yS', 'N': 'yN'}
 
-        # East boundary (ghost cell at index -1)
-        if self.is_at_xE:
-            if not all(grid["bc_xE_P"]):
-                if energy.bc_xE == 'D':
-                    ux = jx[-1, :] / rho[-1, :]
-                    uy = jy[-1, :] / rho[-1, :]
-                    kinetic = 0.5 * (ux**2 + uy**2)
-                    energy.energy[-1, :] = rho[-1, :] * (energy.cv * energy.T_bc_xE + kinetic)
-                elif energy.bc_xE == 'N':
-                    energy.energy[-1, :] = energy.energy[-2, :].copy()
+        for bnd in ['W', 'E', 'S', 'N']:
+            if not self._owns_boundary(bnd):
+                continue
 
-        # South boundary (ghost cell at index 0)
-        if self.is_at_yS:
-            if not all(grid["bc_yS_P"]):
-                if energy.bc_yS == 'D':
-                    ux = jx[:, 0] / rho[:, 0]
-                    uy = jy[:, 0] / rho[:, 0]
-                    kinetic = 0.5 * (ux**2 + uy**2)
-                    energy.energy[:, 0] = rho[:, 0] * (energy.cv * energy.T_bc_yS + kinetic)
-                elif energy.bc_yS == 'N':
-                    energy.energy[:, 0] = energy.energy[:, 1].copy()
+            key = bnd_to_key[bnd]
+            bc_types = grid[f'bc_{key}']
 
-        # North boundary (ghost cell at index -1)
-        if self.is_at_yN:
-            if not all(grid["bc_yN_P"]):
-                if energy.bc_yN == 'D':
-                    ux = jx[:, -1] / rho[:, -1]
-                    uy = jy[:, -1] / rho[:, -1]
-                    kinetic = 0.5 * (ux**2 + uy**2)
-                    energy.energy[:, -1] = rho[:, -1] * (energy.cv * energy.T_bc_yN + kinetic)
-                elif energy.bc_yN == 'N':
-                    energy.energy[:, -1] = energy.energy[:, -2].copy()
+            # Skip if all periodic
+            if all(b == 'P' for b in bc_types):
+                continue
 
-    @staticmethod
-    def _get_ghost_cell_values(field: npt.NDArray[np.floating],
-                               grid: dict,
-                               bc_type: str,
-                               axis: int,
-                               direction: int,
-                               num_ghost: int = 1,
-                               nodal: bool = False) -> npt.NDArray[np.floating]:
-        """
-        Computes ghost cell values for Dirichlet ('D') or Neumann ('N') boundary
-        conditions.
+            ghost, interior = self._get_bc_slices(bnd)
+            bc_type = getattr(energy, f'bc_{key}')
+            T_bc = getattr(energy, f'T_bc_{key}')
 
-        Parameters
-        ----------
-        field : ndarray
-            The field array (with ghost cells).
-        grid : dict
-            Grid configuration with boundary condition info.
-        bc_type : str
-            'D' for Dirichlet or 'N' for Neumann.
-        axis : int
-            0 for x-axis, 1 for y-axis.
-        direction : int
-            Upstream (<0) or downstream (>0) direction.
-        num_ghost : int
-            Number of ghost cells (<= 2 supported).
-        nodal : bool
-            If True, use nodal (FEM 2D) BC treatment where ghost nodes are set
-            directly to the boundary value. If False, use cell-centered
-            treatment with interpolation.
-
-        Returns
-        -------
-        ndarray
-            Ghost cell values extracted/computed for the selected mask.
-        """
-        assert bc_type in ["D", "N"]
-
-        if axis == 0:  # x-axis
-            if direction > 0:  # East boundary (downstream)
-                mask = grid[f"bc_xE_{bc_type}"]
-                q_target = grid["bc_xE_D_val"]
-                q_adj = field[mask, -(num_ghost + num_ghost): -num_ghost, :]
-            else:  # West boundary (upstream)
-                mask = grid[f"bc_xW_{bc_type}"]
-                q_target = grid["bc_xW_D_val"]
-                q_adj = field[mask, num_ghost: num_ghost + num_ghost, :]
-
-        elif axis == 1:  # y-axis
-            if direction > 0:  # North boundary (downstream)
-                mask = grid[f"bc_yN_{bc_type}"]
-                q_target = grid["bc_yN_D_val"]
-                q_adj = field[mask, :, -(num_ghost + num_ghost): -num_ghost]
-            else:  # South boundary (upstream)
-                mask = grid[f"bc_yS_{bc_type}"]
-                q_target = grid["bc_yS_D_val"]
-                q_adj = field[mask, :, num_ghost: num_ghost + num_ghost]
-        else:
-            raise RuntimeError("axis must be either 0 (x) or 1 (y)")
-
-        if nodal:
-            # FEM 2D nodal discretization: ghost node values are set directly
-            # - Dirichlet: ghost = target value (fixed boundary value)
-            # - Neumann: ghost = adjacent inner (zero normal gradient)
-            if bc_type == "D":
-                Q = np.full_like(q_adj, q_target)
-            else:
-                Q = q_adj.copy()
-        else:
-            # Cell-centered discretization: interpolate so cell boundary has target value
-            a1 = 0.5
-            a2 = 0.0
-            q1 = q_adj
-            q2 = 0.0
-
-            if bc_type == "D":
-                Q = (q_target - a1 * q1 + a2 * q2) / (a1 - a2)
-            else:
-                Q = ((1.0 - a1) * q1 + a2 * q2) / (a1 - a2)
-
-        return Q
+            if bc_type == 'D':
+                ux = jx[ghost] / rho[ghost]
+                uy = jy[ghost] / rho[ghost]
+                kinetic = 0.5 * (ux**2 + uy**2)
+                energy.energy[ghost] = rho[ghost] * (energy.cv * T_bc + kinetic)
+            elif bc_type == 'N':
+                energy.energy[ghost] = energy.energy[interior].copy()
 
 
 class FFTDomainTranslation:

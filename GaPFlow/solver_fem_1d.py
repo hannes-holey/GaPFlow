@@ -64,7 +64,7 @@ class FEMSolver1D:
         """Initialize convenience accessors for problem and grid properties."""
         p = self.problem
 
-        self.periodic = p.grid['bc_xE_P'][0]  # periodic in x
+        self.periodic = p.grid['bc_xE'][0] == 'P'  # periodic in x
         self.energy = p.fem_solver['equations']['energy']
         self.dynamic = p.fem_solver['dynamic']
 
@@ -641,10 +641,10 @@ class FEMSolver1D:
         p = self.problem
 
         # Density (mass) BC
-        if p.grid['bc_xW_D'][0]:
+        if p.grid['bc_xW'][0] == 'D':
             M[0, :] = 0.0
             M[0, 0] = 1.0
-        if p.grid['bc_xE_D'][0]:
+        if p.grid['bc_xE'][0] == 'D':
             M[2 * self.nb_pts - 1, :] = 0.0
             M[2 * self.nb_pts - 1, self.nb_pts - 1] = 1.0
 
@@ -668,11 +668,11 @@ class FEMSolver1D:
         p = self.problem
 
         # Density (mass) BC
-        if p.grid['bc_xW_D'][0]:
+        if p.grid['bc_xW'][0] == 'D':
             target = p.grid['bc_xW_D_val']
             guess = self.get_nodal_val('rho')[0]
             R[0] = guess - target
-        if p.grid['bc_xE_D'][0]:
+        if p.grid['bc_xE'][0] == 'D':
             target = p.grid['bc_xE_D_val']
             guess = self.get_nodal_val('rho')[-1]
             R[2 * self.nb_pts - 1] = guess - target

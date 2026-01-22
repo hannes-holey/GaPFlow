@@ -262,6 +262,170 @@ R2Staby = NonLinearTerm(
     der_testfun=True)
 
 # -----------------------------------------------------------------------------
+# Convective momentum terms (R22*)
+# These represent momentum advection: transport of momentum by the flow velocity
+# -----------------------------------------------------------------------------
+
+R22xx = NonLinearTerm(
+    name='R22xx',
+    description='convective momentum flux jx*jx in x',
+    res='momentum_x',
+    dep_vars=['rho', 'jx'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx: -(jx * jx) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx: (jx * jx) / (rho ** 2),
+        lambda ctx: lambda rho, jx: -2 * jx / rho
+    ],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R22xxS = NonLinearTerm(
+    name='R22xxS',
+    description='convective momentum flux jx*jx height source',
+    res='momentum_x',
+    dep_vars=['rho', 'jx'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dh_dx']() * (jx * jx) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx: 1 / ctx['h']() * ctx['dh_dx']() * (jx * jx) / (rho ** 2),
+        lambda ctx: lambda rho, jx: -1 / ctx['h']() * ctx['dh_dx']() * 2 * jx / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R22yx = NonLinearTerm(
+    name='R22yx',
+    description='convective momentum flux jx*jy in y',
+    res='momentum_x',
+    dep_vars=['rho', 'jx', 'jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, jy: -(jx * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx, jy: (jx * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jx, jy: -jy / rho,
+        lambda ctx: lambda rho, jx, jy: -jx / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=False)
+
+R22yxS = NonLinearTerm(
+    name='R22yxS',
+    description='convective momentum flux jx*jy height source',
+    res='momentum_x',
+    dep_vars=['rho', 'jx', 'jy'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dy']() * (jx * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx, jy: 1 / ctx['h']() * ctx['dh_dy']() * (jx * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dy']() * jy / rho,
+        lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dy']() * jx / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R22xy = NonLinearTerm(
+    name='R22xy',
+    description='convective momentum flux jx*jy in x',
+    res='momentum_y',
+    dep_vars=['rho', 'jx', 'jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jx, jy: -(jx * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx, jy: (jx * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jx, jy: -jy / rho,
+        lambda ctx: lambda rho, jx, jy: -jx / rho
+    ],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R22xyS = NonLinearTerm(
+    name='R22xyS',
+    description='convective momentum flux jx*jy height source',
+    res='momentum_y',
+    dep_vars=['rho', 'jx', 'jy'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dx']() * (jx * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx, jy: 1 / ctx['h']() * ctx['dh_dx']() * (jx * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dx']() * jy / rho,
+        lambda ctx: lambda rho, jx, jy: -1 / ctx['h']() * ctx['dh_dx']() * jx / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R22yy = NonLinearTerm(
+    name='R22yy',
+    description='convective momentum flux jy*jy in y',
+    res='momentum_y',
+    dep_vars=['rho', 'jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda rho, jy: -(jy * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jy: (jy * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jy: -2 * jy / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=False)
+
+R22yyS = NonLinearTerm(
+    name='R22yyS',
+    description='convective momentum flux jy*jy height source',
+    res='momentum_y',
+    dep_vars=['rho', 'jy'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda rho, jy: -1 / ctx['h']() * ctx['dh_dy']() * (jy * jy) / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jy: 1 / ctx['h']() * ctx['dh_dy']() * (jy * jy) / (rho ** 2),
+        lambda ctx: lambda rho, jy: -1 / ctx['h']() * ctx['dh_dy']() * 2 * jy / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+# -----------------------------------------------------------------------------
+# In-plane shear stress terms (R23*)
+# Simplified diffusion form: exact for incompressible flow (∇·v = 0)
+# -----------------------------------------------------------------------------
+
+R23xy = NonLinearTerm(
+    name='R23xy',
+    description='shear viscous stress tau_xy in y (for momentum_x)',
+    res='momentum_x',
+    dep_vars=['rho', 'jx'],
+    dep_vals=['eta'],
+    fun=lambda ctx: lambda rho, jx: -ctx['eta']() * jx / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jx: ctx['eta']() * jx / (rho ** 2),
+        lambda ctx: lambda rho, jx: -ctx['eta']() / rho
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
+R23yx = NonLinearTerm(
+    name='R23yx',
+    description='shear viscous stress tau_xy in x (for momentum_y)',
+    res='momentum_y',
+    dep_vars=['rho', 'jy'],
+    dep_vals=['eta'],
+    fun=lambda ctx: lambda rho, jy: -ctx['eta']() * jy / rho,
+    der_funs=[
+        lambda ctx: lambda rho, jy: ctx['eta']() * jy / (rho ** 2),
+        lambda ctx: lambda rho, jy: -ctx['eta']() / rho
+    ],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+# -----------------------------------------------------------------------------
 # Energy equation terms (R3*)
 # -----------------------------------------------------------------------------
 
@@ -472,6 +636,8 @@ R3Staby = NonLinearTerm(
 
 term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
              R21x, R21y, R24x, R24y, R2Tx, R2Ty, R2Stabx, R2Staby,
+             R22xx, R22xxS, R22yx, R22yxS, R22xy, R22xyS, R22yy, R22yyS,  # Convective
+             R23xy, R23yx,  # In-plane shear stress
              R31x, R31y, R31Sx, R31Sy, R32x, R32y, R32Sx, R32Sy,
              R34, R35x, R35y, R36, R3T, R3Stabx, R3Staby]
 

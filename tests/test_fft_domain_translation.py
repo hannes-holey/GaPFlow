@@ -37,14 +37,14 @@ from GaPFlow.parallel import DomainDecomposition, FFTDomainTranslation
 
 def make_grid(Nx, Ny, periodic_x, periodic_y):
     """Create minimal grid config for DomainDecomposition."""
+    bc_type_x = 'P' if periodic_x else 'D'
+    bc_type_y = 'P' if periodic_y else 'D'
     return {
         'Nx': Nx, 'Ny': Ny,
-        'bc_xW_P': [periodic_x] * 3, 'bc_xE_P': [periodic_x] * 3,
-        'bc_yS_P': [periodic_y] * 3, 'bc_yN_P': [periodic_y] * 3,
-        'bc_xW_D': [not periodic_x] * 3, 'bc_xE_D': [not periodic_x] * 3,
-        'bc_yS_D': [not periodic_y] * 3, 'bc_yN_D': [not periodic_y] * 3,
-        'bc_xW_N': [False] * 3, 'bc_xE_N': [False] * 3,
-        'bc_yS_N': [False] * 3, 'bc_yN_N': [False] * 3,
+        'bc_xW': [bc_type_x] * 3,
+        'bc_xE': [bc_type_x] * 3,
+        'bc_yS': [bc_type_y] * 3,
+        'bc_yN': [bc_type_y] * 3,
         'bc_xW_D_val': 0, 'bc_xE_D_val': 0,
         'bc_yS_D_val': 0, 'bc_yN_D_val': 0,
     }

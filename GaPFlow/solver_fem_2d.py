@@ -33,6 +33,7 @@ from .fem_2d.assembly_layout import (
 )
 from .fem_2d.grid_index import GridIndexManager
 from .fem_2d.quad_fields import QuadFieldManager
+from .fem_2d.solution_guards import apply_guards
 
 from functools import cached_property
 import numpy as np
@@ -56,14 +57,12 @@ class FEMSolver2D:
         self.quad_mgr = None  # QuadFieldManager, initialized via init()
         self.linear_solver = None  # Linear solver (PETSc or SciPy)
         self.timer = Timer()
+        self.R_norm_history = []  # Nested list: [[step1_iters], [step2_iters], ...]
 
     def _init_convenience_accessors(self) -> None:
         """Initialize convenience accessors for problem and grid properties."""
         p = self.problem
         self.decomp = p.decomp
-
-        self.per_x = p.decomp.periodic_x
-        self.per_y = p.decomp.periodic_y
         self.energy = p.fem_solver['equations']['energy']
 
         self.global_coords = p.decomp.icoordsg
@@ -84,23 +83,12 @@ class FEMSolver2D:
             self.residuals.append('energy')
             self.field_map['E'] = p.energy.energy
 
-        # Grid index manager (handles masks, connectivity, stencils)
-        bc_neumann = {
-            'xW': list(p.grid['bc_xW_N']), 'xE': list(p.grid['bc_xE_N']),
-            'yS': list(p.grid['bc_yS_N']), 'yN': list(p.grid['bc_yN_N']),
-        }
-        if self.energy:
-            bc_neumann['xW'].append(p.energy_spec['bc_xW'] == 'N')
-            bc_neumann['xE'].append(p.energy_spec['bc_xE'] == 'N')
-            bc_neumann['yS'].append(p.energy_spec['bc_yS'] == 'N')
-            bc_neumann['yN'].append(p.energy_spec['bc_yN'] == 'N')
+        # Grid index manager (handles masks, connectivity, stencils, BCs)
+        energy_spec = p.energy_spec if self.energy else None
         self.grid_idx = GridIndexManager(
-            Nx_inner=self.Nx_inner, Ny_inner=self.Ny_inner,
-            bc_at_W=p.decomp.is_at_xW and not self.per_x,
-            bc_at_E=p.decomp.is_at_xE and not self.per_x,
-            bc_at_S=p.decomp.is_at_yS and not self.per_y,
-            bc_at_N=p.decomp.is_at_yN and not self.per_y,
-            decomp=p.decomp, variables=self.variables, bc_neumann=bc_neumann,
+            decomp=p.decomp,
+            variables=self.variables,
+            energy_spec=energy_spec,
         )
 
         # Convenience aliases from grid index manager
@@ -786,10 +774,18 @@ class FEMSolver2D:
             tol = fem_solver['R_norm_tol']
             alpha = fem_solver['alpha']
 
+            # Start new timestep history (rank 0 only)
+            if p.decomp.rank == 0:
+                self.R_norm_history.append([])
+
             for it in range(max_iter):
                 with self.timer("newton_iteration"):
                     M, R = self.solver_step_fun(q)
                     R_norm = np.linalg.norm(R)
+
+                    # Track residual history (rank 0 only)
+                    if p.decomp.rank == 0:
+                        self.R_norm_history[-1].append(R_norm)
 
                     if R_norm < tol:
                         break
@@ -807,7 +803,7 @@ class FEMSolver2D:
                     # Unscale solution
                     dq = self.scaling.unscale_solution(dq_scaled)
 
-                    q = q + alpha * dq
+                    q = apply_guards(q, alpha * dq, self)
 
                     # Update solver state
                     self.set_q_nodal(q)
@@ -854,6 +850,51 @@ class FEMSolver2D:
             if save_json:
                 with open(save_json, 'w') as f:
                     f.write(self.timer.to_json())
+
+    def plot_residual_history(self, max_separators: int = 50):
+        """Plot R_norm evolution across all Newton iterations.
+
+        Parameters
+        ----------
+        max_separators : int
+            Maximum number of timestep separators to show (default 50).
+
+        Returns
+        -------
+        tuple
+            (fig, ax) matplotlib figure and axes objects, or (None, None) if
+            not on rank 0 or no history available.
+        """
+        if self.problem.decomp.rank != 0:
+            return None, None
+
+        if not self.R_norm_history:
+            print("No residual history available.")
+            return None, None
+
+        import matplotlib.pyplot as plt
+
+        # Flatten history with timestep boundaries
+        all_norms = []
+        boundaries = []
+        for step_history in self.R_norm_history:
+            boundaries.append(len(all_norms))
+            all_norms.extend(step_history)
+
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.semilogy(all_norms, 'b-', linewidth=0.8)
+
+        # Add vertical separators if not too many timesteps
+        if len(boundaries) <= max_separators:
+            for b in boundaries[1:]:  # Skip first (at 0)
+                ax.axvline(x=b, color='gray', linestyle='--', alpha=0.5)
+
+        ax.set_xlabel('Newton iteration (cumulative)')
+        ax.set_ylabel('R_norm')
+        ax.set_title(f'Residual history ({len(self.R_norm_history)} timesteps)')
+        ax.grid(True, alpha=0.3)
+
+        return fig, ax
 
     def pre_run(self, **kwargs) -> None:
         """Initialize solver before running."""

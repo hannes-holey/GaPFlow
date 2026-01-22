@@ -42,29 +42,24 @@ from ContactMechanics.FFTElasticHalfSpace import (
 NDArray = npt.NDArray[np.floating]
 
 
-def create_midpoint_grid(grid, decomp: DomainDecomposition | None = None) -> Tuple[NDArray, NDArray]:
-    """Create cell-center coordinate arrays (xx, yy) for the grid."""
-    if decomp is not None:
-        # MPI-aware: use decomposition to get local coordinates
-        return decomp.local_coordinates_midpoint(grid['dx'], grid['dy'])
+def create_midpoint_grid(grid: dict, decomp: DomainDecomposition) -> Tuple[NDArray, NDArray]:
+    """Create cell-center coordinate arrays (xx, yy) for the grid.
 
-    # Legacy global grid (backward compatibility)
-    Lx = grid['Lx']
-    Ly = grid['Ly']
-    Nx = grid['Nx']
-    Ny = grid['Ny']
+    Parameters
+    ----------
+    grid : dict
+        Grid configuration with 'dx' and 'dy' keys.
+    decomp : DomainDecomposition
+        Domain decomposition instance for MPI-aware coordinate generation.
 
-    dx = Lx / Nx
-    ix = np.arange(-1, Nx + 1)
-    x = ix / Nx * Lx + dx / 2.
-
-    dy = Ly / Ny
-    iy = np.arange(-1, Ny + 1)
-    y = iy / Ny * Ly + dy / 2.
-
-    xx, yy = np.meshgrid(x, y, indexing='ij')
-
-    return xx, yy
+    Returns
+    -------
+    xx : NDArray
+        X-coordinate grid (local subdomain including ghost cells).
+    yy : NDArray
+        Y-coordinate grid (local subdomain including ghost cells).
+    """
+    return decomp.local_coordinates_midpoint(grid['dx'], grid['dy'])
 
 
 def journal_bearing(xx, grid, geo):
@@ -234,9 +229,6 @@ class Topography:
     due to the fluid pressure field.
     """
 
-    # Timer attribute for profiling (set externally after solver init)
-    timer = None
-
     def __init__(self,
                  fc: Any,
                  grid: dict,
@@ -270,6 +262,8 @@ class Topography:
 
         self.dx = grid['dx']
         self.dy = grid['dy']
+        self._Lx = grid['Lx']
+        self._Ly = grid['Ly']
 
         # Store for MPI communication
         self._decomp = decomp
@@ -336,24 +330,50 @@ class Topography:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
                 p_ref = self.get_reference_pressure()
                 p = self.__pressure.pg - p_ref
-                deformation = self._timed_deformation_calc(p)
+                deformation = self._calc_deformation(p)
                 d_ref = self.get_reference_displacement(deformation)
                 deformation = deformation - d_ref
             else:
                 p = self.__pressure.pg
-                deformation = self._timed_deformation_calc(p)
+                deformation = self._calc_deformation(p)
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
         else:
             pass
 
-    def _timed_deformation_calc(self, p):
-        """Wrapper for deformation calculation with optional timing."""
-        if self.timer is not None:
-            with self.timer("elastic_deformation_calc"):
-                return self.ElasticDeformation.get_deformation_underrelax(p, self.timer)
+    def _calc_deformation(self, p):
+        """Calculate elastic deformation from pressure field."""
+        return self.ElasticDeformation.get_deformation_underrelax(p)
+
+    def set_height_manual(self, height_field: NDArray) -> None:
+        """Set the height field manually from external source (e.g., a callback).
+
+        This is the recommended API for dynamically modifying topography during
+        simulation, such as when introducing obstacles via callback functions.
+
+        Parameters
+        ----------
+        height_field : NDArray
+            New height field array. Must match the shape of the existing height
+            field (including ghost cells).
+
+        Notes
+        -----
+        - If elastic deformation is disabled: Sets `h` directly and updates gradients.
+        - If elastic deformation is enabled: Sets `h_undeformed` (the rigid base
+          topography) and updates `h = h_undeformed + deformation` to maintain
+          consistency. The elastic solver will recompute deformation on the next
+          `update()` call based on the new geometry.
+        """
+        if self.elastic:
+            # Update the undeformed (rigid) base topography
+            self.h_undeformed = height_field.copy()
+            # Update h to maintain h = h_undeformed + deformation
+            # This triggers _update_gradients via the h.setter
+            self.h = self.h_undeformed + self.deformation
         else:
-            return self.ElasticDeformation.get_deformation_underrelax(p)
+            # Directly set h, which triggers gradient update
+            self.h = height_field
 
     def _parse_reference_point(self, ref_cfg, grid: dict) -> tuple:
         """Convert reference_point config to (owns, local_i, local_j).
@@ -484,11 +504,7 @@ class Topography:
     @h.setter
     def h(self, value: NDArray) -> None:
         self.__field.pg[0] = value
-        if self.timer is not None:
-            with self.timer("elastic_gradient_update"):
-                self._update_gradients()
-        else:
-            self._update_gradients()
+        self._update_gradients()
 
     @property
     def deformation(self) -> NDArray:
@@ -518,6 +534,36 @@ class Topography:
     def y(self):
         """Cell center y coordinates"""
         return self._y.pg
+
+    def get_coordinates(self, normalized: bool = False) -> Tuple[NDArray, NDArray]:
+        """Get cell-center coordinate grids for defining height profiles.
+
+        This method provides coordinate arrays that work consistently in both
+        serial and parallel execution, enabling scripts to define height profiles
+        independently of the domain decomposition.
+
+        Parameters
+        ----------
+        normalized : bool, optional
+            If False (default), returns physical coordinates in meters.
+            If True, returns coordinates normalized to [0, 1] range (x/Lx, y/Ly).
+
+        Returns
+        -------
+        xx : NDArray
+            X-coordinate grid (local subdomain including ghost cells).
+        yy : NDArray
+            Y-coordinate grid (local subdomain including ghost cells).
+
+        Examples
+        --------
+        >>> xx, yy = topo.get_coordinates()
+        >>> h_new = h_base - amplitude * np.exp(-((xx - x0)**2 + (yy - y0)**2) / sigma**2)
+        >>> topo.set_height_manual(h_new)
+        """
+        if normalized:
+            return self._x.pg / self._Lx, self._y.pg / self._Ly
+        return self._x.pg, self._y.pg
 
 
 class ElasticDeformation:
@@ -566,8 +612,8 @@ class ElasticDeformation:
         local_shape = decomp.local_shape_padded  # (Nx+2, Ny_local+2)
         self.u_prev = np.zeros(local_shape)
 
-        perX = grid['bc_xE_P'][0]
-        perY = grid['bc_yS_P'][0]
+        perX = grid['bc_xE'][0] == 'P'
+        perY = grid['bc_yS'][0] == 'P'
 
         young_effective = E / (1 - v**2)
 
@@ -619,7 +665,7 @@ class ElasticDeformation:
                 fftengine=fftengine
             )
 
-    def get_deformation(self, p: NDArray, timer=None) -> NDArray:
+    def get_deformation(self, p: NDArray) -> NDArray:
         """Calculation of the elastic deformation due to given pressure field p.
         Convention: positive displacement for positive pressure.
 
@@ -628,8 +674,6 @@ class ElasticDeformation:
         p : ndarray
             Pressure array with ghost cells [Pa]. Expected shape includes ghost cells: (Nx+2, Ny+2)
             in serial, or (Nx+2, Ny_local+2) in MPI parallel mode.
-        timer : muGrid.Timer, optional
-            Timer instance for profiling internal operations.
 
         Returns
         -------
@@ -645,27 +689,15 @@ class ElasticDeformation:
         p_fft = np.zeros(fft_shape, dtype=p.dtype)
 
         # Embed into FFT domain (handles MPI redistribution + zero-padding)
-        if timer is not None:
-            with timer("elastic_domain_embed"):
-                self.fft_translation.embed(p_inner, p_fft)
-        else:
-            self.fft_translation.embed(p_inner, p_fft)
+        self.fft_translation.embed(p_inner, p_fft)
 
         # Compute displacement via ContactMechanics
         forces_fft = p_fft * self.area_per_cell
-        if timer is not None:
-            with timer("elastic_fft_disp"):
-                disp_fft = -self.ElDef.evaluate_disp(forces_fft)
-        else:
-            disp_fft = -self.ElDef.evaluate_disp(forces_fft)
+        disp_fft = -self.ElDef.evaluate_disp(forces_fft)
 
         # Extract back to GaPFlow domain
         disp_inner = np.zeros_like(p_inner)
-        if timer is not None:
-            with timer("elastic_domain_extract"):
-                self.fft_translation.extract(disp_fft, disp_inner)
-        else:
-            self.fft_translation.extract(disp_fft, disp_inner)
+        self.fft_translation.extract(disp_fft, disp_inner)
 
         # Pad result back to include ghost cells
         disp = np.zeros_like(p)
@@ -673,22 +705,20 @@ class ElasticDeformation:
 
         return disp
 
-    def get_deformation_underrelax(self, p: NDArray, timer=None) -> NDArray:
+    def get_deformation_underrelax(self, p: NDArray) -> NDArray:
         """Updates elastic deformation using underrelaxation
 
         Parameters
         ----------
         p : ndarray of shape (M, N)
             Pressure field.
-        timer : muGrid.Timer, optional
-            Timer instance for profiling internal operations.
 
         Returns
         -------
         u_relaxed : ndarray of shape (M, N)
             Updated, underrelaxed deformation field.
         """
-        u_computed = self.get_deformation(p, timer)
+        u_computed = self.get_deformation(p)
         u_relaxed = (1 - self.alpha_underrelax) * self.u_prev + self.alpha_underrelax * u_computed
         self.u_prev = u_relaxed.copy()
 

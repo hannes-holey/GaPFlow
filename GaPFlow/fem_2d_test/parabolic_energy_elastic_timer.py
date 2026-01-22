@@ -27,7 +27,7 @@ from GaPFlow.viz.plotting import _plot_sol_from_field_2d  # noqa: E402
 CONFIG_YAML = """
 options:
     output: fem_2d_test/output_elastic_energy
-    write_freq: 5
+    write_freq: 1
     silent: False
 
 grid:
@@ -73,8 +73,8 @@ properties:
 fem_solver:
     type: newton_alpha
     alpha: 0.5
-    linear_solver: direct
-    max_iter: 50
+    linear_solver: iterative
+    max_iter: 30
     dynamic: True
     R_norm_tol: 1e-09
     pressure_stab_alpha: 4500
@@ -158,6 +158,9 @@ def main():
             q_global, pad(pressure),
             pad(tau_xz_bot), pad(tau_xz_top),
             pad(tau_yz_bot), pad(tau_yz_top))
+        plt.show()
+
+        problem.solver.plot_residual_history()
         plt.show()
 
 

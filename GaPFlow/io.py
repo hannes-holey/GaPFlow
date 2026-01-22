@@ -178,57 +178,45 @@ def sanitize_grid(d):
     ndim = int(out['Nx'] > 1) + int(out['Ny'] > 1)
     out['dim'] = ndim
 
-    # x BCs
-    bc_xE = list(d.get('xE', ['P', 'P', 'P']))
-    bc_xW = list(d.get('xW', ['P', 'P', 'P']))
+    # x BCs - store original type lists ['P', 'D', 'N'] per variable
+    out['bc_xW'] = list(d.get('xW', ['P', 'P', 'P']))
+    out['bc_xE'] = list(d.get('xE', ['P', 'P', 'P']))
 
-    assert all([b in ['P', 'N', 'D'] for b in bc_xE])
-    assert all([b in ['P', 'N', 'D'] for b in bc_xW])
+    assert all(b in ['P', 'N', 'D'] for b in out['bc_xW'])
+    assert all(b in ['P', 'N', 'D'] for b in out['bc_xE'])
 
-    out['bc_xE_P'] = [b == 'P' for b in bc_xE]
-    out['bc_xE_D'] = [b == 'D' for b in bc_xE]
-    out['bc_xE_N'] = [b == 'N' for b in bc_xE]
-    out['bc_xW_P'] = [b == 'P' for b in bc_xW]
-    out['bc_xW_D'] = [b == 'D' for b in bc_xW]
-    out['bc_xW_N'] = [b == 'N' for b in bc_xW]
-
-    if any(out['bc_xE_D']):
-        out['bc_xE_D_val'] = d.get('xE_D', 1.)
-        if out['bc_xE_D_val'] is None:
-            raise IOError("Need to specify Dirichlet BC value")
-
-    if any(out['bc_xW_D']):
+    if any(b == 'D' for b in out['bc_xW']):
         out['bc_xW_D_val'] = d.get('xW_D', 1.)
         if out['bc_xW_D_val'] is None:
-            raise IOError("Need to specify Dirichlet BC value")
+            raise IOError("Need to specify Dirichlet BC value for xW")
 
-    assert all([e == w for e, w in zip(out['bc_xE_P'], out['bc_xW_P'])])
+    if any(b == 'D' for b in out['bc_xE']):
+        out['bc_xE_D_val'] = d.get('xE_D', 1.)
+        if out['bc_xE_D_val'] is None:
+            raise IOError("Need to specify Dirichlet BC value for xE")
 
-    # y BCs
-    bc_yS = list(d.get('yS', ['P', 'P', 'P']))
-    bc_yN = list(d.get('yN', ['P', 'P', 'P']))
+    # Periodic BC must be consistent on opposite boundaries
+    assert all((w == 'P') == (e == 'P') for w, e in zip(out['bc_xW'], out['bc_xE']))
 
-    assert all([b in ['P', 'N', 'D'] for b in bc_yS])
-    assert all([b in ['P', 'N', 'D'] for b in bc_yN])
+    # y BCs - store original type lists ['P', 'D', 'N'] per variable
+    out['bc_yS'] = list(d.get('yS', ['P', 'P', 'P']))
+    out['bc_yN'] = list(d.get('yN', ['P', 'P', 'P']))
 
-    out['bc_yS_P'] = [b == 'P' for b in bc_yS]
-    out['bc_yS_D'] = [b == 'D' for b in bc_yS]
-    out['bc_yS_N'] = [b == 'N' for b in bc_yS]
-    out['bc_yN_P'] = [b == 'P' for b in bc_yN]
-    out['bc_yN_D'] = [b == 'D' for b in bc_yN]
-    out['bc_yN_N'] = [b == 'N' for b in bc_yN]
+    assert all(b in ['P', 'N', 'D'] for b in out['bc_yS'])
+    assert all(b in ['P', 'N', 'D'] for b in out['bc_yN'])
 
-    if any(out['bc_yS_D']):
+    if any(b == 'D' for b in out['bc_yS']):
         out['bc_yS_D_val'] = d.get('yS_D', None)
         if out['bc_yS_D_val'] is None:
-            raise IOError("Need to specify Dirichlet BC value")
+            raise IOError("Need to specify Dirichlet BC value for yS")
 
-    if any(out['bc_yN_D']):
+    if any(b == 'D' for b in out['bc_yN']):
         out['bc_yN_D_val'] = d.get('yN_D', None)
         if out['bc_yN_D_val'] is None:
-            raise IOError("Need to specify Dirichlet BC value")
+            raise IOError("Need to specify Dirichlet BC value for yN")
 
-    assert all([s == n for s, n in zip(out['bc_yS_P'], out['bc_yN_P'])])
+    # Periodic BC must be consistent on opposite boundaries
+    assert all((s == 'P') == (n == 'P') for s, n in zip(out['bc_yS'], out['bc_yN']))
 
     print_dict(out)
 

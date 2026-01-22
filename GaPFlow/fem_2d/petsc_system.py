@@ -93,9 +93,16 @@ class PETScSystem:
             self.ksp.setType('bcgs')
             self.ksp.setTolerances(rtol=1e-8, atol=1e-12, max_it=1000)
             pc = self.ksp.getPC()
-            pc.setType('ilu')
-            fill_level = 2 if global_size > self._ILU2_THRESHOLD else 1
-            pc.setFactorLevels(fill_level)
+            if self.comm.getSize() > 1:
+                # Parallel: Block Jacobi with ILU(0) on each block (PETSc default).
+                # For higher fill levels, call ksp.setUp() after first matrix assembly,
+                # then configure sub-KSPs via pc.getBJacobiSubKSP().
+                pc.setType('bjacobi')
+            else:
+                # Serial: ILU with fill level based on problem size
+                fill_level = 2 if global_size > self._ILU2_THRESHOLD else 1
+                pc.setType('ilu')
+                pc.setFactorLevels(fill_level)
         else:
             # MUMPS direct solver (default)
             if self.comm.getRank() == 0:
