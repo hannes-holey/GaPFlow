@@ -294,7 +294,7 @@ def _get_num_fluid_molecules(name, volume, density):
     return Nf, Nf * nC_per_mol
 
 
-def config_fluid(file, Lx, Ly, H, density, buffer=25.):
+def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
     """Calculate an initial molecule grid given the box dimensions and
     adjust the gap height for the initial setup to fit all molecules
     without overlap.
@@ -336,6 +336,17 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25.):
 
     volume = Lx * Ly * H
     num_fluid_mol, num_fluid_atoms = _get_num_fluid_molecules(name, volume, density)
+
+    # In flat sections the achieved density is usually too high
+    # We reduce by 30 molecules (this number might be different for larger systems)
+
+    if flat:
+        sig = (3.92 + 2.63) / 2.
+        dH = sig / 2.
+        excess_vol = Lx * Ly * dH
+        excess_mol, excess_atoms = _get_num_fluid_molecules(name, excess_vol, density)
+        num_fluid_mol -= excess_mol
+        num_fluid_atoms -= excess_atoms
 
     coords = _read_coords_from_lt(file)
     lx, ly, lz = coords.max(0) - coords.min(0)
@@ -390,6 +401,28 @@ def _get_mass_alkane(name):
     mCH4 = 16.3307
 
     return nCH2 * mCH2 + nCH3 * mCH3 + nCH4 * mCH4, np.sum(molecules[name])
+
+
+def _get_effective_params_alkane(name):
+
+    molecules = {'pentane': [3, 2, 0],
+                 'decane': [8, 2, 0],
+                 'hexadecane': [14, 2, 0], }
+
+    assert name in molecules.keys()
+
+    nCH2, nCH3, nCH4 = molecules[name]
+
+    n = nCH2 + nCH3 + nCH4
+
+    # United Atom pseudo particles
+    sigCH2 = 3.95
+    sigCH3 = 3.75
+    sigCH4 = 3.72
+
+    sig = (nCH2 * sigCH2 + nCH3 * sigCH3 + nCH4 * sigCH4) / n
+
+    return sig
 
 
 def write_fluid(name, Nf, mol_grid, slab_size, gap, buffer=25.):
@@ -475,10 +508,11 @@ def write_mixing():
 
 def write_settings(args):
 
-    # FIXME: not hardcoded
-    # effective wall fluid distance / hardcoded for TraPPE / gold
-    # (You slightly miss the target gap height without it)
-    offset = (3.75 + 2.63) / 2.
+    # effective wall fluid distance, hardcoded for TraPPE / gold
+    name = args.get('molecule')
+    sigM = _get_effective_params_alkane(name)
+    sigAu = 2.63
+    offset = (sigM + sigAu) / 2.
 
     density_real = args.get("density")  # g / mol / A^3
     density_SI = density_real / (sci.N_A * 1e-24)
@@ -679,7 +713,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     name = args.get("molecule", "pentane")
     molecule_file = os.path.join(template_dir, f"{name}.lt")
     fluid_grid, num_fluid_mol, num_fluid_atoms, initial_gap = config_fluid(
-        molecule_file, lx, ly, target_gap, target_density, buffer=buffer)
+        molecule_file, lx, ly, target_gap, target_density, buffer=buffer, flat=target_rotation < .1)
 
     # move top wall up
     slab_top.positions += np.array([0., 0., lz + initial_gap])
