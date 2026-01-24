@@ -103,10 +103,11 @@ class ExplicitSolver:
     def print_status_header(self) -> None:
         p = self.problem
 
-        if not p.options['silent']:
+        if p.options['print_progress']:
             print(61 * '-')
             print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
             print(61 * '-')
+        if p.options['save_output']:
             p.write(params=False)
 
     def print_status(self, scalars) -> None:

@@ -213,6 +213,32 @@ R24y= NonLinearTerm(
     d_dy_resfun=False,
     der_testfun=False)
 
+# Body force terms (R25*) - for driving flow with periodic BCs
+# Force per unit mass (like gravity), contributes h*rho*force to momentum
+R25x = NonLinearTerm(
+    name='R25x',
+    description='body force x',
+    res='momentum_x',
+    dep_vars=['rho'],
+    dep_vals=['h', 'force_x'],
+    fun=lambda ctx: lambda rho: ctx['h']() * rho * ctx['force_x'](),
+    der_funs=[lambda ctx: lambda rho: ctx['h']() * ctx['force_x']() * np.ones_like(rho)],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
+R25y = NonLinearTerm(
+    name='R25y',
+    description='body force y',
+    res='momentum_y',
+    dep_vars=['rho'],
+    dep_vals=['h', 'force_y'],
+    fun=lambda ctx: lambda rho: ctx['h']() * rho * ctx['force_y'](),
+    der_funs=[lambda ctx: lambda rho: ctx['h']() * ctx['force_y']() * np.ones_like(rho)],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun=False)
+
 R2Tx = NonLinearTerm(
     name='R2Tx',
     description='time derivative',
@@ -635,7 +661,7 @@ R3Staby = NonLinearTerm(
 
 
 term_list = [R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
-             R21x, R21y, R24x, R24y, R2Tx, R2Ty, R2Stabx, R2Staby,
+             R21x, R21y, R24x, R24y, R25x, R25y, R2Tx, R2Ty, R2Stabx, R2Staby,
              R22xx, R22xxS, R22yx, R22yxS, R22xy, R22xyS, R22yy, R22yyS,  # Convective
              R23xy, R23yx,  # In-plane shear stress
              R31x, R31y, R31Sx, R31Sy, R32x, R32y, R32Sx, R32Sy,

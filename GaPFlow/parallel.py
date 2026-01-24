@@ -29,6 +29,7 @@ from mpi4py import MPI
 import numpy as np
 import numpy.typing as npt
 
+from dataclasses import dataclass
 from functools import cached_property
 
 from typing import TYPE_CHECKING
@@ -50,6 +51,33 @@ except ImportError:
 NDArray = npt.NDArray[np.floating]
 
 
+@dataclass
+class BCContext:
+    """Context object passed to boundary condition callbacks.
+
+    Attributes
+    ----------
+    problem : Problem
+        The GaPFlow Problem instance.
+    required_shape : tuple
+        Required shape of the returned array.
+    ghost_slice : tuple
+        Slice for accessing ghost cells.
+    interior_slice : tuple
+        Slice for accessing adjacent interior cells.
+    x_norm : NDArray
+        Normalized x-coordinates at the boundary (0 to 1).
+    y_norm : NDArray
+        Normalized y-coordinates at the boundary (0 to 1).
+    """
+    problem: 'Problem'
+    required_shape: tuple
+    ghost_slice: tuple
+    interior_slice: tuple
+    x_norm: NDArray
+    y_norm: NDArray
+
+
 class DomainDecomposition:
     """
     Manages domain decomposition for MPI-parallel simulations.
@@ -61,6 +89,8 @@ class DomainDecomposition:
         - Nx, Ny: number of grid points
         - bc_xE, bc_xW, bc_yS, bc_yN: boundary conditions per component
     """
+
+    _BND_TO_KEY = {'W': 'xW', 'E': 'xE', 'S': 'yS', 'N': 'yN'}
 
     def __init__(self, grid: dict):
 
@@ -163,31 +193,43 @@ class DomainDecomposition:
         inner = self.nb_subdomain_grid_pts
         return (inner[0] + 2, inner[1] + 2)
 
-    def local_coordinates_midpoint(self, dx, dy):
-        """Compute cell-center coordinates (xx, yy) for local subdomain.
+    # ---------------------------
+    # Coordinate arrays
+    # ---------------------------
 
-        Note: muGrid's icoordsg uses wrapped/periodic indices for ghost cells,
-        which gives incorrect coordinates for non-periodic topography profiles.
-        This method corrects ghost cell coordinates to proper extrapolated values.
-        """
-        icoords = self.icoordsg
-        xx = icoords[0] * dx + dx / 2.0
-        yy = icoords[1] * dy + dy / 2.0
-
-        # Fix wrapped ghost cell coordinates
-        Lx = self._Nx * dx
-        Ly = self._Ny * dy
-
+    @cached_property
+    def xx(self) -> NDArray:
+        """Cell-center x-coordinates in physical units [m] (2D, with ghosts)."""
+        grid = self.grid
+        dx, Lx = grid['dx'], grid['Lx']
+        xx = self.icoordsg[0] * dx + dx / 2.0
         if self.is_at_xW and not self.periodic_x:
             xx[0, :] = -dx / 2.0
         if self.is_at_xE and not self.periodic_x:
             xx[-1, :] = Lx + dx / 2.0
+        return xx
+
+    @cached_property
+    def yy(self) -> NDArray:
+        """Cell-center y-coordinates in physical units [m] (2D, with ghosts)."""
+        grid = self.grid
+        dy, Ly = grid['dy'], grid['Ly']
+        yy = self.icoordsg[1] * dy + dy / 2.0
         if self.is_at_yS and not self.periodic_y:
             yy[:, 0] = -dy / 2.0
         if self.is_at_yN and not self.periodic_y:
             yy[:, -1] = Ly + dy / 2.0
+        return yy
 
-        return xx, yy
+    @cached_property
+    def xx_norm(self) -> NDArray:
+        """Normalized x-coordinates [0, 1] (2D, with ghosts)."""
+        return self.xx / self.grid['Lx']
+
+    @cached_property
+    def yy_norm(self) -> NDArray:
+        """Normalized y-coordinates [0, 1] (2D, with ghosts)."""
+        return self.yy / self.grid['Ly']
 
     # ---------------------------
     # Boundary ownership detection
@@ -243,14 +285,8 @@ class DomainDecomposition:
 
     @cached_property
     def index_mask_padded_global(self) -> NDArray:
-        """GET global index mask for local padded subdomain shape."""
-        mask = np.zeros(self.local_shape_padded, dtype=int)
-        for x in range(self.local_shape_padded[0]):
-            for y in range(self.local_shape_padded[1]):
-                x_global = self.icoordsg[0][x, y]
-                y_global = self.icoordsg[1][x, y]
-                mask[x, y] = x_global + y_global * self._Nx
-        return mask
+        """Get global index mask for local padded subdomain shape."""
+        return self.icoordsg[0] + self.icoordsg[1] * self._Nx
 
     # ---------------------------
     # Global field gathering
@@ -293,9 +329,56 @@ class DomainDecomposition:
             return global_field
         return None
 
+    def scatter_global(self, global_field: NDArray) -> NDArray:
+        """Scatter global field from rank 0 to local arrays.
+
+        Parameters
+        ----------
+        global_field : NDArray
+            Global field with shape nb_domain_grid_pts. Only needs to be
+            valid on rank 0; other ranks can pass None or empty array.
+
+        Returns
+        -------
+        NDArray
+            Local field with shape local_shape_inner (without ghosts).
+        """
+        comm = self._mpi_comm
+
+        # Gather all locations and sizes
+        all_locs = comm.allgather(self.subdomain_locations)
+        all_sizes = comm.allgather(self.nb_subdomain_grid_pts)
+
+        # Prepare receive buffer
+        local_inner = np.empty(self.local_shape_inner, dtype=np.float64)
+
+        if self.rank == 0:
+            # Send each rank's portion
+            for dest, (loc, sz) in enumerate(zip(all_locs, all_sizes)):
+                chunk = np.ascontiguousarray(
+                    global_field[loc[0]:loc[0] + sz[0], loc[1]:loc[1] + sz[1]])
+                if dest == 0:
+                    local_inner[:] = chunk
+                else:
+                    comm.Send(chunk, dest=dest, tag=0)
+        else:
+            comm.Recv(local_inner, source=0, tag=0)
+
+        return local_inner
+
     # ---------------------------
     # Ghost cell handling
     # ---------------------------
+
+    def communicate_ghosts(self, field) -> None:
+        """Communicate ghost cells between MPI ranks for a single field.
+
+        Parameters
+        ----------
+        field : muGrid RealField
+            The field whose ghost cells should be synchronized.
+        """
+        self._decomp.communicate_ghosts(field)
 
     def communicate_ghost_buffers(self, problem: "Problem") -> None:
         """
@@ -311,9 +394,9 @@ class DomainDecomposition:
             The problem instance containing fields and boundary condition info.
         """
         # Step 1: MPI ghost exchange (applies periodic wrap even in serial)
-        self._decomp.communicate_ghosts(problem.fc.get_real_field('solution'))
+        self.communicate_ghosts(problem.fc.get_real_field('solution'))
         if problem.bEnergy:
-            self._decomp.communicate_ghosts(problem.fc.get_real_field('total_energy'))
+            self.communicate_ghosts(problem.fc.get_real_field('total_energy'))
 
         # Step 2: Apply physical BCs at domain boundaries
         self._apply_solution_bcs(problem)
@@ -341,6 +424,7 @@ class DomainDecomposition:
 
         Only applies BCs if this rank owns the corresponding boundary.
         Iterates through boundaries and variables to apply Dirichlet/Neumann BCs.
+        Supports custom BC callbacks registered via problem.set_bc_function().
         """
         grid = self.grid
         field = problem.q  # shape: (num_vars, Nx_padded, Ny_padded)
@@ -348,14 +432,15 @@ class DomainDecomposition:
         # Check if FEM 2D solver is active (nodal discretization)
         is_nodal = (problem.numerics.get('solver') == 'fem' and grid['dim'] == 2)
 
-        # Map boundary name to grid key prefix
-        bnd_to_key = {'W': 'xW', 'E': 'xE', 'S': 'yS', 'N': 'yN'}
+        # Variable index to name mapping and BC callbacks
+        var_idx_to_name = {0: 'rho', 1: 'jx', 2: 'jy'}
+        bc_callbacks = getattr(problem, '_bc_callbacks', {})
 
         for bnd in ['W', 'E', 'S', 'N']:
             if not self._owns_boundary(bnd):
                 continue
 
-            key = bnd_to_key[bnd]
+            key = self._BND_TO_KEY[bnd]
             bc_types = grid[f'bc_{key}']  # e.g., ['P', 'D', 'N']
 
             # Skip if all periodic (handled by ghost communication)
@@ -367,6 +452,23 @@ class DomainDecomposition:
             for var_idx, bc_type in enumerate(bc_types):
                 if bc_type == 'P':
                     continue
+
+                # Check for BC callback
+                var_name = var_idx_to_name.get(var_idx)
+                callback = bc_callbacks.get(var_name, {}).get(bnd)
+
+                if callback is not None:
+                    # Use callback to compute BC values
+                    required_shape = field[(0,) + ghost].shape
+                    ctx = BCContext(problem, required_shape, ghost, interior,
+                                    self.xx_norm[ghost], self.yy_norm[ghost])
+                    bc_values = callback(ctx)
+                    expected_shape = required_shape
+                    if bc_values.shape != expected_shape:
+                        raise ValueError(
+                            f"BC callback for {var_name}@{bnd}: got shape "
+                            f"{bc_values.shape}, expected {expected_shape}")
+                    field[(var_idx,) + ghost] = bc_values
 
                 elif bc_type == 'D':
                     bc_vals = grid.get(f'bc_{key}_D_val')
@@ -398,14 +500,11 @@ class DomainDecomposition:
         jx = problem.q[1]
         jy = problem.q[2]
 
-        # Map boundary name to grid key prefix
-        bnd_to_key = {'W': 'xW', 'E': 'xE', 'S': 'yS', 'N': 'yN'}
-
         for bnd in ['W', 'E', 'S', 'N']:
             if not self._owns_boundary(bnd):
                 continue
 
-            key = bnd_to_key[bnd]
+            key = self._BND_TO_KEY[bnd]
             bc_types = grid[f'bc_{key}']
 
             # Skip if all periodic

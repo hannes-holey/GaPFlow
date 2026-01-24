@@ -33,8 +33,8 @@ options:
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 50
-    Ny: 50
+    Nx: 100
+    Ny: 100
     xE: ['D', 'N', 'N']
     xW: ['D', 'N', 'N']
     yS: ['D', 'N', 'N']
@@ -67,15 +67,14 @@ properties:
     elastic:
         E: 1e07
         v: 0.3
-        alpha_underrelax: 0.02
-        reference_point: [0, 25]
+        alpha_underrelax: 0.1
+        reference_point: [0, 50]
 
 fem_solver:
     type: newton_alpha
-    alpha: 0.5
+    alpha: 1.0
     linear_solver: iterative
     max_iter: 30
-    dynamic: True
     R_norm_tol: 1e-09
     pressure_stab_alpha: 4500
     momentum_stab_alpha: 25000

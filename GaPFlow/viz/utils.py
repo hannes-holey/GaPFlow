@@ -30,9 +30,6 @@ import matplotlib.pyplot as plt
 from functools import wraps
 from IPython import get_ipython
 
-from ..topography import create_midpoint_grid
-
-
 def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
 
     folders = []
@@ -72,11 +69,10 @@ def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
     return files
 
 
-def _get_centerline_coords(nx, ny, disc=None):
-    if disc is not None:
-        xx, yy = create_midpoint_grid(disc)
-        x = xx[1:-1, ny // 2]
-        y = yy[nx // 2, 1:-1]
+def _get_centerline_coords(nx, ny, decomp=None):
+    if decomp is not None:
+        x = decomp.xx[1:-1, ny // 2]
+        y = decomp.yy[nx // 2, 1:-1]
     else:
         x = np.arange(nx - 2) / (nx - 2)
         x += x[0] / 2.

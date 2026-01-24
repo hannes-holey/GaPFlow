@@ -50,6 +50,7 @@ BASE_FIELDS = {
     'tau_mass',
     'tau_mom',
     'u_mag',
+    'force_x', 'force_y',  # Body force components
 }
 
 STRESS_XZ_FIELDS = {
@@ -301,6 +302,12 @@ class QuadFieldManager:
                      'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy']:
             self.quad_fields[name].pg[s] = apply(
                 getattr(p.wall_stress_yz, name), *args_yz)
+
+        # Body force (constant fields from properties, default 0)
+        force_x = p.prop.get('force_x', 0.0)
+        force_y = p.prop.get('force_y', 0.0)
+        self.quad_fields['force_x'].pg[s] = np.full_like(q('rho'), force_x)
+        self.quad_fields['force_y'].pg[s] = np.full_like(q('rho'), force_y)
 
         if self.energy:
             # Temperature

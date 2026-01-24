@@ -787,7 +787,7 @@ class FEMSolver2D:
                     if p.decomp.rank == 0:
                         self.R_norm_history[-1].append(R_norm)
 
-                    if R_norm < tol:
+                    if (R_norm < tol) and it > 0:
                         break
 
                     # Scale system for better conditioning
@@ -824,16 +824,17 @@ class FEMSolver2D:
     def print_status_header(self) -> None:
         """Print header for simulation status output."""
         p = self.problem
-        if not p.options['silent'] and p.decomp.rank == 0:
+        if p.options['print_progress'] and p.decomp.rank == 0:
             print(75 * '-')
             print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Iter':<6s} {'Conv. Time':<12s} {'Residual':<12s}")
             print(75 * '-')
+        if p.options['save_output']:
             p.write(params=False)
 
     def print_status(self, scalars=None) -> None:
         """Print status line for simulation."""
         p = self.problem
-        if not p.options['silent'] and p.decomp.rank == 0:
+        if p.options['print_progress'] and p.decomp.rank == 0:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
                   f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
 

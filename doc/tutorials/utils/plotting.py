@@ -494,3 +494,130 @@ def plot_3d_snapshot(x_vec, y_vec, T_field, Lx=1.0, Ly=1.0,
     fig.colorbar(surf, ax=ax, shrink=0.5, aspect=10, label='Temperature [K]')
 
     return fig, ax
+
+
+def plot_lid_driven_cavity(problem, title=None):
+    """Create comprehensive visualization of lid-driven cavity flow.
+
+    Parameters
+    ----------
+    problem : Problem
+        GaPFlow Problem instance after simulation
+    title : str, optional
+        Override for the figure title
+
+    Returns
+    -------
+    fig : Figure
+        Matplotlib figure object
+    """
+    # Extract fields (interior only, no ghost cells)
+    rho = problem.q[0][1:-1, 1:-1]
+    jx = problem.q[1][1:-1, 1:-1]
+    jy = problem.q[2][1:-1, 1:-1]
+
+    vx = jx / rho
+    vy = jy / rho
+    v_mag = np.sqrt(vx**2 + vy**2)
+
+    # Pressure from EOS: P = P0 + (rho - rho0) / alpha
+    P0 = problem.prop['P0']
+    rho0 = problem.prop['rho0']
+    alpha = problem.prop['alpha']
+    pressure = P0 + (rho - rho0) / alpha
+
+    # Grid
+    Lx, Ly = problem.grid['Lx'], problem.grid['Ly']
+    Nx, Ny = problem.grid['Nx'], problem.grid['Ny']
+    dx, dy = problem.grid['dx'], problem.grid['dy']
+
+    x = np.linspace(dx/2, Lx - dx/2, Nx)
+    y = np.linspace(dy/2, Ly - dy/2, Ny)
+    X, Y = np.meshgrid(x, y, indexing='ij')
+
+    # Create figure
+    fig = plt.figure(figsize=(12, 8), facecolor='white', constrained_layout=True)
+
+    # 1. Pressure field with streamlines
+    ax1 = fig.add_subplot(2, 3, 1)
+    im1 = ax1.pcolormesh(X, Y, pressure, cmap='RdBu_r', shading='auto')
+    n_start = 5
+    start_x = np.linspace(0.2, 0.8, n_start)
+    start_y = np.linspace(0.2, 0.8, n_start)
+    start_pts = np.array([[sx, sy] for sx in start_x for sy in start_y])
+    ax1.streamplot(x, y, vx.T, vy.T, color='k', linewidth=0.6, density=0.6,
+                   arrowsize=0.8, start_points=start_pts)
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_title('Pressure + Streamlines')
+    ax1.set_aspect('equal')
+    plt.colorbar(im1, ax=ax1, label='P', shrink=0.7)
+
+    # 2. Velocity magnitude with quiver
+    ax2 = fig.add_subplot(2, 3, 2)
+    im2 = ax2.pcolormesh(X, Y, v_mag, cmap='viridis', shading='auto')
+    skip = 3
+    v_mag_sub = v_mag[::skip, ::skip]
+    vx_norm = np.where(v_mag_sub > 0, vx[::skip, ::skip] / v_mag_sub, 0)
+    vy_norm = np.where(v_mag_sub > 0, vy[::skip, ::skip] / v_mag_sub, 0)
+    ax2.quiver(X[::skip, ::skip], Y[::skip, ::skip], vx_norm, vy_norm,
+               color='white', alpha=0.9, scale=25, width=0.003)
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('y')
+    ax2.set_title('Velocity Magnitude + Arrows')
+    ax2.set_aspect('equal')
+    plt.colorbar(im2, ax=ax2, label='|v|', shrink=0.7)
+
+    # 3. Density field
+    ax3 = fig.add_subplot(2, 3, 3)
+    im3 = ax3.pcolormesh(X, Y, rho, cmap='plasma', shading='auto')
+    ax3.set_xlabel('x')
+    ax3.set_ylabel('y')
+    ax3.set_title('Density')
+    ax3.set_aspect('equal')
+    plt.colorbar(im3, ax=ax3, label=r'$\rho$', shrink=0.7)
+
+    # 4. x-momentum (jx)
+    ax4 = fig.add_subplot(2, 3, 4)
+    vmax = np.abs(jx).max()
+    im4 = ax4.pcolormesh(X, Y, jx, cmap='RdBu_r', shading='auto',
+                          vmin=-vmax, vmax=vmax)
+    ax4.set_xlabel('x')
+    ax4.set_ylabel('y')
+    ax4.set_title(r'x-Momentum $j_x$')
+    ax4.set_aspect('equal')
+    plt.colorbar(im4, ax=ax4, label=r'$j_x$', shrink=0.7)
+
+    # 5. y-momentum (jy)
+    ax5 = fig.add_subplot(2, 3, 5)
+    vmax = np.abs(jy).max()
+    im5 = ax5.pcolormesh(X, Y, jy, cmap='RdBu_r', shading='auto',
+                          vmin=-vmax, vmax=vmax)
+    ax5.set_xlabel('x')
+    ax5.set_ylabel('y')
+    ax5.set_title(r'y-Momentum $j_y$')
+    ax5.set_aspect('equal')
+    plt.colorbar(im5, ax=ax5, label=r'$j_y$', shrink=0.7)
+
+    # 6. Vorticity
+    ax6 = fig.add_subplot(2, 3, 6)
+    dvx_dy = np.gradient(vx, dy, axis=1)
+    dvy_dx = np.gradient(vy, dx, axis=0)
+    vorticity = dvx_dy - dvy_dx
+    vmax_vort = np.abs(vorticity).max()
+    im6 = ax6.pcolormesh(X, Y, vorticity, cmap='RdBu_r', shading='auto',
+                          vmin=-vmax_vort, vmax=vmax_vort)
+    ax6.set_xlabel('x')
+    ax6.set_ylabel('y')
+    ax6.set_title(r'Vorticity $\omega$')
+    ax6.set_aspect('equal')
+    plt.colorbar(im6, ax=ax6, label=r'$\omega$', shrink=0.7)
+
+    # Title
+    U_lid = problem.grid['bc_yN_D_val'][1]
+    Re = rho0 * U_lid * Lx / problem.prop['shear']
+    if title is None:
+        title = f'Lid-Driven Cavity Flow (Re = {Re:.0f})'
+    fig.suptitle(title, fontsize=14, fontweight='bold')
+
+    return fig

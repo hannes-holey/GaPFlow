@@ -26,7 +26,6 @@ import os
 import io
 import signal
 import numpy as np
-from copy import deepcopy
 from collections import deque
 from datetime import datetime
 from muGrid import FileIONetCDF, OpenMode
@@ -45,6 +44,7 @@ from . import __version__
 from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
+from .analysis import compute_metrics, print_metrics, create_overview_plot
 from .models import WallStress, BulkStress, Pressure, Energy, Viscosity
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
@@ -124,6 +124,9 @@ class Problem:
         # Callback functions called after each time step
         self._callbacks = []
 
+        # BC callback functions: {var_name: {boundary: callback}}
+        self._bc_callbacks = {}
+
         # Initialize solver
         if self.numerics['solver'] == 'explicit':
             from .solver_explicit import ExplicitSolver
@@ -171,14 +174,15 @@ class Problem:
             self.energy = Energy(self.fc, energy_spec, grid)
             self.energy.initialize()
 
-        # I/O
-        if not self.options['silent']:
-
+        # I/O - create output directory if saving data or plots
+        if self.options['save_output'] or self.options['output_plots']:
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])
+
+        # Data files only when save_output is enabled
+        if self.options['save_output']:
 
             if database is not None:
                 # Set training path inside output path
-                # if database.overwrite_training_path:
                 database.set_training_path(os.path.join(self.outdir, 'train'),
                                            check_temporary=True)
 
@@ -217,11 +221,9 @@ class Problem:
 
             if gpx is not None:
                 field_names.append('wall_stress_xz_var')
-
             if gpy is not None:
                 field_names.append('wall_stress_yz_var')
-
-            if gpz:
+            if gpz is not None:
                 field_names.append('pressure_var')
 
             self.file.register_field_collection(self.fc, field_names=field_names)
@@ -433,8 +435,11 @@ class Problem:
         while not self.converged and self.step < self.numerics['max_it'] and not self._stop:
             self.update()
 
-            if self.step % self.options['write_freq'] == 0 and not self.options['silent']:
-                self.write()
+            if self.step % self.options['write_freq'] == 0:
+                if self.options['print_progress']:
+                    self.solver.print_status(True)
+                if self.options['save_output']:
+                    self.write(scalars=False)
 
             _handle_signals(self._receive_signal)
 
@@ -454,7 +459,7 @@ class Problem:
         self.wall_stress_xz.init()
         self.wall_stress_yz.init()
 
-        if not self.options['silent']:
+        if self.options['save_output']:
             self.pressure.write()
             self.wall_stress_xz.write()
             self.wall_stress_yz.write()
@@ -479,13 +484,23 @@ class Problem:
         """
         Finalize run: write history, print timing and GP timing info.
         """
+        # Print metrics if requested
+        if self.options.get('print_metrics', False):
+            from mpi4py import MPI
+            metrics = compute_metrics(self)
+            print_metrics(metrics, MPI.COMM_WORLD)
+
+        # Output overview plot if requested
+        if self.options.get('output_plots', False):
+            plot_path = os.path.join(self.outdir, 'overview.png')
+            create_overview_plot(self, plot_path)
 
         walltime = datetime.now() - self._tic
 
-        if self.step % self.options['write_freq'] != 0 and not self.options['silent']:
-            self.write()
+        if self.step % self.options['write_freq'] != 0 and self.options['save_output']:
+            self.write(scalars=False)
 
-        if not self.options['silent']:
+        if self.options['save_output']:
             self.file.close()  # need to be closed to be readable when animating from problem
             if self.prop['elastic']['enabled']:
                 self.topofile.close()
@@ -493,7 +508,7 @@ class Problem:
         speed = self.step / walltime.total_seconds()
 
         # Print runtime (only on rank 0)
-        if self.decomp.rank == 0:
+        if self.decomp.rank == 0 and self.options['print_progress']:
             print(33 * '=')
             print("Total walltime   : ", str(walltime).split('.')[0])
             print(f"({speed:.2f} steps/s)")
@@ -510,7 +525,7 @@ class Problem:
 
             print(33 * '=')
 
-        if not self.options['silent']:
+        if self.options['save_output']:
             history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
 
             if self.pressure.is_gp_model:
@@ -542,6 +557,29 @@ class Problem:
         """
         self._callbacks.append(fun)
 
+    def set_bc_function(self, var_name: str, boundary: str, callback: callable) -> None:
+        """Register a BC callback for a variable at a boundary.
+
+        The callback is invoked during BC application, after standard BCs for
+        earlier variables are applied (rho before jx/jy). This allows callbacks
+        for jx/jy to use updated rho ghost values.
+
+        Parameters
+        ----------
+        var_name : str
+            Variable: 'rho', 'jx', or 'jy'
+        boundary : str
+            Boundary: 'W', 'E', 'S', or 'N'
+        callback : callable
+            Function: callback(problem, boundary, ghost_slice, interior_slice) -> np.ndarray
+            Returns array with shape matching problem.q[var][ghost_slice].
+        """
+        if var_name not in {'rho', 'jx', 'jy'}:
+            raise ValueError(f"var_name must be 'rho', 'jx', or 'jy', got '{var_name}'")
+        if boundary not in {'W', 'E', 'S', 'N'}:
+            raise ValueError(f"boundary must be 'W', 'E', 'S', or 'N', got '{boundary}'")
+        self._bc_callbacks.setdefault(var_name, {})[boundary] = callback
+
     # ---------------------------
     # Single time step (update)
     # ---------------------------
@@ -564,7 +602,7 @@ class Problem:
         E_kin_old = self.kinetic_energy_old
         self.residual = abs(self.kinetic_energy - E_kin_old) / (E_kin_old + 1e-12) / self.cfl
         self.residual_buffer.append(self.residual)
-        self.kinetic_energy_old = deepcopy(self.kinetic_energy)
+        self.kinetic_energy_old = self.kinetic_energy
 
         self.step += 1
         self.simtime += self.dt
@@ -648,7 +686,7 @@ class Problem:
         self.__field.pg[1] = rho0 * U / 2.0
         self.__field.pg[2] = rho0 * V / 2.0
 
-        self.kinetic_energy_old = deepcopy(self.kinetic_energy)
+        self.kinetic_energy_old = self.kinetic_energy
 
     # ---------------------------
     # Ghost cell handling
@@ -758,8 +796,8 @@ class Problem:
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")
 
-        if self.options['silent']:
-            raise RuntimeError("Cannot animate in silent mode.")
+        if not self.options['save_output']:
+            raise RuntimeError("Cannot animate without saved output (save_output=False).")
 
         filename_sol = os.path.join(self.outdir, 'sol.nc')
         filename_topo = os.path.join(self.outdir, 'topo.nc')

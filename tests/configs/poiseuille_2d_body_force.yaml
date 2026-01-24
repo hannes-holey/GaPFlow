@@ -1,0 +1,76 @@
+# 2D Poiseuille Flow Validation
+# Body force driven flow with periodic x, no-slip y walls
+# Tests in-plane viscous diffusion (R23xy, R23yx) without wall stress terms
+
+grid:
+    Lx: 0.5
+    Ly: 0.25
+    Nx: 20
+    Ny: 50
+    xW: ['P', 'P', 'P']       # Periodic west
+    xE: ['P', 'P', 'P']       # Periodic east
+    yS: ['N', 'D', 'D']       # South wall: Neumann rho, Dirichlet jx=jy=0
+    yN: ['N', 'D', 'D']       # North wall: Neumann rho, Dirichlet jx=jy=0
+    yS_D: 0.0
+    yN_D: 0.0
+
+geometry:
+    type: inclined
+    hmin: 1.0
+    hmax: 1.0
+    U: 0.0
+    V: 0.0
+
+numerics:
+    solver: fem
+    dt: 0.01
+    tol: 1e-10
+    max_it: 1000
+
+properties:
+    EOS: PL
+    rho0: 1.0
+    P0: 1.0
+    shear: 0.1
+    bulk: 0.
+    alpha: 1e-8
+    force_x: 1.0              # Body force in x (drives flow)
+    force_y: 0.0
+
+fem_solver:
+    type: newton_alpha
+    dynamic: True
+    alpha: 1.0
+    R_norm_tol: 1e-8
+    linear_solver: direct
+    pressure_stab_alpha: 0.1
+    momentum_stab_alpha: 1.0
+    max_iter: 20
+    equations:
+        energy: False
+        term_list:
+            # Mass equation
+            - R11x
+            - R11y
+            - R1T
+            - R1Stabx
+            - R1Staby
+            # Momentum - pressure gradient
+            - R21x
+            - R21y
+            # Momentum - in-plane viscous diffusion (KEY for 2D Poiseuille)
+            - R23xy
+            - R23yx
+            # Momentum - body force (drives the flow)
+            - R25x
+            # Momentum - time derivative and stabilization
+            - R2Tx
+            - R2Ty
+            - R2Stabx
+            - R2Staby
+            # NOTE: R24x, R24y (wall stress) are EXCLUDED
+
+options:
+    output: /tmp/poiseuille_2d_test
+    write_freq: 100
+    silent: True

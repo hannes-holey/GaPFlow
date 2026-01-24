@@ -142,7 +142,23 @@ def sanitize_options(d):
     out['output'] = str(d.get('output', 'example'))
     out['write_freq'] = int(d.get('write_freq', 1000))
     out['use_tstamp'] = bool(d.get('use_tstamp', True))
-    out['silent'] = bool(d.get('silent', False))
+
+    # Handle backward compatibility: 'silent' maps to save_output=False, print_progress=False
+    if 'silent' in d:
+        silent = bool(d['silent'])
+        out['save_output'] = bool(d.get('save_output', not silent))
+        out['print_progress'] = bool(d.get('print_progress', not silent))
+    else:
+        out['save_output'] = bool(d.get('save_output', True))
+        out['print_progress'] = bool(d.get('print_progress', True))
+
+    # Handle backward compatibility: 'output_metrics' -> 'print_metrics'
+    if 'output_metrics' in d and 'print_metrics' not in d:
+        out['print_metrics'] = bool(d['output_metrics'])
+    else:
+        out['print_metrics'] = bool(d.get('print_metrics', False))
+
+    out['output_plots'] = bool(d.get('output_plots', False))
 
     print_dict(out)
 
@@ -185,13 +201,16 @@ def sanitize_grid(d):
     assert all(b in ['P', 'N', 'D'] for b in out['bc_xW'])
     assert all(b in ['P', 'N', 'D'] for b in out['bc_xE'])
 
+    # Dirichlet BC values: float | list[float]
+    # - scalar: applies uniformly to all variables
+    # - list: sets value per variable [rho, rho*u, rho*v]
     if any(b == 'D' for b in out['bc_xW']):
-        out['bc_xW_D_val'] = d.get('xW_D', 1.)
+        out['bc_xW_D_val']: float | list[float] = d.get('xW_D', 1.)
         if out['bc_xW_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value for xW")
 
     if any(b == 'D' for b in out['bc_xE']):
-        out['bc_xE_D_val'] = d.get('xE_D', 1.)
+        out['bc_xE_D_val']: float | list[float] = d.get('xE_D', 1.)
         if out['bc_xE_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value for xE")
 
@@ -205,13 +224,14 @@ def sanitize_grid(d):
     assert all(b in ['P', 'N', 'D'] for b in out['bc_yS'])
     assert all(b in ['P', 'N', 'D'] for b in out['bc_yN'])
 
+    # Dirichlet BC values: float | list[float] (see comment above)
     if any(b == 'D' for b in out['bc_yS']):
-        out['bc_yS_D_val'] = d.get('yS_D', None)
+        out['bc_yS_D_val']: float | list[float] = d.get('yS_D', None)
         if out['bc_yS_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value for yS")
 
     if any(b == 'D' for b in out['bc_yN']):
-        out['bc_yN_D_val'] = d.get('yN_D', None)
+        out['bc_yN_D_val']: float | list[float] = d.get('yN_D', None)
         if out['bc_yN_D_val'] is None:
             raise IOError("Need to specify Dirichlet BC value for yN")
 
@@ -279,6 +299,10 @@ def sanitize_properties(d):
     out['bulk'] = float(d.get('bulk', -1.))
     if out['shear'] < 0.:
         raise IOError("Specify a a (non-negative) bulk viscosity")
+
+    # Body force (for periodic BC simulations)
+    out['force_x'] = float(d.get('force_x', 0.0))
+    out['force_y'] = float(d.get('force_y', 0.0))
 
     # EOS
     available_eos = ['DH', 'PL', 'vdW', 'MT', 'cubic', 'BWR', 'Bayada', 'MD']
@@ -471,7 +495,7 @@ def sanitize_fem_solver(d):
     out['tau_mode'] = str(d.get('tau_mode', 'physics'))  # 'physics' or 'constant'
     out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 1000.))
     out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 10000.))
-    out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 10000.))
+    out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 100000000.))
 
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))

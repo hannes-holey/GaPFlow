@@ -12,6 +12,7 @@ from .plotting import (
     animate_3d_surface,
     animate_3d_advection,
     plot_3d_snapshot,
+    plot_lid_driven_cavity,
 )
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     'animate_3d_surface',
     'animate_3d_advection',
     'plot_3d_snapshot',
+    'plot_lid_driven_cavity',
 ]

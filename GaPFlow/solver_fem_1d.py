@@ -824,13 +824,14 @@ class FEMSolver1D:
 
     def print_status_header(self) -> None:
         p = self.problem
-        if not p.options['silent'] and self.dynamic:
+        if p.options['print_progress'] and self.dynamic:
             print(61 * '-')
             print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} {'Convergence Time':<18s} {'Residual':<12s}")
             print(61 * '-')
+        if p.options['save_output']:
             p.write(params=False)
 
     def print_status(self, scalars=None) -> None:
         p = self.problem
-        if not p.options['silent'] and self.dynamic:
+        if p.options['print_progress'] and self.dynamic:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.time_inner:<18.4e} {p.residual:<12.4e}")

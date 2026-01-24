@@ -96,7 +96,7 @@ def test_shear_wave_decay(setup, n):
     kn = n * 2. * np.pi / Lx
     tau = h**2 / (6 * kin_visc)
 
-    x = problem.topo.x[1:-1, 1]
+    x = problem.topo.xx[1:-1, 1]
 
     problem.q[2, 1:-1, :] = np.sin(kn * x)[:, None]
     problem.kinetic_energy_old = problem.kinetic_energy
@@ -124,7 +124,7 @@ def test_sound_wave_decay(setup, n):
     tau = h**2 / (6 * kin_visc)
     cT = problem.pressure.v_sound
 
-    x = problem.topo.x[1:-1, 1]
+    x = problem.topo.xx[1:-1, 1]
     problem.q[1, 1:-1, :] = np.sin(kn * x)[:, None]
     problem.kinetic_energy_old = problem.kinetic_energy
 

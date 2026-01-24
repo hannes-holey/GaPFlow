@@ -42,36 +42,16 @@ from ContactMechanics.FFTElasticHalfSpace import (
 NDArray = npt.NDArray[np.floating]
 
 
-def create_midpoint_grid(grid: dict, decomp: DomainDecomposition) -> Tuple[NDArray, NDArray]:
-    """Create cell-center coordinate arrays (xx, yy) for the grid.
-
-    Parameters
-    ----------
-    grid : dict
-        Grid configuration with 'dx' and 'dy' keys.
-    decomp : DomainDecomposition
-        Domain decomposition instance for MPI-aware coordinate generation.
-
-    Returns
-    -------
-    xx : NDArray
-        X-coordinate grid (local subdomain including ghost cells).
-    yy : NDArray
-        Y-coordinate grid (local subdomain including ghost cells).
-    """
-    return decomp.local_coordinates_midpoint(grid['dx'], grid['dy'])
-
-
 def journal_bearing(xx, grid, geo):
 
     Lx = grid['Lx']
     freq = 2. * np.pi / Lx
 
-    if 'CR' and 'eps' in geo.keys():
+    if 'CR' in geo and 'eps' in geo:
         shift = geo['CR'] / freq
         amp = geo['eps'] * shift
 
-    elif 'hmin' and 'hmax' in geo.keys():
+    elif 'hmin' in geo and 'hmax' in geo:
         amp = (geo['hmax'] - geo['hmin']) / 2.
         shift = (geo['hmax'] + geo['hmin']) / 2.
 
@@ -250,26 +230,14 @@ class Topography:
         decomp : DomainDecomposition
             Domain decomposition for MPI-parallel coordinate creation.
         """
-
-        xx, yy = create_midpoint_grid(grid, decomp)
-
-        self.__field = Field(fc.get_real_field('topography'))
-        self._x = Field(fc.get_real_field('x'))
-        self._y = Field(fc.get_real_field('y'))
-
-        self._x.pg[:] = xx
-        self._y.pg[:] = yy
+        self._decomp = decomp
+        self._topo_field = fc.get_real_field('topography')
+        self.__field = Field(self._topo_field)
 
         self.dx = grid['dx']
         self.dy = grid['dy']
-        self._Lx = grid['Lx']
-        self._Ly = grid['Ly']
 
-        # Store for MPI communication
-        self._decomp = decomp
-        self._topo_field = fc.get_real_field('topography')
-
-        # TODO: height profiles via callable passed to topography (next to implemented ones)
+        xx, yy = decomp.xx, decomp.yy
 
         # 1D profiles
         if geo['type'] == 'journal':
@@ -338,42 +306,49 @@ class Topography:
                 deformation = self._calc_deformation(p)
             self.deformation = deformation
             self.h = self.h_undeformed + deformation
-        else:
-            pass
 
     def _calc_deformation(self, p):
         """Calculate elastic deformation from pressure field."""
         return self.ElasticDeformation.get_deformation_underrelax(p)
 
-    def set_height_manual(self, height_field: NDArray) -> None:
-        """Set the height field manually from external source (e.g., a callback).
+    def set_mapped_height(self, h_arr: NDArray) -> None:
+        """Set height from local array computed via coordinate mapping.
 
-        This is the recommended API for dynamically modifying topography during
-        simulation, such as when introducing obstacles via callback functions.
+        Use this when computing height from a function of coordinates, e.g.:
+            h_new = f(problem.topo.xx, problem.topo.yy, t)
+            problem.topo.set_mapped_height(h_new)
 
         Parameters
         ----------
-        height_field : NDArray
-            New height field array. Must match the shape of the existing height
-            field (including ghost cells).
-
-        Notes
-        -----
-        - If elastic deformation is disabled: Sets `h` directly and updates gradients.
-        - If elastic deformation is enabled: Sets `h_undeformed` (the rigid base
-          topography) and updates `h = h_undeformed + deformation` to maintain
-          consistency. The elastic solver will recompute deformation on the next
-          `update()` call based on the new geometry.
+        h_arr : NDArray
+            Height array with shape `local_shape` (includes ghost cells).
         """
         if self.elastic:
-            # Update the undeformed (rigid) base topography
-            self.h_undeformed = height_field.copy()
-            # Update h to maintain h = h_undeformed + deformation
-            # This triggers _update_gradients via the h.setter
+            self.h_undeformed = h_arr.copy()
             self.h = self.h_undeformed + self.deformation
         else:
-            # Directly set h, which triggers gradient update
-            self.h = height_field
+            self.h = h_arr
+
+    def set_global_height(self, h_global: NDArray) -> None:
+        """Set height from global array (distributed to processes in parallel).
+
+        Use this when loading height from a dataset, e.g.:
+            h_data = np.loadtxt('topography.txt')
+            problem.topo.set_global_height(h_data)
+
+        Parameters
+        ----------
+        h_global : NDArray
+            Height array with shape `global_shape` (Nx, Ny), without ghost cells.
+            Only needs to be valid on rank 0; other ranks can pass None.
+        """
+        h_inner = self._decomp.scatter_global(h_global)
+
+        # Pad with ghost cells
+        h_local = np.zeros(self.local_shape)
+        h_local[1:-1, 1:-1] = h_inner
+
+        self.set_mapped_height(h_local)
 
     def _parse_reference_point(self, ref_cfg, grid: dict) -> tuple:
         """Convert reference_point config to (owns, local_i, local_j).
@@ -456,7 +431,7 @@ class Topography:
         d = self._decomp
 
         # 1. Sync h ghost cells from MPI neighbors
-        d._decomp.communicate_ghosts(self._topo_field)
+        d.communicate_ghosts(self._topo_field)
 
         # 2. At domain boundaries: linear extrapolation of h (overrides periodic wrap)
         if d.is_at_xW and not d.periodic_x:
@@ -469,15 +444,13 @@ class Topography:
             self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
 
         # 3. Compute gradients on inner points (ghost h is now correct)
-        self.dh_dx[:] = 0.0
-        self.dh_dy[:] = 0.0
         self.dh_dx[1:-1, 1:-1] = (self.h[2:, 1:-1] - self.h[:-2, 1:-1]) / (2 * self.dx)
         self.dh_dy[1:-1, 1:-1] = (self.h[1:-1, 2:] - self.h[1:-1, :-2]) / (2 * self.dy)
 
         # 4. Sync gradient ghost cells from MPI neighbors
-        d._decomp.communicate_ghosts(self._topo_field)
+        d.communicate_ghosts(self._topo_field)
 
-        # 5. At domain boundaries: copy gradient from first inner line
+        # 5. At domain boundaries: copy gradient from first inner line (overrides periodic wrap)
         if d.is_at_xW and not d.periodic_x:
             self.dh_dx[0, :] = self.dh_dx[1, :]
             self.dh_dy[0, :] = self.dh_dy[1, :]
@@ -525,45 +498,39 @@ class Topography:
         """Height gradient field (∂h/∂y)"""
         return self.__field.pg[2]
 
-    @property
-    def x(self):
-        """Cell center x coordinates"""
-        return self._x.pg
+    # ---------------------------
+    # Coordinate and shape properties (forwarded from decomp)
+    # ---------------------------
 
     @property
-    def y(self):
-        """Cell center y coordinates"""
-        return self._y.pg
+    def xx(self) -> NDArray:
+        """Cell-center x-coordinates in physical units [m] (2D, with ghosts)."""
+        return self._decomp.xx
 
-    def get_coordinates(self, normalized: bool = False) -> Tuple[NDArray, NDArray]:
-        """Get cell-center coordinate grids for defining height profiles.
+    @property
+    def yy(self) -> NDArray:
+        """Cell-center y-coordinates in physical units [m] (2D, with ghosts)."""
+        return self._decomp.yy
 
-        This method provides coordinate arrays that work consistently in both
-        serial and parallel execution, enabling scripts to define height profiles
-        independently of the domain decomposition.
+    @property
+    def xx_norm(self) -> NDArray:
+        """Normalized x-coordinates [0, 1] (2D, with ghosts)."""
+        return self._decomp.xx_norm
 
-        Parameters
-        ----------
-        normalized : bool, optional
-            If False (default), returns physical coordinates in meters.
-            If True, returns coordinates normalized to [0, 1] range (x/Lx, y/Ly).
+    @property
+    def yy_norm(self) -> NDArray:
+        """Normalized y-coordinates [0, 1] (2D, with ghosts)."""
+        return self._decomp.yy_norm
 
-        Returns
-        -------
-        xx : NDArray
-            X-coordinate grid (local subdomain including ghost cells).
-        yy : NDArray
-            Y-coordinate grid (local subdomain including ghost cells).
+    @property
+    def local_shape(self) -> tuple:
+        """Local array shape (with ghosts)."""
+        return self._decomp.local_shape_padded
 
-        Examples
-        --------
-        >>> xx, yy = topo.get_coordinates()
-        >>> h_new = h_base - amplitude * np.exp(-((xx - x0)**2 + (yy - y0)**2) / sigma**2)
-        >>> topo.set_height_manual(h_new)
-        """
-        if normalized:
-            return self._x.pg / self._Lx, self._y.pg / self._Ly
-        return self._x.pg, self._y.pg
+    @property
+    def global_shape(self) -> tuple:
+        """Global array shape (Nx, Ny)."""
+        return self._decomp.nb_domain_grid_pts
 
 
 class ElasticDeformation:
