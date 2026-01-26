@@ -1,0 +1,84 @@
+# Bernoulli Quasi-1D Flow Test Configuration
+#
+# Tests incompressible Bernoulli flow through a converging channel.
+# With h_inlet = 2 * h_outlet, Bernoulli predicts:
+#   - Velocity doubles: v_outlet = 2 * v_inlet
+#   - Pressure drop: Δp = 0.5 * ρ * (v_outlet² - v_inlet²) = 1500 Pa
+#
+# Boundary conditions:
+#   - Inlet: Fixed mass flux (Dirichlet jx), free density (Neumann ρ)
+#   - Outlet: Fixed density/pressure (Dirichlet ρ), free flux (Neumann jx)
+#   - Y-direction: Periodic (quasi-1D)
+
+grid:
+    Lx: 0.1
+    Ly: 0.005
+    Nx: 200
+    Ny: 4
+    xW: ['D', 'N', 'N']
+    xW_D: [1000.0, 0.0, 0.0]
+    xE: ['N', 'D', 'D']
+    xE_D: [0., 5000.0, 0.0]
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+
+geometry:
+    type: inclined
+    hmin: 0.0005
+    hmax: 0.001
+    U: 0.0
+    V: 0.0
+
+numerics:
+    solver: fem
+    dt: 1.0e-5
+    tol: 1.0e-10
+    max_it: 50
+
+properties:
+    shear: 0.1894
+    bulk: 0.
+    EOS: DH
+    P0: 101325.
+    rho0: 1000.
+    T0: 323.15
+    C1: 3.5e12
+    C2: 1.23
+
+fem_solver:
+    type: newton_alpha
+    alpha: 0.8
+    R_norm_tol: 1.0e-10
+    linear_solver: iterative
+    max_iter: 5
+    pressure_stab_alpha: 100000
+    momentum_stab_alpha: 2000
+    equations:
+        energy: False
+        term_list:
+            - R11x
+            - R11y
+            - R1T
+            - R1Stabx
+            - R1Staby
+            - R11Sx
+            - R11Sy
+            - R21x
+            - R21y
+            - R22xx
+            - R22xxS
+            - R22yx
+            - R22yxS
+            - R22xy
+            - R22xyS
+            - R22yy
+            - R22yyS
+            - R2Tx
+            - R2Ty
+            - R2Stabx
+            - R2Staby
+
+options:
+    output: /tmp/bernoulli_quasi1d
+    write_freq: 1
+    silent: False

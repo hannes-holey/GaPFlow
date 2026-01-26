@@ -247,14 +247,17 @@ class QuadFieldManager:
         u_mag = np.sqrt((jx / rho)**2 + (jy / rho)**2)
         self.quad_fields['u_mag'].pg[s] = u_mag
 
+        # Grid scaling: alpha values are calibrated for 50x50, scale for other grids
+        grid_scale = (p.grid['Nx'] * p.grid['Ny']) / 2500.0
+
         # Constant tau for mass equation
         P0 = p.prop.get('P0', 1.0)
         h_sq = self.dx * self.dy
-        tau_mass = alpha * h_sq / P0
+        tau_mass = alpha * h_sq * grid_scale / P0
         self.quad_fields['tau_mass'].pg[s] = np.full_like(rho, tau_mass)
 
         # Tezduyar tau for momentum equation
-        mom_alpha = p.fem_solver['momentum_stab_alpha']
+        mom_alpha = p.fem_solver['momentum_stab_alpha'] * grid_scale
 
         dt = p.numerics['dt']
         h = np.sqrt(h_sq)
@@ -327,11 +330,12 @@ class QuadFieldManager:
                 self.quad_fields[name].pg[s] = apply(
                     getattr(p.energy, func), *args_S)
 
-            # Energy stabilization parameter (constant)
+            # Energy stabilization parameter (constant, grid-scaled for 50x50 reference)
             energy_alpha = p.fem_solver['energy_stab_alpha']
             P0 = p.prop.get('P0', 1.0)
             h_sq = self.dx * self.dy
-            tau_energy = energy_alpha * h_sq / P0
+            grid_scale = (p.grid['Nx'] * p.grid['Ny']) / 2500.0
+            tau_energy = energy_alpha * h_sq * grid_scale / P0
             self.quad_fields['tau_energy'].pg[s] = np.full_like(q('rho'), tau_energy)
 
     def store_prev_values(self) -> None:

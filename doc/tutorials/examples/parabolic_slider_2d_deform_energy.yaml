@@ -1,6 +1,6 @@
 options:
     output: data/parabolic_slider_2d
-    write_freq: 1
+    write_freq: 5
     silent: False
 
 grid:
@@ -26,7 +26,7 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1e-04
+    dt: 1.
     tol: 1e-10
     max_it: 50
 
@@ -40,14 +40,14 @@ properties:
     elastic:
         E: 1e07
         v: 0.3
-        alpha_underrelax: 0.02
+        alpha_underrelax: 0.1
         reference_point: [0,25]
 
 fem_solver:
     type: newton_alpha
-    alpha: 0.5
+    alpha: 1.0
     linear_solver: direct
-    max_iter: 50
+    max_iter: 1
     dynamic: True
     R_norm_tol: 1e-09
     pressure_stab_alpha: 4500

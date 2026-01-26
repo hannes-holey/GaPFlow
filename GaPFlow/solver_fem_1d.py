@@ -833,5 +833,5 @@ class FEMSolver1D:
 
     def print_status(self, scalars=None) -> None:
         p = self.problem
-        if p.options['print_progress'] and self.dynamic:
+        if scalars and p.options['print_progress'] and self.dynamic:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} {self.time_inner:<18.4e} {p.residual:<12.4e}")

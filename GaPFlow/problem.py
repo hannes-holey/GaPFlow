@@ -29,6 +29,7 @@ import numpy as np
 from collections import deque
 from datetime import datetime
 from muGrid import FileIONetCDF, OpenMode
+from mpi4py import MPI
 from .parallel import DomainDecomposition
 
 from typing import Type
@@ -155,8 +156,11 @@ class Problem:
             extra.pg[:] = extra_field
 
         # Forward declaration of cross-dependent fields
-        self.fc.real_field('x')
-        self.fc.real_field('y')
+        # Populate x, y fields with actual coordinates from domain decomposition
+        x_field = self.fc.real_field('x')
+        x_field.pg[:] = self.decomp.xx
+        y_field = self.fc.real_field('y')
+        y_field.pg[:] = self.decomp.yy
         self.fc.real_field('pressure')
         self.fc.real_field('topography', components=(4,))
 
@@ -367,18 +371,21 @@ class Problem:
 
     @property
     def mass(self) -> np.floating:
-        """Total mass integrated over domain (scalar)."""
-        return np.sum(self.__field.pg[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
+        """Total mass integrated over domain (scalar), globally reduced across MPI ranks."""
+        local_mass = np.sum(self.__field.pg[0] * self.topo.h * self.grid['dx'] * self.grid['dy'])
+        return self.decomp._mpi_comm.allreduce(local_mass, op=MPI.SUM)
 
     @property
     def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar)."""
-        return np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
+        """Total kinetic energy (scalar), globally reduced across MPI ranks."""
+        local_ekin = np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
+        return self.decomp._mpi_comm.allreduce(local_ekin, op=MPI.SUM)
 
     @property
     def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar)."""
-        return np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
+        """Maximum speed in the domain (scalar), globally reduced across MPI ranks."""
+        local_vmax = np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
+        return self.decomp._mpi_comm.allreduce(local_vmax, op=MPI.MAX)
 
     @property
     def dt_crit(self) -> np.floating:

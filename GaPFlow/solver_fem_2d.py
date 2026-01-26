@@ -39,6 +39,7 @@ from functools import cached_property
 import numpy as np
 import time
 from muGrid import Timer
+from mpi4py import MPI
 
 import numpy.typing as npt
 from typing import TYPE_CHECKING, Tuple, Dict
@@ -781,7 +782,10 @@ class FEMSolver2D:
             for it in range(max_iter):
                 with self.timer("newton_iteration"):
                     M, R = self.solver_step_fun(q)
-                    R_norm = np.linalg.norm(R)
+                    # Compute global residual norm via MPI allreduce
+                    R_norm_local_sq = np.linalg.norm(R)**2
+                    R_norm_global_sq = p.decomp._mpi_comm.allreduce(R_norm_local_sq, op=MPI.SUM)
+                    R_norm = np.sqrt(R_norm_global_sq)
 
                     # Track residual history (rank 0 only)
                     if p.decomp.rank == 0:
@@ -834,7 +838,7 @@ class FEMSolver2D:
     def print_status(self, scalars=None) -> None:
         """Print status line for simulation."""
         p = self.problem
-        if p.options['print_progress'] and p.decomp.rank == 0:
+        if scalars and p.options['print_progress'] and p.decomp.rank == 0:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
                   f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
 
