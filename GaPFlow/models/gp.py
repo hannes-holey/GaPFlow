@@ -600,4 +600,4 @@ def multi_in_single_out(params: dict,
         kernels.stationary.Matern32(distance=kernels.distance.L2Distance()),
     )
 
-    return GaussianProcess(kernel, X, diag=yerr**2)
+    return GaussianProcess(kernel, X, diag=yerr**2, mean=0.)
