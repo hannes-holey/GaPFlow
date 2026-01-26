@@ -31,7 +31,7 @@ dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.105.0",
 	# "tinygp>=0.3.0",
-	"tinygp = { git = 'https://github.com/hannes-holey/tinygp', branch = 'main' }",
+	"tinygp @ git+https://github.com/hannes-holey/tinygp",
 	"jax",
 	"numpy",
 	"scipy",
