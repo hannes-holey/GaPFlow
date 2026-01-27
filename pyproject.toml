@@ -30,8 +30,7 @@ requires-python = ">=3.10"
 dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.105.0",
-	# "tinygp>=0.3.0",
-	"tinygp @ git+https://github.com/hannes-holey/tinygp",
+	"tinygp>=0.3.0",
 	"jax",
 	"numpy",
 	"scipy",
