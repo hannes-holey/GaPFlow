@@ -310,10 +310,12 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
         Box dimension y
     H : float
         Target gap height
-    density: float
+    density : float
         Target fluid density
-    buffer: float
+    buffer : float
         "Safety distance" between the outermost fluid layer and the wall
+    flat : bool
+        Flags flat systems in which a slight density correction is applied.
 
     Returns
     -------
@@ -338,8 +340,7 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
     num_fluid_mol, num_fluid_atoms = _get_num_fluid_molecules(name, volume, density)
 
     # In flat sections the achieved density is usually too high
-    # We reduce by 30 molecules (this number might be different for larger systems)
-
+    # We reduce by removing molecules that would "fit" into the depletion zone
     if flat:
         sig = (3.92 + 2.63) / 2.
         dH = sig / 2.
@@ -686,7 +687,8 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     # input variables
     target_density = args.get("density")  # g/mol/A^3
     target_gap = args.get("gap_height")  # Angstrom
-    target_rotation = args.get("rotation", 0.)
+    target_rotation = args.get("rotation", 0.)  # degrees
+    is_flat = abs(target_rotation) < .1
 
     # solid, create ASE Atoms object
     nx = args.get("nx", 21)
@@ -713,7 +715,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     name = args.get("molecule", "pentane")
     molecule_file = os.path.join(template_dir, f"{name}.lt")
     fluid_grid, num_fluid_mol, num_fluid_atoms, initial_gap = config_fluid(
-        molecule_file, lx, ly, target_gap, target_density, buffer=buffer, flat=target_rotation < .1)
+        molecule_file, lx, ly, target_gap, target_density, buffer=buffer, flat=is_flat)
 
     # move top wall up
     slab_top.positions += np.array([0., 0., lz + initial_gap])
