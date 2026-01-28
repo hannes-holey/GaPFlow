@@ -105,6 +105,9 @@ class QuadFieldManager:
         self.nodal_fields: Dict[str, Any] = {}
         self.quad_fields: Dict[str, Any] = {}
 
+        # Cache for boundary distance (computed on first use)
+        self._boundary_distance_cache = None
+
         # Initialize operators and fields
         self._init_operators()
         self._init_fields()
@@ -234,6 +237,48 @@ class QuadFieldManager:
         result_2d = func(*args_2d)
         return result_2d.reshape(shape)
 
+    def _compute_boundary_distance(self, target_shape: tuple) -> NDArray:
+        """Compute distance (in grid cells) from each quad point to nearest Dirichlet boundary.
+
+        Parameters
+        ----------
+        target_shape : tuple
+            Target shape (6, nx, ny) to match the quad field slice shape.
+
+        Returns array of shape target_shape representing distance in cell units.
+        Points away from any Dirichlet boundary get a large value.
+        """
+        p = self.problem
+        grid = p.grid
+        decomp = p.decomp
+
+        Lx, Ly = grid['Lx'], grid['Ly']
+        h = np.sqrt(self.dx * self.dy)  # characteristic element size
+
+        # Grid dimensions from target shape
+        _, nx, ny = target_shape
+
+        # Physical coordinates for each grid point
+        x_coords = np.arange(nx) * self.dx
+        y_coords = np.arange(ny) * self.dy
+
+        # Broadcast to (nx, ny)
+        X, Y = np.meshgrid(x_coords, y_coords, indexing='ij')
+
+        # Distance to each boundary (in grid cells)
+        # Only consider non-periodic boundaries (Dirichlet)
+        # Use full_like to ensure consistent array shapes
+        dist_W = X / h if not decomp.periodic_x else np.full_like(X, np.inf)
+        dist_E = (Lx - X) / h if not decomp.periodic_x else np.full_like(X, np.inf)
+        dist_S = Y / h if not decomp.periodic_y else np.full_like(Y, np.inf)
+        dist_N = (Ly - Y) / h if not decomp.periodic_y else np.full_like(Y, np.inf)
+
+        # Minimum distance to any Dirichlet boundary
+        dist_boundary = np.minimum(np.minimum(dist_W, dist_E), np.minimum(dist_S, dist_N))
+
+        # Broadcast to (6, nx, ny) for all quad points
+        return np.broadcast_to(dist_boundary[np.newaxis, :, :], target_shape).copy()
+
     def _compute_tau_stabilization(self, s, q) -> None:
         """Compute stabilization parameters at quadrature points."""
         p = self.problem
@@ -250,11 +295,32 @@ class QuadFieldManager:
         # Grid scaling: alpha values are calibrated for 50x50, scale for other grids
         grid_scale = (p.grid['Nx'] * p.grid['Ny']) / 2500.0
 
-        # Constant tau for mass equation
+        # Base tau for mass equation
         P0 = p.prop.get('P0', 1.0)
         h_sq = self.dx * self.dy
-        tau_mass = alpha * h_sq * grid_scale / P0
-        self.quad_fields['tau_mass'].pg[s] = np.full_like(rho, tau_mass)
+        tau_mass_base = alpha * h_sq * grid_scale / P0
+
+        # Boundary-enhanced stabilization for Dirichlet BCs
+        boundary_factor = p.fem_solver.get('boundary_stab_factor', 1.0)
+        boundary_decay = p.fem_solver.get('boundary_stab_decay', 2.0)
+
+        if boundary_factor > 1.0 and (not p.decomp.periodic_x
+                                      or not p.decomp.periodic_y):
+            # Compute distance to nearest Dirichlet boundary (cached)
+            if self._boundary_distance_cache is None:
+                self._boundary_distance_cache = self._compute_boundary_distance(rho.shape)
+            dist = self._boundary_distance_cache
+
+            # Exponential enhancement: 1 + (factor-1) * exp(-dist/decay)
+            # At boundary (dist=0): enhancement = factor
+            # Far from boundary: enhancement -> 1
+            enhancement = 1.0 + (boundary_factor - 1.0) * np.exp(-dist / boundary_decay)
+            tau_mass = tau_mass_base * enhancement
+        else:
+            # Fully periodic or no enhancement: constant tau
+            tau_mass = np.full_like(rho, tau_mass_base)
+
+        self.quad_fields['tau_mass'].pg[s] = tau_mass
 
         # Tezduyar tau for momentum equation
         mom_alpha = p.fem_solver['momentum_stab_alpha'] * grid_scale

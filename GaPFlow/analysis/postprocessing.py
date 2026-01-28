@@ -42,6 +42,7 @@ Metrics Output Format::
     ...
     ==================================================
 """
+import resource
 from datetime import datetime
 
 import numpy as np
@@ -77,6 +78,7 @@ def compute_metrics(problem: "Problem") -> dict:
     metrics.update(_energy_metrics(problem, comm))
     metrics.update(_timing_metrics(problem))
     metrics.update(_solver_metrics(problem))
+    metrics.update(_memory_metrics(comm))
 
     return metrics
 
@@ -209,7 +211,7 @@ def _energy_metrics(problem: "Problem", comm: MPI.Comm) -> dict:
 
     # Wall heat flux
     try:
-        from .models.heatflux import get_heatflux_2d
+        from ..models.heatflux import get_heatflux_2d
         q_top, q_bot = get_heatflux_2d(problem)
         q_top_inner = q_top[1:-1, 1:-1]
         q_bot_inner = q_bot[1:-1, 1:-1]
@@ -259,6 +261,27 @@ def _solver_metrics(problem: "Problem") -> dict:
         metrics["final_residual"] = problem.residual
 
     return metrics
+
+
+def _memory_metrics(comm: MPI.Comm) -> dict:
+    """Compute memory usage metrics.
+
+    Uses resource.getrusage to get peak memory (max RSS).
+    Reports both total (sum) and max across all MPI ranks.
+    """
+    # ru_maxrss is in KB on Linux, bytes on macOS
+    peak_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    peak_mb = peak_kb / 1024  # Convert KB to MB (Linux)
+
+    # Total memory across all ranks (system footprint)
+    total_peak_mb = comm.allreduce(peak_mb, op=MPI.SUM)
+    # Max memory on any single rank (for node limits)
+    max_peak_mb = comm.allreduce(peak_mb, op=MPI.MAX)
+
+    return {
+        "peak_memory_total_mb": total_peak_mb,
+        "peak_memory_max_mb": max_peak_mb,
+    }
 
 
 def print_metrics(metrics: dict, comm: MPI.Comm) -> None:

@@ -30,12 +30,15 @@ from .fem_2d.assembly_layout import (
     RHSPattern,
     JacobianTermMap,
     RHSTermMap,
+    COOLookup,
 )
 from .fem_2d.grid_index import GridIndexManager
 from .fem_2d.quad_fields import QuadFieldManager
 from .fem_2d.solution_guards import apply_guards
+from .fem_2d.stab_diagnostics import StabDiagnostics
 
 from functools import cached_property
+import os
 import numpy as np
 import time
 from muGrid import Timer
@@ -242,11 +245,14 @@ class FEMSolver2D:
             nb_vars=nb_vars,
             nb_inner_pts=self.nb_inner_pts,
             nb_global_pts=Nx * Ny,
+            nb_sq=self.nb_sq,
+            sq_per_row=self.sq_per_row,
+            sq_per_col=self.sq_per_col,
         )
 
     def _build_matrix_coo_pattern(self, l2g_pts: NDArray, nb_vars: int,
-                                  nb_res: int) -> Tuple[MatrixCOOPattern, dict]:
-        """Build sparse matrix COO pattern and local-to-COO map."""
+                                  nb_res: int) -> Tuple[MatrixCOOPattern, COOLookup]:
+        """Build sparse matrix COO pattern and memory-efficient COO lookup."""
         inner_pts, contrib_pts = self.grid_idx.get_stencil_connectivity()
         nnz_per_block = len(inner_pts)
         total_nnz = nb_res * nb_vars * nnz_per_block
@@ -279,11 +285,8 @@ class FEMSolver2D:
 
                 idx += n
 
-        # Build local-to-COO lookup dictionary
-        local_to_coo = {}
-        for coo_idx in range(total_nnz):
-            key = (int(local_rows[coo_idx]), int(local_cols[coo_idx]))
-            local_to_coo[key] = coo_idx
+        # Build memory-efficient COO lookup (replaces Python dict)
+        coo_lookup = COOLookup.from_coo_pattern(local_rows, local_cols)
 
         matrix_coo = MatrixCOOPattern(
             nnz=total_nnz,
@@ -295,7 +298,7 @@ class FEMSolver2D:
             var_block_idx=var_block_idx,
         )
 
-        return matrix_coo, local_to_coo
+        return matrix_coo, coo_lookup
 
     def _build_rhs_pattern(self, l2g_pts: NDArray, nb_res: int) -> RHSPattern:
         """Build RHS vector assembly pattern."""
@@ -342,58 +345,49 @@ class FEMSolver2D:
 
         output_idx_list = []
         weights_list = []
-        quad_idx_list = []
-        sq_x_list = []
-        sq_y_list = []
+        flat_field_idx_list = []
 
         for TO_tri, test_wA, quad_offset in triangle_configs:
             for i in range(3):
                 valid = TO_tri[:, i] >= 0
                 sq_valid = np.where(valid)[0]
                 if len(sq_valid) > 0:
+                    sq_x_valid = sq_x[sq_valid]
+                    sq_y_valid = sq_y[sq_valid]
                     for q in range(3):
                         output_idx_list.append(
                             res_idx * self.nb_inner_pts + TO_tri[sq_valid, i])
                         weights_list.append(
                             np.full(len(sq_valid), test_wA[i, q], dtype=np.float64))
-                        quad_idx_list.append(
-                            np.full(len(sq_valid), q + quad_offset, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_valid])
-                        sq_y_list.append(sq_y[sq_valid])
+                        # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
+                        quad_idx = q + quad_offset
+                        flat_idx = quad_idx * self.nb_sq + sq_x_valid * self.sq_per_col + sq_y_valid
+                        flat_field_idx_list.append(flat_idx.astype(np.int32))
 
         if not output_idx_list:
             return RHSTermMap(
                 output_idx=np.array([], dtype=np.int32),
                 weights=np.array([], dtype=np.float64),
-                quad_idx=np.array([], dtype=np.int32),
-                sq_x=np.array([], dtype=np.int32),
-                sq_y=np.array([], dtype=np.int32),
+                flat_field_idx=np.array([], dtype=np.int32),
             )
 
         return RHSTermMap(
             output_idx=np.concatenate(output_idx_list),
             weights=np.concatenate(weights_list),
-            quad_idx=np.concatenate(quad_idx_list),
-            sq_x=np.concatenate(sq_x_list),
-            sq_y=np.concatenate(sq_y_list),
+            flat_field_idx=np.concatenate(flat_field_idx_list),
         )
 
-    def _lookup_coo_indices(self, local_to_coo: Dict[Tuple[int, int], int],
+    def _lookup_coo_indices(self, coo_lookup: COOLookup,
                             row_block: NDArray, col_block: NDArray) -> NDArray:
         """
-        Vectorized COO index lookup from dictionary.
+        Vectorized COO index lookup using sorted array + binary search.
 
         Returns array of COO indices, with -1 for positions not in pattern.
         """
-        coo_idx = np.full(len(row_block), -1, dtype=np.int32)
-        for k in range(len(row_block)):
-            key = (int(row_block[k]), int(col_block[k]))
-            if key in local_to_coo:
-                coo_idx[k] = local_to_coo[key]
-        return coo_idx
+        return coo_lookup.lookup(row_block, col_block)
 
     def _build_jacobian_term_zero_der(self, term: NonLinearTerm, dep_var: str,
-                                      local_to_coo: dict) -> JacobianTermMap:
+                                      coo_lookup: COOLookup) -> JacobianTermMap:
         """Build Jacobian term map for zero-derivative term (3×3 per triangle)."""
         res_idx = self.residuals.index(term.res)
         var_idx = self.variables.index(dep_var)
@@ -410,9 +404,7 @@ class FEMSolver2D:
 
         coo_idx_list = []
         weights_list = []
-        quad_idx_list = []
-        sq_x_list = []
-        sq_y_list = []
+        flat_field_idx_list = []
 
         for TO_tri, FROM_tri, elem_tensor, quad_offset in triangle_configs:
             for i in range(3):
@@ -423,39 +415,37 @@ class FEMSolver2D:
                     if len(sq_valid) > 0:
                         row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
                         col_block = var_idx * self.grid_idx.nb_contributors + FROM_tri[sq_valid, j]
-                        coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
+                        coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
                         valid_coo = coo_idx >= 0
 
                         if np.any(valid_coo):
                             sq_final = sq_valid[valid_coo]
+                            sq_x_final = sq_x[sq_final]
+                            sq_y_final = sq_y[sq_final]
                             for q in range(3):
                                 coo_idx_list.append(coo_idx[valid_coo])
                                 weights_list.append(np.full(
                                     len(sq_final), elem_tensor[i, j, q], dtype=np.float64))
-                                quad_idx_list.append(np.full(
-                                    len(sq_final), q + quad_offset, dtype=np.int32))
-                                sq_x_list.append(sq_x[sq_final])
-                                sq_y_list.append(sq_y[sq_final])
+                                # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
+                                quad_idx = q + quad_offset
+                                flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
+                                flat_field_idx_list.append(flat_idx.astype(np.int32))
 
         if not coo_idx_list:
             return JacobianTermMap(
                 coo_idx=np.array([], dtype=np.int32),
                 weights=np.array([], dtype=np.float64),
-                quad_idx=np.array([], dtype=np.int32),
-                sq_x=np.array([], dtype=np.int32),
-                sq_y=np.array([], dtype=np.int32),
+                flat_field_idx=np.array([], dtype=np.int32),
             )
 
         return JacobianTermMap(
             coo_idx=np.concatenate(coo_idx_list),
             weights=np.concatenate(weights_list),
-            quad_idx=np.concatenate(quad_idx_list),
-            sq_x=np.concatenate(sq_x_list),
-            sq_y=np.concatenate(sq_y_list),
+            flat_field_idx=np.concatenate(flat_field_idx_list),
         )
 
     def _build_jacobian_term_deriv(self, term: NonLinearTerm, dep_var: str,
-                                   local_to_coo: dict, direction: str) -> JacobianTermMap:
+                                   coo_lookup: COOLookup, direction: str) -> JacobianTermMap:
         """Build Jacobian term map for derivative term (±1/d* stencil)."""
         res_idx = self.residuals.index(term.res)
         var_idx = self.variables.index(dep_var)
@@ -479,9 +469,7 @@ class FEMSolver2D:
 
         coo_idx_list = []
         weights_list = []
-        quad_idx_list = []
-        sq_x_list = []
-        sq_y_list = []
+        flat_field_idx_list = []
         signs_list = []
 
         sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
@@ -502,39 +490,37 @@ class FEMSolver2D:
 
                     row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
                     col_block = var_idx * self.grid_idx.nb_contributors + FROM_pts[sq_valid]
-                    coo_idx = self._lookup_coo_indices(local_to_coo, row_block, col_block)
+                    coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
                     valid_coo = coo_idx >= 0
 
                     if not np.any(valid_coo):
                         continue
 
                     sq_final = sq_valid[valid_coo]
+                    sq_x_final = sq_x[sq_final]
+                    sq_y_final = sq_y[sq_final]
                     for q in range(3):
                         coo_idx_list.append(coo_idx[valid_coo])
                         weights_list.append(np.full(
                             len(sq_final), test_wA[i, q], dtype=np.float64))
-                        quad_idx_list.append(np.full(
-                            len(sq_final), q + quad_offset, dtype=np.int32))
-                        sq_x_list.append(sq_x[sq_final])
-                        sq_y_list.append(sq_y[sq_final])
+                        # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
+                        quad_idx = q + quad_offset
+                        flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
+                        flat_field_idx_list.append(flat_idx.astype(np.int32))
                         signs_list.append(np.full(len(sq_final), sign, dtype=np.float64))
 
         if not coo_idx_list:
             return JacobianTermMap(
                 coo_idx=np.array([], dtype=np.int32),
                 weights=np.array([], dtype=np.float64),
-                quad_idx=np.array([], dtype=np.int32),
-                sq_x=np.array([], dtype=np.int32),
-                sq_y=np.array([], dtype=np.int32),
+                flat_field_idx=np.array([], dtype=np.int32),
                 signs=np.array([], dtype=np.float64),
             )
 
         return JacobianTermMap(
             coo_idx=np.concatenate(coo_idx_list),
             weights=np.concatenate(weights_list),
-            quad_idx=np.concatenate(quad_idx_list),
-            sq_x=np.concatenate(sq_x_list),
-            sq_y=np.concatenate(sq_y_list),
+            flat_field_idx=np.concatenate(flat_field_idx_list),
             signs=np.concatenate(signs_list),
         )
 
@@ -573,7 +559,7 @@ class FEMSolver2D:
             return
 
         res_deriv = self.get_res_deriv_vals(term, dep_var)
-        res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
+        res_vals = res_deriv.ravel()[idx.flat_field_idx]
         contrib = idx.weights * res_vals
         np.add.at(coo_values, idx.coo_idx, contrib)
 
@@ -587,7 +573,7 @@ class FEMSolver2D:
             return
 
         res_deriv = self.get_res_deriv_vals(term, dep_var)
-        res_vals = res_deriv[idx.quad_idx, idx.sq_x, idx.sq_y]
+        res_vals = res_deriv.ravel()[idx.flat_field_idx]
         inv_d = 1.0 / (self.dx if direction == 'x' else self.dy)
 
         contrib = idx.weights * res_vals * idx.signs * inv_d
@@ -819,6 +805,11 @@ class FEMSolver2D:
 
             self.update_output_fields()
 
+            # Capture stabilization diagnostics every N steps
+            step = p.step
+            if step % self.stab_diag.save_interval == 0:
+                self.stab_diag.capture(step)
+
         p._post_update()
 
     def update(self) -> None:
@@ -980,3 +971,16 @@ class FEMSolver2D:
         # Build scaling for linear system conditioning
         char_scales = self._get_characteristic_scales()
         self.scaling = self.assembly_layout.build_scaling(char_scales, self.variables)
+
+        # Initialize stabilization diagnostics
+        self._init_stab_diagnostics()
+
+    def _init_stab_diagnostics(self) -> None:
+        """Initialize stabilization diagnostics collector."""
+        p = self.problem
+        case_name = os.path.basename(p.options.get('output', 'unknown'))
+        # Remove any file extension
+        if '.' in case_name:
+            case_name = case_name.rsplit('.', 1)[0]
+        output_dir = os.path.join('/home/qd5728/GaPFlow/stab_analysis', case_name)
+        self.stab_diag = StabDiagnostics(self, output_dir, case_name, save_interval=10)

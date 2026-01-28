@@ -101,18 +101,15 @@ class JacobianTermMap:
         Which COO entries receive contributions.
     weights : NDArray
         FEM integration weights.
-    quad_idx : IntArray
-        Quadrature point index (0-5).
-    sq_x, sq_y : IntArray
-        Square indices for field value lookup.
+    flat_field_idx : IntArray
+        Flat index into quad field: quad_idx * nb_sq + sq_x + sq_y * sq_per_row.
+        Use with res_deriv.ravel()[flat_field_idx] for field lookup.
     signs : NDArray or None
         Sign multipliers (+/-1) for derivative terms.
     """
     coo_idx: IntArray
     weights: NDArray
-    quad_idx: IntArray
-    sq_x: IntArray
-    sq_y: IntArray
+    flat_field_idx: IntArray
     signs: Optional[NDArray] = None
 
 
@@ -126,21 +123,87 @@ class RHSTermMap:
         Which R[i] entries receive contributions.
     weights : NDArray
         FEM integration weights.
-    quad_idx : IntArray
-        Quadrature point index (0-5).
-    sq_x, sq_y : IntArray
-        Square indices for field value lookup.
+    flat_field_idx : IntArray
+        Flat index into quad field: quad_idx * nb_sq + sq_x + sq_y * sq_per_row.
+        Use with res_vals.ravel()[flat_field_idx] for field lookup.
     """
     output_idx: IntArray
     weights: NDArray
-    quad_idx: IntArray
-    sq_x: IntArray
-    sq_y: IntArray
+    flat_field_idx: IntArray
 
 
 # Type alias for term keys
 JacobianTermKey = Tuple[str, str, str]  # (term_name, residual, dep_var)
 RHSTermKey = Tuple[str, str]            # (term_name, residual)
+
+
+@dataclass
+class COOLookup:
+    """Memory-efficient COO index lookup using sorted arrays.
+
+    Replaces Python dict with 16M+ entries (~2GB overhead) with numpy arrays
+    and binary search (~0.3GB for same data).
+
+    Attributes
+    ----------
+    sorted_keys : IntArray
+        Composite keys (row * max_col + col), sorted for binary search.
+    sorted_indices : IntArray
+        COO indices corresponding to sorted_keys.
+    max_col : int
+        Maximum column index + 1, for computing composite keys.
+    """
+    sorted_keys: IntArray
+    sorted_indices: IntArray
+    max_col: int
+
+    @classmethod
+    def from_coo_pattern(cls, local_rows: IntArray, local_cols: IntArray) -> "COOLookup":
+        """Build lookup structure from COO row/col arrays.
+
+        Parameters
+        ----------
+        local_rows : IntArray
+            Local row indices for COO entries.
+        local_cols : IntArray
+            Local column indices for COO entries.
+
+        Returns
+        -------
+        COOLookup
+            Lookup structure for efficient index queries.
+        """
+        max_col = int(local_cols.max()) + 1
+        # Composite key: row * max_col + col (fits in int64 for large grids)
+        coo_keys = local_rows.astype(np.int64) * max_col + local_cols
+        sort_order = np.argsort(coo_keys)
+        return cls(
+            sorted_keys=coo_keys[sort_order],
+            sorted_indices=sort_order.astype(np.int32),
+            max_col=max_col,
+        )
+
+    def lookup(self, row_block: IntArray, col_block: IntArray) -> IntArray:
+        """Vectorized COO index lookup.
+
+        Parameters
+        ----------
+        row_block : IntArray
+            Row indices to look up.
+        col_block : IntArray
+            Column indices to look up.
+
+        Returns
+        -------
+        IntArray
+            COO indices for each (row, col) pair, or -1 if not found.
+        """
+        query_keys = row_block.astype(np.int64) * self.max_col + col_block
+        positions = np.searchsorted(self.sorted_keys, query_keys)
+        # Handle out-of-bounds positions
+        positions = np.minimum(positions, len(self.sorted_keys) - 1)
+        valid = self.sorted_keys[positions] == query_keys
+        return np.where(valid, self.sorted_indices[positions], -1).astype(np.int32)
 
 
 @dataclass
@@ -230,6 +293,10 @@ class FEMAssemblyLayout:
         Number of inner points on this rank.
     nb_global_pts : int
         Total global grid points.
+    nb_sq : int
+        Number of square elements (sq_per_row * sq_per_col).
+    sq_per_row : int
+        Squares per row (for flat index computation).
     """
     matrix_coo: MatrixCOOPattern
     rhs: RHSPattern
@@ -240,6 +307,9 @@ class FEMAssemblyLayout:
     nb_vars: int
     nb_inner_pts: int
     nb_global_pts: int
+    nb_sq: int
+    sq_per_row: int
+    sq_per_col: int
 
     def get_petsc_info(self) -> "PETScAssemblyInfo":
         """Extract PETSc-specific assembly info."""

@@ -512,6 +512,14 @@ class Problem:
             if self.prop['elastic']['enabled']:
                 self.topofile.close()
 
+        # Save stabilization diagnostics (final capture + write)
+        if hasattr(self.solver, 'stab_diag'):
+            # Always capture final timestep
+            self.solver.stab_diag.capture(self.step)
+            # Save to disk (rank 0 only)
+            if self.decomp.rank == 0:
+                self.solver.stab_diag.save()
+
         speed = self.step / walltime.total_seconds()
 
         # Print runtime (only on rank 0)
@@ -578,8 +586,19 @@ class Problem:
         boundary : str
             Boundary: 'W', 'E', 'S', or 'N'
         callback : callable
-            Function: callback(problem, boundary, ghost_slice, interior_slice) -> np.ndarray
-            Returns array with shape matching problem.q[var][ghost_slice].
+            Function: callback(ctx: BCContext) -> np.ndarray
+            The BCContext contains: problem, required_shape, ghost_slice,
+            interior_slice, x_norm, y_norm.
+            Returns array with shape matching ctx.required_shape.
+
+        Example
+        -------
+        def jx_lid(ctx):
+            u_wall = 1.0
+            rho_ghost = ctx.problem.q[0][ctx.ghost_slice]
+            return rho_ghost * u_wall
+
+        problem.set_bc_function('jx', 'N', jx_lid)
         """
         if var_name not in {'rho', 'jx', 'jy'}:
             raise ValueError(f"var_name must be 'rho', 'jx', or 'jy', got '{var_name}'")

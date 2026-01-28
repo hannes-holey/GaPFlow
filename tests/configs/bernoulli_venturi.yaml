@@ -53,6 +53,8 @@ fem_solver:
     max_iter: 5
     pressure_stab_alpha: 100000
     momentum_stab_alpha: 2000
+    boundary_stab_factor: 100.
+    boundary_stab_decay: 5
     equations:
         energy: False
         term_list:

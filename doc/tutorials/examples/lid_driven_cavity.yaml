@@ -31,8 +31,8 @@ geometry:
 numerics:
     solver: fem
     dt: 0.01
-    tol: 5e-05
-    max_it: 150
+    tol: 5e-07
+    max_it: 500
 
 properties:
     EOS: PL
@@ -45,7 +45,7 @@ properties:
     force_y: 0.0
 
 fem_solver:
-    pressure_stab_alpha: 1000
+    pressure_stab_alpha: 500
     R_norm_tol: 1e-8
     linear_solver: iterative
     equations:

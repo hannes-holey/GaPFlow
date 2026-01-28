@@ -496,6 +496,10 @@ def sanitize_fem_solver(d):
     out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 10000.))
     out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 100000000.))
 
+    # Boundary-enhanced stabilization (for Dirichlet BCs)
+    out['boundary_stab_factor'] = float(d.get('boundary_stab_factor', 1.0))
+    out['boundary_stab_decay'] = float(d.get('boundary_stab_decay', 2.0))
+
     out['equations'] = {}
     out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
     # User-provided term_list (None = auto-select in solver based on flags)
