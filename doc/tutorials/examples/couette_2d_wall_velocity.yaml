@@ -43,7 +43,7 @@ fem_solver:
     alpha: 1.0
     R_norm_tol: 1e-8
     linear_solver: direct
-    pressure_stab_alpha: 0.1
+    pressure_stab_alpha: 1.0
     momentum_stab_alpha: 1.0
     max_iter: 20
     equations:

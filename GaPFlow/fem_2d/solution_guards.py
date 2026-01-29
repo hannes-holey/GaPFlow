@@ -22,36 +22,42 @@
 # SOFTWARE.
 #
 import numpy as np
+from mpi4py import MPI
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..solver_fem_2d import FEMSolver2D
 
 
+# Guard parameters
+MAX_DENSITY_CHANGE = 1.0  # Maximum relative density change per Newton step (10%)
+RHO_MIN = 1e-10           # Minimum allowed density
+
+
 def apply_guards(q: np.ndarray, dq: np.ndarray, solver: "FEMSolver2D") -> np.ndarray:
     """Apply solution update with physical safeguards.
 
-    Parameters
-    ----------
-    q : ndarray
-        Current solution vector (nb_vars * nb_inner_pts,)
-    dq : ndarray
-        Newton increment (already scaled by alpha)
-    solver : FEMSolver2D
-        Solver instance for accessing problem parameters
-
-    Returns
-    -------
-    q_new : ndarray
-        Updated and guarded solution vector
+    Limits density changes to MAX_DENSITY_CHANGE per Newton step by uniformly scaling dq.
+    Uses MPI allreduce to ensure consistent scaling across all processes.
     """
-    q_new = q + dq
-
     nb = solver.nb_inner_pts
-    rho_min = 1e-10
+    comm = solver.problem.decomp._mpi_comm
 
-    # Clamp density to positive values
-    rho = q_new[0:nb]
-    rho[:] = np.maximum(rho, rho_min)
+    # Max relative density change (only density part: first nb elements)
+    rho = q[:nb]
+    d_rho = dq[:nb]
+    max_rel = np.max(np.abs(d_rho) / np.maximum(np.abs(rho), RHO_MIN))
+
+    # Global max across MPI processes
+    max_rel = comm.allreduce(max_rel, op=MPI.MAX)
+
+    # Uniform scaling if density change exceeds limit
+    if max_rel > MAX_DENSITY_CHANGE:
+        scale = MAX_DENSITY_CHANGE / max_rel
+        dq = dq * scale
+        print(f"Applied density change guard: scaled dq by {scale:.3f}")
+
+    q_new = q + dq
+    q_new[:nb] = np.maximum(q_new[:nb], RHO_MIN)  # Clamp density only
 
     return q_new

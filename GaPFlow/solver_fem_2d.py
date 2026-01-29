@@ -29,9 +29,11 @@ from .fem_2d.assembly_layout import (
     MatrixCOOPattern,
     RHSPattern,
     JacobianTermMap,
+    JacobianMapCache,
     RHSTermMap,
     COOLookup,
 )
+from .fem_2d.scaling import compute_characteristic_scales
 from .fem_2d.grid_index import GridIndexManager
 from .fem_2d.quad_fields import QuadFieldManager
 from .fem_2d.solution_guards import apply_guards
@@ -45,7 +47,7 @@ from muGrid import Timer
 from mpi4py import MPI
 
 import numpy.typing as npt
-from typing import TYPE_CHECKING, Tuple, Dict
+from typing import TYPE_CHECKING, Tuple
 if TYPE_CHECKING:
     from .problem import Problem
 
@@ -214,20 +216,29 @@ class FEMSolver2D:
         # 3. Build RHS pattern
         rhs = self._build_rhs_pattern(l2g_pts, nb_res)
 
-        # 4. Build Jacobian term maps
-        jacobian_terms = {}
+        # 4. Build Jacobian term maps with deduplication
+        # Terms with identical structural keys share the same index arrays
+        jacobian_terms = JacobianMapCache.empty()
         for term in self.terms:
             for dep_var in term.dep_vars:
-                key = (term.name, term.res, dep_var)
-                if term.d_dx_resfun:
-                    jacobian_terms[key] = self._build_jacobian_term_deriv(
-                        term, dep_var, local_to_coo, 'x')
-                elif term.d_dy_resfun:
-                    jacobian_terms[key] = self._build_jacobian_term_deriv(
-                        term, dep_var, local_to_coo, 'y')
+                term_key = (term.name, term.res, dep_var)
+                structural_key = self._get_structural_key(term, dep_var)
+
+                # Only build if this structural pattern hasn't been seen
+                if structural_key not in jacobian_terms._canonical_maps:
+                    if term.d_dx_resfun:
+                        term_map = self._build_jacobian_term_deriv(
+                            term, dep_var, local_to_coo, 'x')
+                    elif term.d_dy_resfun:
+                        term_map = self._build_jacobian_term_deriv(
+                            term, dep_var, local_to_coo, 'y')
+                    else:
+                        term_map = self._build_jacobian_term_zero_der(
+                            term, dep_var, local_to_coo)
+                    jacobian_terms.register(term_key, structural_key, term_map)
                 else:
-                    jacobian_terms[key] = self._build_jacobian_term_zero_der(
-                        term, dep_var, local_to_coo)
+                    # Reuse existing map
+                    jacobian_terms.register(term_key, structural_key, None)
 
         # 5. Build RHS term maps
         rhs_terms = {}
@@ -249,6 +260,22 @@ class FEMSolver2D:
             sq_per_row=self.sq_per_row,
             sq_per_col=self.sq_per_col,
         )
+
+    def _get_structural_key(self, term: NonLinearTerm, dep_var: str) -> tuple:
+        """Compute structural key that determines JacobianTermMap identity.
+
+        Terms with the same structural key have identical coo_idx, weights,
+        and flat_field_idx arrays, so they can share the same JacobianTermMap.
+
+        The key is: (residual, dep_var, derivative_type, der_testfun)
+        """
+        if term.d_dx_resfun:
+            deriv_type = 'dx'
+        elif term.d_dy_resfun:
+            deriv_type = 'dy'
+        else:
+            deriv_type = 'none'
+        return (term.res, dep_var, deriv_type, term.der_testfun)
 
     def _build_matrix_coo_pattern(self, l2g_pts: NDArray, nb_vars: int,
                                   nb_res: int) -> Tuple[MatrixCOOPattern, COOLookup]:
@@ -553,7 +580,7 @@ class FEMSolver2D:
                                          coo_values: NDArray):
         """Sparse assembly for zero-derivative term."""
         key = (term.name, term.res, dep_var)
-        idx = self.assembly_layout.jacobian_terms[key]
+        idx = self.assembly_layout.jacobian_terms.get(key)
 
         if len(idx.coo_idx) == 0:
             return
@@ -567,7 +594,7 @@ class FEMSolver2D:
                                       coo_values: NDArray, direction: str):
         """Sparse assembly for derivative term with ±1/d* stencil."""
         key = (term.name, term.res, dep_var)
-        idx = self.assembly_layout.jacobian_terms[key]
+        idx = self.assembly_layout.jacobian_terms.get(key)
 
         if len(idx.coo_idx) == 0:
             return
@@ -833,6 +860,32 @@ class FEMSolver2D:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
                   f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
 
+    def print_stabilization_effect(self) -> None:
+        """Print stabilization contribution to residual at current state."""
+        R_total = np.zeros(self.res_size)
+        R_stab = np.zeros(self.res_size)
+
+        for term in self.terms:
+            sl = self._res_slice(term.res)
+            contrib = self.residual_vector_term(term)
+            R_total[sl] += contrib
+            if 'Stab' in term.name:
+                R_stab[sl] += contrib
+
+        comm = self.problem.decomp._mpi_comm
+        if self.problem.decomp.rank == 0:
+            print("\nStabilization effect (||R_stab|| / ||R_total||):")
+        for res in self.residuals:
+            sl = self._res_slice(res)
+            stab_norm = np.sqrt(comm.allreduce(np.sum(R_stab[sl]**2), op=MPI.SUM))
+            total_norm = np.sqrt(comm.allreduce(np.sum(R_total[sl]**2), op=MPI.SUM))
+            if self.problem.decomp.rank == 0:
+                if total_norm > 1e-14:
+                    ratio = stab_norm / total_norm * 100
+                    print(f"  {res}: {ratio:.2f}% (stab={stab_norm:.2e}, total={total_norm:.2e})")
+                else:
+                    print(f"  {res}: N/A (total={total_norm:.2e})")
+
     def print_timer_summary(self, save_json: str = "") -> None:
         """Print timer summary and optionally save to JSON.
 
@@ -918,36 +971,6 @@ class FEMSolver2D:
         self.time_inner = 0.0
         self.inner_iterations = 0
 
-    def _get_characteristic_scales(self) -> Dict[str, float]:
-        """Derive characteristic scales from problem specification.
-
-        These scales are used to condition the linear system by normalizing
-        variables to O(1) magnitudes.
-
-        Returns
-        -------
-        dict
-            Characteristic scale for each variable: {'rho': ρ_ref, 'jx': j_ref, ...}
-        """
-        p = self.problem
-
-        rho_ref = p.prop['rho0']
-        U_ref = max(abs(p.geo['U']), abs(p.geo['V']), 1e-10)
-        j_ref = rho_ref * U_ref
-
-        scales = {'rho': rho_ref, 'jx': j_ref, 'jy': j_ref}
-
-        if self.energy:
-            cv = p.energy_spec['cv']
-            # Handle both tuple format ('uniform', T) and direct value
-            T0 = p.energy_spec['T0']
-            T_ref = T0[1] if isinstance(T0, tuple) else T0
-            T_ref = p.energy_spec['T_wall']
-            E_ref = rho_ref * cv * T_ref
-            scales['E'] = E_ref
-
-        return scales
-
     def _init_linear_solver(self):
         """Initialize linear solver and scaling for sparse system solves."""
         solver_type = self.problem.fem_solver['linear_solver']
@@ -969,7 +992,7 @@ class FEMSolver2D:
                   "Install petsc4py for better performance and parallel support.")
 
         # Build scaling for linear system conditioning
-        char_scales = self._get_characteristic_scales()
+        char_scales = compute_characteristic_scales(self.problem, self.energy)
         self.scaling = self.assembly_layout.build_scaling(char_scales, self.variables)
 
         # Initialize stabilization diagnostics

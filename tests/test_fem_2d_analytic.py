@@ -137,18 +137,19 @@ X_RAMP_START, X_RAMP_END = 0.03, 0.07
 THROAT_HALF_WIDTH = 0.005
 RHO0, V_INLET = 1000.0, 5.0
 
+
 def _venturi_topography(xx):
     """Symmetric venturi with cosine transitions."""
     x_mid = (X_RAMP_START + X_RAMP_END) / 2
     ramp_len = x_mid - THROAT_HALF_WIDTH - X_RAMP_START
-    
+
     # Distance from throat edge, clipped to [0, ramp_len]
     dist = np.clip(np.abs(xx - x_mid) - THROAT_HALF_WIDTH, 0, ramp_len)
     xi = dist / ramp_len
-    
+
     return np.where(
         (xx >= X_RAMP_START) & (xx <= X_RAMP_END),
-        (H_INLET + H_THROAT)/2 - (H_INLET - H_THROAT)/2 * np.cos(np.pi * xi),
+        (H_INLET + H_THROAT) / 2 - (H_INLET - H_THROAT) / 2 * np.cos(np.pi * xi),
         H_INLET
     )
 
@@ -229,7 +230,7 @@ def test_temp_diffusion_2d():
 
     # Parameters for analytical solution
     Lx, Nx = problem.grid['Lx'], problem.grid['Nx']
-    dx, dt = problem.grid['dx'], problem.numerics['dt']
+    dx = problem.grid['dx']
     cv, k = problem.energy_spec['cv'], problem.energy_spec['k']
     rho = problem.prop['rho0']
     T_max = problem.energy_spec['T0'][2]

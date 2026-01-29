@@ -531,8 +531,8 @@ def plot_lid_driven_cavity(problem, title=None):
     Nx, Ny = problem.grid['Nx'], problem.grid['Ny']
     dx, dy = problem.grid['dx'], problem.grid['dy']
 
-    x = np.linspace(dx/2, Lx - dx/2, Nx)
-    y = np.linspace(dy/2, Ly - dy/2, Ny)
+    x = np.linspace(dx / 2, Lx - dx / 2, Nx)
+    y = np.linspace(dy / 2, Ly - dy / 2, Ny)
     X, Y = np.meshgrid(x, y, indexing='ij')
 
     # Create figure
@@ -581,7 +581,7 @@ def plot_lid_driven_cavity(problem, title=None):
     ax4 = fig.add_subplot(2, 3, 4)
     vmax = np.abs(jx).max()
     im4 = ax4.pcolormesh(X, Y, jx, cmap='RdBu_r', shading='auto',
-                          vmin=-vmax, vmax=vmax)
+                         vmin=-vmax, vmax=vmax)
     ax4.set_xlabel('x')
     ax4.set_ylabel('y')
     ax4.set_title(r'x-Momentum $j_x$')
@@ -592,7 +592,7 @@ def plot_lid_driven_cavity(problem, title=None):
     ax5 = fig.add_subplot(2, 3, 5)
     vmax = np.abs(jy).max()
     im5 = ax5.pcolormesh(X, Y, jy, cmap='RdBu_r', shading='auto',
-                          vmin=-vmax, vmax=vmax)
+                         vmin=-vmax, vmax=vmax)
     ax5.set_xlabel('x')
     ax5.set_ylabel('y')
     ax5.set_title(r'y-Momentum $j_y$')
@@ -606,7 +606,7 @@ def plot_lid_driven_cavity(problem, title=None):
     vorticity = dvx_dy - dvy_dx
     vmax_vort = np.abs(vorticity).max()
     im6 = ax6.pcolormesh(X, Y, vorticity, cmap='RdBu_r', shading='auto',
-                          vmin=-vmax_vort, vmax=vmax_vort)
+                         vmin=-vmax_vort, vmax=vmax_vort)
     ax6.set_xlabel('x')
     ax6.set_ylabel('y')
     ax6.set_title(r'Vorticity $\omega$')

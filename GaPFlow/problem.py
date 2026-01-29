@@ -450,6 +450,10 @@ class Problem:
 
             _handle_signals(self._receive_signal)
 
+        # Print stabilization effect at end of simulation (FEM 2D only)
+        if not self._stop and hasattr(self.solver, 'print_stabilization_effect'):
+            self.solver.print_stabilization_effect()
+
         if not keep_open:
             self._post_run()
 

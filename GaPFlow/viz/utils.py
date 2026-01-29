@@ -30,6 +30,7 @@ import matplotlib.pyplot as plt
 from functools import wraps
 from IPython import get_ipython
 
+
 def get_pipeline(path='.', silent=False, mode='select', name='sol.nc'):
 
     folders = []

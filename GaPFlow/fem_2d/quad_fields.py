@@ -304,8 +304,8 @@ class QuadFieldManager:
         boundary_factor = p.fem_solver.get('boundary_stab_factor', 1.0)
         boundary_decay = p.fem_solver.get('boundary_stab_decay', 2.0)
 
-        if boundary_factor > 1.0 and (not p.decomp.periodic_x
-                                      or not p.decomp.periodic_y):
+        if boundary_factor > 1.0 and (
+                not p.decomp.periodic_x or not p.decomp.periodic_y):
             # Compute distance to nearest Dirichlet boundary (cached)
             if self._boundary_distance_cache is None:
                 self._boundary_distance_cache = self._compute_boundary_distance(rho.shape)
