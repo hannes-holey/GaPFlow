@@ -22,6 +22,8 @@
 # SOFTWARE.
 #
 
+# flake8: noqa: W503
+
 """
 Linear system scaling for FEM solver conditioning.
 
@@ -158,8 +160,8 @@ def build_scaling(
     r_scales = q_scales  # Residual scales match corresponding variable
 
     # COO scaling factors: J*[k] = J[k] * D_q[var_idx] / D_R[res_idx]
-    coo_scale = (q_scales[matrix_coo.var_block_idx] /
-                 r_scales[matrix_coo.res_block_idx])
+    coo_scale = (q_scales[matrix_coo.var_block_idx]
+                 / r_scales[matrix_coo.res_block_idx])
 
     # RHS scaling factors
     rhs_scale = r_scales[rhs.res_block_idx]

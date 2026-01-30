@@ -690,27 +690,73 @@ term_list = [
 
 
 def get_default_terms(fem_solver: dict) -> list[str]:
-    """Determine default 2D term names based on config flags."""
-    terms = ['R11x', 'R11y', 'R11Sx', 'R11Sy',   # Mass
-             'R21x', 'R21y', 'R24x', 'R24y',     # Momentum
-             'R1T', 'R2Tx', 'R2Ty']              # Time derivatives
+    """Build term list from physics flags.
 
-    # Pressure stabilization
-    if fem_solver['pressure_stab_alpha'] > 0:
-        terms.extend(['R1Stabx', 'R1Staby'])
+    Physics flags control which physical terms are included:
+    - gap_shear: Gap-averaged wall shear τ/h (R24x, R24y)
+    - plane_shear: In-plane viscous diffusion (R23xy, R23yx)
+    - inertia: Momentum convection (R22*)
+    - body_force: External body force (R25x, R25y)
+    - energy: Energy equation master switch
+    - energy_convection: Energy advection (R31*)
+    - pressure_work: Pressure-volume work (R32*)
+    - thermal_diffusion: Heat conduction (R35x, R35y)
+    - wall_heat_balance: Wall heat flux BC (R36)
+    - wall_shear_work: Wall stress work / shear heating (R34)
+    - stabilization: Stabilization for all equations
 
-    # Momentum stabilization
-    if fem_solver['momentum_stab_alpha'] > 0:
-        terms.extend(['R2Stabx', 'R2Staby'])
+    Note: Disabling wall_shear_work (R34) is consistent with gap_shear=False,
+    as both disable the gap-averaged wall stress contribution.
+    """
+    physics = fem_solver.get('physics', {})
 
-    # Energy
-    if fem_solver['equations']['energy']:
-        terms.extend(['R31x', 'R31y', 'R31Sx', 'R31Sy',
-                      'R32x', 'R32y', 'R32Sx', 'R32Sy',
-                      'R34', 'R35x', 'R35y', 'R36', 'R3T'])
+    # Always included: mass conservation, pressure gradient, time derivatives
+    terms = [
+        'R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1T',  # Mass
+        'R21x', 'R21y', 'R2Tx', 'R2Ty',            # Momentum base
+    ]
 
-        # Energy stabilization: enabled when alpha > 0
-        if fem_solver['energy_stab_alpha'] > 0:
+    # Momentum physics
+    if physics.get('gap_shear', True):
+        terms.extend(['R24x', 'R24y'])
+
+    if physics.get('plane_shear', False):
+        terms.extend(['R23xy', 'R23yx'])
+
+    if physics.get('inertia', False):
+        terms.extend(['R22xx', 'R22yy', 'R22xy', 'R22yx',
+                      'R22xxS', 'R22yyS', 'R22xyS', 'R22yxS'])
+
+    if physics.get('body_force', False):
+        terms.extend(['R25x', 'R25y'])
+
+    # Stabilization (mass and momentum)
+    if physics.get('stabilization', True):
+        terms.extend(['R1Stabx', 'R1Staby', 'R2Stabx', 'R2Staby'])
+
+    # Energy physics
+    if physics.get('energy', False):
+        # Time derivative (always included with energy)
+        terms.append('R3T')
+
+        # Wall stress work / shear heating
+        if physics.get('wall_shear_work', True):
+            terms.append('R34')
+
+        if physics.get('energy_convection', True):
+            terms.extend(['R31x', 'R31y', 'R31Sx', 'R31Sy'])
+
+        if physics.get('pressure_work', True):
+            terms.extend(['R32x', 'R32y', 'R32Sx', 'R32Sy'])
+
+        if physics.get('thermal_diffusion', True):
+            terms.extend(['R35x', 'R35y'])
+
+        if physics.get('wall_heat_balance', True):
+            terms.append('R36')
+
+        # Energy stabilization
+        if physics.get('stabilization', True):
             terms.extend(['R3Stabx', 'R3Staby'])
 
     return terms
@@ -719,8 +765,8 @@ def get_default_terms(fem_solver: dict) -> list[str]:
 def get_active_terms(fem_solver: dict) -> list[NonLinearTerm]:
     """Get active terms based on config.
 
-    If user specified explicit term_list, use that.
-    Otherwise, auto-select based on config flags.
+    If user specified explicit term_list, use that (overrides all physics flags).
+    Otherwise, auto-select based on physics flags.
     """
     user_terms = fem_solver['equations'].get('term_list')
     if user_terms is not None:

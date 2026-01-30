@@ -51,36 +51,15 @@ fem_solver:
     R_norm_tol: 1.0e-10
     linear_solver: iterative
     max_iter: 5
-    pressure_stab_alpha: 100000
-    momentum_stab_alpha: 2000
-    boundary_stab_factor: 100.
-    boundary_stab_decay: 5
-    equations:
-        energy: False
-        term_list:
-            - R11x
-            - R11y
-            - R1T
-            - R1Stabx
-            - R1Staby
-            - R11Sx
-            - R11Sy
-            - R21x
-            - R21y
-            - R22xx
-            - R22xxS
-            - R22yx
-            - R22yxS
-            - R22xy
-            - R22xyS
-            - R22yy
-            - R22yyS
-            - R2Tx
-            - R2Ty
-            - R2Stabx
-            - R2Staby
+    pressure_stab_alpha: 0.02
+    momentum_stab_alpha: 3.2e-03
+    boundary_stab_factor: 1.
+    boundary_stab_decay: 2
+    physics:
+        gap_shear: False
+        inertia: True
 
 options:
     output: /tmp/bernoulli_quasi1d
     write_freq: 1
-    silent: False
+    save_output: False

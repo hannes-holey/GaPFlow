@@ -2,7 +2,7 @@ options:
     output: /tmp/parabolic_test_{solver}
     write_freq: 1000
     use_tstamp: True
-    silent: False
+    save_output: False
 
 grid:
     Lx: 0.0762

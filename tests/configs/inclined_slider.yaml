@@ -1,7 +1,7 @@
 options:
     output: /tmp/comparison_test
     write_freq: 1000
-    silent: True
+    save_output: False
 
 grid:
     Lx: 0.1

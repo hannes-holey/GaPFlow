@@ -46,31 +46,12 @@ fem_solver:
     pressure_stab_alpha: 0.1
     momentum_stab_alpha: 1.0
     max_iter: 20
-    equations:
-        energy: False
-        term_list:
-            # Mass equation
-            - R11x
-            - R11y
-            - R1T
-            - R1Stabx
-            - R1Staby
-            # Momentum - pressure gradient
-            - R21x
-            - R21y
-            # Momentum - in-plane viscous diffusion (KEY for 2D Poiseuille)
-            - R23xy
-            - R23yx
-            # Momentum - body force (drives the flow)
-            - R25x
-            # Momentum - time derivative and stabilization
-            - R2Tx
-            - R2Ty
-            - R2Stabx
-            - R2Staby
-            # NOTE: R24x, R24y (wall stress) are EXCLUDED
+    physics:
+        gap_shear: False
+        plane_shear: True
+        body_force: True
 
 options:
     output: /tmp/poiseuille_2d_test
     write_freq: 100
-    silent: True
+    save_output: False

@@ -1,7 +1,7 @@
 options:
     output: data/temp_advection_2d
     write_freq: 20
-    silent: False
+    save_output: False
 
 grid:
     Lx: 1.0
@@ -39,11 +39,13 @@ fem_solver:
     linear_solver: direct
     dynamic: True
     R_norm_tol: 1e-5
-    equations:
+    physics:
         energy: True
-        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1T',
-                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty',
-                    'R31x', 'R31y', 'R3T']
+        pressure_work: False
+        thermal_diffusion: False
+        wall_heat_balance: False
+        wall_shear_work: False
+        stabilization: False
 
 energy_spec:
     cv: 718.0

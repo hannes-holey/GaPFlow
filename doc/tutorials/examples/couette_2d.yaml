@@ -1,13 +1,13 @@
 options:
-    output: data/parabolic_slider_2d
-    write_freq: 1
-    silent: False
+    output: data/couette_2d
+    write_freq: 5
+    save_output: False
 
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 128
-    Ny: 128
+    Nx: 50
+    Ny: 50
     xE: ['P', 'P', 'P']
     xW: ['P', 'P', 'P']
     yS: ['P', 'P', 'P']
@@ -19,14 +19,14 @@ geometry:
     type: inclined
     hmax: 1.0e-2
     hmin: 1.0e-2
-    U: 0.1
+    U: 0.2
     V: 0.
 
 numerics:
     solver: fem
-    dt: 0.001
+    dt: 0.1
     tol: 0.
-    max_it: 10
+    max_it: 40
 
 properties:
     EOS: PL
@@ -41,7 +41,3 @@ fem_solver:
     linear_solver: direct
     dynamic: True
     R_norm_tol: 1e-11
-    pressure_stab_alpha: 500
-    equations:
-        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
-                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']

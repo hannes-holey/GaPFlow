@@ -614,10 +614,8 @@ def plot_lid_driven_cavity(problem, title=None):
     plt.colorbar(im6, ax=ax6, label=r'$\omega$', shrink=0.7)
 
     # Title
-    U_lid = problem.grid['bc_yN_D_val'][1]
-    Re = rho0 * U_lid * Lx / problem.prop['shear']
     if title is None:
-        title = f'Lid-Driven Cavity Flow (Re = {Re:.0f})'
+        title = 'Lid-Driven Cavity Flow'
     fig.suptitle(title, fontsize=14, fontweight='bold')
 
     return fig

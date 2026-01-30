@@ -49,7 +49,6 @@ BASE_FIELDS = {
     'rho_prev', 'jx_prev', 'jy_prev',
     'tau_mass',
     'tau_mom',
-    'u_mag',
     'force_x', 'force_y',  # Body force components
 }
 
@@ -280,63 +279,41 @@ class QuadFieldManager:
         return np.broadcast_to(dist_boundary[np.newaxis, :, :], target_shape).copy()
 
     def _compute_tau_stabilization(self, s, q) -> None:
-        """Compute stabilization parameters at quadrature points."""
+        """Compute stabilization parameters at quadrature points.
+
+        Uses user-specified alpha values as tau, with P0 normalization for
+        pressure/energy and optional boundary enhancement for Dirichlet BCs.
+        """
         p = self.problem
-        alpha = p.fem_solver['pressure_stab_alpha']
-
         rho = q('rho')
-        jx = q('jx')
-        jy = q('jy')
-
-        # Velocity magnitude
-        u_mag = np.sqrt((jx / rho)**2 + (jy / rho)**2)
-        self.quad_fields['u_mag'].pg[s] = u_mag
-
-        # Grid scaling: alpha values are calibrated for 50x50, scale for other grids
-        grid_scale = (p.grid['Nx'] * p.grid['Ny']) / 2500.0
-
-        # Base tau for mass equation
         P0 = p.prop.get('P0', 1.0)
-        h_sq = self.dx * self.dy
-        tau_mass_base = alpha * h_sq * grid_scale / P0
 
-        # Boundary-enhanced stabilization for Dirichlet BCs
+        # Base tau values: pressure/energy normalized by P0, momentum direct
+        tau_mass_base = p.fem_solver['pressure_stab_alpha'] / P0
+        tau_mom_base = p.fem_solver['momentum_stab_alpha']
+
+        # Optional boundary enhancement
         boundary_factor = p.fem_solver.get('boundary_stab_factor', 1.0)
         boundary_decay = p.fem_solver.get('boundary_stab_decay', 2.0)
 
-        if boundary_factor > 1.0 and (
-                not p.decomp.periodic_x or not p.decomp.periodic_y):
-            # Compute distance to nearest Dirichlet boundary (cached)
+        if boundary_factor > 1.0 and (not p.decomp.periodic_x or not p.decomp.periodic_y):
             if self._boundary_distance_cache is None:
                 self._boundary_distance_cache = self._compute_boundary_distance(rho.shape)
             dist = self._boundary_distance_cache
-
-            # Exponential enhancement: 1 + (factor-1) * exp(-dist/decay)
-            # At boundary (dist=0): enhancement = factor
-            # Far from boundary: enhancement -> 1
             enhancement = 1.0 + (boundary_factor - 1.0) * np.exp(-dist / boundary_decay)
             tau_mass = tau_mass_base * enhancement
+            tau_mom = tau_mom_base * enhancement
         else:
-            # Fully periodic or no enhancement: constant tau
             tau_mass = np.full_like(rho, tau_mass_base)
+            tau_mom = np.full_like(rho, tau_mom_base)
 
         self.quad_fields['tau_mass'].pg[s] = tau_mass
-
-        # Tezduyar tau for momentum equation
-        mom_alpha = p.fem_solver['momentum_stab_alpha'] * grid_scale
-
-        dt = p.numerics['dt']
-        h = np.sqrt(h_sq)
-
-        eta = q('eta')
-        nu = eta / rho
-
-        term1 = (2.0 / dt)**2
-        term2 = (2.0 * u_mag / h)**2
-        term3 = (4.0 * nu / h**2)**2
-        tau_mom = mom_alpha / np.sqrt(term1 + term2 + term3)
-
         self.quad_fields['tau_mom'].pg[s] = tau_mom
+
+        # Energy stabilization (if enabled)
+        if self.energy:
+            tau_energy = p.fem_solver['energy_stab_alpha']
+            self.quad_fields['tau_energy'].pg[s] = np.full_like(rho, tau_energy)
 
     def update_quad_computed(self) -> None:
         """Compute derived quantities at quadrature points.
@@ -395,14 +372,6 @@ class QuadFieldManager:
                                ('dS_dE', 'q_wall_grad_E')]:
                 self.quad_fields[name].pg[s] = apply(
                     getattr(p.energy, func), *args_S)
-
-            # Energy stabilization parameter (constant, grid-scaled for 50x50 reference)
-            energy_alpha = p.fem_solver['energy_stab_alpha']
-            P0 = p.prop.get('P0', 1.0)
-            h_sq = self.dx * self.dy
-            grid_scale = (p.grid['Nx'] * p.grid['Ny']) / 2500.0
-            tau_energy = energy_alpha * h_sq * grid_scale / P0
-            self.quad_fields['tau_energy'].pg[s] = np.full_like(q('rho'), tau_energy)
 
     def store_prev_values(self) -> None:
         """Store current quad values for time derivatives."""

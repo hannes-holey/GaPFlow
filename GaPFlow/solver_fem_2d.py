@@ -21,6 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
 from . import HAS_PETSC
 from .fem_2d.elements import TriangleQuadrature
 from .fem_2d.terms import NonLinearTerm, get_active_terms
@@ -29,18 +30,14 @@ from .fem_2d.assembly_layout import (
     MatrixCOOPattern,
     RHSPattern,
     JacobianTermMap,
-    JacobianMapCache,
-    RHSTermMap,
     COOLookup,
 )
 from .fem_2d.scaling import compute_characteristic_scales
 from .fem_2d.grid_index import GridIndexManager
 from .fem_2d.quad_fields import QuadFieldManager
 from .fem_2d.solution_guards import apply_guards
-from .fem_2d.stab_diagnostics import StabDiagnostics
 
 from functools import cached_property
-import os
 import numpy as np
 import time
 from muGrid import Timer
@@ -217,15 +214,16 @@ class FEMSolver2D:
         rhs = self._build_rhs_pattern(l2g_pts, nb_res)
 
         # 4. Build Jacobian term maps with deduplication
-        # Terms with identical structural keys share the same index arrays
-        jacobian_terms = JacobianMapCache.empty()
+        # Terms with identical structural keys share the same JacobianTermMap object
+        jacobian_terms = {}
+        structural_key_to_map = {}  # temporary, for deduplication during build
         for term in self.terms:
             for dep_var in term.dep_vars:
                 term_key = (term.name, term.res, dep_var)
                 structural_key = self._get_structural_key(term, dep_var)
 
                 # Only build if this structural pattern hasn't been seen
-                if structural_key not in jacobian_terms._canonical_maps:
+                if structural_key not in structural_key_to_map:
                     if term.d_dx_resfun:
                         term_map = self._build_jacobian_term_deriv(
                             term, dep_var, local_to_coo, 'x')
@@ -235,30 +233,15 @@ class FEMSolver2D:
                     else:
                         term_map = self._build_jacobian_term_zero_der(
                             term, dep_var, local_to_coo)
-                    jacobian_terms.register(term_key, structural_key, term_map)
-                else:
-                    # Reuse existing map
-                    jacobian_terms.register(term_key, structural_key, None)
+                    structural_key_to_map[structural_key] = term_map
 
-        # 5. Build RHS term maps
-        rhs_terms = {}
-        for term in self.terms:
-            key = (term.name, term.res)
-            rhs_terms[key] = self._build_rhs_term(term)
+                # Store reference (same object if structural_key already existed)
+                jacobian_terms[term_key] = structural_key_to_map[structural_key]
 
         return FEMAssemblyLayout(
             matrix_coo=matrix_coo,
             rhs=rhs,
             jacobian_terms=jacobian_terms,
-            rhs_terms=rhs_terms,
-            dx=self.dx,
-            dy=self.dy,
-            nb_vars=nb_vars,
-            nb_inner_pts=self.nb_inner_pts,
-            nb_global_pts=Nx * Ny,
-            nb_sq=self.nb_sq,
-            sq_per_row=self.sq_per_row,
-            sq_per_col=self.sq_per_col,
         )
 
     def _get_structural_key(self, term: NonLinearTerm, dep_var: str) -> tuple:
@@ -342,66 +325,8 @@ class FEMSolver2D:
             res_block_idx[start:end] = res_idx
 
         return RHSPattern(
-            size=local_size,
             global_rows=global_rows,
             res_block_idx=res_block_idx,
-        )
-
-    def _build_rhs_term(self, term: NonLinearTerm) -> RHSTermMap:
-        """Build RHS term map for a single term."""
-        TO = self.grid_idx.sq_TO_inner
-        res_idx = self.residuals.index(term.res)
-        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
-
-        # Select test weights based on term type
-        if term.d_dx_resfun:
-            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
-        elif term.d_dy_resfun:
-            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
-        else:
-            test_wA_left = self.test_wA_left
-            test_wA_right = self.test_wA_right
-
-        # Triangle configs: (TO_indices, test_weights, quad_offset)
-        triangle_configs = [
-            (TO[:, [0, 2, 1]], test_wA_left, 0),   # left: [bl, tl, br], quad 0-2
-            (TO[:, [3, 1, 2]], test_wA_right, 3),  # right: [tr, br, tl], quad 3-5
-        ]
-
-        output_idx_list = []
-        weights_list = []
-        flat_field_idx_list = []
-
-        for TO_tri, test_wA, quad_offset in triangle_configs:
-            for i in range(3):
-                valid = TO_tri[:, i] >= 0
-                sq_valid = np.where(valid)[0]
-                if len(sq_valid) > 0:
-                    sq_x_valid = sq_x[sq_valid]
-                    sq_y_valid = sq_y[sq_valid]
-                    for q in range(3):
-                        output_idx_list.append(
-                            res_idx * self.nb_inner_pts + TO_tri[sq_valid, i])
-                        weights_list.append(
-                            np.full(len(sq_valid), test_wA[i, q], dtype=np.float64))
-                        # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
-                        quad_idx = q + quad_offset
-                        flat_idx = quad_idx * self.nb_sq + sq_x_valid * self.sq_per_col + sq_y_valid
-                        flat_field_idx_list.append(flat_idx.astype(np.int32))
-
-        if not output_idx_list:
-            return RHSTermMap(
-                output_idx=np.array([], dtype=np.int32),
-                weights=np.array([], dtype=np.float64),
-                flat_field_idx=np.array([], dtype=np.int32),
-            )
-
-        return RHSTermMap(
-            output_idx=np.concatenate(output_idx_list),
-            weights=np.concatenate(weights_list),
-            flat_field_idx=np.concatenate(flat_field_idx_list),
         )
 
     def _lookup_coo_indices(self, coo_lookup: COOLookup,
@@ -580,7 +505,7 @@ class FEMSolver2D:
                                          coo_values: NDArray):
         """Sparse assembly for zero-derivative term."""
         key = (term.name, term.res, dep_var)
-        idx = self.assembly_layout.jacobian_terms.get(key)
+        idx = self.assembly_layout.jacobian_terms[key]
 
         if len(idx.coo_idx) == 0:
             return
@@ -594,7 +519,7 @@ class FEMSolver2D:
                                       coo_values: NDArray, direction: str):
         """Sparse assembly for derivative term with ±1/d* stencil."""
         key = (term.name, term.res, dep_var)
-        idx = self.assembly_layout.jacobian_terms.get(key)
+        idx = self.assembly_layout.jacobian_terms[key]
 
         if len(idx.coo_idx) == 0:
             return
@@ -786,7 +711,7 @@ class FEMSolver2D:
             q = self.get_q_nodal().copy()
             max_iter = fem_solver['max_iter']
             tol = fem_solver['R_norm_tol']
-            alpha = fem_solver['alpha']
+            alpha = fem_solver['newton_relax']
 
             # Start new timestep history (rank 0 only)
             if p.decomp.rank == 0:
@@ -832,11 +757,6 @@ class FEMSolver2D:
 
             self.update_output_fields()
 
-            # Capture stabilization diagnostics every N steps
-            step = p.step
-            if step % self.stab_diag.save_interval == 0:
-                self.stab_diag.capture(step)
-
         p._post_update()
 
     def update(self) -> None:
@@ -859,32 +779,6 @@ class FEMSolver2D:
         if scalars and p.options['print_progress'] and p.decomp.rank == 0:
             print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
                   f"{self.inner_iterations:<6d} {self.time_inner:<12.4e} {p.residual:<12.4e}")
-
-    def print_stabilization_effect(self) -> None:
-        """Print stabilization contribution to residual at current state."""
-        R_total = np.zeros(self.res_size)
-        R_stab = np.zeros(self.res_size)
-
-        for term in self.terms:
-            sl = self._res_slice(term.res)
-            contrib = self.residual_vector_term(term)
-            R_total[sl] += contrib
-            if 'Stab' in term.name:
-                R_stab[sl] += contrib
-
-        comm = self.problem.decomp._mpi_comm
-        if self.problem.decomp.rank == 0:
-            print("\nStabilization effect (||R_stab|| / ||R_total||):")
-        for res in self.residuals:
-            sl = self._res_slice(res)
-            stab_norm = np.sqrt(comm.allreduce(np.sum(R_stab[sl]**2), op=MPI.SUM))
-            total_norm = np.sqrt(comm.allreduce(np.sum(R_total[sl]**2), op=MPI.SUM))
-            if self.problem.decomp.rank == 0:
-                if total_norm > 1e-14:
-                    ratio = stab_norm / total_norm * 100
-                    print(f"  {res}: {ratio:.2f}% (stab={stab_norm:.2e}, total={total_norm:.2e})")
-                else:
-                    print(f"  {res}: N/A (total={total_norm:.2e})")
 
     def print_timer_summary(self, save_json: str = "") -> None:
         """Print timer summary and optionally save to JSON.
@@ -974,7 +868,13 @@ class FEMSolver2D:
     def _init_linear_solver(self):
         """Initialize linear solver and scaling for sparse system solves."""
         solver_type = self.problem.fem_solver['linear_solver']
-        petsc_info = self.assembly_layout.get_petsc_info()
+        p = self.problem
+        nb_global_pts = p.grid['Nx'] * p.grid['Ny']
+        petsc_info = self.assembly_layout.get_petsc_info(
+            nb_vars=len(self.variables),
+            nb_inner_pts=self.nb_inner_pts,
+            nb_global_pts=nb_global_pts,
+        )
 
         if HAS_PETSC:
             from .fem_2d.petsc_system import PETScSystem
@@ -994,16 +894,3 @@ class FEMSolver2D:
         # Build scaling for linear system conditioning
         char_scales = compute_characteristic_scales(self.problem, self.energy)
         self.scaling = self.assembly_layout.build_scaling(char_scales, self.variables)
-
-        # Initialize stabilization diagnostics
-        self._init_stab_diagnostics()
-
-    def _init_stab_diagnostics(self) -> None:
-        """Initialize stabilization diagnostics collector."""
-        p = self.problem
-        case_name = os.path.basename(p.options.get('output', 'unknown'))
-        # Remove any file extension
-        if '.' in case_name:
-            case_name = case_name.rsplit('.', 1)[0]
-        output_dir = os.path.join('/home/qd5728/GaPFlow/stab_analysis', case_name)
-        self.stab_diag = StabDiagnostics(self, output_dir, case_name, save_interval=10)

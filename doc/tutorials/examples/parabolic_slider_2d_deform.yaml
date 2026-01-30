@@ -1,7 +1,7 @@
 options:
-    output: data/parabolic_slider_2d
-    write_freq: 1
-    silent: False
+    output: data/parabolic_slider_2d_deform
+    write_freq: 5
+    save_output: False
 
 grid:
     Lx: 0.1
@@ -26,8 +26,8 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1e-04
-    tol: 1e-10
+    dt: 1.
+    tol: 1e-12
     max_it: 50
 
 properties:
@@ -40,17 +40,13 @@ properties:
     elastic:
         E: 1e07
         v: 0.3
-        alpha_underrelax: 0.02
+        alpha_underrelax: 0.1
         reference_point: [0,25]
 
 fem_solver:
-    type: newton_alpha
-    linear_solver: direct
-    max_iter: 50
-    dynamic: True
+    linear_solver: iterative
+    max_iter: 10
     R_norm_tol: 1e-09
-    pressure_stab_alpha: 4500
-    momentum_stab_alpha: 25000
-    equations:
-        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
-                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty', 'R2Stabx', 'R2Staby']
+    pressure_stab_alpha: 0.02
+    momentum_stab_alpha: 1.0
+    energy_stab_alpha: 0.02

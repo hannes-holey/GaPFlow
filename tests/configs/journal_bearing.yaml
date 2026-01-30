@@ -1,7 +1,7 @@
 options:
     output: /tmp/journal_test
     write_freq: 1000
-    silent: False
+    save_output: False
 
 grid:
     dx: 1.e-5
@@ -42,3 +42,5 @@ fem_solver:
     type: newton_alpha
     R_norm_tol: 1e-04
     max_iter: 10
+    physics:
+        stabilization: False

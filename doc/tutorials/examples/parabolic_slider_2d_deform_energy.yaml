@@ -1,7 +1,7 @@
 options:
-    output: data/parabolic_slider_2d
+    output: data/parabolic_slider_2d_deform_energy
     write_freq: 5
-    silent: False
+    save_output: False
 
 grid:
     Lx: 0.1
@@ -44,16 +44,13 @@ properties:
         reference_point: [0,25]
 
 fem_solver:
-    type: newton_alpha
-    alpha: 1.0
-    linear_solver: direct
+    linear_solver: iterative
     max_iter: 1
-    dynamic: True
     R_norm_tol: 1e-09
-    pressure_stab_alpha: 4500
-    momentum_stab_alpha: 25000
-    energy_stab_alpha: 500000000
-    equations:
+    pressure_stab_alpha: 0.02
+    momentum_stab_alpha: 1.0
+    energy_stab_alpha: 0.02
+    physics:
         energy: True
 
 energy_spec:

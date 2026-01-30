@@ -1,7 +1,7 @@
 options:
     output: data/lid_driven_cavity
     write_freq: 10
-    silent: False
+    save_output: False
 
 grid:
     Lx: 1.0
@@ -32,7 +32,7 @@ numerics:
     solver: fem
     dt: 0.01
     tol: 5e-07
-    max_it: 500
+    max_it: 200
 
 properties:
     EOS: PL
@@ -45,26 +45,10 @@ properties:
     force_y: 0.0
 
 fem_solver:
-    pressure_stab_alpha: 500
+    boundary_stab_factor: 10
+    boundary_stab_decay: 2
     R_norm_tol: 1e-8
     linear_solver: iterative
-    equations:
-        energy: False
-        term_list:
-            # Mass equation
-            - R11x
-            - R11y
-            - R1T
-            - R1Stabx
-            - R1Staby
-            # Momentum - pressure gradient
-            - R21x
-            - R21y
-            # Momentum - in-plane viscous diffusion
-            - R23xy
-            - R23yx
-            # Momentum - time derivative and stabilization
-            - R2Tx
-            - R2Ty
-            - R2Stabx
-            - R2Staby
+    physics:
+        gap_shear: False
+        plane_shear: True

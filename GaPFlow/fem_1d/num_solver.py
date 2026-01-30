@@ -43,7 +43,9 @@ def newton_alpha_solver(fem_solver,
                         **kwargs
                         ):
 
-    sol.alpha = getattr(fem_solver, 'alpha', 1.0)
+    # Support both newton_relax (new) and alpha (legacy)
+    sol.alpha = getattr(fem_solver, 'newton_relax',
+                        getattr(fem_solver, 'alpha', 1.0))
     sol.q = sol.q0.copy()
 
     while True:

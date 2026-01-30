@@ -46,18 +46,16 @@ def apply_guards(q: np.ndarray, dq: np.ndarray, solver: "FEMSolver2D") -> np.nda
     # Max relative density change (only density part: first nb elements)
     rho = q[:nb]
     d_rho = dq[:nb]
-    max_rel = np.max(np.abs(d_rho) / np.maximum(np.abs(rho), RHO_MIN))
-
-    # Global max across MPI processes
-    max_rel = comm.allreduce(max_rel, op=MPI.MAX)
+    max_rel_loc = np.max(np.abs(d_rho) / np.abs(rho))
+    max_rel_glob = comm.allreduce(max_rel_loc, op=MPI.MAX)
 
     # Uniform scaling if density change exceeds limit
-    if max_rel > MAX_DENSITY_CHANGE:
-        scale = MAX_DENSITY_CHANGE / max_rel
+    if max_rel_glob > MAX_DENSITY_CHANGE:
+        scale = MAX_DENSITY_CHANGE / max_rel_glob
         dq = dq * scale
         print(f"Applied density change guard: scaled dq by {scale:.3f}")
 
     q_new = q + dq
-    q_new[:nb] = np.maximum(q_new[:nb], RHO_MIN)  # Clamp density only
+    q_new[:nb] = np.maximum(q_new[:nb], RHO_MIN)
 
     return q_new

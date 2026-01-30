@@ -488,21 +488,40 @@ def sanitize_fem_solver(d):
     out['type'] = str(d.get('type', 'newton_alpha'))
     out['max_iter'] = int(d.get('max_iter', 100))
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
-    out['alpha'] = float(d.get('alpha', 1.0))
+    # newton_relax: support both new name and legacy 'alpha'
+    out['newton_relax'] = float(d.get('newton_relax', d.get('alpha', 1.0)))
     out['linear_solver'] = str(d.get('linear_solver', 'direct'))
 
-    # Stabilization parameters
-    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 1000.))
-    out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 10000.))
-    out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 100000000.))
-
-    # Boundary-enhanced stabilization (for Dirichlet BCs)
+    out['pressure_stab_alpha'] = float(d.get('pressure_stab_alpha', 0.01))
+    out['momentum_stab_alpha'] = float(d.get('momentum_stab_alpha', 0.1))
+    out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 0.01))
     out['boundary_stab_factor'] = float(d.get('boundary_stab_factor', 1.0))
     out['boundary_stab_decay'] = float(d.get('boundary_stab_decay', 2.0))
 
+    physics = d.get('physics', {})
+    out['physics'] = {
+        # Momentum physics
+        'gap_shear': bool(physics.get('gap_shear', True)),
+        'plane_shear': bool(physics.get('plane_shear', False)),
+        'inertia': bool(physics.get('inertia', False)),
+        'body_force': bool(physics.get('body_force', False)),
+        # Energy physics (sub-flags only relevant if energy=True)
+        'energy': bool(physics.get('energy', False)),
+        'energy_convection': bool(physics.get('energy_convection', True)),
+        'pressure_work': bool(physics.get('pressure_work', True)),
+        'thermal_diffusion': bool(physics.get('thermal_diffusion', True)),
+        'wall_heat_balance': bool(physics.get('wall_heat_balance', True)),
+        'wall_shear_work': bool(physics.get('wall_shear_work', True)),
+        # Numerical
+        'stabilization': bool(physics.get('stabilization', True)),
+    }
+
+    equations_energy = d.get('equations', {}).get('energy', None)
+    if equations_energy is not None and 'energy' not in physics:
+        out['physics']['energy'] = bool(equations_energy)
+
     out['equations'] = {}
-    out['equations']['energy'] = bool(d.get('equations', {}).get('energy', False))
-    # User-provided term_list (None = auto-select in solver based on flags)
+    out['equations']['energy'] = out['physics']['energy']
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
 
     print_dict(out)

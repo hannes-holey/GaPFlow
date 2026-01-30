@@ -20,7 +20,12 @@ and the final tutorial introduces elastic deformation of the solid surfaces.
 	05_lubrication.ipynb
 	06_GP.ipynb
 	07_elastic_deformation.ipynb
-	08_FEM1d_theory.ipynb
-	09_FEM1d_examples.ipynb
-	10_wall_heat.ipynb
-	11_FEM2d_theory.ipynb
+	08_fem_1d_theory.ipynb
+	09_fem_1d_examples.ipynb
+	10_wall_fluid_heatflow.ipynb
+	11_fem_2d_theory.ipynb
+	12_fem_2d_examples.ipynb
+	13_solver_comparison.ipynb
+	14_fem_2d_analytic.ipynb
+	A_config.ipynb
+	B_scripting.ipynb

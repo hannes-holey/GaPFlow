@@ -60,4 +60,4 @@ energy_spec:
 options:
     output: /tmp/temp_diffusion_2d
     write_freq: 10
-    silent: False
+    save_output: False

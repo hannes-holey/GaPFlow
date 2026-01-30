@@ -1,7 +1,7 @@
 options:
     output: data/parabolic_slider_2d
     write_freq: 1
-    silent: False
+    save_output: False
 
 grid:
     Lx: 0.1
@@ -43,7 +43,3 @@ fem_solver:
     linear_solver: direct
     dynamic: True
     R_norm_tol: 1e-11
-    pressure_stab_alpha: 500
-    equations:
-        term_list: ['R11x', 'R11y', 'R11Sx', 'R11Sy', 'R1Stabx', 'R1Staby', 'R1T',
-                    'R21x', 'R21y', 'R24x', 'R24y', 'R2Tx', 'R2Ty']

@@ -450,10 +450,6 @@ class Problem:
 
             _handle_signals(self._receive_signal)
 
-        # Print stabilization effect at end of simulation (FEM 2D only)
-        if not self._stop and hasattr(self.solver, 'print_stabilization_effect'):
-            self.solver.print_stabilization_effect()
-
         if not keep_open:
             self._post_run()
 
@@ -515,14 +511,6 @@ class Problem:
             self.file.close()  # need to be closed to be readable when animating from problem
             if self.prop['elastic']['enabled']:
                 self.topofile.close()
-
-        # Save stabilization diagnostics (final capture + write)
-        if hasattr(self.solver, 'stab_diag'):
-            # Always capture final timestep
-            self.solver.stab_diag.capture(self.step)
-            # Save to disk (rank 0 only)
-            if self.decomp.rank == 0:
-                self.solver.stab_diag.save()
 
         speed = self.step / walltime.total_seconds()
 
