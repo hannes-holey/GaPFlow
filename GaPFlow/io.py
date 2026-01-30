@@ -401,7 +401,7 @@ def sanitize_gp(d):
             out[sk] = {}
             ds = d[sk]
             out[sk]['atol'] = float(ds.get('atol', 1.))
-            out[sk]['rtol'] = float(ds.get('rtol', 0.5))
+            out[sk]['rtol'] = float(ds.get('rtol', 0.))
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
@@ -431,7 +431,12 @@ def sanitize_db(d):
     out['init_width'] = float(d.get('init_width', 1e-2))
     out['init_seed'] = int(d.get('init_width', 123))
 
+    out['normalizer_X'] = d.get('normalizer_X', 'standard')
+    out['normalizer_Y'] = d.get('normalizer_Y', 'standard')
+
     assert out['init_method'] in ['rand', 'lhc', 'sobol']
+    assert out['normalizer_X'] in ['max', 'minmax', 'standard', 'none']
+    assert out['normalizer_Y'] in ['max', 'minmax', 'standard', 'none']
 
     print_dict(out)
 

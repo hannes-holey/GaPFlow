@@ -192,7 +192,7 @@ class WallStress(GaussianProcessSurrogate):
     @property
     def Xtest(self) -> JAXArray:
         """Test inputs for shear stress GP (normalized)."""
-        return (self._Xtest / self.database.X_scale)[:, self.active_dims]
+        return ((self._Xtest - self.database.X_shift) / self.database.X_scale)[:, self.active_dims]
 
     @property
     def Xtrain(self) -> JAXArray:
@@ -222,7 +222,7 @@ class WallStress(GaussianProcessSurrogate):
         jax.Array
             Concatenated array of training outputs (lower then upper).
         """
-        return self._Ytrain / self.Yscale
+        return (self._Ytrain - self.Yshift) / self.Yscale
 
     @property
     def Yscale(self) -> JAXArray:
@@ -238,6 +238,21 @@ class WallStress(GaussianProcessSurrogate):
                              self._out_index + 7], dtype=int)
 
         return jnp.max(self.database.Y_scale[indices])
+
+    @property
+    def Yshift(self) -> JAXArray:
+        """
+        Output scaling factor used for normalization.
+
+        Returns
+        -------
+        jax.Array
+            Scalar-like array representing the maximum of selected Y scales.
+        """
+        indices = jnp.array([self._out_index + 1,
+                             self._out_index + 7], dtype=int)
+
+        return jnp.max(self.database.Y_shift[indices])
 
     @property
     def Yerr(self) -> JAXArray:
@@ -539,7 +554,7 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def Xtest(self) -> JAXArray:
         """Test inputs for pressure GP (normalized)."""
-        return (self._Xtest / self.database.X_scale)[:, self.active_dims]
+        return ((self._Xtest - self.database.X_shift) / self.database.X_scale)[:, self.active_dims]
 
     @property
     def Xtrain(self) -> JAXArray:
@@ -554,7 +569,12 @@ class Pressure(GaussianProcessSurrogate):
     @property
     def Ytrain(self) -> JAXArray:
         """Training outputs for pressure GP (normalized)."""
-        return self._Ytrain / self.Yscale
+        return (self._Ytrain - self.Yshift) / self.Yscale
+
+    @property
+    def Yshift(self) -> JAXArray:
+        """Training outputs for pressure GP (not normalized)."""
+        return self.database.Y_shift[0]
 
     @property
     def Yscale(self) -> JAXArray:

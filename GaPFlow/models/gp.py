@@ -356,7 +356,7 @@ class GaussianProcessSurrogate:
         else:
             m = _repredict_mean(self.gp, self._cache, self.Xtest)
 
-        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
+        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale + self.Yshift
 
         return predictive_mean
 
@@ -379,7 +379,7 @@ class GaussianProcessSurrogate:
         else:
             m, v = _repredict_mean_var(self.gp, self._cache, self.Xtest)
 
-        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale
+        predictive_mean = m.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale + self.Yshift
         predictive_var = v.reshape(-1, *self.solution.shape[-2:]).squeeze() * self.Yscale**2
 
         return predictive_mean, predictive_var
@@ -405,8 +405,12 @@ class GaussianProcessSurrogate:
         if compute_var:
             predictive_mean, self._predictive_var = self._infer_mean_var()
             self.maximum_variance = jnp.max(self._predictive_var)
-            self.variance_tol = jnp.maximum(self.atol * self.Yerr * self.Yscale,
-                                            self.rtol * self.Yscale)**2
+            Yrange = (jnp.max(self.Ytrain) - jnp.min(self.Ytrain))
+            tolerance = jnp.maximum(self.atol * self.Yerr * self.Yscale,  # tolerance based on noise
+                                    self.rtol * Yrange * self.Yscale  # lower bound (optional, default rtol=0.)
+                                    )
+            self.variance_tol = tolerance**2
+
         else:
             predictive_mean = self._infer_mean()
 
@@ -542,7 +546,7 @@ class GaussianProcessSurrogate:
                 print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
                 print('#' + 50 * '-')
 
-            if counter == self.max_steps:
+            if counter == self.max_steps and after > 1.:
                 print("# Active learning loop missed uncertainty threshold")
                 print(f"# Pause for {self.pause_steps} steps...")
                 print('#' + 50 * '-')

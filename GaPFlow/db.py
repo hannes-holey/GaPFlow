@@ -110,11 +110,14 @@ class Database:
         self._Ytrain_err = Yerr
 
         if self.size == 0:
-            self._X_scale = jnp.ones((self.num_features,))
-            self._Y_scale = jnp.ones((13,))
+            input_norm = 'none'
+            output_norm = 'none'
         else:
-            self._X_scale = self._normalizer(self._Xtrain)
-            self._Y_scale = self._normalizer(self._Ytrain)
+            input_norm = self._db['normalizer_X']
+            output_norm = self._db['normalizer_Y']
+
+        self._X_shift, self._X_scale = self._normalizer(self._Xtrain, mode=input_norm)
+        self._Y_shift, self._Y_scale = self._normalizer(self._Ytrain, mode=output_norm)
 
     # ------------------------------------------------------------------
     # Properties
@@ -132,12 +135,12 @@ class Database:
     @property
     def Xtrain(self) -> ArrayX:
         """Normalized input features of shape (Ntrain, Nfeat)."""
-        return self._Xtrain / self.X_scale
+        return (self._Xtrain - self._X_shift) / self.X_scale
 
     @property
     def Ytrain(self) -> ArrayY:
         """Normalized observations of shape (Ntrain, 13)."""
-        return self._Ytrain / self.Y_scale
+        return (self._Ytrain - self._Y_shift) / self.Y_scale
 
     @property
     def Ytrain_err(self) -> ArrayY:
@@ -158,6 +161,16 @@ class Database:
     def Y_scale(self) -> ArrayY:
         """Normalization constants for observations"""
         return self._Y_scale
+
+    @property
+    def X_shift(self) -> ArrayX:
+        """Normalization constants for input features."""
+        return self._X_shift
+
+    @property
+    def Y_shift(self) -> ArrayY:
+        """Normalization constants for observations"""
+        return self._Y_shift
 
     @property
     def num_features(self) -> int:
@@ -259,9 +272,22 @@ class Database:
             self._md._dtool_basepath = new_path
             self._db['dtool_path'] = new_path
 
-    def _normalizer(self, x: ArrayX) -> ArrayX:
+    def _normalizer(self, x: ArrayX, mode) -> ArrayX:
         """Compute feature-wise normalization factors."""
-        return jnp.maximum(jnp.max(jnp.abs(x), axis=0), 1e-12)
+
+        shift = jnp.zeros(x.shape[1])
+        scale = jnp.ones(x.shape[1])
+
+        if mode == 'max':
+            scale = jnp.maximum(jnp.max(jnp.abs(x - shift), axis=0), 1e-12)
+        elif mode == 'minmax':
+            shift = jnp.min(x, axis=0)
+            scale = jnp.maximum(jnp.max(x - shift, axis=0), 1e-12)
+        elif mode == 'standard':
+            shift = jnp.mean(x, axis=0)
+            scale = jnp.maximum(jnp.std(x, axis=0), 1e-12)
+
+        return shift, scale
 
     def write(self) -> None:
         """Write the dataset arrays to disk (if the simulation output path is specified)."""
@@ -361,8 +387,8 @@ class Database:
             self._Ytrain = jnp.vstack([self._Ytrain, Y])
             self._Ytrain_err = jnp.vstack([self._Ytrain_err, Ye])
 
-            self._X_scale = self._normalizer(self._Xtrain)
-            self._Y_scale = self._normalizer(self._Ytrain)
+            self._X_shift, self._X_scale = self._normalizer(self._Xtrain, mode=self._db['normalizer_X'])
+            self._Y_shift, self._Y_scale = self._normalizer(self._Ytrain, mode=self._db['normalizer_Y'])
 
         self.write()
 
