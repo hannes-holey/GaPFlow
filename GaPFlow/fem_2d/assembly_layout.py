@@ -29,11 +29,18 @@ FEM Assembly Layout - Precomputed index structures for O(nnz) assembly.
 
 Architecture:
     FEMAssemblyLayout (top-level container)
-    ├── MatrixCOOPattern  - Sparse matrix structure
-    ├── RHSPattern        - RHS vector structure
-    └── jacobian_terms    - Dict[TermKey, JacobianTermMap]
+    ├── MatrixCOOPattern      - Sparse matrix structure
+    ├── RHSPattern            - RHS vector structure
+    ├── jacobian_templates    - Dict[TemplateKey, JacobianTermTemplate]
+    │                           Shared templates (typically 5-20)
+    └── jacobian_terms        - Dict[TermKey, JacobianTermRef]
+                                Lightweight refs (~80) pointing to templates
 
-    PETScAssemblyInfo     - Extracted info for PETSc (references, not copies)
+    PETScAssemblyInfo         - Extracted info for PETSc (references, not copies)
+
+Memory optimization: Templates share structural index patterns across terms that
+differ only in (res, var) block position. Actual COO indices are computed at
+assembly time as: template_coo_idx + block_offset.
 """
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -118,6 +125,56 @@ class JacobianTermMap:
 # Type alias for term keys
 JacobianTermKey = Tuple[str, str, str]  # (term_name, residual, dep_var)
 
+# Template key: (from_pattern_hash, deriv_type, der_testfun)
+TemplateKey = Tuple[int, str, bool]
+
+
+@dataclass
+class JacobianTermTemplate:
+    """Shared index template for terms with identical (from_pattern, deriv_type, der_testfun).
+
+    Multiple JacobianTermRef objects can reference the same template when they
+    share the same structural pattern (FROM indices and derivative type).
+    The actual COO indices are computed at assembly time as:
+        actual_coo_idx = template_coo_idx + block_offset
+
+    Attributes
+    ----------
+    template_coo_idx : IntArray
+        Base COO indices for block (res=0, var=0).
+    weights : NDArray
+        FEM integration weights.
+    flat_field_idx : IntArray
+        Flat index into quad field: quad_idx * nb_sq + sq_x * sq_per_col + sq_y.
+        Use with res_deriv.ravel()[flat_field_idx] for field lookup.
+    signs : NDArray or None
+        Sign multipliers (+/-1) for derivative terms.
+    nnz_per_block : int
+        Number of non-zeros per (res, var) block, for computing block offsets.
+    """
+    template_coo_idx: IntArray
+    weights: NDArray
+    flat_field_idx: IntArray
+    signs: Optional[NDArray]
+    nnz_per_block: int
+
+
+@dataclass
+class JacobianTermRef:
+    """Lightweight reference to a shared template (~24 bytes vs ~200 MB per JacobianTermMap).
+
+    Stores the template reference and block offset for computing actual COO indices.
+
+    Attributes
+    ----------
+    template : JacobianTermTemplate
+        Shared template with base indices and weights.
+    block_offset : int
+        Offset into COO array: (res_idx * nb_vars + var_idx) * nnz_per_block.
+    """
+    template: JacobianTermTemplate
+    block_offset: int
+
 
 @dataclass
 class COOLookup:
@@ -201,13 +258,16 @@ class FEMAssemblyLayout:
     rhs : RHSPattern
         RHS vector structure.
     jacobian_terms : dict
-        Maps (term_name, residual, dep_var) -> JacobianTermMap.
-        Multiple keys may reference the same JacobianTermMap object
-        when terms share identical structural properties.
+        Maps (term_name, residual, dep_var) -> JacobianTermRef.
+        Each ref contains a lightweight reference to a shared template.
+    jacobian_templates : dict
+        Maps TemplateKey -> JacobianTermTemplate.
+        Typically 5-20 templates shared across all ~80 term refs.
     """
     matrix_coo: MatrixCOOPattern
     rhs: RHSPattern
-    jacobian_terms: Dict[JacobianTermKey, JacobianTermMap]
+    jacobian_terms: Dict[JacobianTermKey, JacobianTermRef]
+    jacobian_templates: Dict[TemplateKey, JacobianTermTemplate]
 
     def get_petsc_info(self, nb_vars: int, nb_inner_pts: int,
                        nb_global_pts: int) -> "PETScAssemblyInfo":
