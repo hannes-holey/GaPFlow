@@ -400,6 +400,7 @@ def sanitize_gp(d):
         if active:
             out[sk] = {}
             ds = d[sk]
+            out[sk]['tol'] = ds.get('tol', 'delta')
             out[sk]['atol'] = float(ds.get('atol', 1.))
             out[sk]['rtol'] = float(ds.get('rtol', 0.))
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
@@ -415,6 +416,8 @@ def sanitize_gp(d):
                 ds_ad = ds.get('active_dims', {})
                 out[sk]['active_dims_x'] = ds_ad.get('x', [0, 1, 3])
                 out[sk]['active_dims_y'] = ds_ad.get('y', [0, 2, 3])
+
+    assert out['tol'] in ['absmax', 'delta', 'snr']
 
     print_dict(out)
 

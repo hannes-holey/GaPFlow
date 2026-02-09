@@ -61,6 +61,7 @@ class GaussianProcessSurrogate:
     use_active_learning: bool
     rtol: float
     atol: float
+    tol: str
     max_steps: int
     pause_steps: int
     params_init: dict
@@ -163,6 +164,12 @@ class GaussianProcessSurrogate:
     @abc.abstractmethod
     def Yscale(self):
         """Observations scaling factor."""
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def Yshift(self):
+        """Observations shift."""
         raise NotImplementedError
 
     @property
@@ -405,12 +412,7 @@ class GaussianProcessSurrogate:
         if compute_var:
             predictive_mean, self._predictive_var = self._infer_mean_var()
             self.maximum_variance = jnp.max(self._predictive_var)
-            Yrange = (jnp.max(self.Ytrain) - jnp.min(self.Ytrain))
-            tolerance = jnp.maximum(self.atol * self.Yerr * self.Yscale,  # tolerance based on noise
-                                    self.rtol * Yrange * self.Yscale  # lower bound (optional, default rtol=0.)
-                                    )
-            self.variance_tol = tolerance**2
-
+            self.variance_tol = self._get_tolerance()
         else:
             predictive_mean = self._infer_mean()
 
@@ -419,6 +421,29 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Active Learning
     # ------------------------------------------------------------------
+    def _get_tolerance(self):
+
+        noise = self.Yerr * self.Yscale
+        Y = self.Ytrain * self.Yscale + self.Yshift
+
+        if self.tol == 'delta':
+            Ys = jnp.max(Y) - jnp.min(Y)
+        elif self.tol == 'absmax':
+            Ys = jnp.max(jnp.abs(Y))
+        elif self.tol == 'snr':
+            Ys = jnp.mean(Y) / noise
+        else:
+            raise RuntimeError('No tolerance calculation configured.')
+
+        std_tol = jnp.maximum(
+            self.atol * noise,  # "lower bound", multiple of observation noise
+            self.rtol * Ys  # grows with Ys,
+        )
+
+        variance_tol = std_tol**2
+
+        return variance_tol
+
     def _active_learning(self, var: JAXArray) -> None:
         """
         Apply active learning by adding new point to the training database.

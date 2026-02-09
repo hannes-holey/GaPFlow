@@ -94,6 +94,7 @@ class WallStress(GaussianProcessSurrogate):
 
             self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
 
+            self.tol = gp['tol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
@@ -510,6 +511,7 @@ class Pressure(GaussianProcessSurrogate):
         if gp is not None:
             self.active_dims = gp.get('active_dims', [0, 3])
             self.__field_variance = fc.real_field('pressure_var')
+            self.tol = gp['tol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
