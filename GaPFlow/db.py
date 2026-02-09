@@ -363,6 +363,9 @@ class Database:
             ])
 
             self.add_data(Xnew)
+        else:
+            # Also write training data to file when no new data is added
+            self.write()
 
     def add_data(
         self,
