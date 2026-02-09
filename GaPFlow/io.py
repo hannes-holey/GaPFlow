@@ -409,6 +409,8 @@ def sanitize_gp(d):
             out[sk]['pause_steps'] = int(ds.get('pause_steps', 100))
             out[sk]['active_learning'] = bool(ds.get('active_learning', True))
 
+            assert out[sk]['tol'] in ['absmax', 'delta', 'snr']
+
             # For shear/2D: need to distinguish (x and y)
             if sk == 'press':
                 out[sk]['active_dims'] = list(ds.get('active_dims', [0, 3]))
@@ -416,8 +418,6 @@ def sanitize_gp(d):
                 ds_ad = ds.get('active_dims', {})
                 out[sk]['active_dims_x'] = ds_ad.get('x', [0, 1, 3])
                 out[sk]['active_dims_y'] = ds_ad.get('y', [0, 2, 3])
-
-    assert out['tol'] in ['absmax', 'delta', 'snr']
 
     print_dict(out)
 
