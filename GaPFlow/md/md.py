@@ -171,8 +171,12 @@ class MolecularDynamics:
         logger.info('---')
 
         for i, (Xi, Xi_t, name) in enumerate(zip(X, X_target, self._input_names)):
-            deviation = (Xi - Xi_t) / max(abs(Xi_t), 1e-12) * 100
-            logger.info(f'Realized input {i + 1}: {Xi:+.3e} ({deviation:+.1f}%)   ({name})')
+
+            if abs(Xi_t) < 1e-9:
+                logger.info(f'Realized input {i + 1}: {Xi:+.3e} (-----%)   ({name})')
+            else:
+                deviation = (Xi - Xi_t) / abs(Xi_t) * 100
+                logger.info(f'Realized input {i + 1}: {Xi:+.3e} ({deviation:+.1f}%)   ({name})')
 
         logger.info('---')
 
