@@ -94,6 +94,7 @@ class GaussianProcessSurrogate:
             self._database = database
             self._last_fit_train_size = 0
             self._pause = self.pause_steps
+            self._use_relative_tol = False
 
             # Initialize timers
             ref = datetime.now()
@@ -447,10 +448,11 @@ class GaussianProcessSurrogate:
         else:
             raise RuntimeError('No tolerance calculation configured.')
 
-        std_tol = jnp.maximum(
-            self.atol * noise,  # "lower bound", multiple of observation noise
-            self.rtol * Ys  # grows with Ys,
-        )
+        atol = self.atol * noise  # "lower bound", multiple of observation noise
+        rtol = self.rtol * Ys  # grows with Ys,
+        self._use_relative_tol = rtol > atol
+
+        std_tol = jnp.maximum(atol, rtol)
 
         variance_tol = std_tol**2
 
@@ -580,7 +582,8 @@ class GaussianProcessSurrogate:
                 self._cumtime_infer += tic - toc
 
                 after = self.maximum_variance / self.variance_tol
-                logger.info(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
+                key = 'R' if self._use_relative_tol else 'A'
+                logger.info(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f} ({key})")
                 logger.info('#' + 50 * '-')
 
             if counter == self.max_steps and after > 1.:
