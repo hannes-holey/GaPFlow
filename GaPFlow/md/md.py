@@ -167,7 +167,7 @@ class MolecularDynamics:
         """
 
         logger.info('---')
-        logger.info(f'MD run completed (walltime: {str(walltime).split('.')[0]})')
+        logger.info(f'MD run completed (walltime: {str(walltime).split(".")[0]})')
         logger.info('---')
 
         for i, (Xi, Xi_t, name) in enumerate(zip(X, X_target, self._input_names)):
