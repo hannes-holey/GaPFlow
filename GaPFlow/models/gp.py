@@ -413,7 +413,7 @@ class GaussianProcessSurrogate:
         if compute_var:
             predictive_mean, self._predictive_var = self._infer_mean_var()
             self.maximum_variance = jnp.max(self._predictive_var)
-            self.variance_tol = self._get_tolerance()
+            self.variance_tol = self._get_tolerance(predictive_mean)
         else:
             predictive_mean = self._infer_mean()
 
@@ -422,10 +422,21 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Active Learning
     # ------------------------------------------------------------------
-    def _get_tolerance(self):
+    def _get_tolerance(self, Y):
+        """Compute the variance tolerance based on the current prediction.
+
+        Parameters
+        ----------
+        Y : jax.Array
+            Predictive mean
+
+        Returns
+        -------
+        float
+            Maximum allowed tolerance
+        """
 
         noise = self.Yerr * self.Yscale
-        Y = self.Ytrain * self.Yscale + self.Yshift
 
         if self.tol == 'delta':
             Ys = jnp.max(Y) - jnp.min(Y)
