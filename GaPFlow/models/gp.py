@@ -39,6 +39,10 @@ with warnings.catch_warnings():
 
 from tinygp import GaussianProcess, kernels, transforms
 
+from ..logging import get_logger
+
+logger = get_logger("gapflow.gp")
+
 JAXArray = jax.Array
 
 
@@ -260,13 +264,10 @@ class GaussianProcessSurrogate:
 
     def _print_opt_summary(self, obj: float) -> None:
         """Print summary of optimization results."""
-        print(f'# Objective    : {obj:.5g}')
-        print("# Hyperparam   :", end=' ')
-        print(f"{self.kernel_variance:.5e}", end=' ')
-        print(f"{self.obs_stddev:.5e}", end=' ')
-        for li in self.kernel_lengthscale:
-            print(f"{li:.5e}", end=' ')
-        print()
+        # Consolidate multiple prints into a single log entry
+        scale = ' '.join([f"{li:.5e}" for li in self.kernel_lengthscale])
+        msg = f"# Objective    : {obj:.5g}\n# Hyperparam   : {self.kernel_variance:.5e} {self.obs_stddev:.5e} {scale}"
+        logger.info(msg)
 
     # ------------------------------------------------------------------
     # Training and Inference
@@ -305,10 +306,10 @@ class GaussianProcessSurrogate:
         self._last_fit_train_size = deepcopy(self._database.size)
         reasons = ['DB', "AL"]
 
-        print('#' + 17 * '-' + f"GP TRAINING ({self.name.upper()})" + 17 * '-')
-        print('# Timestep     :', self._step)
-        print('# Reason       :', reasons[reason])
-        print('# Database size:', self._database.size)
+        logger.info('#' + 17 * '-' + f"GP TRAINING ({self.name.upper()})" + 17 * '-')
+        logger.info(f'# Timestep     : {self._step}')
+        logger.info(f'# Reason       : {reasons[reason]}')
+        logger.info(f'# Database size: {self._database.size}')
 
         @jax.jit
         def loss_so(params, X, Y, yerr):
@@ -335,7 +336,7 @@ class GaussianProcessSurrogate:
             self.write()
 
         if reason == 0:
-            print('#' + 50 * '-')
+            logger.info('#' + 50 * '-')
 
         # Delete cache to force inference step with new training data
         self._cache = None
@@ -568,13 +569,13 @@ class GaussianProcessSurrogate:
                 self._cumtime_infer += tic - toc
 
                 after = self.maximum_variance / self.variance_tol
-                print(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
-                print('#' + 50 * '-')
+                logger.info(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}")
+                logger.info('#' + 50 * '-')
 
             if counter == self.max_steps and after > 1.:
-                print("# Active learning loop missed uncertainty threshold")
-                print(f"# Pause for {self.pause_steps} steps...")
-                print('#' + 50 * '-')
+                logger.warning("# Active learning loop missed uncertainty threshold")
+                logger.info(f"# Pause for {self.pause_steps} steps...")
+                logger.info('#' + 50 * '-')
                 self._pause = self.pause_steps
 
         return m, v

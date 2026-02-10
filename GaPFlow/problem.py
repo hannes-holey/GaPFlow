@@ -50,6 +50,10 @@ from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
 from .viz.animations import animate_1d, animate_2d
+from .logging import get_logger
+
+# Configure module logger writing to gapflow_problem.log via centralized helper
+logger = get_logger("gapflow.problem")
 
 
 class Problem:
@@ -153,6 +157,10 @@ class Problem:
 
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
+            # Reconfigure module loggers to write into the simulation output directory
+            # so all components write into the same outdir logfile(s).
+            get_logger("gapflow.problem", outdir=self.outdir, force=True)
+
             if database is not None:
                 # Set training path inside output path
                 # if database.overwrite_training_path:
@@ -161,6 +169,9 @@ class Problem:
 
                 database.output_path = self.outdir
                 options['output'] = self.outdir
+
+                get_logger("gapflow.gp", outdir=self.outdir, force=True)
+                get_logger("gapflow.md", outdir=self.outdir, force=True)
 
             # Reconstruct dict
             full_dict = {}
@@ -261,7 +272,7 @@ class Problem:
         Problem
             Instantiated `Problem` object.
         """
-        print(f"Reading input file: {fname}")
+        logger.info(f"Reading input file: {fname}")
         with open(fname, "r") as ymlfile:
             input_dict = read_yaml_input(ymlfile)
 
@@ -389,9 +400,9 @@ class Problem:
         }
 
         if not self.options['silent']:
-            print(61 * '-')
-            print(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
-            print(61 * '-')
+            logger.info(61 * '-')
+            logger.info(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
+            logger.info(61 * '-')
             self.write(params=False)
 
         # Run
@@ -466,21 +477,21 @@ class Problem:
         speed = self.step / walltime.total_seconds()
 
         # Print runtime
-        print(33 * '=')
-        print("Total walltime   : ", str(walltime).split('.')[0])
-        print(f"({speed:.2f} steps/s)")
+        logger.info(33 * '=')
+        logger.info("Total walltime   : %s", str(walltime).split('.')[0])
+        logger.info("(%0.2f steps/s)", speed)
 
         if self.pressure.is_gp_model:
-            print(" - GP train (zz) : ", str(self.pressure.cumtime_train).split('.')[0])
-            print(" - GP infer (zz) : ", str(self.pressure.cumtime_infer).split('.')[0])
+            logger.info(" - GP train (zz) : %s", str(self.pressure.cumtime_train).split('.')[0])
+            logger.info(" - GP infer (zz) : %s", str(self.pressure.cumtime_infer).split('.')[0])
         if self.wall_stress_xz.is_gp_model:
-            print(" - GP train (xz) : ", str(self.wall_stress_xz.cumtime_train).split('.')[0])
-            print(" - GP infer (xz) : ", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
+            logger.info(" - GP train (xz) : %s", str(self.wall_stress_xz.cumtime_train).split('.')[0])
+            logger.info(" - GP infer (xz) : %s", str(self.wall_stress_xz.cumtime_infer).split('.')[0])
         if self.wall_stress_yz.is_gp_model:
-            print(" - GP train (yz) : ", str(self.wall_stress_yz.cumtime_train).split('.')[0])
-            print(" - GP infer (yz) : ", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
+            logger.info(" - GP train (yz) : %s", str(self.wall_stress_yz.cumtime_train).split('.')[0])
+            logger.info(" - GP infer (yz) : %s", str(self.wall_stress_yz.cumtime_infer).split('.')[0])
 
-        print(33 * '=')
+        logger.info(33 * '=')
 
         if not self.options['silent']:
             history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
@@ -586,9 +597,9 @@ class Problem:
             Solution field
         """
         if self.q_has_nan:
-            print('NaN detected.', end=' ')
+            logger.warning('NaN detected.')
         elif self.q_has_negative_density:
-            print('Negative density detected.', end=' ')
+            logger.warning('Negative density detected.')
 
         self.__field.p[...] = q0
         self.pressure.update(predictor=False, compute_var=True)
@@ -596,7 +607,7 @@ class Problem:
         self.wall_stress_yz.update(predictor=False, compute_var=True)
         self.bulk_stress.update()
 
-        print('Writing previous step and aborting simulation.')
+        logger.info('Writing previous step and aborting simulation.')
         self._stop = True
 
     # ---------------------------
@@ -608,7 +619,7 @@ class Problem:
         Write scalars, fields and hyperparameters to disk as configured.
         """
         if scalars:
-            print(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
+            logger.info(f"{self.step:<6d} {self.dt:.4e} {self.simtime:.4e} {self.cfl:.4e} {self.residual:.4e}")
             self.history["step"].append(self.step)
             self.history["time"].append(self.simtime)
             self.history["ekin"].append(self.kinetic_energy)

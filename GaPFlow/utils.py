@@ -40,16 +40,6 @@ def progressbar(it, prefix="", size=40, out=sys.stdout):  # Python3.6+
     print("\n", flush=True, file=out)
 
 
-def bordered_text(text):
-    lines = text.splitlines()
-    width = max(len(s) for s in lines)
-    res = ['┌' + '─' * width + '┐']
-    for s in lines:
-        res.append('│' + (s + ' ' * width)[:width] + '│')
-    res.append('└' + '─' * width + '┘')
-    return '\n'.join(res)
-
-
 def make_dumpable(obj):
     """
     Recursively convert numpy and other non-native types in dictionaries/lists

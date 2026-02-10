@@ -33,6 +33,9 @@ from jax import Array
 from scipy.stats import qmc
 
 from .utils import progressbar
+from .logging import get_logger
+
+logger = get_logger("gapflow.md")
 
 ArrayX = Float[Array, "Ntrain Nfeat"]   # Input features
 ArrayY = Float[Array, "Ntrain 13"]  # Output features
@@ -214,9 +217,9 @@ class Database:
         readme_list = [yaml.load(ds.get_readme_content())
                        for ds in dtoolcore.iter_datasets_in_base_uri(self.training_path)]
 
-        print(f"Loading {len(readme_list)} local datasets in '{self.training_path}'.")
+        logger.info("Loading %d local datasets in '%s'.", len(readme_list), self.training_path)
         for ds in dtoolcore.iter_datasets_in_base_uri(self.training_path):
-            print(f'- {ds.uuid} ({ds.name})')
+            logger.info('- %s (%s)', ds.uuid, ds.name)
 
         return readme_list
 
@@ -323,8 +326,8 @@ class Database:
         Nsample = init_size - self.size
 
         if Nsample > 0:
-            print(f"Database contains less than {init_size} MD runs.")
-            print(f"Generate new training data in {self.training_path}")
+            logger.info("Database contains less than %d MD runs.", init_size)
+            logger.info("Generate new training data in %s", self.training_path)
 
             if dim == 1:
                 flux = jnp.mean(Xtest[:, 1])
@@ -475,7 +478,7 @@ def _get_sobol_samples(N, lo, hi):
     m = int(jnp.log2(N))
     if int(2**m) != N:
         m = int(jnp.ceil(jnp.log2(N)))
-        print(f'Sample size should be a power of 2 for Sobol sampling. Use Ninit={2**m}.')
+        logger.info("Sample size should be a power of 2 for Sobol sampling. Use Ninit=%d.", 2**m)
     sample = sampler.random_base2(m=m)
     scaled_samples = qmc.scale(sample, lo, hi)
 
