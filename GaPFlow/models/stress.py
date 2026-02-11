@@ -196,11 +196,6 @@ class WallStress(GaussianProcessSurrogate):
         return ((self._Xtest - self.database.X_shift) / self.database.X_scale)[:, self.active_dims]
 
     @property
-    def Xtrain(self) -> JAXArray:
-        """Training inputs for shear stress GP (normalized)."""
-        return self.database.Xtrain[:, self.active_dims]
-
-    @property
     def _Ytrain(self) -> JAXArray:
         """
         Training outputs for GP corresponding to the lower and upper wall stress.
@@ -557,11 +552,6 @@ class Pressure(GaussianProcessSurrogate):
     def Xtest(self) -> JAXArray:
         """Test inputs for pressure GP (normalized)."""
         return ((self._Xtest - self.database.X_shift) / self.database.X_scale)[:, self.active_dims]
-
-    @property
-    def Xtrain(self) -> JAXArray:
-        """Training inputs for pressure GP (normalized)."""
-        return self.database.Xtrain[:, self.active_dims]
 
     @property
     def _Ytrain(self) -> JAXArray:

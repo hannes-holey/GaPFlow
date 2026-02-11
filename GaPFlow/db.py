@@ -109,6 +109,7 @@ class Database:
             Yerr = jnp.empty((0, 13))
 
         self._Xtrain = Xtrain
+        self._Xtrain_target = Xtrain
         self._Ytrain = Ytrain
         self._Ytrain_err = Yerr
 
@@ -139,6 +140,11 @@ class Database:
     def Xtrain(self) -> ArrayX:
         """Normalized input features of shape (Ntrain, Nfeat)."""
         return (self._Xtrain - self._X_shift) / self.X_scale
+
+    @property
+    def Xtrain_target(self) -> ArrayX:
+        """Normalized input features of shape (Ntrain, Nfeat)."""
+        return (self._Xtrain_target - self._X_shift) / self.X_scale
 
     @property
     def Ytrain(self) -> ArrayY:
@@ -386,6 +392,8 @@ class Database:
 
         for Xi in Xnew:
             size_before += 1
+
+            self._Xtrain_target = jnp.vstack([self._Xtrain_target, Xi])
 
             X, Y, Ye = self._md.run(Xi, size_before)
 

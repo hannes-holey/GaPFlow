@@ -149,12 +149,6 @@ class GaussianProcessSurrogate:
 
     @property
     @abc.abstractmethod
-    def Xtrain(self):
-        """Training inputs (only active dimensions."""
-        raise NotImplementedError
-
-    @property
-    @abc.abstractmethod
     def Ytrain(self):
         """Training observations (only active dimensions, scaled)."""
         raise NotImplementedError
@@ -241,6 +235,16 @@ class GaussianProcessSurrogate:
             self.height_and_slopes,
             self.extra
         ]).reshape(self._database.num_features, -1).T
+
+    @property
+    def Xtrain(self) -> JAXArray:
+        """Training inputs (normalized)."""
+        return self._database.Xtrain[:, self.active_dims]
+
+    @property
+    def Xtrain_target(self) -> JAXArray:
+        """Training inputs (normalized)."""
+        return self._database.Xtrain_target[:, self.active_dims]
 
     @property
     def has_multi_output(self):
