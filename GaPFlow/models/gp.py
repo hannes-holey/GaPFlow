@@ -101,6 +101,9 @@ class GaussianProcessSurrogate:
             self._cumtime_train = datetime.now() - ref
             self._cumtime_infer = datetime.now() - ref
 
+            # Initialize PRNG key
+            self._key = jax.random.key(0)
+
             # History of hyperparameters
             self.history = {
                 'step': [],
@@ -472,16 +475,19 @@ class GaussianProcessSurrogate:
             Predictive variance field.
         """
 
-        next_train_index = self._select_next_point(var)
-        _Xnew = self._Xtest[next_train_index, :][None, :]
-        self._database.add_data(_Xnew)
+        Xnew = self._select_next_point(var)
+        self._database.add_data(Xnew)
 
     def _select_next_point(self,
                            var: JAXArray,
                            similarity_check: bool = True) -> int:
         """
         Select new training point using maximum variance criterion.
-        Returns flattened index
+        If `similarity_check=True`, we try to avoid points that are
+        too similar to the existing database. If all candidate points
+        are too close, we select the one with largest variance and perturb
+        it slightly with random noise.
+
 
         Parameters
         ----------
@@ -490,35 +496,91 @@ class GaussianProcessSurrogate:
         similarity_check : bool, optional
             If true, check similarity between existing and new training points
             (and avoid too similar points). The default is True.
+
+        Returns
+        -------
+        jax.Array
+            Selected point
         """
 
         # from large to small
         sorted_indices = jnp.argsort(var, axis=None)[::-1]
 
         # start with largest variance (currently only implemented strategy)
-        imax = sorted_indices[0]
+        selected = sorted_indices[0]
+
+        perturb = False
 
         if similarity_check:
+            selected = None
             skipped = 0
-            min_similarity = 1.
 
             for i in sorted_indices:
                 Xnew = self.Xtest[i][None, :]
-                similarity_score = self.gp.kernel(Xnew, self.Xtrain) / self.kernel_variance
-                if jnp.any(jnp.isclose(similarity_score, 1., rtol=0., atol=1e-8)):
-                    # Too similar point exists
+
+                # Similarity between selected point and all requested training points
+                similarity_score = self.gp.kernel(Xnew, self.Xtrain_target) / self.kernel_variance
+                smax = similarity_score.max()
+                smin = similarity_score.min()
+
+                if jnp.isclose(smax, 1., rtol=0., atol=1e-6):
+                    # Too similar point exists already
                     skipped += 1
-                    min_similarity = min(min_similarity, jnp.min(similarity_score))
                     continue
                 else:
                     # Found suitable test point
-                    imax = i
+                    logger.info(f'New input selected (skipped {skipped}): {smax:.3e}, {smin:.3e} (max, min)')
+                    selected = i
                     break
 
-            if skipped > 0 and skipped < var.size:
-                print(f"Skipped {skipped} largest variance points ({min_similarity})")
+            if selected is None:
+                # The selected point is very similar to other points in the database
+                # Apply a small random perturbation
+                logger.info('No suitable test point found. Apply random perturbation to max. variance point.')
+                selected = sorted_indices[0]
+                perturb = True
 
-        return imax
+        # Test point from index
+        _Xnew = self._Xtest[selected, :][None, :]
+
+        if perturb:
+            _Xnew = self._perturb_training_point(_Xnew)
+
+        return _Xnew
+
+    def _perturb_training_point(self, X, scale=0.05):
+        """Apply random additive perturbation to a training point.
+
+        Parameters
+        ----------
+        X : jax.Array
+            Training point, not normalized, shape (1, Nfeat)
+        scale: float
+            Scaling parameter, controls the magnitude of the parturbation.
+            Default 0.05
+
+
+        Returns
+        -------
+        jax.Array
+            The perturbed training point.
+        """
+
+        # normalize
+        _X = (X - self._database.X_shift) / self._database.X_scale
+
+        # perturb
+        Xrange = (self._Xtest.max(axis=0) - self._Xtest.min(axis=0)) / self._database.X_scale
+        for d in self.active_dims:
+            if d not in [4, 5]:
+                new_key, subkey = jax.random.split(self._key)
+                _X = _X.at[d].add(scale * Xrange[d] * jax.random.normal(subkey))
+                self._key = new_key  # overwrite PRNG key
+
+        # scale back
+        X = _X * self._database.X_scale + self._database.X_shift
+
+        return X
 
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
@@ -590,7 +652,7 @@ class GaussianProcessSurrogate:
                 logger.info(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f} ({key})")
                 logger.info('#' + 50 * '-')
 
-            if counter == self.max_steps and after > 1.:
+            if not self.trusted:  # AL loop failed
                 logger.warning("# Active learning loop missed uncertainty threshold")
                 logger.info(f"# Pause for {self.pause_steps} steps...")
                 logger.info('#' + 50 * '-')
