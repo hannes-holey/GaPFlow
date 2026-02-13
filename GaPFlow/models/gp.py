@@ -94,7 +94,7 @@ class GaussianProcessSurrogate:
             self._database = database
             self._last_fit_train_size = 0
             self._pause = self.pause_steps
-            self._use_relative_tol = False
+            self._tol_ratio = 0.
 
             # Initialize timers
             ref = datetime.now()
@@ -457,7 +457,7 @@ class GaussianProcessSurrogate:
 
         atol = self.atol * noise  # "lower bound", multiple of observation noise
         rtol = self.rtol * Ys  # grows with Ys,
-        self._use_relative_tol = rtol > atol
+        self._tol_ratio = rtol / atol
 
         std_tol = jnp.maximum(atol, rtol)
 
@@ -647,9 +647,12 @@ class GaussianProcessSurrogate:
                 toc = datetime.now()
                 self._cumtime_infer += tic - toc
 
+                # AL step output summary
                 after = self.maximum_variance / self.variance_tol
-                key = 'R' if self._use_relative_tol else 'A'
-                logger.info(f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f} ({key})")
+                key = 'R' if self._tol_ratio > 1. else 'A'
+                msg = f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}"
+                msg += f" | {key} ({self._tol_ratio:.3f})"
+                logger.info(msg)
                 logger.info('#' + 50 * '-')
 
             if not self.trusted:  # AL loop failed
