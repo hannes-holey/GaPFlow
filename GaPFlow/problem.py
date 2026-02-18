@@ -62,7 +62,7 @@ class Problem:
 
     Notes
     -----
-    Calling the constructor :meth:`__init__` directly expects properly formatted innput dictionaries.
+    Calling the constructor :meth:`__init__` directly expects properly formatted input dictionaries.
     It is recommended to use the :meth:`from_yaml` or :meth:`from_string` class methods, which automatically
     sanitize the simulation input.
 
@@ -577,7 +577,7 @@ class Problem:
 
     def _finalize(self, q0: npt.NDArray) -> None:
         """
-        Reset the solution field to the one of the ols time step and update stresses.
+        Reset the solution field to the one of the old time step and update stresses.
         Sets the _stop flag to abort the simulation run.
 
         Parameters
@@ -761,7 +761,7 @@ class Problem:
     # Plotting and animations
     # ---------------------------
     def plot(self, ax=None) -> None:
-        """Plot a snaphsot of the solution and the current stress state.
+        """Plot a snapshot of the solution and the current stress state.
 
         Parameters
         ----------
@@ -843,7 +843,7 @@ class Problem:
         save: bool, optional
             Whether to save the animation as an .mp4 file, by default False.
         seconds: float, optional
-            Duration of the animation in seconds(if saved), by default 10.0
+            Duration of the animation in seconds (if saved), by default 10.0
         """
         if not getattr(self, "step", 0) > 0:
             raise RuntimeError("Cannot animate before running the simulation.")
