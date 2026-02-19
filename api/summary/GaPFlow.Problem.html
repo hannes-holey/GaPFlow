@@ -373,7 +373,7 @@ document.write(`
 bulk stress), optional Gaussian-process surrogate databases, time-stepping
 parameters, and I/O.</p>
 <p class="rubric">Notes</p>
-<p>Calling the constructor <a class="reference internal" href="#GaPFlow.Problem.__init__" title="GaPFlow.Problem.__init__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__init__()</span></code></a> directly expects properly formatted innput dictionaries.
+<p>Calling the constructor <a class="reference internal" href="#GaPFlow.Problem.__init__" title="GaPFlow.Problem.__init__"><code class="xref py py-meth docutils literal notranslate"><span class="pre">__init__()</span></code></a> directly expects properly formatted input dictionaries.
 It is recommended to use the <a class="reference internal" href="#GaPFlow.Problem.from_yaml" title="GaPFlow.Problem.from_yaml"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_yaml()</span></code></a> or <a class="reference internal" href="#GaPFlow.Problem.from_string" title="GaPFlow.Problem.from_string"><code class="xref py py-meth docutils literal notranslate"><span class="pre">from_string()</span></code></a> class methods, which automatically
 sanitize the simulation input.</p>
 <p class="rubric">Examples</p>
@@ -418,7 +418,7 @@ sanitize the simulation input.</p>
 <td><p>Create a Problem instance from a YAML file.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot" title="GaPFlow.Problem.plot"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot</span></code></a>([ax])</p></td>
-<td><p>Plot a snaphsot of the solution and the current stress state.</p></td>
+<td><p>Plot a snapshot of the solution and the current stress state.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.plot_topo" title="GaPFlow.Problem.plot_topo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_topo</span></code></a>([show_defo, show_pressure])</p></td>
 <td><p>Plot the gap topography, optionally in deformed state and with pressure profile.</p></td>
@@ -481,7 +481,7 @@ For 1D elastic simulations, height and deformation are included.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>save</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether to save the animation as an .mp4 file, by default False.</p></li>
-<li><p><strong>seconds</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration of the animation in seconds(if saved), by default 10.0</p></li>
+<li><p><strong>seconds</strong> (<em>float</em><em>, </em><em>optional</em>) – Duration of the animation in seconds (if saved), by default 10.0</p></li>
 </ul>
 </dd>
 </dl>
@@ -554,7 +554,7 @@ For 1D elastic simulations, height and deformation are included.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.Problem.plot">
 <span class="sig-name descname"><span class="pre">plot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.plot" title="Link to this definition">#</a></dt>
-<dd><p>Plot a snaphsot of the solution and the current stress state.</p>
+<dd><p>Plot a snapshot of the solution and the current stress state.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>ax</strong> (<em>matplotlib.pyplot.axis</em><em>, </em><em>optional</em>) – An axis to plot into, if None or wrong shape a new axis is created</p>

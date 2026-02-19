@@ -358,7 +358,7 @@ or directly from a <a class="reference internal" href="GaPFlow.Problem.html#GaPF
 <td><p>Create animation for 1D simulations.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.viz.animations.animate_2d" title="GaPFlow.viz.animations.animate_2d"><code class="xref py py-obj docutils literal notranslate"><span class="pre">animate_2d</span></code></a>(filename_sol[, seconds, save])</p></td>
-<td><p>Create animation for 1D simulations.</p></td>
+<td><p>Create animation for 2D simulations.</p></td>
 </tr>
 </tbody>
 </table>
@@ -397,12 +397,11 @@ or directly from a <a class="reference internal" href="GaPFlow.Problem.html#GaPF
 <dl class="py function">
 <dt class="sig sig-object py" id="GaPFlow.viz.animations.animate_2d">
 <span class="sig-prename descclassname"><span class="pre">GaPFlow.viz.animations.</span></span><span class="sig-name descname"><span class="pre">animate_2d</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">filename_sol</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seconds</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#GaPFlow.viz.animations.animate_2d" title="Link to this definition">#</a></dt>
-<dd><p>Create animation for 1D simulations.</p>
+<dd><p>Create animation for 2D simulations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>filename_sol</strong> (<em>str</em>) – Relative path to the solution NetCDF file.</p></li>
-<li><p><strong>filename_topo</strong> (<em>str</em>) – Relative path to the topography NetCDF file.</p></li>
 <li><p><strong>seconds</strong> (<em>float</em>) – Length of the saved video in seconds, i.e. determines the frame rate.</p></li>
 <li><p><strong>save</strong> (<em>bool</em>) – Whether the plot should be saved or not</p></li>
 </ul>

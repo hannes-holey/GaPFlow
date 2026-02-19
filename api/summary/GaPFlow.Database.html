@@ -375,12 +375,15 @@ and optional dtool integration for persistent dataset storage.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>md</strong> (<a class="reference internal" href="GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics" title="GaPFlow.md.MolecularDynamics"><em>GaPFlow.md.MolecularDynamics</em></a>) – An instance of the MD runner object. Adding a data point will lead to calling its <cite>run</cite> method.</p></li>
-<li><p><strong>db</strong> (<em>dict</em>) – Configuration dictionary with keys:
-- <code class="docutils literal notranslate"><span class="pre">'dtool_path'</span></code> : str, path where training data is stored and loaded from.
-- <code class="docutils literal notranslate"><span class="pre">'init_size'</span></code> : int, minimum dataset size.
-- <code class="docutils literal notranslate"><span class="pre">'init_width'</span></code> : float, relative sampling width.
-- <code class="docutils literal notranslate"><span class="pre">'init_method'</span></code> : str, name of the (quasi-)random initialization method (‘lhc’, ‘rand’, ‘sobol’).
-- <code class="docutils literal notranslate"><span class="pre">'init_seed'</span></code> : int, random seed for initialization.</p></li>
+<li><p><strong>db</strong> (<em>dict</em>) – <p>Configuration dictionary with keys:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">'dtool_path'</span></code> : str, path where training data is stored and loaded from.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'init_size'</span></code> : int, minimum dataset size.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'init_width'</span></code> : float, relative sampling width.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'init_method'</span></code> : str, name of the (quasi-)random initialization method (‘lhc’, ‘rand’, ‘sobol’).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">'init_seed'</span></code> : int, random seed for initialization.</p></li>
+</ul>
+</p></li>
 <li><p><strong>num_extra_features</strong> (<em>int</em><em>, </em><em>number</em><em> of </em><em>additional features</em><em> (</em><em>next to solution</em><em>, </em><em>gap height + gradients</em><em>)</em>) – stored with the database (default is 1)</p></li>
 </ul>
 </dd>
