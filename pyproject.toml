@@ -31,7 +31,7 @@ dynamic = ["version"]
 dependencies = [
 	"muGrid>=0.105.0",
 	"tinygp>=0.3.0",
-	"jax",
+	"jax<=0.9.0",
 	"numpy",
 	"scipy",
 	"jaxopt==0.8.5",
