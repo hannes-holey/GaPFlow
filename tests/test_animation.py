@@ -25,11 +25,8 @@
 import os
 import shutil
 import matplotlib
-import polars as pl
-import numpy as np
 from GaPFlow.problem import Problem
-from GaPFlow.viz.animations import (_create_animation_1d, _create_animation_1d_gp,
-                                    _create_animation_2d, _display_animation)
+from GaPFlow.viz.animations import _create_animation_1d, _create_animation_2d, _display_animation
 
 
 def test_animation_1d_elastic(tmp_path):
