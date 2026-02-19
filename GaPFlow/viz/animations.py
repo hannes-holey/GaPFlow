@@ -96,14 +96,12 @@ def animate_2d(filename_sol: str,
                seconds: float = 10.,
                save: bool = False):
     """
-    Create animation for 1D simulations.
+    Create animation for 2D simulations.
 
     Parameters
     ----------
     filename_sol : str
         Relative path to the solution NetCDF file.
-    filename_topo : str
-        Relative path to the topography NetCDF file.
     seconds : float
         Length of the saved video in seconds, i.e. determines the frame rate.
     save : bool
