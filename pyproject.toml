@@ -97,17 +97,3 @@ sdist.include = [
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "dirty-tag"
-
-[tool.cibuildwheel]
-# skip = ["*cp314t*", "*musllinux*"]
-test-command = "pytest -v {project}/tests"
-test-requires = "pytest"
-
-# [tool.cibuildwheel.linux]
-# archs = ["x86_64"]
-
-# [tool.cibuildwheel.macos]
-# archs = ["arm64"]
-
-# [tool.cibuildwheel.windows]
-# archs = ["AMD64"]

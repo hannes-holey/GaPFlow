@@ -11,7 +11,7 @@ on:
 
 jobs:
   wheels:
-    name: Build wheels on ${{ matrix.os }} ${{ matrix.python }}
+    name: Build wheels for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
     runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
@@ -32,6 +32,8 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: 15.0
           CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}*
           CIBW_ARCHS: ${{ matrix.buildplat[2] }}
+          CIBW_TEST_REQUIRES: "pytest"
+          CIBW_TEST_COMMAND: "pytest -v {project}/tests"
 
       - uses: actions/upload-artifact@v4
         with:
