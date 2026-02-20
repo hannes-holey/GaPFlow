@@ -122,10 +122,5 @@ file. After successful completion, you should find the following files.
 - ``Ytrain.npy`` (Optional): Training data observations
 - ``Ytrain_err.npy`` (Optional): Training data observation error
 
-The code comes with a few useful command line tools for visualizations like this one
-
-.. figure:: assets/journal.gif
-   :alt: Journal bearing simulation
-
-which shows the transient solution of a 1D journal bearing with active
-learning of the underlying constitutive behavior.
+GaPFlow also provides command line tools for visualizing and animating
+simulation results. See :doc:`visualization` for details.
