@@ -30,11 +30,13 @@ jobs:
         uses: pypa/cibuildwheel@v3.3.1
         env:
           MACOSX_DEPLOYMENT_TARGET: 15.0
+          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}*
+          CIBW_ARCHS: ${{ matrix.buildplat[2] }}
 
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: ${{ matrix.os }}-${{ matrix.python-version }}
+          name: ${{ matrix.python }}-${{ matrix.buildplat[1] }}-${{ matrix.buildplat[2] }}
 
   sdist:
     name: Build sdist
