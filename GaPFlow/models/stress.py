@@ -45,6 +45,7 @@ class WallStress(GaussianProcessSurrogate):
     Wall stress model (wall shear/stress in xz or yz direction).
 
     This class can operate in two modes:
+    
     - Deterministic: compute wall/boundary stresses from viscous models.
     - GP-based surrogate: train/predict wall stress using GaussianProcessSurrogate.
 
