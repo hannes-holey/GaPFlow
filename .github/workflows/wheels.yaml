@@ -12,7 +12,7 @@ on:
 jobs:
   wheels:
     name: Build wheels on ${{ matrix.os }} ${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
         buildplat:
