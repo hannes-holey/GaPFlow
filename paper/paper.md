@@ -90,12 +90,13 @@ This makes it straightforward to discover previously computed configurations, or
 
 ## Elastic deformations
 
-In non-conforming lubricated contacts such as in ball or roller bearings, local fluid pressures can become large such that elastic deformation of the walls can no longer be neglected. 
-For simulations in this *Elastohydrodynamic Regime*, `GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [@rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid. 
-Under the assumption that the elastic deformation of the walls responds on a timescale much shorter than that of the fluid-dynamic system, the elastic response can be treated as quasi-static and represented by its steady-state solution. 
+In non-conforming lubricated contacts such as in ball or roller bearings, local fluid pressures can become large such that elastic deformation of the walls can no longer be neglected.
+For simulations in this *Elastohydrodynamic Regime*, `GaPFlow` uses the [ContactMechanics](https://contactengineering.github.io/ContactMechanics/) code which is part of the [contact.engineering](https://contact.engineering) [@rottger2022_contactengineeringcreate] ecosystem to compute elastic deformations of the walls in contact with the fluid.
+Under the assumption that the elastic deformation of the walls responds on a timescale much shorter than that of the fluid-dynamic system, the elastic response can be treated as quasi-static and represented by its steady-state solution.
 Further assuming linear-elastic and isotropic walls, the tool utilizes a *Green's function* formulation that reduces the computational effort to a convolution operation, which can be efficiently solved in Fourier space [@stanley1997_FFT].
 The elastic deformation is determined based on the fluid pressure field and automatically adapts to the boundary conditions specified in the fluid-flow problem.
-Fluid flow and wall deformation are linked through a *weak coupling* scheme in which both solutions are iteratively updated,.
+Fluid flow and wall deformation are linked through a *weak coupling* scheme in which both solutions are iteratively updated.
+Note that there is currently no support for solid-solid contact, but this might be added in future versions.
 
 # Acknowledgments
 
