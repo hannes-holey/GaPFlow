@@ -503,8 +503,18 @@ class GaussianProcessSurrogate:
             Selected point
         """
 
+        # Consicer only interior cells (no ghosts)
+        inner = slice(1, -1, None), slice(1, -1, None)
+        nx, ny = var.shape
+        n_inner = (nx - 2) * (ny - 2)
+
+        # normalized
+        Xtest = self.Xtest.reshape(nx, ny, -1)[*inner].reshape(n_inner, -1)
+        # not normalized
+        _Xtest = self._Xtest.reshape(nx, ny, -1)[*inner].reshape(n_inner, -1)
+
         # from large to small
-        sorted_indices = jnp.argsort(var, axis=None)[::-1]
+        sorted_indices = jnp.argsort(var[*inner], axis=None)[::-1]
 
         # start with largest variance (currently only implemented strategy)
         selected = sorted_indices[0]
@@ -516,7 +526,7 @@ class GaussianProcessSurrogate:
             skipped = 0
 
             for i in sorted_indices:
-                Xnew = self.Xtest[i][None, :]
+                Xnew = Xtest[i][None, :]
 
                 # Similarity between selected point and all requested training points
                 similarity_score = self.gp.kernel(Xnew, self.Xtrain_target) / self.kernel_variance
@@ -541,7 +551,7 @@ class GaussianProcessSurrogate:
                 perturb = True
 
         # Test point from index
-        _Xnew = self._Xtest[selected, :][None, :]
+        _Xnew = _Xtest[selected, :][None, :]
 
         if perturb:
             _Xnew = self._perturb_training_point(_Xnew)
