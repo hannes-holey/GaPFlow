@@ -89,18 +89,23 @@ class WallStress(GaussianProcessSurrogate):
         self._out_index = {'x': 4, 'y': 3}[direction]
 
         if gp is not None:
+            self.is_gp_model = True
             self.active_dims = {'x': gp.get('active_dims_x', [0, 1, 3]),
                                 'y': gp.get('active_dims_y', [0, 2, 3])}[direction]
 
             self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
 
+            # Active learning parameters
             self.tol = gp['tol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.pause_steps = gp['pause_steps']
-            self.is_gp_model = True
             self.use_active_learning = gp['active_learning']
+            self.similarity_check = gp['similarity_check']
+            self.allowed_skips = gp['allowed_skips']
+            self.perturb_target = gp['perturb_target']
+
         else:
             self.is_gp_model = False
             self.use_active_learning = False
@@ -504,15 +509,20 @@ class Pressure(GaussianProcessSurrogate):
         self.prop = prop
 
         if gp is not None:
+            self.is_gp_model = True
             self.active_dims = gp.get('active_dims', [0, 3])
             self.__field_variance = fc.real_field('pressure_var')
+
+            # Active learning parameters
             self.tol = gp['tol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
             self.max_steps = gp['max_steps']
             self.pause_steps = gp['pause_steps']
-            self.is_gp_model = True
             self.use_active_learning = gp['active_learning']
+            self.similarity_check = gp['similarity_check']
+            self.allowed_skips = gp['allowed_skips']
+            self.perturb_target = gp['perturb_target']
         else:
             self.is_gp_model = False
             self.use_active_learning = False

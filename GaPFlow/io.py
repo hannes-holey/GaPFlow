@@ -408,6 +408,9 @@ def sanitize_gp(d):
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
             out[sk]['pause_steps'] = int(ds.get('pause_steps', 100))
             out[sk]['active_learning'] = bool(ds.get('active_learning', True))
+            out[sk]['similarity_check'] = bool(ds.get('similarity_check', True))
+            out[sk]['allowed_skips'] = int(ds.get('allowed_skips', 0))
+            out[sk]['perturb_target'] = bool(ds.get('perturb_target', False))
 
             assert out[sk]['tol'] in ['absmax', 'delta', 'snr']
 
@@ -434,7 +437,7 @@ def sanitize_db(d):
     out['init_width'] = float(d.get('init_width', 1e-2))
     out['init_seed'] = int(d.get('init_width', 123))
 
-    out['normalizer_X'] = d.get('normalizer_X', 'standard')
+    out['normalizer_X'] = d.get('normalizer_X', 'minmax')
     out['normalizer_Y'] = d.get('normalizer_Y', 'standard')
 
     assert out['init_method'] in ['rand', 'lhc', 'sobol']

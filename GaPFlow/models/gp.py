@@ -68,6 +68,9 @@ class GaussianProcessSurrogate:
     tol: str
     max_steps: int
     pause_steps: int
+    similarity_check: bool
+    allowed_skips: int
+    perturb_target: bool
     params_init: dict
     noise: Tuple[float, float]
     prop: dict
@@ -93,7 +96,7 @@ class GaussianProcessSurrogate:
             self._cache = None
             self._database = database
             self._last_fit_train_size = 0
-            self._pause = self.pause_steps
+            self._pause = 0
             self._tol_ratio = 0.
 
             # Initialize timers
@@ -475,7 +478,7 @@ class GaussianProcessSurrogate:
             Predictive variance field.
         """
 
-        Xnew = self._select_next_point(var)
+        Xnew = self._select_next_point(var, similarity_check=self.similarity_check)
         self._database.add_data(Xnew)
 
     def _select_next_point(self,
@@ -517,13 +520,12 @@ class GaussianProcessSurrogate:
 
         # start with largest variance (currently only implemented strategy)
         selected = sorted_indices[0]
-
-        perturb = False
+        perturb = self.perturb_target  # default True
 
         if similarity_check:
-            selected = None
             skipped = 0
 
+            # Loop over candidate points
             for i in sorted_indices:
                 Xnew = Xtest[i][None, :]
 
@@ -542,11 +544,11 @@ class GaussianProcessSurrogate:
                     selected = i
                     break
 
-            if selected is None:
-                # The selected point is very similar to other points in the database
-                # Apply a small random perturbation
+            # Apply perturbation only if similarity check fails
+            if skipped <= self.allowed_skips:
+                perturb = False
+            else:
                 logger.info('No suitable test point found. Apply random perturbation to max. variance point.')
-                selected = sorted_indices[0]
                 perturb = True
 
         # Test point from index
