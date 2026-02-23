@@ -150,8 +150,7 @@ class MolecularDynamics:
 
     @abc.abstractmethod
     def build_input_files(self, dataset, location, X) -> None:
-        """Builds LAMMPS input files based on GP inputs
-         and writes them to a dtool dataset.
+        """Builds LAMMPS input files based on GP inputs and writes them to a dtool dataset.
 
         Parameters
         ----------
@@ -166,7 +165,7 @@ class MolecularDynamics:
 
     @abc.abstractmethod
     def read_output(self):
-        """Read simulation output and returns observations and their standard error."""
+        """Read simulation output and return observations and their standard error."""
         raise NotImplementedError
 
     def _pretty_print(self, proto_datapath, X) -> None:
