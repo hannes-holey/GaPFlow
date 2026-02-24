@@ -1,4 +1,5 @@
 #
+# Copyright 2026 Hannes Holey
 #
 # ### MIT License
 #
