@@ -108,7 +108,6 @@ or from a Python script
    from GaPFlow.problem import Problem
 
    myProblem = Problem.from_yaml('my_input_file.yaml')
-   myProblem.pre_run()
    myProblem.run()
 
 Simulation output is stored under the location specified in the input
