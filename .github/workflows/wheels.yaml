@@ -11,14 +11,15 @@ on:
 
 jobs:
   wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Build wheels for ${{ matrix.python }}-${{ matrix.buildplat[1] }}
+    runs-on: ${{ matrix.buildplat[0] }}
     strategy:
       matrix:
-        os: 
-          - ubuntu-latest
-          - macos-latest
-          - windows-latest
+        buildplat:
+        - [ubuntu-latest, manylinux, x86_64]
+        - [macos-latest, macosx, arm64]
+        - [windows-latest, win, AMD64]
+        python: ['cp310', 'cp311', 'cp312', 'cp313', 'cp314']
     steps:
       - uses: actions/checkout@v5
         with:
@@ -29,11 +30,15 @@ jobs:
         uses: pypa/cibuildwheel@v3.3.1
         env:
           MACOSX_DEPLOYMENT_TARGET: 15.0
+          CIBW_BUILD: ${{ matrix.python }}-${{ matrix.buildplat[1] }}*
+          CIBW_ARCHS: ${{ matrix.buildplat[2] }}
+          CIBW_TEST_REQUIRES: "pytest"
+          CIBW_TEST_COMMAND: "pytest -v {project}/tests"
 
       - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
-          name: ${{ matrix.os }}
+          name: ${{ matrix.python }}-${{ matrix.buildplat[1] }}-${{ matrix.buildplat[2] }}
 
   sdist:
     name: Build sdist
