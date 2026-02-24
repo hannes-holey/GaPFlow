@@ -43,6 +43,9 @@ In contrast, `GaPFlow` solves the lubrication problem in the formulation propose
 This formulation is agnostic to the constitutive behavior of the confined fluid, making it suitable for multiscale simulations in which the fluid response is provided by molecular dynamics (MD) simulations.
 `GaPFlow` uses a surrogate model based on Gaussian process (GP) regression to interpolate between data obtained from MD, and to select new configurations based on the GP uncertainty to augment an existing MD database (a.k.a. active learning) [@holey2025_active]. Earlier versions of `GaPFlow` have been used in three publications so far [@holey2022_heightaveraged;@holey2024_sound;@holey2025_active].
 
+While many in-house and proprietary implementations of Reynolds solvers exist in academia and industry, there are currently no widely adopted, community-driven open-source software packages that provide a general and extensible implementation of Reynolds-type lubrication models.
+To the best of our knowledge, `GaPFlow` is the only open-source multiscale framework that tightly couples a time-dependent lubrication solver to on-the-fly molecular simulations through an uncertainty-aware surrogate model for this class of lubrication problems.
+
 # Components and external dependencies
 
 `GaPFlow`'s core functionality is the numerical solution of the gap-averaged balance equations as introduced by @holey2022_heightaveraged for lubrication problems.
