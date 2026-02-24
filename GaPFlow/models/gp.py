@@ -520,7 +520,7 @@ class GaussianProcessSurrogate:
 
         # start with largest variance (currently only implemented strategy)
         selected = sorted_indices[0]
-        perturb = self.perturb_target  # default True
+        perturb = self.perturb_target  # default False
 
         if similarity_check:
             skipped = 0
