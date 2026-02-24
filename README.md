@@ -60,6 +60,12 @@ MPI: False
 We currently do not use parallel functionalities of µGrid, so MPI support is not
 required.
 
+For installations from source, do not forget to initialize the LAMMPS submodule after cloning the repository
+```
+git submodule update --init
+```
+
+
 ## Minimal example
 Simulation inputs are commonly provided in YAML files. A typical input file
 might look like this:
@@ -114,7 +120,6 @@ or from a Python script
 from GaPFlow.problem import Problem
 
 myProblem = Problem.from_yaml('my_input_file.yaml')
-myProblem.pre_run()
 myProblem.run()
 ```
 Simulation output is stored under the location specified in the input file.
