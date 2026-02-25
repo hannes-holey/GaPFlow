@@ -160,6 +160,9 @@ def sanitize_options(d):
 
     out['output_plots'] = bool(d.get('output_plots', False))
 
+    # Residual analysis option (only applies to fem_2d solver)
+    out['residual_analysis'] = bool(d.get('residual_analysis', False))
+
     print_dict(out)
 
     return out
@@ -497,6 +500,7 @@ def sanitize_fem_solver(d):
     out['energy_stab_alpha'] = float(d.get('energy_stab_alpha', 0.01))
     out['boundary_stab_factor'] = float(d.get('boundary_stab_factor', 1.0))
     out['boundary_stab_decay'] = float(d.get('boundary_stab_decay', 2.0))
+    out['pspg_boundary_decay'] = float(d.get('pspg_boundary_decay', 0.0))
 
     physics = d.get('physics', {})
     out['physics'] = {
@@ -514,7 +518,12 @@ def sanitize_fem_solver(d):
         'wall_shear_work': bool(physics.get('wall_shear_work', True)),
         # Numerical
         'stabilization': bool(physics.get('stabilization', True)),
+        'pspg': bool(physics.get('pspg', False)),
+        'gls': bool(physics.get('gls', False)),
     }
+
+    out['pspg_C_I'] = float(d.get('pspg_C_I', 1.0 / 3.0))
+    out['gls_C_I'] = float(d.get('gls_C_I', 1.0 / 3.0))
 
     equations_energy = d.get('equations', {}).get('energy', None)
     if equations_energy is not None and 'energy' not in physics:

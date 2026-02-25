@@ -353,44 +353,77 @@ class TestJacobianFiniteDifference:
 
 
 # =============================================================================
+# Test Classes - Stabilization
+# =============================================================================
+
+class TestStabilizationJacobian:
+    """Test stabilization Jacobian assembly against finite differences."""
+
+    @pytest.mark.parametrize("Nx,Ny", [(4, 3), (4, 4)])
+    def test_jacobian_gls(self, Nx: int, Ny: int):
+        """Test Jacobian with GLS (mass-to-momentum cross-coupling).
+
+        GLS has no Picard-frozen velocity — only tau_gls is frozen, so
+        tight tolerance is appropriate (same situation as PSPG).
+        """
+        bc_config = BC_CONFIGS['fully_periodic']
+        config = make_config(Nx, Ny, bc_config, energy=False)
+        config = config.replace(
+            'fem_solver:\n    type: newton_alpha',
+            'fem_solver:\n    type: newton_alpha\n'
+            '    physics:\n        pspg: true\n        gls: true')
+
+        problem = Problem.from_string(config)
+        solver = problem.solver
+        solver.pre_run()
+
+        # Nonzero momentum for nontrivial tau_gls
+        problem.q[1][:] = 0.5
+        problem.q[2][:] = 0.3
+
+        problem.decomp.communicate_ghost_buffers(problem)
+        solver.update_quad()
+        solver.update_prev_quad()
+
+        M = solver.get_M_dense()
+        nb = solver.nb_inner_pts
+        n_vars = len(solver.variables)
+        M_inner = M[:, :n_vars * nb]
+
+        J_fd = compute_fd_jacobian(solver, problem)
+        J_fd_inner = J_fd[:, :n_vars * nb]
+
+        diff_norm = np.linalg.norm(M_inner - J_fd_inner)
+        fd_norm = np.linalg.norm(J_fd_inner)
+        rel_err = diff_norm / (fd_norm + 1e-15)
+
+        assert rel_err < 1e-7, (
+            f"GLS Jacobian mismatch for Nx={Nx}, Ny={Ny}: "
+            f"rel_err={rel_err:.2e}"
+        )
+
+
+# =============================================================================
 # Test Classes - Shape Function Consistency
 # =============================================================================
 
 class TestShapeFunctionConsistency:
     """Test shape function values are consistent with interpolation kernel."""
 
-    def test_left_triangle_shape_functions(self):
-        """Verify left triangle shape functions match kernel."""
+    def test_shape_functions(self):
+        """Verify shape functions N = BARY_COORDS.T."""
         from GaPFlow.fem_2d.elements import TriangleQuadrature
 
         quad = TriangleQuadrature()
-        N_left = quad.N_left
 
         expected = np.array([
             [2 / 3, 1 / 6, 1 / 6],
-            [1 / 6, 1 / 6, 2 / 3],
             [1 / 6, 2 / 3, 1 / 6],
+            [1 / 6, 1 / 6, 2 / 3],
         ])
 
-        assert np.allclose(N_left, expected), (
-            f"N_left mismatch:\n{N_left}\nvs expected:\n{expected}"
-        )
-
-    def test_right_triangle_shape_functions(self):
-        """Verify right triangle shape functions match kernel."""
-        from GaPFlow.fem_2d.elements import TriangleQuadrature
-
-        quad = TriangleQuadrature()
-        N_right = quad.N_right
-
-        expected = np.array([
-            [2 / 3, 1 / 6, 1 / 6],
-            [1 / 6, 1 / 6, 2 / 3],
-            [1 / 6, 2 / 3, 1 / 6],
-        ])
-
-        assert np.allclose(N_right, expected), (
-            f"N_right mismatch:\n{N_right}\nvs expected:\n{expected}"
+        assert np.allclose(quad.N, expected), (
+            f"N mismatch:\n{quad.N}\nvs expected:\n{expected}"
         )
 
     def test_shape_functions_partition_of_unity(self):
@@ -400,14 +433,9 @@ class TestShapeFunctionConsistency:
         quad = TriangleQuadrature()
 
         for q in range(3):
-            sum_left = quad.N_left[:, q].sum()
-            sum_right = quad.N_right[:, q].sum()
-
-            assert np.isclose(sum_left, 1.0), (
-                f"Left triangle partition of unity failed at quad {q}: sum={sum_left}"
-            )
-            assert np.isclose(sum_right, 1.0), (
-                f"Right triangle partition of unity failed at quad {q}: sum={sum_right}"
+            s = quad.N[:, q].sum()
+            assert np.isclose(s, 1.0), (
+                f"Partition of unity failed at quad {q}: sum={s}"
             )
 
     def test_quadrature_weights(self):

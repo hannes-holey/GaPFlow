@@ -23,11 +23,11 @@
 #
 """Grid index management for FEM assembly.
 
-Handles index masks, element connectivity, and stencil patterns for
-triangular FEM on structured grids with domain decomposition support.
+Handles index masks, element connectivity, and boundary condition handling
+for triangular FEM on structured grids with domain decomposition support.
 """
 from functools import cached_property, lru_cache
-from typing import List, Tuple, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
@@ -45,8 +45,9 @@ class GridIndexManager:
     Handles:
     - Index masks for inner (residual) and padded (contributor) grids
     - Square element coordinates and corner connectivity
-    - 7-point stencil connectivity for sparse matrix pattern
+    - Local-to-global point mapping
     - Boundary condition handling (Dirichlet removal, Neumann forwarding)
+    - Does NOT know about triangular elements and quadrature
 
     Parameters
     ----------
@@ -58,14 +59,6 @@ class GridIndexManager:
         Energy specification dict with BC info (bc_xW, bc_xE, etc.).
         Required if 'E' is in variables.
     """
-
-    # 7-point stencil offsets (excludes main diagonal corners)
-    STENCIL_OFFSETS = [
-        (0, 0),            # self
-        (-1, 0), (1, 0),   # horizontal
-        (0, -1), (0, 1),   # vertical
-        (-1, 1), (1, -1),  # anti-diagonal (connected via triangles)
-    ]
 
     def __init__(self, decomp: "DomainDecomposition", variables: List[str],
                  energy_spec: dict = None):
@@ -86,7 +79,7 @@ class GridIndexManager:
         self.bc_at_S = decomp.is_at_yS and not decomp.periodic_y
         self.bc_at_N = decomp.is_at_yN and not decomp.periodic_y
 
-        # Build Neumann BC flags from grid config
+        # Build Neumann BC flags from grid config (bool list for each boundary)
         self._bc_neumann = {
             'xW': [b == 'N' for b in grid['bc_xW']],
             'xE': [b == 'N' for b in grid['bc_xE']],
@@ -108,7 +101,7 @@ class GridIndexManager:
         self.sq_per_col = Ny_inner + 1
         self.nb_sq = self.sq_per_row * self.sq_per_col
 
-        # Square coordinate arrays
+        # Square coordinate arrays in x-major order (shape (nb_sq,))
         sq_idx = np.arange(self.nb_sq)
         self.sq_x_arr = sq_idx % self.sq_per_row
         self.sq_y_arr = sq_idx // self.sq_per_row
@@ -135,13 +128,14 @@ class GridIndexManager:
         return mask
 
     @lru_cache(maxsize=None)
-    def index_mask_padded_local(self, var: str = '') -> IntArray:
+    def _index_mask_padded_local(self, var: str = '') -> IntArray:
         """Local indices for all contributor (FROM) points with BC handling.
 
         Parameters
         ----------
         var : str, optional
-            Variable name for Neumann BC forwarding. If empty, no Neumann handling.
+            Variable name to check if Neumann BC forwarding has to be applied.
+            If empty, no Neumann handling.
 
         Returns mask of shape (Nx_padded, Ny_padded) where:
         - Inner points retain indices from index_mask_inner_local
@@ -190,9 +184,23 @@ class GridIndexManager:
 
         Accounts for periodic wrapping where ghost points reuse inner indices.
         """
-        mask = self.index_mask_padded_local('')
+        mask = self._index_mask_padded_local('')
         valid_indices = mask[mask >= 0]
         return int(np.max(valid_indices)) + 1 if len(valid_indices) > 0 else 0
+
+    @cached_property
+    def l2g_list(self) -> IntArray:
+        """Local-to-global point mapping, shape (nb_contributors,).
+
+        Maps local contributor indices to global point indices.
+        Built from local and global index masks.
+        """
+        mask_local = self._index_mask_padded_local('')
+        mask_global = self._decomp.index_mask_padded_global
+        l2g = np.zeros(self.nb_contributors, dtype=np.int32)
+        valid = mask_local >= 0
+        l2g[mask_local[valid]] = mask_global[valid]
+        return l2g
 
     @cached_property
     def sq_TO_inner(self) -> IntArray:
@@ -228,7 +236,7 @@ class GridIndexManager:
 
         Returns shape (nb_sq, 4) for corners [bl, br, tl, tr].
         """
-        m = self.index_mask_padded_local(var)
+        m = self._index_mask_padded_local(var)
         sx, sy = self.sq_x_arr, self.sq_y_arr
         return np.column_stack([
             m[sx, sy],         # bl
@@ -237,33 +245,3 @@ class GridIndexManager:
             m[sx + 1, sy + 1]  # tr
         ])
 
-    def get_stencil_connectivity(self) -> Tuple[IntArray, IntArray]:
-        """Get FEM stencil connectivity as parallel arrays.
-
-        Returns (inner_pts, contrib_pts) where inner_pts[i] connects to
-        contrib_pts[i] in the sparse matrix pattern.
-
-        Uses 7-point stencil (self + 6 neighbors). Main diagonal corners
-        (-1,-1) and (1,1) are excluded since triangular elements don't
-        connect them.
-        """
-        m_inner = self.index_mask_inner_local
-        m_padded = self.index_mask_padded_local('')
-
-        inner_list = []
-        contrib_list = []
-
-        inner_pts_2d = np.argwhere(m_inner >= 0)
-
-        for dx, dy in self.STENCIL_OFFSETS:
-            nx = inner_pts_2d[:, 0] + dx
-            ny = inner_pts_2d[:, 1] + dy
-
-            inner_idx = m_inner[inner_pts_2d[:, 0], inner_pts_2d[:, 1]]
-            contrib_idx = m_padded[nx, ny]
-
-            valid = contrib_idx >= 0
-            inner_list.append(inner_idx[valid])
-            contrib_list.append(contrib_idx[valid])
-
-        return np.concatenate(inner_list), np.concatenate(contrib_list)

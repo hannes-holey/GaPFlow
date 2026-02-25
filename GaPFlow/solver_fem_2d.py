@@ -25,21 +25,17 @@
 from . import HAS_PETSC
 from .fem_2d.elements import TriangleQuadrature
 from .fem_2d.terms import NonLinearTerm, get_active_terms
-from .fem_2d.assembly_layout import (
-    FEMAssemblyLayout,
-    MatrixCOOPattern,
-    RHSPattern,
-    JacobianTermMap,
-    JacobianTermTemplate,
-    JacobianTermRef,
-    COOLookup,
-)
-from .fem_2d.scaling import compute_characteristic_scales
+from .fem_2d.assembly import Assembly
+from .fem_2d.scaling import build_scaling
 from .fem_2d.grid_index import GridIndexManager
 from .fem_2d.quad_fields import QuadFieldManager
 from .fem_2d.solution_guards import apply_guards
+from .fem_2d.residual_analysis import (
+    create_residual_analysis_plot,
+    plot_residual_history,
+    print_residual_analysis,
+)
 
-from functools import cached_property
 import numpy as np
 import time
 from muGrid import Timer
@@ -59,18 +55,13 @@ class FEMSolver2D:
     def __init__(self, fem_spec: dict, problem: "Problem") -> None:
         self.fem_spec = fem_spec
         self.problem = problem
-        self.quad_mgr = None  # QuadFieldManager, initialized via init()
-        self.linear_solver = None  # Linear solver (PETSc or SciPy)
         self.timer = Timer()
         self.R_norm_history = []  # Nested list: [[step1_iters], [step2_iters], ...]
 
     def _init_convenience_accessors(self) -> None:
         """Initialize convenience accessors for problem and grid properties."""
         p = self.problem
-        self.decomp = p.decomp
         self.energy = p.fem_solver['equations']['energy']
-
-        self.global_coords = p.decomp.icoordsg
 
         nb_subdomain_pts = p.decomp.nb_subdomain_grid_pts
         self.Nx_inner = nb_subdomain_pts[0]
@@ -78,7 +69,6 @@ class FEMSolver2D:
 
         self.dx = p.grid['dx']
         self.dy = p.grid['dy']
-        self.A = self.dx * self.dy
 
         self.variables = ['rho', 'jx', 'jy']
         self.residuals = ['mass', 'momentum_x', 'momentum_y']
@@ -96,33 +86,13 @@ class FEMSolver2D:
             energy_spec=energy_spec,
         )
 
-        # Convenience aliases from grid index manager
         self.nb_inner_pts = self.grid_idx.nb_inner_pts
-        self.sq_per_row = self.grid_idx.sq_per_row
-        self.sq_per_col = self.grid_idx.sq_per_col
-        self.nb_sq = self.grid_idx.nb_sq
-        self.sq_x_arr = self.grid_idx.sq_x_arr
-        self.sq_y_arr = self.grid_idx.sq_y_arr
 
         self.res_size = len(self.residuals) * self.nb_inner_pts
         self.var_size = len(self.variables) * self.grid_idx.nb_contributors
 
-        # Quadrature data for triangular elements
-        quad = TriangleQuadrature(self.dx, self.dy)
-        w = quad.weights
-        Nl, Nr = quad.N_left, quad.N_right
-
-        # Precomputed element tensors: elem[i,j,q] = N_i[q] * N_j[q] * w[q] * A
-        self.elem_tensor_left = Nl[:, None, :] * Nl[None, :, :] * w * self.A
-        self.elem_tensor_right = Nr[:, None, :] * Nr[None, :, :] * w * self.A
-
-        # Precomputed test function integrals: integral[i,q] = N_i[q] * w[q] * A
-        self.test_wA_left = Nl * w * self.A
-        self.test_wA_right = Nr * w * self.A
-        self.test_wA_left_dx = quad.dN_left_dx * w * self.A
-        self.test_wA_right_dx = quad.dN_right_dx * w * self.A
-        self.test_wA_left_dy = quad.dN_left_dy * w * self.A
-        self.test_wA_right_dy = quad.dN_right_dy * w * self.A
+        # Quadrature data and element tensors for triangular elements
+        self.quad = TriangleQuadrature(self.dx, self.dy)
 
     def _get_active_terms(self) -> None:
         """Initialize list of active terms from problem fem_solver config."""
@@ -134,10 +104,8 @@ class FEMSolver2D:
             problem=self.problem,
             energy=self.energy,
             variables=self.variables,
+            quad=self.quad,
         )
-        # Convenience aliases for backward compatibility
-        self.nodal_fields = self.quad_mgr.nodal_fields
-        self.quad_fields = self.quad_mgr.quad_fields
 
     def _build_jit_functions(self) -> None:
         """Build JIT-compiled gradient functions for all physical models."""
@@ -159,10 +127,7 @@ class FEMSolver2D:
         quad_field_names = self.quad_mgr.get_needed_fields()
 
         for term in self.terms:
-            term_ctx = {
-                name: make_getter(name)
-                for name in quad_field_names
-            }
+            term_ctx = {name: make_getter(name) for name in quad_field_names}
 
             # Non-quad values
             term_ctx['dt'] = p.numerics['dt']
@@ -190,509 +155,14 @@ class FEMSolver2D:
     # Assembly Layout (unified COO pattern and term mappings)
     # =========================================================================
 
-    @cached_property
-    def assembly_layout(self) -> FEMAssemblyLayout:
-        """Precomputed assembly layout for O(nnz) matrix/vector assembly."""
-        return self._build_assembly_layout()
-
-    def _build_assembly_layout(self) -> FEMAssemblyLayout:
-        """Build complete assembly layout with COO pattern and term mappings.
-
-        Uses template-based approach: builds ~5-20 shared templates instead of
-        ~80 individual JacobianTermMaps. Each term gets a lightweight ref that
-        points to its template plus a block offset.
-        """
-        nb_vars = len(self.variables)
-        nb_res = len(self.residuals)
-
-        # 1. Build local-to-global point mapping
-        mask_local = self.grid_idx.index_mask_padded_local('')
-        mask_global = self.decomp.index_mask_padded_global
-        l2g_pts = np.zeros(self.grid_idx.nb_contributors, dtype=np.int32)
-        valid = mask_local >= 0
-        l2g_pts[mask_local[valid]] = mask_global[valid]
-
-        # 2. Build matrix COO pattern
-        matrix_coo, coo_lookup = self._build_matrix_coo_pattern(
-            l2g_pts, nb_vars, nb_res)
-
-        # 3. Build RHS pattern
-        rhs = self._build_rhs_pattern(l2g_pts, nb_res)
-
-        # 4. Build shared Jacobian templates (grouped by FROM pattern)
-        inner_pts, _ = self.grid_idx.get_stencil_connectivity()
-        nnz_per_block = len(inner_pts)
-        jacobian_templates, var_to_from_hash = self._build_jacobian_templates(
-            coo_lookup, nnz_per_block)
-
-        # 5. Create lightweight refs for each (term, res, dep_var) combination
-        jacobian_terms = {}
-        for term in self.terms:
-            for dep_var in term.dep_vars:
-                term_key = (term.name, term.res, dep_var)
-                deriv_type, der_testfun = self._get_template_key(term)
-                from_hash = var_to_from_hash[dep_var]
-                template_key = (from_hash, deriv_type, der_testfun)
-
-                res_idx = self.residuals.index(term.res)
-                var_idx = self.variables.index(dep_var)
-                block_offset = (res_idx * nb_vars + var_idx) * nnz_per_block
-
-                jacobian_terms[term_key] = JacobianTermRef(
-                    template=jacobian_templates[template_key],
-                    block_offset=block_offset,
-                )
-
-        return FEMAssemblyLayout(
-            matrix_coo=matrix_coo,
-            rhs=rhs,
-            jacobian_terms=jacobian_terms,
-            jacobian_templates=jacobian_templates,
-        )
-
-    def _get_template_key(self, term: NonLinearTerm) -> Tuple[str, bool]:
-        """Get (deriv_type, der_testfun) template key from term.
-
-        This identifies the structural pattern independent of (res, var).
-        """
-        if term.d_dx_resfun:
-            deriv_type = 'dx'
-        elif term.d_dy_resfun:
-            deriv_type = 'dy'
-        else:
-            deriv_type = 'none'
-        return (deriv_type, term.der_testfun)
-
-    def _build_jacobian_templates(self, coo_lookup: COOLookup, nnz_per_block: int
-                                   ) -> Tuple[dict, dict]:
-        """Build templates grouped by unique FROM pattern.
-
-        Returns
-        -------
-        jacobian_templates : dict
-            Maps (from_hash, deriv_type, der_testfun) -> JacobianTermTemplate
-        var_to_from_hash : dict
-            Maps variable name -> FROM pattern hash
-        """
-        # Step 1: Group variables by their FROM pattern (using array hash)
-        from_pattern_to_vars = {}  # hash -> list of var names
-        var_to_from_hash = {}      # var name -> hash
-
-        for var in self.variables:
-            from_arr = self.grid_idx.sq_FROM_padded(var)
-            from_hash = hash(from_arr.tobytes())
-            var_to_from_hash[var] = from_hash
-            if from_hash not in from_pattern_to_vars:
-                from_pattern_to_vars[from_hash] = []
-            from_pattern_to_vars[from_hash].append(var)
-
-        # Step 2: Build templates for each unique FROM pattern
-        jacobian_templates = {}
-        for from_hash, vars_with_this_pattern in from_pattern_to_vars.items():
-            representative_var = vars_with_this_pattern[0]
-
-            for deriv_type in ['none', 'dx', 'dy']:
-                for der_testfun in [False, True]:
-                    # Skip invalid combination: no derivative but derivative test function
-                    if deriv_type == 'none' and der_testfun:
-                        continue
-
-                    template_key = (from_hash, deriv_type, der_testfun)
-                    if deriv_type == 'none':
-                        jacobian_templates[template_key] = self._build_template_zero_der(
-                            coo_lookup, representative_var, nnz_per_block)
-                    else:
-                        direction = 'x' if deriv_type == 'dx' else 'y'
-                        jacobian_templates[template_key] = self._build_template_deriv(
-                            coo_lookup, representative_var, direction, der_testfun, nnz_per_block)
-
-        return jacobian_templates, var_to_from_hash
-
-    def _build_matrix_coo_pattern(self, l2g_pts: NDArray, nb_vars: int,
-                                  nb_res: int) -> Tuple[MatrixCOOPattern, COOLookup]:
-        """Build sparse matrix COO pattern and memory-efficient COO lookup."""
-        inner_pts, contrib_pts = self.grid_idx.get_stencil_connectivity()
-        nnz_per_block = len(inner_pts)
-        total_nnz = nb_res * nb_vars * nnz_per_block
-
-        local_rows = np.empty(total_nnz, dtype=np.int32)
-        local_cols = np.empty(total_nnz, dtype=np.int32)
-        global_rows = np.empty(total_nnz, dtype=np.int32)
-        global_cols = np.empty(total_nnz, dtype=np.int32)
-        # Block indices for scaling
-        res_block_idx = np.empty(total_nnz, dtype=np.int8)
-        var_block_idx = np.empty(total_nnz, dtype=np.int8)
-
-        global_inner = l2g_pts[inner_pts]
-        global_contrib = l2g_pts[contrib_pts]
-
-        idx = 0
-        for res_idx in range(nb_res):
-            row_offset = res_idx * self.nb_inner_pts
-            for var_idx in range(nb_vars):
-                col_offset = var_idx * self.grid_idx.nb_contributors
-                n = nnz_per_block
-
-                local_rows[idx:idx + n] = row_offset + inner_pts
-                local_cols[idx:idx + n] = col_offset + contrib_pts
-                global_rows[idx:idx + n] = global_inner * nb_res + res_idx
-                global_cols[idx:idx + n] = global_contrib * nb_vars + var_idx
-                # Store block indices for scaling (no additional iteration cost)
-                res_block_idx[idx:idx + n] = res_idx
-                var_block_idx[idx:idx + n] = var_idx
-
-                idx += n
-
-        # Build memory-efficient COO lookup (replaces Python dict)
-        coo_lookup = COOLookup.from_coo_pattern(local_rows, local_cols)
-
-        matrix_coo = MatrixCOOPattern(
-            nnz=total_nnz,
-            local_rows=local_rows,
-            local_cols=local_cols,
-            global_rows=global_rows,
-            global_cols=global_cols,
-            res_block_idx=res_block_idx,
-            var_block_idx=var_block_idx,
-        )
-
-        return matrix_coo, coo_lookup
-
-    def _build_rhs_pattern(self, l2g_pts: NDArray, nb_res: int) -> RHSPattern:
-        """Build RHS vector assembly pattern."""
-        local_size = nb_res * self.nb_inner_pts
-        global_rows = np.empty(local_size, dtype=np.int32)
-        # Block indices for scaling
-        res_block_idx = np.empty(local_size, dtype=np.int8)
-        global_pts = l2g_pts[:self.nb_inner_pts]
-
-        for res_idx in range(nb_res):
-            start = res_idx * self.nb_inner_pts
-            end = start + self.nb_inner_pts
-            global_rows[start:end] = global_pts * nb_res + res_idx
-            res_block_idx[start:end] = res_idx
-
-        return RHSPattern(
-            global_rows=global_rows,
-            res_block_idx=res_block_idx,
-        )
-
-    def _lookup_coo_indices(self, coo_lookup: COOLookup,
-                            row_block: NDArray, col_block: NDArray) -> NDArray:
-        """
-        Vectorized COO index lookup using sorted array + binary search.
-
-        Returns array of COO indices, with -1 for positions not in pattern.
-        """
-        return coo_lookup.lookup(row_block, col_block)
-
-    def _build_template_zero_der(self, coo_lookup: COOLookup, representative_var: str,
-                                  nnz_per_block: int) -> JacobianTermTemplate:
-        """Build template for zero-derivative term (3×3 per triangle).
-
-        Uses res_idx=0, var_idx=0 (first block) as the base. Actual COO indices
-        are computed at assembly time as: template_coo_idx + block_offset.
-        """
-        # Use first block position (res=0, var=0) for template
-        res_idx = 0
-        var_idx = 0
-        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
-
-        TO = self.grid_idx.sq_TO_inner
-        FROM = self.grid_idx.sq_FROM_padded(representative_var)
-
-        # Triangle configs: (TO_indices, FROM_indices, elem_tensor, quad_offset)
-        triangle_configs = [
-            (TO[:, [0, 2, 1]], FROM[:, [0, 2, 1]], self.elem_tensor_left, 0),
-            (TO[:, [3, 1, 2]], FROM[:, [3, 1, 2]], self.elem_tensor_right, 3),
-        ]
-
-        coo_idx_list = []
-        weights_list = []
-        flat_field_idx_list = []
-
-        for TO_tri, FROM_tri, elem_tensor, quad_offset in triangle_configs:
-            for i in range(3):
-                for j in range(3):
-                    valid = (TO_tri[:, i] >= 0) & (FROM_tri[:, j] >= 0)
-                    sq_valid = np.where(valid)[0]
-
-                    if len(sq_valid) > 0:
-                        row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
-                        col_block = var_idx * self.grid_idx.nb_contributors + FROM_tri[sq_valid, j]
-                        coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
-                        valid_coo = coo_idx >= 0
-
-                        if np.any(valid_coo):
-                            sq_final = sq_valid[valid_coo]
-                            sq_x_final = sq_x[sq_final]
-                            sq_y_final = sq_y[sq_final]
-                            for q in range(3):
-                                coo_idx_list.append(coo_idx[valid_coo])
-                                weights_list.append(np.full(
-                                    len(sq_final), elem_tensor[i, j, q], dtype=np.float64))
-                                # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
-                                quad_idx = q + quad_offset
-                                flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
-                                flat_field_idx_list.append(flat_idx.astype(np.int32))
-
-        if not coo_idx_list:
-            return JacobianTermTemplate(
-                template_coo_idx=np.array([], dtype=np.int32),
-                weights=np.array([], dtype=np.float64),
-                flat_field_idx=np.array([], dtype=np.int32),
-                signs=None,
-                nnz_per_block=nnz_per_block,
-            )
-
-        return JacobianTermTemplate(
-            template_coo_idx=np.concatenate(coo_idx_list),
-            weights=np.concatenate(weights_list),
-            flat_field_idx=np.concatenate(flat_field_idx_list),
-            signs=None,
-            nnz_per_block=nnz_per_block,
-        )
-
-    def _build_template_deriv(self, coo_lookup: COOLookup, representative_var: str,
-                               direction: str, der_testfun: bool,
-                               nnz_per_block: int) -> JacobianTermTemplate:
-        """Build template for derivative term (±1/d* stencil).
-
-        Uses res_idx=0, var_idx=0 (first block) as the base. Actual COO indices
-        are computed at assembly time as: template_coo_idx + block_offset.
-        """
-        # Use first block position (res=0, var=0) for template
-        res_idx = 0
-        var_idx = 0
-
-        TO = self.grid_idx.sq_TO_inner
-        FROM = self.grid_idx.sq_FROM_padded(representative_var)
-
-        TO_left = TO[:, [0, 2, 1]]
-        TO_right = TO[:, [3, 1, 2]]
-
-        if direction == 'x':
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 1]
-            FROM_neg_right, FROM_pos_right = FROM[:, 2], FROM[:, 3]
-            test_wA_left = self.test_wA_left_dx if der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dx if der_testfun else self.test_wA_right
-        else:
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 2]
-            FROM_neg_right, FROM_pos_right = FROM[:, 1], FROM[:, 3]
-            test_wA_left = self.test_wA_left_dy if der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dy if der_testfun else self.test_wA_right
-
-        coo_idx_list = []
-        weights_list = []
-        flat_field_idx_list = []
-        signs_list = []
-
-        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
-
-        triangle_configs = [
-            (TO_left, FROM_neg_left, FROM_pos_left, test_wA_left, 0),
-            (TO_right, FROM_neg_right, FROM_pos_right, test_wA_right, 3),
-        ]
-
-        for TO_tri, FROM_neg, FROM_pos, test_wA, quad_offset in triangle_configs:
-            for i in range(3):
-                for FROM_pts, sign in [(FROM_neg, -1.0), (FROM_pos, 1.0)]:
-                    valid = (TO_tri[:, i] >= 0) & (FROM_pts >= 0)
-                    sq_valid = np.where(valid)[0]
-
-                    if len(sq_valid) == 0:
-                        continue
-
-                    row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
-                    col_block = var_idx * self.grid_idx.nb_contributors + FROM_pts[sq_valid]
-                    coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
-                    valid_coo = coo_idx >= 0
-
-                    if not np.any(valid_coo):
-                        continue
-
-                    sq_final = sq_valid[valid_coo]
-                    sq_x_final = sq_x[sq_final]
-                    sq_y_final = sq_y[sq_final]
-                    for q in range(3):
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        weights_list.append(np.full(
-                            len(sq_final), test_wA[i, q], dtype=np.float64))
-                        # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
-                        quad_idx = q + quad_offset
-                        flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
-                        flat_field_idx_list.append(flat_idx.astype(np.int32))
-                        signs_list.append(np.full(len(sq_final), sign, dtype=np.float64))
-
-        if not coo_idx_list:
-            return JacobianTermTemplate(
-                template_coo_idx=np.array([], dtype=np.int32),
-                weights=np.array([], dtype=np.float64),
-                flat_field_idx=np.array([], dtype=np.int32),
-                signs=np.array([], dtype=np.float64),
-                nnz_per_block=nnz_per_block,
-            )
-
-        return JacobianTermTemplate(
-            template_coo_idx=np.concatenate(coo_idx_list),
-            weights=np.concatenate(weights_list),
-            flat_field_idx=np.concatenate(flat_field_idx_list),
-            signs=np.concatenate(signs_list),
-            nnz_per_block=nnz_per_block,
-        )
-
-    # =========================================================================
-    # Legacy Methods (deprecated, kept for backward compatibility)
-    # =========================================================================
-    # These methods are no longer used by the main assembly path.
-    # Use _build_template_zero_der and _build_template_deriv instead.
-
-    def _build_jacobian_term_zero_der(self, term: NonLinearTerm, dep_var: str,
-                                      coo_lookup: COOLookup) -> JacobianTermMap:
-        """Build Jacobian term map for zero-derivative term (3×3 per triangle).
-
-        .. deprecated::
-            Use _build_template_zero_der instead. This method is kept for
-            backward compatibility and external usage.
-        """
-        res_idx = self.residuals.index(term.res)
-        var_idx = self.variables.index(dep_var)
-        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
-
-        TO = self.grid_idx.sq_TO_inner
-        FROM = self.grid_idx.sq_FROM_padded(dep_var)
-
-        # Triangle configs: (TO_indices, FROM_indices, elem_tensor, quad_offset)
-        triangle_configs = [
-            (TO[:, [0, 2, 1]], FROM[:, [0, 2, 1]], self.elem_tensor_left, 0),
-            (TO[:, [3, 1, 2]], FROM[:, [3, 1, 2]], self.elem_tensor_right, 3),
-        ]
-
-        coo_idx_list = []
-        weights_list = []
-        flat_field_idx_list = []
-
-        for TO_tri, FROM_tri, elem_tensor, quad_offset in triangle_configs:
-            for i in range(3):
-                for j in range(3):
-                    valid = (TO_tri[:, i] >= 0) & (FROM_tri[:, j] >= 0)
-                    sq_valid = np.where(valid)[0]
-
-                    if len(sq_valid) > 0:
-                        row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
-                        col_block = var_idx * self.grid_idx.nb_contributors + FROM_tri[sq_valid, j]
-                        coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
-                        valid_coo = coo_idx >= 0
-
-                        if np.any(valid_coo):
-                            sq_final = sq_valid[valid_coo]
-                            sq_x_final = sq_x[sq_final]
-                            sq_y_final = sq_y[sq_final]
-                            for q in range(3):
-                                coo_idx_list.append(coo_idx[valid_coo])
-                                weights_list.append(np.full(
-                                    len(sq_final), elem_tensor[i, j, q], dtype=np.float64))
-                                # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
-                                quad_idx = q + quad_offset
-                                flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
-                                flat_field_idx_list.append(flat_idx.astype(np.int32))
-
-        if not coo_idx_list:
-            return JacobianTermMap(
-                coo_idx=np.array([], dtype=np.int32),
-                weights=np.array([], dtype=np.float64),
-                flat_field_idx=np.array([], dtype=np.int32),
-            )
-
-        return JacobianTermMap(
-            coo_idx=np.concatenate(coo_idx_list),
-            weights=np.concatenate(weights_list),
-            flat_field_idx=np.concatenate(flat_field_idx_list),
-        )
-
-    def _build_jacobian_term_deriv(self, term: NonLinearTerm, dep_var: str,
-                                   coo_lookup: COOLookup, direction: str) -> JacobianTermMap:
-        """Build Jacobian term map for derivative term (±1/d* stencil).
-
-        .. deprecated::
-            Use _build_template_deriv instead. This method is kept for
-            backward compatibility and external usage.
-        """
-        res_idx = self.residuals.index(term.res)
-        var_idx = self.variables.index(dep_var)
-
-        TO = self.grid_idx.sq_TO_inner
-        FROM = self.grid_idx.sq_FROM_padded(dep_var)
-
-        TO_left = TO[:, [0, 2, 1]]
-        TO_right = TO[:, [3, 1, 2]]
-
-        if direction == 'x':
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 1]
-            FROM_neg_right, FROM_pos_right = FROM[:, 2], FROM[:, 3]
-            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
-        else:
-            FROM_neg_left, FROM_pos_left = FROM[:, 0], FROM[:, 2]
-            FROM_neg_right, FROM_pos_right = FROM[:, 1], FROM[:, 3]
-            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
-
-        coo_idx_list = []
-        weights_list = []
-        flat_field_idx_list = []
-        signs_list = []
-
-        sq_x, sq_y = self.sq_x_arr, self.sq_y_arr
-
-        triangle_configs = [
-            (TO_left, FROM_neg_left, FROM_pos_left, test_wA_left, 0),
-            (TO_right, FROM_neg_right, FROM_pos_right, test_wA_right, 3),
-        ]
-
-        for TO_tri, FROM_neg, FROM_pos, test_wA, quad_offset in triangle_configs:
-            for i in range(3):
-                for FROM_pts, sign in [(FROM_neg, -1.0), (FROM_pos, 1.0)]:
-                    valid = (TO_tri[:, i] >= 0) & (FROM_pts >= 0)
-                    sq_valid = np.where(valid)[0]
-
-                    if len(sq_valid) == 0:
-                        continue
-
-                    row_block = res_idx * self.nb_inner_pts + TO_tri[sq_valid, i]
-                    col_block = var_idx * self.grid_idx.nb_contributors + FROM_pts[sq_valid]
-                    coo_idx = self._lookup_coo_indices(coo_lookup, row_block, col_block)
-                    valid_coo = coo_idx >= 0
-
-                    if not np.any(valid_coo):
-                        continue
-
-                    sq_final = sq_valid[valid_coo]
-                    sq_x_final = sq_x[sq_final]
-                    sq_y_final = sq_y[sq_final]
-                    for q in range(3):
-                        coo_idx_list.append(coo_idx[valid_coo])
-                        weights_list.append(np.full(
-                            len(sq_final), test_wA[i, q], dtype=np.float64))
-                        # Flat field index: quad_idx * nb_sq + sq_x * sq_per_col + sq_y
-                        quad_idx = q + quad_offset
-                        flat_idx = quad_idx * self.nb_sq + sq_x_final * self.sq_per_col + sq_y_final
-                        flat_field_idx_list.append(flat_idx.astype(np.int32))
-                        signs_list.append(np.full(len(sq_final), sign, dtype=np.float64))
-
-        if not coo_idx_list:
-            return JacobianTermMap(
-                coo_idx=np.array([], dtype=np.int32),
-                weights=np.array([], dtype=np.float64),
-                flat_field_idx=np.array([], dtype=np.int32),
-                signs=np.array([], dtype=np.float64),
-            )
-
-        return JacobianTermMap(
-            coo_idx=np.concatenate(coo_idx_list),
-            weights=np.concatenate(weights_list),
-            flat_field_idx=np.concatenate(flat_field_idx_list),
-            signs=np.concatenate(signs_list),
+    def _build_assembly(self) -> None:
+        """Precompute assembly layout for O(nnz) matrix/vector assembly."""
+        self.assembly = Assembly(
+            grid_idx=self.grid_idx,
+            quad=self.quad,
+            terms=self.terms,
+            residuals=self.residuals,
+            variables=self.variables
         )
 
     # =========================================================================
@@ -701,8 +171,7 @@ class FEMSolver2D:
 
     def get_tang_matrix_sparse(self) -> NDArray:
         """Assemble tangent matrix directly to COO values - O(nnz) memory."""
-        layout = self.assembly_layout
-        coo_values = np.zeros(layout.matrix_coo.nnz, dtype=np.float64)
+        coo_values = np.zeros(self.assembly.nnz, dtype=np.float64)
 
         for term in self.terms:
             for dep_var in term.dep_vars:
@@ -724,7 +193,7 @@ class FEMSolver2D:
                                          coo_values: NDArray):
         """Sparse assembly for zero-derivative term using template."""
         key = (term.name, term.res, dep_var)
-        ref = self.assembly_layout.jacobian_terms[key]
+        ref = self.assembly.term_templates[key]
         template = ref.template
 
         if len(template.template_coo_idx) == 0:
@@ -743,7 +212,7 @@ class FEMSolver2D:
                                       coo_values: NDArray, direction: str):
         """Sparse assembly for derivative term with ±1/d* stencil using template."""
         key = (term.name, term.res, dep_var)
-        ref = self.assembly_layout.jacobian_terms[key]
+        ref = self.assembly.term_templates[key]
         template = ref.template
 
         if len(template.template_coo_idx) == 0:
@@ -779,6 +248,8 @@ class FEMSolver2D:
             return self._residual_vector_term_deriv(term, 'x')
         elif term.d_dy_resfun:
             return self._residual_vector_term_deriv(term, 'y')
+        elif term.der_testfun in ('x', 'y'):
+            return self._residual_vector_term_testfun_deriv(term)
         else:
             return self._residual_vector_term_zero_der(term)
 
@@ -788,9 +259,8 @@ class FEMSolver2D:
         R = np.zeros((self.nb_inner_pts,), dtype=float)
         TO = self.grid_idx.sq_TO_inner
 
-        # Triangle configs: (TO_indices, contributions)
-        for TO_tri, contrib in [(TO[:, [0, 2, 1]], contrib_left),
-                                (TO[:, [3, 1, 2]], contrib_right)]:
+        for t, contrib in enumerate([contrib_left, contrib_right]):
+            TO_tri = TO[:, self.quad.TRI_PTS[t]]
             for i in range(3):
                 valid = TO_tri[:, i] != -1
                 np.add.at(R, TO_tri[valid, i], contrib[valid, i])
@@ -800,42 +270,70 @@ class FEMSolver2D:
         """Get residual vector for term without derivative in residual function."""
         res_fun_vals = self.get_res_vals(term)  # (6, sq_per_row, sq_per_col)
 
-        sx, sy = self.sq_x_arr, self.sq_y_arr
+        sx, sy = self.grid_idx.sq_x_arr, self.grid_idx.sq_y_arr
+        # Quad layout: [0:3] = left triangle, [3:6] = right triangle
         res_left = res_fun_vals[0:3, sx, sy].T   # (nb_sq, 3)
         res_right = res_fun_vals[3:6, sx, sy].T
 
         # contrib[sq, i] = sum_q(N_i[q] * res[sq, q] * w[q]) * A
-        contrib_left = np.einsum('iq,sq->si', self.test_wA_left, res_left)
-        contrib_right = np.einsum('iq,sq->si', self.test_wA_right, res_right)
+        contrib_left = np.einsum('iq,sq->si', self.quad.test_wA[0], res_left)
+        contrib_right = np.einsum('iq,sq->si', self.quad.test_wA[1], res_right)
+
+        return self._assemble_residual_contributions(contrib_left, contrib_right)
+
+    def _residual_vector_term_testfun_deriv(self, term: NonLinearTerm) -> NDArray:
+        """Get residual vector for test-function-derivative-only term (PSPG).
+
+        Computes INT (dN_i/dx_k) * F(q) dOmega where F has no spatial derivative.
+        Uses test function gradient weights instead of standard test function weights.
+        """
+        res_fun_vals = self.get_res_vals(term)  # (6, sq_per_row, sq_per_col)
+
+        sx, sy = self.grid_idx.sq_x_arr, self.grid_idx.sq_y_arr
+        res_left = res_fun_vals[0:3, sx, sy].T   # (nb_sq, 3)
+        res_right = res_fun_vals[3:6, sx, sy].T
+
+        test_wA = self.quad.test_wA_dx if term.der_testfun == 'x' \
+            else self.quad.test_wA_dy
+
+        contrib_left = np.einsum('iq,sq->si', test_wA[0], res_left)
+        contrib_right = np.einsum('iq,sq->si', test_wA[1], res_right)
 
         return self._assemble_residual_contributions(contrib_left, contrib_right)
 
     def _residual_vector_term_deriv(self, term: NonLinearTerm, direction: str) -> NDArray:
         """Get residual vector for term with spatial derivative in residual function."""
-        # Select derivative operator and test weights based on direction
-        if direction == 'x':
-            get_field_deriv = self.quad_mgr.get_deriv_dx
-            test_wA_left = self.test_wA_left_dx if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dx if term.der_testfun else self.test_wA_right
-        else:  # 'y'
-            get_field_deriv = self.quad_mgr.get_deriv_dy
-            test_wA_left = self.test_wA_left_dy if term.der_testfun else self.test_wA_left
-            test_wA_right = self.test_wA_right_dy if term.der_testfun else self.test_wA_right
+        # Field derivative direction (for chain rule computation)
+        get_field_deriv = self.quad_mgr.get_deriv_dx if direction == 'x' \
+            else self.quad_mgr.get_deriv_dy
+
+        # Test function weights (decoupled from field derivative direction)
+        if term.der_testfun is True:
+            # Legacy (PSPG pressure): test weight dir matches field deriv dir
+            test_wA = self.quad.test_wA_dx if direction == 'x' \
+                else self.quad.test_wA_dy
+        elif term.der_testfun == 'x':
+            test_wA = self.quad.test_wA_dx
+        elif term.der_testfun == 'y':
+            test_wA = self.quad.test_wA_dy
+        else:
+            test_wA = self.quad.test_wA
 
         # Compute dF/d* using chain rule: (6, sq_per_row, sq_per_col)
-        dF = np.zeros((6, self.sq_per_row, self.sq_per_col))
+        dF = np.zeros((6, self.grid_idx.sq_per_row, self.grid_idx.sq_per_col))
         for dep_var in term.dep_vars:
             dF_dvar = self.get_res_deriv_vals(term, dep_var)  # (6, X, Y)
             dvar_2 = get_field_deriv(dep_var)                 # (2, X, Y)
             dvar_6 = np.repeat(dvar_2, 3, axis=0)             # expand to (6, X, Y)
             dF += dF_dvar * dvar_6
 
-        sx, sy = self.sq_x_arr, self.sq_y_arr
+        sx, sy = self.grid_idx.sq_x_arr, self.grid_idx.sq_y_arr
+        # Quad layout: [0:3] = left triangle, [3:6] = right triangle
         res_left = dF[0:3, sx, sy].T   # (nb_sq, 3)
         res_right = dF[3:6, sx, sy].T
 
-        contrib_left = np.einsum('iq,sq->si', test_wA_left, res_left)
-        contrib_right = np.einsum('iq,sq->si', test_wA_right, res_right)
+        contrib_left = np.einsum('iq,sq->si', test_wA[0], res_left)
+        contrib_right = np.einsum('iq,sq->si', test_wA[1], res_right)
 
         return self._assemble_residual_contributions(contrib_left, contrib_right)
 
@@ -863,9 +361,8 @@ class FEMSolver2D:
     def get_M_dense(self) -> NDArray:
         """Get tangent matrix as dense array (for testing/debugging)."""
         coo_values = self.get_tang_matrix_sparse()
-        layout = self.assembly_layout
-        rows = layout.matrix_coo.local_rows
-        cols = layout.matrix_coo.local_cols
+        rows = self.assembly.local_rows
+        cols = self.assembly.local_cols
 
         M = np.zeros((self.res_size, self.var_size), dtype=np.float64)
         np.add.at(M, (rows, cols), coo_values)
@@ -1025,58 +522,41 @@ class FEMSolver2D:
     def plot_residual_history(self, max_separators: int = 50):
         """Plot R_norm evolution across all Newton iterations.
 
-        Parameters
-        ----------
-        max_separators : int
-            Maximum number of timestep separators to show (default 50).
-
-        Returns
-        -------
-        tuple
-            (fig, ax) matplotlib figure and axes objects, or (None, None) if
-            not on rank 0 or no history available.
+        Returns (fig, ax) or (None, None) if not on rank 0.
         """
         if self.problem.decomp.rank != 0:
             return None, None
+        return plot_residual_history(self.R_norm_history, max_separators)
 
-        if not self.R_norm_history:
-            print("No residual history available.")
-            return None, None
+    def run_residual_analysis(self) -> None:
+        """
+        Run residual analysis and generate output if enabled.
 
-        import matplotlib.pyplot as plt
+        Called from _post_run when residual_analysis option is True.
+        Requires solver to be initialized with updated quad fields.
+        """
+        import os
+        p = self.problem
 
-        # Flatten history with timestep boundaries
-        all_norms = []
-        boundaries = []
-        for step_history in self.R_norm_history:
-            boundaries.append(len(all_norms))
-            all_norms.extend(step_history)
+        # Ensure quad fields are up-to-date
+        self.update_quad()
 
-        fig, ax = plt.subplots(figsize=(12, 6))
-        ax.semilogy(all_norms, 'b-', linewidth=0.8)
+        # Print text summary
+        print_residual_analysis(self)
 
-        # Add vertical separators if not too many timesteps
-        if len(boundaries) <= max_separators:
-            for b in boundaries[1:]:  # Skip first (at 0)
-                ax.axvline(x=b, color='gray', linestyle='--', alpha=0.5)
-
-        ax.set_xlabel('Newton iteration (cumulative)')
-        ax.set_ylabel('R_norm')
-        ax.set_title(f'Residual history ({len(self.R_norm_history)} timesteps)')
-        ax.grid(True, alpha=0.3)
-
-        return fig, ax
+        # Generate plot if output directory exists
+        if hasattr(p, 'outdir'):
+            plot_path = os.path.join(p.outdir, 'residual_analysis.png')
+            create_residual_analysis_plot(self, plot_path)
 
     def pre_run(self, **kwargs) -> None:
         """Initialize solver before running."""
+
         with self.timer("preparation"):
             self._init_convenience_accessors()
-
-            # Pass timer to topography for elastic deformation profiling
-            self.problem.topo.timer = self.timer
-
             self._init_quad_fields()
             self._get_active_terms()
+            self._build_assembly()
             self._build_jit_functions()
             self._build_terms()
             with self.timer("init_petsc"):
@@ -1084,7 +564,6 @@ class FEMSolver2D:
 
             # Initial quad update
             self.update_quad()
-
             self.update_prev_quad()
 
             # Update output fields for initial frame
@@ -1096,9 +575,8 @@ class FEMSolver2D:
     def _init_linear_solver(self):
         """Initialize linear solver and scaling for sparse system solves."""
         solver_type = self.problem.fem_solver['linear_solver']
-        p = self.problem
-        nb_global_pts = p.grid['Nx'] * p.grid['Ny']
-        petsc_info = self.assembly_layout.get_petsc_info(
+        nb_global_pts = np.prod(self.problem.decomp.nb_domain_grid_pts)
+        petsc_info = self.assembly.get_petsc_info(
             nb_vars=len(self.variables),
             nb_inner_pts=self.nb_inner_pts,
             nb_global_pts=nb_global_pts,
@@ -1120,5 +598,5 @@ class FEMSolver2D:
                   "Install petsc4py for better performance and parallel support.")
 
         # Build scaling for linear system conditioning
-        char_scales = compute_characteristic_scales(self.problem, self.energy)
-        self.scaling = self.assembly_layout.build_scaling(char_scales, self.variables)
+        self.scaling = build_scaling(
+            self.problem, self.energy, self.variables, self.assembly)

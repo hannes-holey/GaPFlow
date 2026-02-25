@@ -53,8 +53,6 @@ fem_solver:
     max_iter: 5
     pressure_stab_alpha: 0.02
     momentum_stab_alpha: 3.2e-03
-    boundary_stab_factor: 1.
-    boundary_stab_decay: 2
     physics:
         gap_shear: False
         inertia: True

@@ -1,26 +1,3 @@
-#
-# Copyright 2025 Christoph Huber
-#
-# ### MIT License
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
 from functools import cached_property
 
 import numpy as np
@@ -31,163 +8,205 @@ NDArray = npt.NDArray[np.floating]
 
 
 class TriangleQuadrature:
-    """Quadrature data for linear triangular elements on a square cell.
+    """Quadrature data for linear triangular elements on a structured square grid.
 
-    Single source of truth: 3-point Gauss quadrature with barycentric
-    coordinates cycling through [2/3, 1/6, 1/6].
+    Each square cell has corners [bl=0, br=1, tl=2, tr=3] and is split
+    into two triangles by the anti-diagonal (tl--br):
 
-    Node ordering:
-    - Left triangle:  [bl, tl, br] (bottom-left, top-left, bottom-right)
-    - Right triangle: [tr, br, tl] (top-right, bottom-right, top-left)
+        tl --- tr        2 ---- 3
+        |\\ t=1|         |\\ 1  |
+        | \\   |    =    | \\   |
+        |  \\  |         |  \\  |
+        |t=0\\ |         | 0 \\ |
+        bl --- br        0 ---- 1
+
+    All quantities are derived from the five specifications marked
+    "source of truth" below.  Triangle-indexed arrays use t=0 (left)
+    and t=1 (right).
     """
 
-    # Barycentric coordinates for 3-point Gauss quadrature on triangle
-    # Each row is one quad point, columns are barycentric coords for nodes 0,1,2
-    BARY_COORDS = np.array([
-        [2 / 3, 1 / 6, 1 / 6],
-        [1 / 6, 2 / 3, 1 / 6],
-        [1 / 6, 1 / 6, 2 / 3],
+    # ================================================================
+    # Sources of truth
+    # ================================================================
+
+    TRI_PTS = np.array([
+        [0, 1, 2],   # left:  bl, br, tl
+        [3, 2, 1],   # right: tr, tl, br
     ])
 
-    # Quadrature weights (equal for 3-point rule)
-    WEIGHTS = np.array([1 / 6, 1 / 6, 1 / 6])
+    # Nodes that contribute to d/dx and d/dy for each triangle, and their signs.
+    DERIV_NODES_DX = [0, 1]
+    DERIV_NODES_DY = [0, 2]
+    DERIV_SIGNS = np.array([+1, -1])
+
+    # 3-point Gauss quadrature (barycentric coords on reference triangle).
+    # Row q = weights for [node0, node1, node2] at quadrature point q.
+    BARY_COORDS = np.array([
+        [2/3, 1/6, 1/6],
+        [1/6, 2/3, 1/6],
+        [1/6, 1/6, 2/3],
+    ])
+    WEIGHTS = np.array([1/6, 1/6, 1/6])
+
+    # 7-point stencil: self + 6 neighbors (cardinal + anti-diagonal).
+    # Main-diagonal neighbors (-1,-1) and (1,1) are NOT connected.
+    STENCIL_OFFSETS = [
+        ( 0,  0),           # self
+        (-1,  0), (1, 0),   # horizontal
+        ( 0, -1), (0, 1),   # vertical
+        (-1,  1), (1, -1),  # anti-diagonal
+    ]
+
+    # ================================================================
 
     def __init__(self, dx: float = 1.0, dy: float = 1.0):
         self.dx = dx
         self.dy = dy
 
-        # Shape function values: N[node, quad_pt]
-        # Node ordering: [node0, node1, node2] maps to barycentric [0, 2, 1]
-        # This matches the historical FEM node ordering convention
-        self._N = self.BARY_COORDS.T[[0, 2, 1], :].copy()
+    # ================================================================
+    # Shape functions
+    # ================================================================
 
-        # Derivatives are constant within each triangle (linear elements)
-        # Left triangle nodes: bl(0,0), tl(0,1), br(1,0)
-        # dN/dx: bl→br is +x direction, tl is on same x as bl
-        self._dN_left_dx = np.array([
-            np.full(3, -1 / dx),  # bl: decreases toward br
-            np.full(3, 0.0),      # tl: constant in x
-            np.full(3, 1 / dx),   # br: increases from bl
-        ])
-        # dN/dy: bl→tl is +y direction, br is on same y as bl
-        self._dN_left_dy = np.array([
-            np.full(3, -1 / dy),  # bl: decreases toward tl
-            np.full(3, 1 / dy),   # tl: increases from bl
-            np.full(3, 0.0),      # br: constant in y
-        ])
+    @cached_property
+    def N(self) -> NDArray:
+        """Shape functions N[node, quad_pt], shape (3, 3).
 
-        # Right triangle nodes: tr(1,1), br(1,0), tl(0,1)
-        # dN/dx: tl→tr is +x direction, br is on same x as tr
-        self._dN_right_dx = np.array([
-            np.full(3, 1 / dx),   # tr: increases from tl
-            np.full(3, 0.0),      # br: constant in x
-            np.full(3, -1 / dx),  # tl: decreases toward tr
-        ])
-        # dN/dy: br→tr is +y direction, tl is on same y as tr
-        self._dN_right_dy = np.array([
-            np.full(3, 1 / dy),   # tr: increases from br
-            np.full(3, -1 / dy),  # br: decreases toward tr
-            np.full(3, 0.0),      # tl: constant in y
-        ])
+        Same for both triangles (barycentric coords are defined relative
+        to each triangle's own node ordering).
+        """
+        return self.BARY_COORDS.T.copy()
+
+    @cached_property
+    def dN_dx(self) -> NDArray:
+        """dN/dx[tri, node, quad_pt], shape (2, 3, 3).
+
+        Constant per triangle (linear elements).  Only nodes 0, 1 nonzero.
+        """
+        dN = np.zeros((2, 3, 3))
+        for t in range(2):
+            s = self.DERIV_SIGNS[t]
+            dN[t, 0] = -s / self.dx
+            dN[t, 1] = +s / self.dx
+        return dN
+
+    @cached_property
+    def dN_dy(self) -> NDArray:
+        """dN/dy[tri, node, quad_pt], shape (2, 3, 3).
+
+        Only nodes 0, 2 nonzero.
+        """
+        dN = np.zeros((2, 3, 3))
+        for t in range(2):
+            s = self.DERIV_SIGNS[t]
+            dN[t, 0] = -s / self.dy
+            dN[t, 2] = +s / self.dy
+        return dN
 
     @property
     def weights(self) -> NDArray:
         """Quadrature weights, shape (3,)."""
         return self.WEIGHTS
 
-    @property
-    def N_left(self) -> NDArray:
-        """Shape function values for left triangle, shape (3 nodes, 3 quad pts)."""
-        return self._N
+    # ================================================================
+    # Element tensors  (tangent matrix assembly)
+    # ================================================================
 
-    @property
-    def N_right(self) -> NDArray:
-        """Shape function values for right triangle, shape (3 nodes, 3 quad pts)."""
-        return self._N  # Same values, different node interpretation
+    @cached_property
+    def elem_tensor(self) -> NDArray:
+        """N_i * N_j * w * A,  shape (2, 3, 3, 3) = [tri, i, j, q].
 
-    @property
-    def dN_left_dx(self) -> NDArray:
-        """dN/dx for left triangle, shape (3 nodes, 3 quad pts)."""
-        return self._dN_left_dx
+        Identical for both triangles.
+        """
+        A = self.dx * self.dy
+        single = self.N[:, None, :] * self.N[None, :, :] * self.WEIGHTS * A
+        return np.stack([single, single])
 
-    @property
-    def dN_right_dx(self) -> NDArray:
-        """dN/dx for right triangle, shape (3 nodes, 3 quad pts)."""
-        return self._dN_right_dx
+    @cached_property
+    def elem_tensor_testfun_dx(self) -> NDArray:
+        """(dN_i/dx) * N_j * w * A,  shape (2, 3, 3, 3)."""
+        A = self.dx * self.dy
+        return np.stack([
+            self.dN_dx[t, :, None, :] * self.N[None, :, :] * self.WEIGHTS * A
+            for t in range(2)
+        ])
 
-    @property
-    def dN_left_dy(self) -> NDArray:
-        """dN/dy for left triangle, shape (3 nodes, 3 quad pts)."""
-        return self._dN_left_dy
+    @cached_property
+    def elem_tensor_testfun_dy(self) -> NDArray:
+        """(dN_i/dy) * N_j * w * A,  shape (2, 3, 3, 3)."""
+        A = self.dx * self.dy
+        return np.stack([
+            self.dN_dy[t, :, None, :] * self.N[None, :, :] * self.WEIGHTS * A
+            for t in range(2)
+        ])
 
-    @property
-    def dN_right_dy(self) -> NDArray:
-        """dN/dy for right triangle, shape (3 nodes, 3 quad pts)."""
-        return self._dN_right_dy
+    # ================================================================
+    # Test function integrals  (residual vector assembly)
+    # ================================================================
 
-    # =========================================================================
-    # muGrid Operators (for field interpolation)
-    # =========================================================================
+    @cached_property
+    def test_wA(self) -> NDArray:
+        """N_i * w * A,  shape (2, 3, 3) = [tri, node, q].
+
+        Identical for both triangles.
+        """
+        single = self.N * self.WEIGHTS * self.dx * self.dy
+        return np.stack([single, single])
+
+    @cached_property
+    def test_wA_dx(self) -> NDArray:
+        """(dN_i/dx) * w * A,  shape (2, 3, 3)."""
+        wA = self.WEIGHTS * self.dx * self.dy
+        return np.stack([self.dN_dx[t] * wA for t in range(2)])
+
+    @cached_property
+    def test_wA_dy(self) -> NDArray:
+        """(dN_i/dy) * w * A,  shape (2, 3, 3)."""
+        wA = self.WEIGHTS * self.dx * self.dy
+        return np.stack([self.dN_dy[t] * wA for t in range(2)])
+
+    # ================================================================
+    # muGrid operators  (field interpolation)
+    # ================================================================
 
     @cached_property
     def interpolation_operator(self) -> GenericLinearOperator:
-        """Operator to interpolate nodal values to 6 quadrature points.
+        """Interpolate 4 corner values -> 6 quadrature point values.
 
-        Interpolates from 4 corner nodes (bl, tl, br, tr) to 6 quad points
-        (3 per triangle). Left triangle uses bl, tl, br; right uses tr, br, tl.
-
-        Kernel layout: kernel[quad_pt, 1, 1, x_offset, y_offset]
-        Node positions: bl=(0,0), tl=(0,1), br=(1,0), tr=(1,1)
+        Quad points 0..2 = triangle 0,  3..5 = triangle 1.
+        Kernel[1, 6, 1, 2, 2]: weight at grid offset (x, y) per quad point.
         """
-        B = self.BARY_COORDS
-        # Quad point order uses [0, 2, 1] permutation of BARY_COORDS
-        # Left triangle: [bl, tl, br] -> barycentric [0, 1, 2]
-        # Right triangle: [tr, br, tl] -> barycentric [0, 1, 2]
-        # Kernel format: [[[bl, tl], [br, tr]]]
-        kernel = np.array([
-            [
-                # Left triangle quad points (bl, tl, br active; tr=0)
-                [[[B[0, 0], B[0, 1]], [B[0, 2], 0]]],  # quad0: BARY[0]
-                [[[B[2, 0], B[2, 1]], [B[2, 2], 0]]],  # quad1: BARY[2]
-                [[[B[1, 0], B[1, 1]], [B[1, 2], 0]]],  # quad2: BARY[1]
-                # Right triangle quad points (tr, br, tl active; bl=0)
-                [[[0, B[0, 2]], [B[0, 1], B[0, 0]]]],  # quad3: BARY[0]
-                [[[0, B[2, 2]], [B[2, 1], B[2, 0]]]],  # quad4: BARY[2]
-                [[[0, B[1, 2]], [B[1, 1], B[1, 0]]]],  # quad5: BARY[1]
-            ]
-        ])
+        kernel = np.zeros((1, 6, 1, 2, 2))
+        for t in range(2):
+            for q in range(3):
+                for k in range(3):
+                    c = self.TRI_PTS[t, k]
+                    kernel[0, t*3 + q, 0, c % 2, c // 2] = self.N[k, q]
         return GenericLinearOperator([0, 0], kernel)
 
     @cached_property
     def dx_operator(self) -> GenericLinearOperator:
-        """Derivative operator d/dx for linear triangular elements.
+        """d/dx operator -> 2 values per cell (one per triangle).
 
-        Returns 2 values per element (one per triangle).
-        Left triangle: d/dx = (F_br - F_bl) / dx
-        Right triangle: d/dx = (F_tr - F_tl) / dx
+        Kernel[1, 2, 1, 2, 2].
         """
-        dx = self.dx
-        kernel = np.array([
-            [
-                [[[-1 / dx, 0], [1 / dx, 0]]],      # Left: -bl + br
-                [[[0, -1 / dx], [0, 1 / dx]]],      # Right: -tl + tr
-            ]
-        ])
+        kernel = np.zeros((1, 2, 1, 2, 2))
+        for t in range(2):
+            s = self.DERIV_SIGNS[t]
+            c0, c1 = self.TRI_PTS[t, self.DERIV_NODES_DX]
+            kernel[0, t, 0, c0 % 2, c0 // 2] = -s / self.dx
+            kernel[0, t, 0, c1 % 2, c1 // 2] = +s / self.dx
         return GenericLinearOperator([0, 0], kernel)
 
     @cached_property
     def dy_operator(self) -> GenericLinearOperator:
-        """Derivative operator d/dy for linear triangular elements.
+        """d/dy operator -> 2 values per cell (one per triangle).
 
-        Returns 2 values per element (one per triangle).
-        Left triangle: d/dy = (F_tl - F_bl) / dy
-        Right triangle: d/dy = (F_tr - F_br) / dy
+        Kernel[1, 2, 1, 2, 2].
         """
-        dy = self.dy
-        kernel = np.array([
-            [
-                [[[-1 / dy, 1 / dy], [0, 0]]],      # Left: -bl + tl
-                [[[0, 0], [-1 / dy, 1 / dy]]],      # Right: -br + tr
-            ]
-        ])
+        kernel = np.zeros((1, 2, 1, 2, 2))
+        for t in range(2):
+            s = self.DERIV_SIGNS[t]
+            c0, c2 = self.TRI_PTS[t, self.DERIV_NODES_DY]
+            kernel[0, t, 0, c0 % 2, c0 // 2] = -s / self.dy
+            kernel[0, t, 0, c2 % 2, c2 // 2] = +s / self.dy
         return GenericLinearOperator([0, 0], kernel)

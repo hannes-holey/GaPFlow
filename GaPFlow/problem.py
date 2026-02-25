@@ -179,7 +179,7 @@ class Problem:
             self.energy.initialize()
 
         # I/O - create output directory if saving data or plots
-        if self.options['save_output'] or self.options['output_plots']:
+        if self.options['save_output'] or self.options['output_plots'] or self.options['residual_analysis']:
             self.outdir = create_output_directory(options['output'], options['use_tstamp'])
 
         # Data files only when save_output is enabled
@@ -501,6 +501,12 @@ class Problem:
         if self.options.get('output_plots', False):
             plot_path = os.path.join(self.outdir, 'overview.png')
             create_overview_plot(self, plot_path)
+
+        # Residual analysis for FEM 2D solver
+        if self.options.get('residual_analysis', False):
+            from .solver_fem_2d import FEMSolver2D
+            if isinstance(self.solver, FEMSolver2D):
+                self.solver.run_residual_analysis()
 
         walltime = datetime.now() - self._tic
 

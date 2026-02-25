@@ -1,5 +1,5 @@
 options:
-    output: /tmp/journal_test
+    output: /tmp/journal_bearing_{solver}
     write_freq: 1000
     save_output: False
 
@@ -44,3 +44,5 @@ fem_solver:
     max_iter: 10
     physics:
         stabilization: False
+        pspg: true
+        gls: true

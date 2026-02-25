@@ -43,12 +43,13 @@ fem_solver:
     alpha: 1.0
     R_norm_tol: 1e-8
     linear_solver: direct
-    pressure_stab_alpha: 0.1
-    momentum_stab_alpha: 1.0
+    pspg_boundary_decay: 2.0
     max_iter: 20
     physics:
         gap_shear: False
         plane_shear: True
+        pspg: true
+        gls: true
 
 options:
     output: /tmp/couette_2d_test

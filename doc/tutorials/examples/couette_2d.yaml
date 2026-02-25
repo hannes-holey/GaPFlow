@@ -41,3 +41,6 @@ fem_solver:
     linear_solver: direct
     dynamic: True
     R_norm_tol: 1e-11
+    physics:
+        pspg: true
+        gls: true

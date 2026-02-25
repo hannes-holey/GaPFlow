@@ -1,5 +1,5 @@
 options:
-    output: /tmp/comparison_test
+    output: /tmp/inclined_slider_{solver}
     write_freq: 1000
     save_output: False
 
@@ -41,3 +41,8 @@ properties:
 fem_solver:
     type: newton_alpha
     R_norm_tol: 1e-10
+    physics:
+        pspg: true
+        gls: true
+    pspg_C_I: 0.001
+    pspg_boundary_decay: 2.0

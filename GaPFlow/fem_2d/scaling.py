@@ -44,8 +44,8 @@ import numpy as np
 import numpy.typing as npt
 
 if TYPE_CHECKING:
-    from .assembly_layout import MatrixCOOPattern, RHSPattern
     from GaPFlow import Problem
+    from .assembly import Assembly
 
 NDArray = npt.NDArray[np.floating]
 
@@ -114,60 +114,46 @@ class ScalingInfo:
 
 
 def build_scaling(
-    char_scales: Dict[str, float],
+    problem: "Problem",
+    energy: bool,
     variables: List[str],
-    matrix_coo: "MatrixCOOPattern",
-    rhs: "RHSPattern",
+    assembly: "Assembly",
 ) -> ScalingInfo:
-    """Build scaling factors from characteristic scales.
+    """Build scaling factors for linear system conditioning.
 
-    Uses the block indices stored in matrix_coo and rhs patterns
-    to efficiently compute per-entry scale factors.
+    Computes characteristic scales from the problem specification and
+    uses the assembly block indices to build per-entry scale factors.
 
     Parameters
     ----------
-    char_scales : dict
-        Characteristic scale for each variable: {'rho': ρ_ref, 'jx': j_ref, ...}
+    problem : Problem
+        The problem instance containing geometry and property specifications.
+    energy : bool
+        Whether the energy equation is active.
     variables : list
         Variable names in block order: ['rho', 'jx', 'jy'] or with 'E'.
-    matrix_coo : MatrixCOOPattern
-        Sparse matrix structure with block indices.
-    rhs : RHSPattern
-        RHS vector structure with block indices.
+    assembly : Assembly
+        Assembly object with block index arrays.
 
     Returns
     -------
     ScalingInfo
         Precomputed scaling factors for COO values, RHS, and solution.
-
-    Raises
-    ------
-    ValueError
-        If char_scales is missing entries or contains non-positive values.
     """
-    # Validation
-    for var in variables:
-        if var not in char_scales:
-            raise ValueError(f"Missing characteristic scale for '{var}'")
-        if char_scales[var] <= 0:
-            raise ValueError(
-                f"Characteristic scale for '{var}' must be positive, "
-                f"got {char_scales[var]}"
-            )
+    char_scales = compute_characteristic_scales(problem, energy)
 
     # Per-block scale arrays
     q_scales = np.array([char_scales[v] for v in variables], dtype=np.float64)
     r_scales = q_scales  # Residual scales match corresponding variable
 
     # COO scaling factors: J*[k] = J[k] * D_q[var_idx] / D_R[res_idx]
-    coo_scale = (q_scales[matrix_coo.var_block_idx]
-                 / r_scales[matrix_coo.res_block_idx])
+    coo_scale = q_scales[assembly.var_block_idx] / r_scales[assembly.res_block_idx]
 
     # RHS scaling factors
-    rhs_scale = r_scales[rhs.res_block_idx]
+    rhs_scale = r_scales[assembly.rhs_res_block_idx]
 
     # Solution scaling factors (same block structure as RHS)
-    sol_scale = q_scales[rhs.res_block_idx]
+    sol_scale = q_scales[assembly.rhs_res_block_idx]
 
     return ScalingInfo(
         coo_scale=coo_scale,
@@ -203,9 +189,6 @@ def compute_characteristic_scales(problem: "Problem", energy: bool) -> Dict[str,
 
     if energy:
         cv = problem.energy_spec['cv']
-        # Handle both tuple format ('uniform', T) and direct value
-        T0 = problem.energy_spec['T0']
-        T_ref = T0[1] if isinstance(T0, tuple) else T0
         T_ref = problem.energy_spec['T_wall']
         E_ref = rho_ref * cv * T_ref
         scales['E'] = E_ref

@@ -31,7 +31,7 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve, gmres
 
 if TYPE_CHECKING:
-    from .assembly_layout import PETScAssemblyInfo
+    from .assembly import PETScAssemblyInfo
 
 NDArray = npt.NDArray[np.floating]
 

@@ -46,6 +46,8 @@ fem_solver:
         wall_heat_balance: False
         wall_shear_work: False
         stabilization: False
+        pspg: true
+        gls: true
 
 energy_spec:
     cv: 718.0

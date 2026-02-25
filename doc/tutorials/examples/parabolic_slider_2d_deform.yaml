@@ -47,6 +47,7 @@ fem_solver:
     linear_solver: iterative
     max_iter: 10
     R_norm_tol: 1e-09
-    pressure_stab_alpha: 0.02
-    momentum_stab_alpha: 1.0
-    energy_stab_alpha: 0.02
+    pspg_boundary_decay: 2.0
+    physics:
+        pspg: true
+        gls: true

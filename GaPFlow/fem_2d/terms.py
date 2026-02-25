@@ -669,12 +669,236 @@ R3Staby = NonLinearTerm(
 
 
 # -----------------------------------------------------------------------------
+# PSPG stabilization terms (full momentum-residual PSPG for mass equation)
+# Activated by physics flag pspg: true, replaces R1Stabx/R1Staby.
+# Uses tau_pspg (Tezduyar 1992) instead of tau_mass.
+# -----------------------------------------------------------------------------
+
+# PSPG pressure gradient (replaces R1Stabx/R1Staby with tau_pspg)
+R1PSPG_Px = NonLinearTerm(
+    name='R1PSPG_Px',
+    description='PSPG pressure gradient x',
+    res='mass',
+    dep_vars=['rho'],
+    dep_vals=['tau_pspg', 'p', 'dp_drho'],
+    fun=lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['dp_drho']()],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+R1PSPG_Py = NonLinearTerm(
+    name='R1PSPG_Py',
+    description='PSPG pressure gradient y',
+    res='mass',
+    dep_vars=['rho'],
+    dep_vals=['tau_pspg', 'p', 'dp_drho'],
+    fun=lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['p'](),
+    der_funs=[lambda ctx: lambda rho: -ctx['tau_pspg']() * ctx['dp_drho']()],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
+# PSPG temporal: tau * INT (dN/dx_k) * (-(jx-jx_prev)/dt) dOmega
+R1PSPG_Tx = NonLinearTerm(
+    name='R1PSPG_Tx',
+    description='PSPG temporal x',
+    res='mass',
+    dep_vars=['jx'],
+    dep_vals=['tau_pspg', 'jx_prev'],
+    fun=lambda ctx: lambda jx: -(ctx['tau_pspg']() / ctx['dt']) * (jx - ctx['jx_prev']()),
+    der_funs=[lambda ctx: lambda jx: np.full_like(jx, -1.0) * ctx['tau_pspg']() / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='x')
+
+R1PSPG_Ty = NonLinearTerm(
+    name='R1PSPG_Ty',
+    description='PSPG temporal y',
+    res='mass',
+    dep_vars=['jy'],
+    dep_vals=['tau_pspg', 'jy_prev'],
+    fun=lambda ctx: lambda jy: -(ctx['tau_pspg']() / ctx['dt']) * (jy - ctx['jy_prev']()),
+    der_funs=[lambda ctx: lambda jy: np.full_like(jy, -1.0) * ctx['tau_pspg']() / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+# PSPG wall shear: tau * INT (dN/dx_k) * (tau_xz/h) dOmega
+R1PSPG_Wx = NonLinearTerm(
+    name='R1PSPG_Wx',
+    description='PSPG wall shear x',
+    res='mass',
+    dep_vars=['rho', 'jx'],
+    dep_vals=['tau_pspg', 'tau_xz', 'h', 'dtau_xz_drho', 'dtau_xz_djx'],
+    fun=lambda ctx: lambda rho, jx: ctx['tau_pspg']() * ctx['tau_xz']() / ctx['h'](),
+    der_funs=[
+        lambda ctx: lambda rho, jx: ctx['tau_pspg']() * ctx['dtau_xz_drho']() / ctx['h'](),
+        lambda ctx: lambda rho, jx: ctx['tau_pspg']() * ctx['dtau_xz_djx']() / ctx['h'](),
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='x')
+
+R1PSPG_Wy = NonLinearTerm(
+    name='R1PSPG_Wy',
+    description='PSPG wall shear y',
+    res='mass',
+    dep_vars=['rho', 'jy'],
+    dep_vals=['tau_pspg', 'tau_yz', 'h', 'dtau_yz_drho', 'dtau_yz_djy'],
+    fun=lambda ctx: lambda rho, jy: ctx['tau_pspg']() * ctx['tau_yz']() / ctx['h'](),
+    der_funs=[
+        lambda ctx: lambda rho, jy: ctx['tau_pspg']() * ctx['dtau_yz_drho']() / ctx['h'](),
+        lambda ctx: lambda rho, jy: ctx['tau_pspg']() * ctx['dtau_yz_djy']() / ctx['h'](),
+    ],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+
+# -----------------------------------------------------------------------------
+# GLS stabilization terms (mass-residual cross-coupling into momentum)
+# Activated by physics flag gls: true, replaces R2Stabx/R2Staby.
+# Uses tau_gls (Tezduyar 1992). No Picard-frozen velocity (exact Jacobian).
+# Naming: R2GLS_{T|D|S}{test_dir}{res_dir}
+#   T = temporal, D = divergence, S = height source
+#   test_dir = momentum equation direction (x or y)
+#   res_dir = mass residual spatial direction (x or y)
+# -----------------------------------------------------------------------------
+
+# GLS temporal: tau * INT (dN/dx_k) * (-(rho-rho_prev)/dt) dOmega
+R2GLS_Tx = NonLinearTerm(
+    name='R2GLS_Tx',
+    description='GLS temporal x',
+    res='momentum_x',
+    dep_vars=['rho'],
+    dep_vals=['tau_gls', 'rho_prev'],
+    fun=lambda ctx: lambda rho: -ctx['tau_gls']() / ctx['dt'] * (rho - ctx['rho_prev']()),
+    der_funs=[lambda ctx: lambda rho: np.full_like(rho, -1.0) * ctx['tau_gls']() / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='x')
+
+R2GLS_Ty = NonLinearTerm(
+    name='R2GLS_Ty',
+    description='GLS temporal y',
+    res='momentum_y',
+    dep_vars=['rho'],
+    dep_vals=['tau_gls', 'rho_prev'],
+    fun=lambda ctx: lambda rho: -ctx['tau_gls']() / ctx['dt'] * (rho - ctx['rho_prev']()),
+    der_funs=[lambda ctx: lambda rho: np.full_like(rho, -1.0) * ctx['tau_gls']() / ctx['dt']],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+# GLS divergence: tau * INT (dN/dx_k) * (-djm/dxm) dOmega
+R2GLS_Dxx = NonLinearTerm(
+    name='R2GLS_Dxx',
+    description='GLS divergence x-x',
+    res='momentum_x',
+    dep_vars=['jx'],
+    dep_vals=['tau_gls'],
+    fun=lambda ctx: lambda jx: -ctx['tau_gls']() * jx,
+    der_funs=[lambda ctx: lambda jx: np.full_like(jx, -1.0) * ctx['tau_gls']()],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun=True)
+
+R2GLS_Dxy = NonLinearTerm(
+    name='R2GLS_Dxy',
+    description='GLS divergence x-y',
+    res='momentum_x',
+    dep_vars=['jy'],
+    dep_vals=['tau_gls'],
+    fun=lambda ctx: lambda jy: -ctx['tau_gls']() * jy,
+    der_funs=[lambda ctx: lambda jy: np.full_like(jy, -1.0) * ctx['tau_gls']()],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun='x')
+
+R2GLS_Dyx = NonLinearTerm(
+    name='R2GLS_Dyx',
+    description='GLS divergence y-x',
+    res='momentum_y',
+    dep_vars=['jx'],
+    dep_vals=['tau_gls'],
+    fun=lambda ctx: lambda jx: -ctx['tau_gls']() * jx,
+    der_funs=[lambda ctx: lambda jx: np.full_like(jx, -1.0) * ctx['tau_gls']()],
+    d_dx_resfun=True,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+R2GLS_Dyy = NonLinearTerm(
+    name='R2GLS_Dyy',
+    description='GLS divergence y-y',
+    res='momentum_y',
+    dep_vars=['jy'],
+    dep_vals=['tau_gls'],
+    fun=lambda ctx: lambda jy: -ctx['tau_gls']() * jy,
+    der_funs=[lambda ctx: lambda jy: np.full_like(jy, -1.0) * ctx['tau_gls']()],
+    d_dx_resfun=False,
+    d_dy_resfun=True,
+    der_testfun=True)
+
+# GLS height source: tau * INT (dN/dx_k) * (-(dh/dxm)/h * jm) dOmega
+R2GLS_Sxx = NonLinearTerm(
+    name='R2GLS_Sxx',
+    description='GLS height source x-x',
+    res='momentum_x',
+    dep_vars=['jx'],
+    dep_vals=['tau_gls', 'h', 'dh_dx'],
+    fun=lambda ctx: lambda jx: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dx']() * jx,
+    der_funs=[lambda ctx: lambda jx: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dx']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='x')
+
+R2GLS_Sxy = NonLinearTerm(
+    name='R2GLS_Sxy',
+    description='GLS height source x-y',
+    res='momentum_x',
+    dep_vars=['jy'],
+    dep_vals=['tau_gls', 'h', 'dh_dy'],
+    fun=lambda ctx: lambda jy: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dy']() * jy,
+    der_funs=[lambda ctx: lambda jy: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dy']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='x')
+
+R2GLS_Syx = NonLinearTerm(
+    name='R2GLS_Syx',
+    description='GLS height source y-x',
+    res='momentum_y',
+    dep_vars=['jx'],
+    dep_vals=['tau_gls', 'h', 'dh_dx'],
+    fun=lambda ctx: lambda jx: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dx']() * jx,
+    der_funs=[lambda ctx: lambda jx: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dx']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+R2GLS_Syy = NonLinearTerm(
+    name='R2GLS_Syy',
+    description='GLS height source y-y',
+    res='momentum_y',
+    dep_vars=['jy'],
+    dep_vals=['tau_gls', 'h', 'dh_dy'],
+    fun=lambda ctx: lambda jy: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dy']() * jy,
+    der_funs=[lambda ctx: lambda jy: -ctx['tau_gls']() / ctx['h']() * ctx['dh_dy']()],
+    d_dx_resfun=False,
+    d_dy_resfun=False,
+    der_testfun='y')
+
+
+# -----------------------------------------------------------------------------
 # Term list and selection functions
 # -----------------------------------------------------------------------------
 
 term_list = [
     # Mass equation
     R11x, R11y, R11Sx, R11Sy, R1T, R1Stabx, R1Staby,
+    # PSPG mass stabilization (replaces R1Stabx/R1Staby when pspg=True)
+    R1PSPG_Px, R1PSPG_Py, R1PSPG_Tx, R1PSPG_Ty, R1PSPG_Wx, R1PSPG_Wy,
     # Momentum equation (numerical order: R21 -> R22 -> R23 -> R24 -> R25 -> R2T -> R2Stab)
     R21x, R21y,
     R22xx, R22xxS, R22yx, R22yxS, R22xy, R22xyS, R22yy, R22yyS,
@@ -683,6 +907,10 @@ term_list = [
     R25x, R25y,
     R2Tx, R2Ty,
     R2Stabx, R2Staby,
+    # GLS momentum stabilization (when gls=True)
+    R2GLS_Tx, R2GLS_Ty,
+    R2GLS_Dxx, R2GLS_Dxy, R2GLS_Dyx, R2GLS_Dyy,
+    R2GLS_Sxx, R2GLS_Sxy, R2GLS_Syx, R2GLS_Syy,
     # Energy equation
     R31x, R31y, R31Sx, R31Sy, R32x, R32y, R32Sx, R32Sy,
     R34, R35x, R35y, R36, R3T, R3Stabx, R3Staby,
@@ -730,9 +958,23 @@ def get_default_terms(fem_solver: dict) -> list[str]:
     if physics.get('body_force', False):
         terms.extend(['R25x', 'R25y'])
 
-    # Stabilization (mass and momentum)
-    if physics.get('stabilization', True):
-        terms.extend(['R1Stabx', 'R1Staby', 'R2Stabx', 'R2Staby'])
+    # Mass stabilization: PSPG (full) or Laplacian (legacy), mutually exclusive
+    if physics.get('pspg', False):
+        terms.extend(['R1PSPG_Px', 'R1PSPG_Py',
+                      'R1PSPG_Tx', 'R1PSPG_Ty',
+                      'R1PSPG_Wx', 'R1PSPG_Wy'])
+    elif physics.get('stabilization', True) and not physics.get('gls', False):
+        terms.extend(['R1Stabx', 'R1Staby'])
+
+    # Momentum stabilization: GLS > Laplacian (mutually exclusive)
+    if physics.get('gls', False):
+        terms.extend([
+            'R2GLS_Tx', 'R2GLS_Ty',
+            'R2GLS_Dxx', 'R2GLS_Dxy', 'R2GLS_Dyx', 'R2GLS_Dyy',
+            'R2GLS_Sxx', 'R2GLS_Sxy', 'R2GLS_Syx', 'R2GLS_Syy',
+        ])
+    elif physics.get('stabilization', True):
+        terms.extend(['R2Stabx', 'R2Staby'])
 
     # Energy physics
     if physics.get('energy', False):

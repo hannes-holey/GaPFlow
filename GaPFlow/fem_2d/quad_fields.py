@@ -49,6 +49,8 @@ BASE_FIELDS = {
     'rho_prev', 'jx_prev', 'jy_prev',
     'tau_mass',
     'tau_mom',
+    'tau_pspg',
+    'tau_gls',
     'force_x', 'force_y',  # Body force components
 }
 
@@ -91,7 +93,8 @@ class QuadFieldManager:
         Variable names for time stepping (e.g., ['rho', 'jx', 'jy']).
     """
 
-    def __init__(self, problem: "Problem", energy: bool, variables: List[str]):
+    def __init__(self, problem: "Problem", energy: bool, variables: List[str],
+                 quad: TriangleQuadrature):
         self.problem = problem
         self.energy = energy
         self.variables = variables
@@ -108,12 +111,11 @@ class QuadFieldManager:
         self._boundary_distance_cache = None
 
         # Initialize operators and fields
-        self._init_operators()
+        self._init_operators(quad)
         self._init_fields()
 
-    def _init_operators(self) -> None:
+    def _init_operators(self, quad: TriangleQuadrature) -> None:
         """Initialize interpolation and derivative operators."""
-        quad = TriangleQuadrature(self.dx, self.dy)
         self.quad_operator = quad.interpolation_operator
         self.dx_operator = quad.dx_operator
         self.dy_operator = quad.dy_operator
@@ -187,16 +189,18 @@ class QuadFieldManager:
     def update_nodal_fields(self) -> None:
         """Update nodal fields from problem state (pressure, viscosity, etc.)."""
         p = self.problem
-        timer = p.solver.timer
 
         p.pressure.update()
-        with timer("topography_update"):
+
+        with p.solver.timer("topography_update"):
             p.topo.update()
-        dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
-        dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
-        with timer("viscosity_update"):
+
+        with p.solver.timer("viscosity_update"):
+            dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
+            dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
             p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy,
                                p.topo.h, p.geo['U'], p.geo['V'])
+
         if self.energy:
             p.energy.update_temperature()
 
@@ -315,6 +319,97 @@ class QuadFieldManager:
             tau_energy = p.fem_solver['energy_stab_alpha']
             self.quad_fields['tau_energy'].pg[s] = np.full_like(rho, tau_energy)
 
+    def _compute_tau_pspg(self, s, q) -> None:
+        """Compute PSPG stabilization parameter using compressible Tezduyar formula.
+
+        tau_PSPG = [ (2/dt)^2
+                   + (ux^2 + c^2)/dx^2 + (uy^2 + c^2)/dy^2
+                   + C_I * nu_eff^2 * (1/dx^4 + 1/dy^4)
+                   ]^(-1/2)
+
+        where c^2 = dp/drho is the acoustic speed squared. Including the acoustic
+        speed in the advective velocity is the standard compressible generalization
+        (Hauke & Hughes 1998). For stiff EOS (large c), tau ~ dx/c which is small
+        and appropriate. No separate 1/dp_drho scaling is needed — the acoustic
+        speed naturally sets the stabilization magnitude.
+
+        Completely separate from the existing tau_mass / tau_mom computation.
+        Only called when pspg physics flag is active.
+        """
+        p = self.problem
+        rho = q('rho')
+        jx = q('jx')
+        jy = q('jy')
+        dp_drho = q('dp_drho')
+
+        dt = p.numerics['dt']
+        C_I = p.fem_solver['pspg_C_I']
+
+        # Element metric tensor G = diag(1/dx^2, 1/dy^2) for structured grid
+        inv_dx2 = 1.0 / self.dx**2
+        inv_dy2 = 1.0 / self.dy**2
+
+        # Temporal contribution: (2/dt)^2
+        tau_sq = 4.0 / dt**2
+
+        # Advective contribution with acoustic speed: (u^2 + c^2) * G
+        ux = jx / rho
+        uy = jy / rho
+        c_sq = dp_drho  # acoustic speed squared
+        tau_sq = tau_sq + (ux**2 + c_sq) * inv_dx2 + (uy**2 + c_sq) * inv_dy2
+
+        # Diffusive contribution: C_I * nu^2 * G:G
+        if p.fem_solver['physics'].get('plane_shear', False):
+            eta = q('eta')
+            nu = eta / rho
+            G_sq = inv_dx2**2 + inv_dy2**2  # G:G = 1/dx^4 + 1/dy^4
+            tau_sq = tau_sq + C_I * nu**2 * G_sq
+
+        tau = 1.0 / np.sqrt(tau_sq)
+
+        # Optional boundary damping: tau *= 1 - exp(-dist / decay)
+        decay = p.fem_solver.get('pspg_boundary_decay', 0.0)
+        if decay > 0 and (not p.decomp.periodic_x or not p.decomp.periodic_y):
+            if self._boundary_distance_cache is None:
+                self._boundary_distance_cache = self._compute_boundary_distance(
+                    rho.shape)
+            tau = tau * (1.0 - np.exp(-self._boundary_distance_cache / decay))
+
+        self.quad_fields['tau_pspg'].pg[s] = tau
+
+    def _compute_tau_gls(self, s, q) -> None:
+        """Compute GLS stabilization parameter (Tezduyar 1992).
+
+        Same formula as PSPG. Separate field to allow independent control.
+        Only called when gls physics flag is active.
+        """
+        p = self.problem
+        rho = q('rho')
+        jx = q('jx')
+        jy = q('jy')
+        dp_drho = q('dp_drho')
+
+        dt = p.numerics['dt']
+        C_I = p.fem_solver['gls_C_I']
+
+        inv_dx2 = 1.0 / self.dx**2
+        inv_dy2 = 1.0 / self.dy**2
+
+        tau_sq = 4.0 / dt**2
+
+        ux = jx / rho
+        uy = jy / rho
+        c_sq = dp_drho
+        tau_sq = tau_sq + (ux**2 + c_sq) * inv_dx2 + (uy**2 + c_sq) * inv_dy2
+
+        if p.fem_solver['physics'].get('plane_shear', False):
+            eta = q('eta')
+            nu = eta / rho
+            G_sq = inv_dx2**2 + inv_dy2**2
+            tau_sq = tau_sq + C_I * nu**2 * G_sq
+
+        self.quad_fields['tau_gls'].pg[s] = 1.0 / np.sqrt(tau_sq)
+
     def update_quad_computed(self) -> None:
         """Compute derived quantities at quadrature points.
 
@@ -332,6 +427,10 @@ class QuadFieldManager:
 
         # Stabilization parameter computation
         self._compute_tau_stabilization(s, q)
+        if p.fem_solver['physics'].get('pspg', False):
+            self._compute_tau_pspg(s, q)
+        if p.fem_solver['physics'].get('gls', False):
+            self._compute_tau_gls(s, q)
 
         # Wall stress xz
         args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'),

@@ -45,10 +45,11 @@ properties:
     force_y: 0.0
 
 fem_solver:
-    boundary_stab_factor: 10
-    boundary_stab_decay: 2
     R_norm_tol: 1e-8
     linear_solver: iterative
+    pspg_boundary_decay: 2.0
     physics:
         gap_shear: False
         plane_shear: True
+        pspg: true
+        gls: true

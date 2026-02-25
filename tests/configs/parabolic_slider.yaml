@@ -1,7 +1,6 @@
 options:
-    output: /tmp/parabolic_test_{solver}
+    output: /tmp/parabolic_slider_{solver}
     write_freq: 1000
-    use_tstamp: True
     save_output: False
 
 grid:
@@ -44,3 +43,7 @@ fem_solver:
     type: newton_alpha
     R_norm_tol: 1e-04
     max_iter: 10
+    pspg_boundary_decay: 2.0
+    physics:
+        pspg: true
+        gls: true

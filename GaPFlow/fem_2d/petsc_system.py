@@ -36,7 +36,7 @@ if not HAS_PETSC:
 from petsc4py import PETSc
 
 if TYPE_CHECKING:
-    from .assembly_layout import PETScAssemblyInfo
+    from .assembly import PETScAssemblyInfo
 
 NDArray = npt.NDArray[np.floating]
 
