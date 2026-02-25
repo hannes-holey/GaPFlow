@@ -259,19 +259,19 @@ def _create_animation_1d(filename_sol: str,
     return ani
 
 
-def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
+def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
 
     if tol_p is not None:
         tol_p = np.sqrt(tol_p)
         tol_p_max = tol_p.max()
     else:
-        tol_p_max = 0.
+        tol_p_max = None
 
-    if tol_s is not None:
-        tol_t = np.sqrt(tol_s)
+    if tol_t is not None:
+        tol_t = np.sqrt(tol_t)
         tol_t_max = tol_t.max()
     else:
-        tol_t_max = 0.
+        tol_t_max = None
 
     def update_lines(i, q, p, vp, tau, vt):
 
@@ -283,17 +283,22 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_s=None):
         ax[1, 1].cla()
         ax[1, 2].cla()
 
+        _tol_t = tol_t[i] if tol_t is not None else None
+        _tol_p = tol_p[i] if tol_p is not None else None
+        _tol_t_max = tol_t_max if tol_t_max is not None else np.sqrt(vt[i, 1:-1, ny // 2]).max()
+        _tol_p_max = tol_p_max if tol_p_max is not None else np.sqrt(vp[i, 1:-1, ny // 2]).max()
+
         # Pressure
-        _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=tol_p[i], color=color_p)
+        _plot_gp(ax[1, 0], x, p[i, 1:-1, ny // 2], vp[i, 1:-1, ny // 2], tol=_tol_p, color=color_p)
 
         # Shear stress
-        _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
-        _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=tol_t[i], color=color_t)
+        _plot_gp(ax[1, 1], x, tau[i, 4, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=_tol_t, color=color_t)
+        _plot_gp(ax[1, 2], x, tau[i, 10, 0, 1:-1, ny // 2], vt[i, 1:-1, ny // 2], tol=_tol_t, color=color_t)
 
         set_axes_labels(ax)
-        set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2], tol=1.96 * tol_p_max)
-        set_axes_limits(ax[1, 1], tau[1:, 4, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
-        set_axes_limits(ax[1, 2], tau[1:, 10, 0, 1:-1, ny // 2], tol=1.96 * tol_t_max)
+        set_axes_limits(ax[1, 0], p[1:, 1:-1, ny // 2], tol=1.96 * _tol_p_max)
+        set_axes_limits(ax[1, 1], tau[1:, 4, 0, 1:-1, ny // 2], tol=1.96 * _tol_t_max)
+        set_axes_limits(ax[1, 2], tau[1:, 10, 0, 1:-1, ny // 2], tol=1.96 * _tol_t_max)
 
     # adaptive_ylim(ax)
 

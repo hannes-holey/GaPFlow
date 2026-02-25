@@ -50,7 +50,7 @@ from .integrate import predictor_corrector, source
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
-from .viz.animations import animate_1d, animate_2d
+from .viz.animations import animate_1d, animate_1d_gp, animate_2d
 
 
 class Problem:
@@ -142,6 +142,7 @@ class Problem:
 
         # Initialize stress and topography models
         gpx, gpy, gpz = self._select_gp_config(gp)
+        self.has_gp_model = gp is not None
         self.pressure = Pressure(fc, prop, geo, data=database, gp=gpz)
         self.bulk_stress = BulkStress(fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(fc, prop, geo, direction='x', data=database, gp=gpx)
@@ -856,10 +857,15 @@ class Problem:
         filename_topo = os.path.join(self.outdir, 'topo.nc')
 
         if self.grid['Ny'] == 1:
-            return animate_1d(filename_sol,
-                              filename_topo,
-                              seconds=seconds,
-                              save=save)
+            if self.has_gp_model:
+                return animate_1d_gp(filename_sol,
+                                     seconds=seconds,
+                                     save=save)
+            else:
+                return animate_1d(filename_sol,
+                                  filename_topo,
+                                  seconds=seconds,
+                                  save=save)
 
         else:
             return animate_2d(filename_sol,
