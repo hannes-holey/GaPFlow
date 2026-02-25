@@ -1,6 +1,6 @@
 #
-# Copyright 2026 Dan Waxman
-#           2025-2026 Hannes Holey
+# Copyright 2025-2026 Hannes Holey
+#           2026 Dan Waxman
 #           2025-2026 Christoph Huber
 #
 # ### MIT License
