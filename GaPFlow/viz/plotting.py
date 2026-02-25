@@ -463,7 +463,7 @@ def _plot_sol_from_field_2d(q,
                             ax=None):
 
     if ax is None:
-        fig, ax = plt.subplots(2, 3)
+        fig, ax = plt.subplots(3, 3, figsize=(9, 9))
 
     s = [slice(1, -1), slice(1, -1)]
 
