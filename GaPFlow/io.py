@@ -22,6 +22,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""Helper functions for input and output operations.
+
+Mainly functions that sanitize the user input from YAML configuration files.
+"""
+
+
 import os
 from datetime import datetime
 import yaml

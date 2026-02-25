@@ -21,6 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""Equation of state (pressure).
+
+Pressure-density relations for the implemented models.
+"""
+
 import os
 import numpy as np
 from scipy.constants import gas_constant
@@ -175,6 +181,7 @@ def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
         P(\\rho) = \\frac{K}{n} \\left(\\left(\\frac{\\rho}{\\rho_0}\\right)^n - 1\\right) + P_0
 
     Commonly used in compressible fluid and shock wave studies.
+    Reference: Macdonald, J. R. (1966). *Reviews of Modern Physics, 38, 669*
 
     Parameters
     ----------
@@ -228,6 +235,7 @@ def bwr(dens, T, gamma=3.):
     Computes pressure using the Benedict–Webb–Rubin (BWR) equation of state.
 
     This complex EoS models real fluid behavior accurately over wide conditions.
+    Reference: Benedict, M.; Webb, G. B.; Rubin, L. C. (1940), *Journal of Chemical Physics, 8, 334–345*
 
     Parameters
     ----------

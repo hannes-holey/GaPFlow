@@ -508,8 +508,16 @@ class Problem:
 
     def update(self) -> None:
         """
-        Performs a single time step using the MacCormack predictor corrector scheme.
+        Performs a single time step using the MacCormack [1]_ predictor corrector scheme.
+
+        References
+        ----------
+        .. [1] MacCormack, R. W. (2003).
+               The effect of viscosity in hypervelocity impact cratering
+               Journal of Spacecraft and Rockets (reprint)
+               https://doi.org/10.2514/2.6901
         """
+
         switch = (self.step % 2 == 0) * 2 - 1 if self.numerics["MC_order"] == 0 else self.numerics["MC_order"]
         directions = [[-1, 1], [1, -1]][(switch + 1) // 2]
 

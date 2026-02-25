@@ -22,7 +22,13 @@
 # SOFTWARE.
 #
 
+"""Gap profiles.
+
+Analytical expressions for velocity and stress profiles as a function of the gap coordinate.
+"""
+
 # flake8: noqa: W503
+
 
 def get_velocity_profiles(z, q, Ls=0.0, U=1.0, V=0.0, slip="both"):
     """Velocity profiles for a given flow rate and wall velcoty

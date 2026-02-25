@@ -21,6 +21,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""
+Flux and source term contributions for numerical integration.
+
+This module contains functions that construct flux and source term vectors for the
+time integration of the gap-averaged balance equations. These functions are called
+from :class:`GaPFlow.Problem` instances.
+"""
+
 from typing import Tuple
 import numpy as np
 import numpy.typing as npt
@@ -76,10 +85,16 @@ def source(
     stress_upper: npt.NDArray[np.floating]
 ) -> npt.NDArray[np.floating]:
     """
-    Compute the source term for the momentum equations.
+    Compute the source term for the gap-averaged balance equations.
 
-    Accounts for stress differences across upper and lower
-    boundaries.
+    See Eq. (11) in [1]_.
+
+    References
+    ----------
+    .. [1] Holey, H., Codrigani, A., Gumbsch, P. & Pastewka, L. (2022).
+           Height‐Averaged Navier–Stokes Solver for Hydrodynamic Lubrication
+           Tribology Letters 70
+           https://doi.org/10.1007/s11249-022-01576-5
 
     Parameters
     ----------

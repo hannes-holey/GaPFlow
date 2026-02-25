@@ -24,6 +24,13 @@
 
 # flake8: noqa: W503
 
+
+"""Viscous stress tensor components.
+
+This module contains functions that calculate the (generalized) Newtonian stress tensor
+components at the walls of the bottom and top surface, and averaged across the gap.
+"""
+
 import numpy as np
 
 

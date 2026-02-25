@@ -21,6 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""Moltemplate helper functions.
+
+This module contains functions that help setting up the gold/alkane system.
+"""
+
 import os
 import numpy as np
 import subprocess

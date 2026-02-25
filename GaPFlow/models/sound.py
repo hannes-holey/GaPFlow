@@ -21,6 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""Equation of state (sound speed).
+
+Sound speed-density relations for the implemented models.
+"""
+
 import os
 import numpy as np
 from scipy.constants import gas_constant
