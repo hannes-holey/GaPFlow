@@ -152,27 +152,36 @@
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="index.html">GaPFlow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="visualization.html">Visualization</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/01_macro_equations.html">Governing equations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/01_macro_equations.html">1. Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/02_stress_sympy.html">2. Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/03_constitutive_laws.html">3. Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/04_confined_fluids.html">4. Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/05_lubrication_1d.html">5. Lubrication (1D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/06_lubrication_2d.html">6. Lubrication (2D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/07_gp_mock.html">7. Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/08_gp_md.html">8. Gaussian process regression with MD data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/09_elastic_deformation.html">9. Elastic Deformation</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.integrate.html">GaPFlow.integrate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.gp.GaussianProcessSurrogate.html">GaPFlow.models.gp.GaussianProcessSurrogate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.pressure.html">GaPFlow.models.pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.sound.html">GaPFlow.models.sound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.viscosity.html">GaPFlow.models.viscosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.models.viscous.html">GaPFlow.models.viscous</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.md.moltemplate.html">GaPFlow.md.moltemplate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.topography.Topography.html">GaPFlow.topography.Topography</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.topography.ElasticDeformation.html">GaPFlow.topography.ElasticDeformation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
@@ -386,6 +395,14 @@ document.write(`
 <h2 id="B">B</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.barus_piezo">barus_piezo() (in module GaPFlow.models.viscosity)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.bayada_chupin">bayada_chupin() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.bayada_chupin">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.build_gp">build_gp() (GaPFlow.models.BulkStress method)</a>
 
       <ul>
@@ -408,20 +425,40 @@ document.write(`
         <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.build_input_files">(GaPFlow.md.MolecularDynamics method)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.build_template">build_template() (in module GaPFlow.md.moltemplate)</a>
+</li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress">BulkStress (class in GaPFlow.models)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.bwr">bwr() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.bwr">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.carreau_shear">carreau_shear() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.cfl">cfl (GaPFlow.Problem property)</a>
 </li>
       <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.config">config (GaPFlow.Database property)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.config_fluid">config_fluid() (in module GaPFlow.md.moltemplate)</a>
+</li>
       <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.converged">converged (GaPFlow.Problem property)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.cubic">cubic() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.cubic">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.cumtime_infer">cumtime_infer (GaPFlow.models.BulkStress property)</a>
 
       <ul>
@@ -432,8 +469,6 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.cumtime_infer">(GaPFlow.models.WallStress property)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.cumtime_train">cumtime_train (GaPFlow.models.BulkStress property)</a>
 
       <ul>
@@ -468,6 +503,14 @@ document.write(`
 </li>
       <li><a href="api/summary/GaPFlow.topography.Topography.html#GaPFlow.topography.Topography.dh_dy">dh_dy (GaPFlow.topography.Topography property)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.integrate.html#GaPFlow.integrate.diffusiveFlux">diffusiveFlux() (in module GaPFlow.integrate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.dowson_higginson">dowson_higginson() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.dowson_higginson">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.dp_dx">dp_dx (GaPFlow.models.BulkStress property)</a>
@@ -494,6 +537,8 @@ document.write(`
         <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.dtool_basepath">(GaPFlow.md.MolecularDynamics property)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.dukler_mixture">dukler_mixture() (in module GaPFlow.models.viscosity)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -501,6 +546,10 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.topography.ElasticDeformation.html#GaPFlow.topography.ElasticDeformation">ElasticDeformation (class in GaPFlow.topography)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.eos_pressure">eos_pressure() (in module GaPFlow.models.pressure)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.eos_sound_velocity">eos_sound_velocity() (in module GaPFlow.models.sound)</a>
 </li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.extra">extra (GaPFlow.models.BulkStress property)</a>
 
@@ -512,6 +561,10 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.extra">(GaPFlow.models.WallStress property)</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.eyring_shear">eyring_shear() (in module GaPFlow.models.viscosity)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -537,12 +590,56 @@ document.write(`
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li>
+    GaPFlow.integrate
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.integrate.html#module-GaPFlow.integrate">module</a>
+</li>
+      </ul></li>
+      <li>
+    GaPFlow.md.moltemplate
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.md.moltemplate.html#module-GaPFlow.md.moltemplate">module</a>
+</li>
+      </ul></li>
+      <li>
+    GaPFlow.models.pressure
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.pressure.html#module-GaPFlow.models.pressure">module</a>
+</li>
+      </ul></li>
+      <li>
+    GaPFlow.models.sound
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#module-GaPFlow.models.sound">module</a>
+</li>
+      </ul></li>
+      <li>
+    GaPFlow.models.viscosity
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.viscosity.html#module-GaPFlow.models.viscosity">module</a>
+</li>
+      </ul></li>
+      <li>
+    GaPFlow.models.viscous
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.viscous.html#module-GaPFlow.models.viscous">module</a>
+</li>
+      </ul></li>
+      <li>
     GaPFlow.viz.animations
 
       <ul>
         <li><a href="api/summary/GaPFlow.viz.animations.html#module-GaPFlow.viz.animations">module</a>
 </li>
       </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     GaPFlow.viz.plotting
 
@@ -562,8 +659,6 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.geo">(GaPFlow.models.WallStress attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.topography.ElasticDeformation.html#GaPFlow.topography.ElasticDeformation.get_deformation">get_deformation() (GaPFlow.topography.ElasticDeformation method)</a>
 </li>
       <li><a href="api/summary/GaPFlow.topography.ElasticDeformation.html#GaPFlow.topography.ElasticDeformation.get_deformation_underrelax">get_deformation_underrelax() (GaPFlow.topography.ElasticDeformation method)</a>
@@ -620,6 +715,8 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.height_and_slopes">(GaPFlow.models.WallStress property)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.integrate.html#GaPFlow.integrate.hyperbolicFlux">hyperbolicFlux() (in module GaPFlow.integrate)</a>
+</li>
   </ul></td>
 </tr></table>
 
@@ -746,16 +843,30 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.max_steps">(GaPFlow.models.WallStress attribute)</a>
 </li>
       </ul></li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.mc_adams_mixture">mc_adams_mixture() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.md_config">md_config (GaPFlow.Database property)</a>
 </li>
       <li><a href="api/summary/GaPFlow.md.Mock.html#GaPFlow.md.Mock">Mock (class in GaPFlow.md)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li>
     module
 
       <ul>
+        <li><a href="api/summary/GaPFlow.integrate.html#module-GaPFlow.integrate">GaPFlow.integrate</a>
+</li>
+        <li><a href="api/summary/GaPFlow.md.moltemplate.html#module-GaPFlow.md.moltemplate">GaPFlow.md.moltemplate</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.pressure.html#module-GaPFlow.models.pressure">GaPFlow.models.pressure</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.sound.html#module-GaPFlow.models.sound">GaPFlow.models.sound</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.viscosity.html#module-GaPFlow.models.viscosity">GaPFlow.models.viscosity</a>
+</li>
+        <li><a href="api/summary/GaPFlow.models.viscous.html#module-GaPFlow.models.viscous">GaPFlow.models.viscous</a>
+</li>
         <li><a href="api/summary/GaPFlow.viz.animations.html#module-GaPFlow.viz.animations">GaPFlow.viz.animations</a>
 </li>
         <li><a href="api/summary/GaPFlow.viz.plotting.html#module-GaPFlow.viz.plotting">GaPFlow.viz.plotting</a>
@@ -763,6 +874,12 @@ document.write(`
       </ul></li>
       <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics">MolecularDynamics (class in GaPFlow.md)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.murnaghan_tait">murnaghan_tait() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.murnaghan_tait">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
   </ul></td>
 </tr></table>
 
@@ -867,20 +984,28 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.pause_steps">(GaPFlow.models.WallStress attribute)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.piezoviscosity">piezoviscosity() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.plot">plot() (GaPFlow.Problem method)</a>
 </li>
       <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_frame">plot_frame() (in module GaPFlow.viz.plotting)</a>
 </li>
       <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_frames">plot_frames() (in module GaPFlow.viz.plotting)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_height">plot_height() (in module GaPFlow.viz.plotting)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.viz.plotting.html#GaPFlow.viz.plotting.plot_history">plot_history() (in module GaPFlow.viz.plotting)</a>
 </li>
       <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.plot_topo">plot_topo() (GaPFlow.Problem method)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.power_law">power_law() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.power_law">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.predict">predict() (GaPFlow.models.BulkStress method)</a>
 
       <ul>
@@ -891,6 +1016,8 @@ document.write(`
         <li><a href="api/summary/GaPFlow.models.WallStress.html#GaPFlow.models.WallStress.predict">(GaPFlow.models.WallStress method)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.integrate.html#GaPFlow.integrate.predictor_corrector">predictor_corrector() (in module GaPFlow.integrate)</a>
+</li>
       <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure">Pressure (class in GaPFlow.models)</a>
 </li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.pressure">pressure (GaPFlow.models.BulkStress property)</a>
@@ -945,6 +1072,8 @@ document.write(`
         <li><a href="api/summary/GaPFlow.md.MolecularDynamics.html#GaPFlow.md.MolecularDynamics.read_output">(GaPFlow.md.MolecularDynamics method)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.roelands_piezo">roelands_piezo() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.rtol">rtol (GaPFlow.models.BulkStress attribute)</a>
 
       <ul>
@@ -977,6 +1106,10 @@ document.write(`
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.set_training_path">set_training_path() (GaPFlow.Database method)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.shear_rate_avg">shear_rate_avg() (in module GaPFlow.models.viscosity)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.shear_thinning_factor">shear_thinning_factor() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.Database.html#GaPFlow.Database.size">size (GaPFlow.Database property)</a>
 </li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.solution">solution (GaPFlow.models.BulkStress property)</a>
@@ -991,7 +1124,17 @@ document.write(`
       </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.integrate.html#GaPFlow.integrate.source">source() (in module GaPFlow.integrate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.viscosity.html#GaPFlow.models.viscosity.srate_wall_newton">srate_wall_newton() (in module GaPFlow.models.viscosity)</a>
+</li>
       <li><a href="api/summary/GaPFlow.models.BulkStress.html#GaPFlow.models.BulkStress.stress">stress (GaPFlow.models.BulkStress property)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.viscous.html#GaPFlow.models.viscous.stress_avg">stress_avg() (in module GaPFlow.models.viscous)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.viscous.html#GaPFlow.models.viscous.stress_bottom">stress_bottom() (in module GaPFlow.models.viscous)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.models.viscous.html#GaPFlow.models.viscous.stress_top">stress_top() (in module GaPFlow.models.viscous)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -1057,6 +1200,12 @@ document.write(`
 </li>
       <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.v_sound">v_sound (GaPFlow.models.Pressure property)</a>
 </li>
+      <li><a href="api/summary/GaPFlow.models.pressure.html#GaPFlow.models.pressure.van_der_waals">van_der_waals() (in module GaPFlow.models.pressure)</a>
+
+      <ul>
+        <li><a href="api/summary/GaPFlow.models.sound.html#GaPFlow.models.sound.van_der_waals">(in module GaPFlow.models.sound)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/summary/GaPFlow.models.Pressure.html#GaPFlow.models.Pressure.variance">variance (GaPFlow.models.Pressure property)</a>
@@ -1087,6 +1236,26 @@ document.write(`
         <li><a href="api/summary/GaPFlow.Problem.html#GaPFlow.Problem.write">(GaPFlow.Problem method)</a>
 </li>
       </ul></li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_fluid">write_fluid() (in module GaPFlow.md.moltemplate)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_init">write_init() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_mixing">write_mixing() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_restart">write_restart() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_run">write_run() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_settings">write_settings() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_slab">write_slab() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_solid_data">write_solid_data() (in module GaPFlow.md.moltemplate)</a>
+</li>
+      <li><a href="api/summary/GaPFlow.md.moltemplate.html#GaPFlow.md.moltemplate.write_template">write_template() (in module GaPFlow.md.moltemplate)</a>
+</li>
   </ul></td>
 </tr></table>
 

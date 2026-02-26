@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Constitutive laws &#8212; GaPFlow  documentation</title>
+    <title>3. Constitutive laws &#8212; GaPFlow  documentation</title>
   
   
   
@@ -46,8 +46,8 @@
     <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/03_constitutive_laws';</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Dynamics of highly confined fluids" href="04_confined_fluids.html" />
-    <link rel="prev" title="Viscous stress tensor calculation with wall slip" href="02_stress_sympy.html" />
+    <link rel="next" title="4. Dynamics of highly confined fluids" href="04_confined_fluids.html" />
+    <link rel="prev" title="2. Viscous stress tensor calculation with wall slip" href="02_stress_sympy.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   </head>
@@ -155,27 +155,36 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualization.html">Visualization</a></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">Governing equations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2 current active"><a class="current reference internal" href="#">Constitutive laws</a></li>
-<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="05_lubrication.html">Lubrication: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="06_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="07_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">1. Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">2. Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">3. Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">4. Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication_1d.html">5. Lubrication (1D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_lubrication_2d.html">6. Lubrication (2D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_gp_mock.html">7. Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_gp_md.html">8. Gaussian process regression with MD data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09_elastic_deformation.html">9. Elastic Deformation</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.integrate.html">GaPFlow.integrate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.gp.GaussianProcessSurrogate.html">GaPFlow.models.gp.GaussianProcessSurrogate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.pressure.html">GaPFlow.models.pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.sound.html">GaPFlow.models.sound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscosity.html">GaPFlow.models.viscosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscous.html">GaPFlow.models.viscous</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.moltemplate.html">GaPFlow.md.moltemplate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.Topography.html">GaPFlow.topography.Topography</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.ElasticDeformation.html">GaPFlow.topography.ElasticDeformation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
@@ -321,7 +330,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Constitutive laws</h1>
+    <h1>3. Constitutive laws</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -345,7 +354,7 @@ document.write(`
                 <article class="bd-article">
                   
   <section class="tex2jax_ignore mathjax_ignore" id="constitutive-laws">
-<h1>Constitutive laws<a class="headerlink" href="#constitutive-laws" title="Link to this heading">#</a></h1>
+<h1>3. Constitutive laws<a class="headerlink" href="#constitutive-laws" title="Link to this heading">#</a></h1>
 <section id="equation-of-state-for-isothermal-compressible-fluids">
 <h2>Equation of state for isothermal compressible fluids<a class="headerlink" href="#equation-of-state-for-isothermal-compressible-fluids" title="Link to this heading">#</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">GaPFlow</span></code> is a compressible fluid solver for confined flows. To close the gap-averaged balance laws, one needs to specify an equation of state in the form <span class="math notranslate nohighlight">\(p(\rho)\)</span>.
@@ -697,7 +706,7 @@ Below is an overview of fluid models currently implemented <code class="docutils
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Viscous stress tensor calculation with wall slip</p>
+        <p class="prev-next-title">2. Viscous stress tensor calculation with wall slip</p>
       </div>
     </a>
     <a class="right-next"
@@ -705,7 +714,7 @@ Below is an overview of fluid models currently implemented <code class="docutils
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Dynamics of highly confined fluids</p>
+        <p class="prev-next-title">4. Dynamics of highly confined fluids</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>

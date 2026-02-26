@@ -153,27 +153,36 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../index.html">GaPFlow</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../visualization.html">Visualization</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">Governing equations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">Viscous stress tensor calculation with wall slip</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">Constitutive laws</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">Dynamics of highly confined fluids</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication.html">Lubrication: wall-driven flows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_GP.html">Gaussian process regression and active learning</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_elastic_deformation.html">Elastic Deformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/01_macro_equations.html">1. Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/02_stress_sympy.html">2. Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/03_constitutive_laws.html">3. Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/04_confined_fluids.html">4. Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/05_lubrication_1d.html">5. Lubrication (1D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/06_lubrication_2d.html">6. Lubrication (2D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/07_gp_mock.html">7. Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/08_gp_md.html">8. Gaussian process regression with MD data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/09_elastic_deformation.html">9. Elastic Deformation</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1 current active has-children"><a class="reference internal" href="../index.html">API Reference</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
 <li class="toctree-l2 current active"><a class="current reference internal" href="#">GaPFlow.Problem</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.integrate.html">GaPFlow.integrate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.gp.GaussianProcessSurrogate.html">GaPFlow.models.gp.GaussianProcessSurrogate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.pressure.html">GaPFlow.models.pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.sound.html">GaPFlow.models.sound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.viscosity.html">GaPFlow.models.viscosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.models.viscous.html">GaPFlow.models.viscous</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="GaPFlow.md.moltemplate.html">GaPFlow.md.moltemplate</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.topography.Topography.html">GaPFlow.topography.Topography</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.topography.ElasticDeformation.html">GaPFlow.topography.ElasticDeformation</a></li>
 <li class="toctree-l2"><a class="reference internal" href="GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
@@ -427,7 +436,7 @@ sanitize the simulation input.</p>
 <td><p>Run the time-stepping loop until convergence, maximum iterations, or until a termination signal is received.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#GaPFlow.Problem.update" title="GaPFlow.Problem.update"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code></a>()</p></td>
-<td><p>Performs a single time step using the MacCormack predictor corrector scheme.</p></td>
+<td><p>Performs a single time step using the MacCormack <a class="footnote-reference brackets" href="#id3" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> predictor corrector scheme.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#GaPFlow.Problem.write" title="GaPFlow.Problem.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>([scalars, fields, params])</p></td>
 <td><p>Write scalars, fields and hyperparameters to disk as configured.</p></td>
@@ -616,7 +625,18 @@ written in the same files, by default False.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="GaPFlow.Problem.update">
 <span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#GaPFlow.Problem.update" title="Link to this definition">#</a></dt>
-<dd><p>Performs a single time step using the MacCormack predictor corrector scheme.</p>
+<dd><p>Performs a single time step using the MacCormack <a class="footnote-reference brackets" href="#id3" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> predictor corrector scheme.</p>
+<p class="rubric">References</p>
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" id="id3" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink" href="#id1">1</a>,<a role="doc-backlink" href="#id2">2</a>)</span>
+<p>MacCormack, R. W. (2003).
+The effect of viscosity in hypervelocity impact cratering
+Journal of Spacecraft and Rockets (reprint)
+<a class="reference external" href="https://doi.org/10.2514/2.6901">https://doi.org/10.2514/2.6901</a></p>
+</aside>
+</aside>
 </dd></dl>
 
 <dl class="py property">

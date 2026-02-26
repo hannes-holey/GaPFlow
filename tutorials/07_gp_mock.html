@@ -1,0 +1,1334 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>7. Gaussian process regression and active learning &#8212; GaPFlow  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/07_gp_mock';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="8. Gaussian process regression with MD data" href="08_gp_md.html" />
+    <link rel="prev" title="6. Lubrication (2D)" href="06_lubrication_2d.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">GaPFlow  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualization.html">Visualization</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">1. Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">2. Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html">3. Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">4. Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05_lubrication_1d.html">5. Lubrication (1D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_lubrication_2d.html">6. Lubrication (2D)</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">7. Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_gp_md.html">8. Gaussian process regression with MD data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09_elastic_deformation.html">9. Elastic Deformation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.integrate.html">GaPFlow.integrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.gp.GaussianProcessSurrogate.html">GaPFlow.models.gp.GaussianProcessSurrogate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.pressure.html">GaPFlow.models.pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.sound.html">GaPFlow.models.sound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscosity.html">GaPFlow.models.viscosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscous.html">GaPFlow.models.viscous</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.moltemplate.html">GaPFlow.md.moltemplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.Topography.html">GaPFlow.topography.Topography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.ElasticDeformation.html">GaPFlow.topography.ElasticDeformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.plotting.html">GaPFlow.viz.plotting</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/hannes-holey/hans">Github repository</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorials/07_gp_mock.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>7. Gaussian process regression and active learning</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="gaussian-process-regression-and-active-learning">
+<h1>7. Gaussian process regression and active learning<a class="headerlink" href="#gaussian-process-regression-and-active-learning" title="Link to this heading">#</a></h1>
+<p>Now we’ll look at the same problem as in the previous tutorial, but replace the hardcoded constitutive laws with purely data-driven ones.
+In multiscale simulations, this data comes from molecular dynamics (MD) simulations.
+For illustrative purposes, we sample the training data from the same hard-coded constituive laws as before and pretend it comes from an MD run.
+Thus, we generate a <em>Mock</em> of an actual MD simulation. Real MD data is noisy, so we’ll add some random noise to our mock-up data as well.
+As in the previous example, we start with the <em>YAML</em> input file:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">journal_gp_input</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">options:</span>
+<span class="s2">    output: data/journal_gp</span>
+<span class="s2">    write_freq: 100</span>
+<span class="s2">    use_tstamp: True</span>
+<span class="s2">grid:</span>
+<span class="s2">    dx: 1.e-5</span>
+<span class="s2">    dy: 1.</span>
+<span class="s2">    Nx: 100</span>
+<span class="s2">    Ny: 1</span>
+<span class="s2">    xE: [&#39;D&#39;, &#39;N&#39;, &#39;N&#39;]</span>
+<span class="s2">    xW: [&#39;D&#39;, &#39;N&#39;, &#39;N&#39;]</span>
+<span class="s2">    yS: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    yN: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    xE_D: 877.7007</span>
+<span class="s2">    xW_D: 877.7007</span>
+<span class="s2">geometry:</span>
+<span class="s2">    type: journal</span>
+<span class="s2">    CR: 1.e-2</span>
+<span class="s2">    eps: 0.7</span>
+<span class="s2">    U: 0.1</span>
+<span class="s2">    V: 0.</span>
+<span class="s2">numerics:</span>
+<span class="s2">    CFL: 0.25</span>
+<span class="s2">    adaptive: 1</span>
+<span class="s2">    tol: 1e-9</span>
+<span class="s2">    dt: 1e-10</span>
+<span class="s2">    max_it: 2_500</span>
+<span class="s2">properties:</span>
+<span class="s2">    shear: 0.0794</span>
+<span class="s2">    bulk: 0.</span>
+<span class="s2">    EOS: DH</span>
+<span class="s2">    P0: 101325</span>
+<span class="s2">    rho0: 877.7007</span>
+<span class="s2">    T0: 323.15</span>
+<span class="s2">    C1: 3.5e10</span>
+<span class="s2">    C2: 1.23</span>
+<span class="s2">gp:</span>
+<span class="s2">    press:</span>
+<span class="s2">        fix_noise: True</span>
+<span class="s2">        atol: 1.</span>
+<span class="s2">        rtol: 0.1</span>
+<span class="s2">        obs_stddev: 100.</span>
+<span class="s2">        max_steps: 5</span>
+<span class="s2">    shear:</span>
+<span class="s2">        fix_noise: True</span>
+<span class="s2">        atol: 1.</span>
+<span class="s2">        rtol: 0.1</span>
+<span class="s2">        obs_stddev: 1.</span>
+<span class="s2">        max_steps: 5</span>
+<span class="s2">db:</span>
+<span class="s2">    dtool: True</span>
+<span class="s2">    init_size: 5</span>
+<span class="s2">    init_method: lhc</span>
+<span class="s2">    init_width: 1.e-6</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p>The first part is identical, but we recognize two new sections, <code class="docutils literal notranslate"><span class="pre">gp</span></code> and <code class="docutils literal notranslate"><span class="pre">db</span></code>, which control the settings for the Gaussian process regression and the underlying training database, respectively. We start by loading the problem as usual:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="n">myProblem</span> <span class="o">=</span> <span class="n">Problem</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">journal_gp_input</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>*************************************************************
+*                       PROBLEM SETUP                       *
+*************************************************************
+- options:
+  - output                   : data/journal_gp
+  - write_freq               : 100
+  - use_tstamp               : True
+  - silent                   : False
+- grid:
+  - Nx                       : 100
+  - dx                       : 1e-05
+  - Lx                       : 0.001
+  - Ny                       : 1
+  - dy                       : 1.0
+  - Ly                       : 1.0
+  - dim                      : 1
+  - bc_xE_P                  : [False, False, False]
+  - bc_xE_D                  : [True, False, False]
+  - bc_xE_N                  : [False, True, True]
+  - bc_xW_P                  : [False, False, False]
+  - bc_xW_D                  : [True, False, False]
+  - bc_xW_N                  : [False, True, True]
+  - bc_xE_D_val              : 877.7007
+  - bc_xW_D_val              : 877.7007
+  - bc_yS_P                  : [True, True, True]
+  - bc_yS_D                  : [False, False, False]
+  - bc_yS_N                  : [False, False, False]
+  - bc_yN_P                  : [True, True, True]
+  - bc_yN_D                  : [False, False, False]
+  - bc_yN_N                  : [False, False, False]
+- geometry:
+  - U                        : 0.1
+  - V                        : 0.0
+  - type                     : journal
+  - flip                     : False
+  - CR                       : 0.01
+  - eps                      : 0.7
+- numerics:
+  - tol                      : 1e-09
+  - max_it                   : 2500
+  - dt                       : 1e-10
+  - adaptive                 : True
+  - CFL                      : 0.25
+  - MC_order                 : 1
+- properties:
+  - shear                    : 0.0794
+  - bulk                     : 0.0
+  - EOS                      : DH
+  - rho0                     : 877.7007
+  - P0                       : 101325.0
+  - C1                       : 35000000000.0
+  - C2                       : 1.23
+  - elastic:
+    - enabled                : False
+- gp:
+  - press_gp                 : True
+  - shear_gp                 : True
+  - press:
+    - atol                   : 1.0
+    - rtol                   : 0.1
+    - obs_stddev             : 100.0
+    - fix_noise              : True
+    - max_steps              : 5
+    - pause_steps            : 100
+    - active_learning        : True
+    - active_dims            : [0, 3]
+  - shear:
+    - atol                   : 1.0
+    - rtol                   : 0.1
+    - obs_stddev             : 1.0
+    - fix_noise              : True
+    - max_steps              : 5
+    - pause_steps            : 100
+    - active_learning        : True
+    - active_dims_x          : [0, 1, 3]
+    - active_dims_y          : [0, 2, 3]
+- db:
+  - dtool_path               : None
+  - init_size                : 5
+  - init_method              : lhc
+  - init_width               : 1e-06
+  - init_seed                : 0
+- md:
+*************************************************************
+*                  PROBLEM SETUP COMPLETED                  *
+*************************************************************
+                                                            
+   Writing output into: data/2026-02-26_105730_journal_gp
+</pre></div>
+</div>
+</div>
+</div>
+<p>Before we unpack what we see here, a word of caution regarding wording and notation.</p>
+<p>There are two types of models, which can be replaced by a GP: the pressure/normal stress and the viscous shear stress.
+Here, we sometimes use the terms <em>pressure</em> and <em>normal stress</em> synonymously, although they are strictly speaking different things.
+For instance, the normal stress component is given by <span class="math notranslate nohighlight">\(\sigma_{zz} = -p(\rho) + \tau_{zz}\)</span>, but we assume that viscous
+contributions to the normal stress (here: <span class="math notranslate nohighlight">\(\tau_{zz}\)</span>) are small.
+This is not a bad assumption as we have seen in <a class="reference internal" href="02_stress_sympy.html"><span class="std std-doc">Tutorial 2</span></a>.</p>
+<p>In this example, where we make use of hard-coded constitutive laws, we would be able to include both effects separately,
+but with actual MD data this is not the case. Thus, in this example, what we call pressure is the actual thermodynamic pressure,
+and we explicitly set viscous normal stresses to zero. In contrast, with <em>actual</em> MD data, what we call pressure is the normal stress <span class="math notranslate nohighlight">\(\sigma_{zz}\)</span>,
+but we assume that it is the same in the other two directions (thus we handle it numerically as it was the pressure).
+Similarly, we ignore all viscous shear stress components except <span class="math notranslate nohighlight">\(\tau_{xz}\)</span> and <span class="math notranslate nohighlight">\(\tau_{yz}\)</span>, whenever we use GPs, since these are the only
+ones we measure in an MD run.</p>
+<hr class="docutils" />
+<p>Upon loading the problem, the sanitized configuration of the GP settings look like this:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">gp</span><span class="p">:</span>
+  <span class="o">-</span> <span class="n">press_gp</span>                 <span class="p">:</span> <span class="kc">True</span>
+  <span class="o">-</span> <span class="n">shear_gp</span>                 <span class="p">:</span> <span class="kc">True</span>
+  <span class="o">-</span> <span class="n">press</span><span class="p">:</span>
+    <span class="o">-</span> <span class="n">atol</span>                   <span class="p">:</span> <span class="mf">1.0</span>
+    <span class="o">-</span> <span class="n">rtol</span>                   <span class="p">:</span> <span class="mf">0.1</span>
+    <span class="o">-</span> <span class="n">obs_stddev</span>             <span class="p">:</span> <span class="mf">100.0</span>
+    <span class="o">-</span> <span class="n">fix_noise</span>              <span class="p">:</span> <span class="kc">True</span>
+    <span class="o">-</span> <span class="n">max_steps</span>              <span class="p">:</span> <span class="mi">5</span>
+    <span class="o">-</span> <span class="n">pause_steps</span>            <span class="p">:</span> <span class="mi">100</span>
+    <span class="o">-</span> <span class="n">active_learning</span>        <span class="p">:</span> <span class="kc">True</span>
+    <span class="o">-</span> <span class="n">active_dims</span>            <span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+  <span class="o">-</span> <span class="n">shear</span><span class="p">:</span>
+    <span class="o">-</span> <span class="n">atol</span>                   <span class="p">:</span> <span class="mf">1.0</span>
+    <span class="o">-</span> <span class="n">rtol</span>                   <span class="p">:</span> <span class="mf">0.1</span>
+    <span class="o">-</span> <span class="n">obs_stddev</span>             <span class="p">:</span> <span class="mf">1.0</span>
+    <span class="o">-</span> <span class="n">fix_noise</span>              <span class="p">:</span> <span class="kc">True</span>
+    <span class="o">-</span> <span class="n">max_steps</span>              <span class="p">:</span> <span class="mi">5</span>
+    <span class="o">-</span> <span class="n">pause_steps</span>            <span class="p">:</span> <span class="mi">100</span>
+    <span class="o">-</span> <span class="n">active_learning</span>        <span class="p">:</span> <span class="kc">True</span>
+    <span class="o">-</span> <span class="n">active_dims_x</span>          <span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+    <span class="o">-</span> <span class="n">active_dims_y</span>          <span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The first two entries <code class="docutils literal notranslate"><span class="pre">press_gp</span></code> and <code class="docutils literal notranslate"><span class="pre">shear_gp</span></code> indicate that both GP models are active.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Pressure GP: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">is_gp_model</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wall shear stress (xz) GP: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_xz</span><span class="o">.</span><span class="n">is_gp_model</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Wall shear stress (yz) GP: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_yz</span><span class="o">.</span><span class="n">is_gp_model</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Bulk viscous stress GP: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">bulk_stress</span><span class="o">.</span><span class="n">is_gp_model</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Pressure GP:  True
+Wall shear stress (xz) GP:  True
+Wall shear stress (yz) GP:  False
+Bulk viscous stress GP:  False
+</pre></div>
+</div>
+</div>
+</div>
+<p>Since we are looking at a one-dimensional problem, the wall shear stress in <span class="math notranslate nohighlight">\(y\)</span> direction is irrelevant and therefore not replaced with a surrogate.
+The gap-averaged viscous stress components (<code class="docutils literal notranslate"><span class="pre">bulk_stress</span></code>) are never replaced by a GP model, and are set to zero in this example (see remark above).</p>
+<p>GP models are connected to a database, which is configured with the following settings:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">-</span> <span class="n">db</span><span class="p">:</span>
+  <span class="o">-</span> <span class="n">dtool_path</span>               <span class="p">:</span> <span class="kc">None</span>
+  <span class="o">-</span> <span class="n">init_size</span>                <span class="p">:</span> <span class="mi">5</span>
+  <span class="o">-</span> <span class="n">init_method</span>              <span class="p">:</span> <span class="n">lhc</span>
+  <span class="o">-</span> <span class="n">init_width</span>               <span class="p">:</span> <span class="mf">1e-06</span>
+  <span class="o">-</span> <span class="n">init_seed</span>                <span class="p">:</span> <span class="mi">0</span>
+</pre></div>
+</div>
+<p>Both models read from and write to the same database, which is initially empty:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Both models are connected to the same database...</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_xz</span><span class="o">.</span><span class="n">database</span><span class="p">)</span>
+
+<span class="c1"># ...but the database is initially empty</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">Xtrain</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">Ytrain</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">training_path</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>&lt;GaPFlow.db.Database object at 0x7f7cb0c75a90&gt;
+&lt;GaPFlow.db.Database object at 0x7f7cb0c75a90&gt;
+0
+[]
+[]
+data/2026-02-26_105730_journal_gp/train
+</pre></div>
+</div>
+</div>
+</div>
+<p>The database configurations specifies that 5 (<code class="docutils literal notranslate"><span class="pre">init_size</span></code>) datapoints should be initialized via Latin hypercube sampling (<code class="docutils literal notranslate"><span class="pre">lhc</span></code>).
+The bounds for the LHC sampling are determined autmatically from the initial conditions, but we can modify the bounds for the density
+individually wiht the <code class="docutils literal notranslate"><span class="pre">init_width</span></code> argument, which gives the half width of the density interval relative to the initial condition (the default is <span class="math notranslate nohighlight">\(\pm1\%\)</span>).
+Here, it is quite small due to the nearly incompressible fluid. Before we can run a simulation, we have to initialize the database.
+Usually, this is done automatically when we call <code class="docutils literal notranslate"><span class="pre">GaPFlow.problem.Problem.run()</span></code>. Here, since we want to run the simulation ‘manually’, we have to call <code class="docutils literal notranslate"><span class="pre">GaPFlow.problem.Problem._pre_run()</span></code> first:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">myProblem</span><span class="o">.</span><span class="n">_pre_run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Database contains less than 5 MD runs.
+Generate new training data in data/2026-02-26_105730_journal_gp/train
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105731_mock-001│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +2.693e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +5.433e-07    (h)                                                                                      │
+│Input 5: -2.371e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105732_mock-002│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +3.419e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +1.281e-06    (h)                                                                                      │
+│Input 5: +6.722e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105732_mock-003│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +5.176e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.679e-06    (h)                                                                                      │
+│Input 5: -1.527e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105732_mock-004│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +6.460e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +7.559e-07    (h)                                                                                      │
+│Input 5: +4.629e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105732_mock-005│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.128e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +1.349e-06    (h)                                                                                      │
+│Input 5: -6.831e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 0
+# Reason       : DB
+# Database size: 5
+# Objective    : -6.0106
+# Hyperparam   : 7.23990e+06 4.60927e-04 7.52319e+01 4.93510e-14 
+#--------------------------------------------------
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 0
+# Reason       : DB
+# Database size: 5
+# Objective    : 3.4172
+# Hyperparam   : 2.66139e-01 3.16907e-05 6.68408e+01 1.91105e+00 1.73013e+00 
+#--------------------------------------------------
+</pre></div>
+</div>
+</div>
+</div>
+<p>The output tells us that five <em>Mock</em> MD simulations “ran” with the inputs as specified.
+Let’s check the size of the database again.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Database size: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Database features: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">num_features</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;X (shape)&#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">Xtrain</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Y (shape)&#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">Ytrain</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Y error (shape)&#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">Ytrain_err</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Database size:  5
+Database features:  7
+X (shape) (5, 7)
+Y (shape) (5, 13)
+Y error (shape) (5, 13)
+</pre></div>
+</div>
+</div>
+</div>
+<p>We see that the database has been filled with the requested five datapoints. Each point is determined by seven features:</p>
+<ul class="simple">
+<li><p>the density <span class="math notranslate nohighlight">\(\rho\)</span></p></li>
+<li><p>the flux in x direction <span class="math notranslate nohighlight">\(j_x\)</span></p></li>
+<li><p>the flux in y direction <span class="math notranslate nohighlight">\(j_y\)</span></p></li>
+<li><p>the gap height <span class="math notranslate nohighlight">\(h\)</span></p></li>
+<li><p>the x gradient of the gap <span class="math notranslate nohighlight">\(\partial h/\partial x\)</span></p></li>
+<li><p>the y gradient of the gap <span class="math notranslate nohighlight">\(\partial h/\partial y\)</span></p></li>
+<li><p>an extra feature (by default zero)</p></li>
+</ul>
+<p>We can append an arbitrary number of extra features. By default there is just one but it is not used.
+You can check <span class="xref myst">the example on wall slip</span> to see how the extra arguments can be used in a simulation.</p>
+<p>We also see, that there are in total 13 outputs (or observations) stored within the database.
+The outputs are stored in the following order:</p>
+<ul class="simple">
+<li><p><span class="math notranslate nohighlight">\(p\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{xx}^\mathrm{bot}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{yy}^\mathrm{bot}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{zz}^\mathrm{bot}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\tau_{yz}^\mathrm{bot}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\tau_{xz}^\mathrm{bot}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{xy}^\mathrm{bot}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{xx}^\mathrm{top}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{yy}^\mathrm{top}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{zz}^\mathrm{top}}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\tau_{yz}^\mathrm{top}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\tau_{xz}^\mathrm{top}\)</span></p></li>
+<li><p><span class="math notranslate nohighlight">\(\textcolor{grey}{\tau_{xy}^\mathrm{top}}\)</span></p></li>
+</ul>
+<p>As mentioned above, most of the slots (in gray) are not used, because these stress components are not measured and thus zero.
+The individual training data of a single “MD” run is also stored in a local <code class="docutils literal notranslate"><span class="pre">dtool</span></code> dataset:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">training_path</span><span class="p">)):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">f</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260226_105731_mock-001
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260226_105732_mock-002
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260226_105732_mock-003
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260226_105732_mock-004
+/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/20260226_105732_mock-005
+</pre></div>
+</div>
+</div>
+</div>
+<p>The training data is stored as metadata in <code class="docutils literal notranslate"><span class="pre">README.yml</span></code>, which can be loaded directly into a list of dicts:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">readme_list</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">get_readme_list_local</span><span class="p">()</span>
+<span class="n">readme_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;Y&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Loading 5 local datasets in &#39;data/2026-02-26_105730_journal_gp/train&#39;.
+- 9f896d69-5b6b-4281-80b2-152dc98f8246 (20260226_105732_mock-004)
+- 75bbd0a8-f20b-42d5-bead-c9312d772f6a (20260226_105732_mock-002)
+- b3b215b4-70cd-46ff-bb65-fdd81dcbd4a0 (20260226_105732_mock-003)
+- 9d59c8f8-7c8e-4d77-ac38-7216c565eb0c (20260226_105731_mock-001)
+- 8c1d2324-2ecf-4123-90de-3b13e17e8625 (20260226_105732_mock-005)
+</pre></div>
+</div>
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[57041.09733081885, -0.619900249931894, -0.619900249931894, -0.619900249931894, -0.619900249931894, 4372.407487012817, -0.619900249931894, 154.8260859030306, -80.17112154141914, -80.17112154141914, -1.8387190599359027, -25383.98547556146, -1.8387190599359027]
+</pre></div>
+</div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">pre_run()</span></code> initialization also runs a first hyperparameter fit of the GP models.
+The output data used in the pressure and shear stress models is fixed, but we can change which features will be used via the <code class="docutils literal notranslate"><span class="pre">active_dims</span></code> settings.
+The defaults are density and gap height (<code class="docutils literal notranslate"><span class="pre">active_dims:</span> <span class="pre">[0,</span> <span class="pre">3]</span></code>) for pressure, and density, gap height, and flux for shear stress (e.g. <code class="docutils literal notranslate"><span class="pre">active_dims_x:</span> <span class="pre">[0,</span> <span class="pre">1,</span> <span class="pre">3]</span></code>).
+The models are now ready to make a first prediction:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">press_predict</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">predictor</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">shear_predict</span> <span class="o">=</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_xz</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">predictor</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.viz.plotting</span><span class="w"> </span><span class="kn">import</span> <span class="n">_plot_sol_from_field_1d</span>
+
+<span class="n">_sx</span><span class="p">,</span> <span class="n">_sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">_sx</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">_sy</span><span class="p">))</span>
+
+<span class="n">_plot_sol_from_field_1d</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">q</span><span class="p">,</span>
+                        <span class="n">press_predict</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">shear_predict</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                        <span class="n">shear_predict</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">press_predict</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">shear_predict</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                        <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">variance_tol</span><span class="p">,</span>
+                        <span class="n">myProblem</span><span class="o">.</span><span class="n">wall_stress_xz</span><span class="o">.</span><span class="n">variance_tol</span><span class="p">,</span>
+                        <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/ee1221ad49f58ba2888ef1d635bad6571b0525a04520388dccb1de7b6853389c.png" src="../_images/ee1221ad49f58ba2888ef1d635bad6571b0525a04520388dccb1de7b6853389c.png" />
+</div>
+</div>
+<p>The uncertainty tolerance is controlled via the <code class="docutils literal notranslate"><span class="pre">atol</span></code> and <code class="docutils literal notranslate"><span class="pre">rtol</span></code> parameters.
+Here, we see that the pressure prediction is very good (which is expected, as pressure only depends on density and the density is constant in the beginning).
+However, the shear stress prediction exceeds the uncertainty tolerance, such that active learning is necessary to augment the database and thereby the fit. Let’s run the simulations for a few steps and see how the predictions evolve.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># This is usually what happens within the run() method but we can also trigger it manually</span>
+<span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">50</span><span class="p">):</span>
+    <span class="n">myProblem</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105739_mock-006│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +4.780e-07    (h)                                                                                      │
+│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 6
+# Objective    : 4.3866
+# Hyperparam   : 2.24329e-01 3.16907e-05 6.85268e+05 2.11728e+00 9.23562e-01
+# AL  1/ 5     : 5.373 --&gt; 3.829
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105742_mock-007│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.705e-06    (h)                                                                                      │
+│Input 5: +2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 7
+# Objective    : 0.69171
+# Hyperparam   : 3.31931e-01 3.16907e-05 3.09209e+01 1.22842e+00 1.43310e+00
+# AL  2/ 5     : 5.373 --&gt; 2.330
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105744_mock-008│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.389e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.034e-06    (h)                                                                                      │
+│Input 5: -6.424e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 1
+# Reason       : AL
+# Database size: 8
+# Objective    : -1.6738
+# Hyperparam   : 5.04642e-01 3.16907e-05 2.49557e+04 1.02209e+00 8.27913e-01
+# AL  3/ 5     : 5.373 --&gt; 0.298
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 2
+# Reason       : DB
+# Database size: 8
+# Objective    : -25.791
+# Hyperparam   : 7.13804e+06 4.60927e-04 7.30148e+01 1.65679e-14 
+#--------------------------------------------------
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Simulation step: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Database size: &#39;</span><span class="p">,</span> <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">database</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Simulation step:  50
+Database size:  8
+</pre></div>
+</div>
+</div>
+</div>
+<p>Let’s plot the current prediction again:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">_sx</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">_sy</span><span class="p">))</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/dfa9e53573075de1f9b23cf731eeb45a74fdca213f9164975b7d94a5b1035d7a.png" src="../_images/dfa9e53573075de1f9b23cf731eeb45a74fdca213f9164975b7d94a5b1035d7a.png" />
+</div>
+</div>
+<p>Looks good. We now run the simulation again up to 2500 steps as specified in the input.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">myProblem</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">keep_open</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>-------------------------------------------------------------
+Step   Timestep   Time       CFL        Residual  
+-------------------------------------------------------------
+50     1.8984e-10 9.4921e-09 2.5000e-01 8.5949e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105752_mock-009│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.120e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +8.548e-07    (h)                                                                                      │
+│Input 5: +5.251e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 66
+# Reason       : AL
+# Database size: 9
+# Objective    : -3.8755
+# Hyperparam   : 5.30355e-01 3.16907e-05 1.25667e+04 1.03211e+00 8.27480e-01
+# AL  1/ 5     : 1.006 --&gt; 0.476
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 67
+# Reason       : DB
+# Database size: 9
+# Objective    : -36.231
+# Hyperparam   : 9.24821e+07 2.45866e-04 1.00173e+01 4.15596e-22 
+#--------------------------------------------------
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105758_mock-010│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +3.502e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.705e-06    (h)                                                                                      │
+│Input 5: -2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 87
+# Reason       : AL
+# Database size: 10
+# Objective    : -6.9131
+# Hyperparam   : 7.10744e-01 3.16907e-05 1.02602e+04 7.22217e-01 7.84599e-01
+# AL  1/ 5     : 1.034 --&gt; 0.606
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 88
+# Reason       : DB
+# Database size: 10
+# Objective    : -42.954
+# Hyperparam   : 8.19695e+07 2.45866e-04 1.09759e+01 4.56601e-19 
+#--------------------------------------------------
+100    1.8984e-10 1.8984e-08 2.5000e-01 8.3199e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105805_mock-011│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +4.369e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +8.548e-07    (h)                                                                                      │
+│Input 5: -5.251e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 139
+# Reason       : AL
+# Database size: 11
+# Objective    : -12.461
+# Hyperparam   : 1.16407e+00 3.16907e-05 4.66969e-01 5.37785e-01 7.07981e-01
+# AL  1/ 5     : 1.006 --&gt; 0.523
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 140
+# Reason       : DB
+# Database size: 11
+# Objective    : -57.602
+# Hyperparam   : 4.86049e+06 8.25842e-05 1.16924e+01 1.33205e-20 
+#--------------------------------------------------
+200    1.8983e-10 3.7968e-08 2.5000e-01 5.0774e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105814_mock-012│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +2.682e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.159e-06    (h)                                                                                      │
+│Input 5: -6.025e-03    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 251
+# Reason       : AL
+# Database size: 12
+# Objective    : -15.299
+# Hyperparam   : 1.46927e+00 3.16907e-05 2.48995e-01 4.68232e-01 6.14846e-01
+# AL  1/ 5     : 1.001 --&gt; 0.516
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 252
+# Reason       : DB
+# Database size: 12
+# Objective    : -62.488
+# Hyperparam   : 6.46107e+05 8.25842e-05 3.02022e+01 1.08643e-14 
+#--------------------------------------------------
+300    1.8983e-10 5.6951e-08 2.5000e-01 3.3033e-03
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Run next MD simulation in:                                                                                      │
+│/home/runner/work/GaPFlow/GaPFlow/doc/tutorials/data/2026-02-26_105730_journal_gp/train/20260226_105822_mock-013│
+│                                                                                                                │
+│  __  __  ___   ____ _  __                                                                                      │
+│ |  \/  |/ _ \ / ___| |/ /                                                                                      │
+│ | |\/| | | | | |   | &#39; /                                                                                       │
+│ | |  | | |_| | |___| . \                                                                                       │
+│ |_|  |_|\___/ \____|_|\_\                                                                                      │
+│                                                                                                                │
+│                                                                                                                │
+│---                                                                                                             │
+│Input 1: +8.777e+02    (ρ)                                                                                      │
+│Input 2: +2.024e+01    (jx)                                                                                     │
+│Input 3: +0.000e+00    (jy)                                                                                     │
+│Input 4: +2.705e-06    (h)                                                                                      │
+│Input 5: +2.199e-04    (∂h/∂x)                                                                                  │
+│Input 6: +0.000e+00    (∂h/∂y)                                                                                  │
+│Input 7: +0.000e+00    (extra_0)                                                                                │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+#-----------------GP TRAINING (XZ)-----------------
+# Timestep     : 329
+# Reason       : AL
+# Database size: 13
+# Objective    : -18.188
+# Hyperparam   : 1.88487e+00 3.16907e-05 1.13321e+00 3.82721e-01 5.74702e-01
+# AL  1/ 5     : 1.003 --&gt; 0.287
+#--------------------------------------------------
+#-----------------GP TRAINING (ZZ)-----------------
+# Timestep     : 330
+# Reason       : DB
+# Database size: 13
+# Objective    : -70.079
+# Hyperparam   : 1.81991e+05 8.25842e-05 5.47701e+01 1.73323e-17 
+#--------------------------------------------------
+400    1.8983e-10 7.5934e-08 2.5000e-01 1.8627e-03
+500    1.8983e-10 9.4917e-08 2.5000e-01 1.1360e-03
+600    1.8983e-10 1.1390e-07 2.5000e-01 7.6245e-04
+700    1.8982e-10 1.3288e-07 2.5000e-01 5.1960e-04
+800    1.8982e-10 1.5186e-07 2.5000e-01 3.6095e-04
+900    1.8982e-10 1.7085e-07 2.5000e-01 2.5523e-04
+1000   1.8982e-10 1.8983e-07 2.5000e-01 1.8330e-04
+1100   1.8982e-10 2.0881e-07 2.5000e-01 1.3341e-04
+1200   1.8982e-10 2.2779e-07 2.5000e-01 9.8203e-05
+1300   1.8982e-10 2.4678e-07 2.5000e-01 7.2968e-05
+1400   1.8982e-10 2.6576e-07 2.5000e-01 5.4639e-05
+1500   1.8982e-10 2.8474e-07 2.5000e-01 4.1171e-05
+1600   1.8982e-10 3.0372e-07 2.5000e-01 3.1179e-05
+1700   1.8982e-10 3.2271e-07 2.5000e-01 2.3707e-05
+1800   1.8982e-10 3.4169e-07 2.5000e-01 1.8083e-05
+1900   1.8982e-10 3.6067e-07 2.5000e-01 1.3828e-05
+2000   1.8982e-10 3.7965e-07 2.5000e-01 1.0595e-05
+2100   1.8982e-10 3.9863e-07 2.5000e-01 8.1301e-06
+2200   1.8982e-10 4.1762e-07 2.5000e-01 6.2462e-06
+2300   1.8982e-10 4.3660e-07 2.5000e-01 4.8033e-06
+2400   1.8982e-10 4.5558e-07 2.5000e-01 3.6965e-06
+2500   1.8982e-10 4.7456e-07 2.5000e-01 2.8464e-06
+</pre></div>
+</div>
+</div>
+</div>
+<p>The active learning simulation continued to extend the database. Let’s check its growth as a function of the simulation time step:</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="s1">&#39;step&#39;</span><span class="p">],</span>
+         <span class="n">myProblem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">history</span><span class="p">[</span><span class="s1">&#39;database_size&#39;</span><span class="p">])</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Database size&#39;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/9bb2425890bf248111313e2b2ca50ccda0c5075bcfb83755e912c18937e57ad6.png" src="../_images/9bb2425890bf248111313e2b2ca50ccda0c5075bcfb83755e912c18937e57ad6.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">_sx</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">_sy</span><span class="p">))</span>
+<span class="n">myProblem</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/681f19074af89246ad0d4c1a5e1bd05b324e14ef3909e6910649d75daa6bf166.png" src="../_images/681f19074af89246ad0d4c1a5e1bd05b324e14ef3909e6910649d75daa6bf166.png" />
+</div>
+</div>
+<p>After 2500 steps, the simulation results looks close to what we expect for the journal bearing case, but has not yet converged. Feel free to run it for longer (by modifying the <code class="docutils literal notranslate"><span class="pre">max_it</span></code> parameter).</p>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="06_lubrication_2d.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">6. Lubrication (2D)</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="08_gp_md.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">8. Gaussian process regression with MD data</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Hannes Holey
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hannes Holey.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>

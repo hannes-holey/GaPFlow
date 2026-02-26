@@ -12,6 +12,7 @@
 
    self
    quickstart
+   visualization
    ./tutorials/index
    ./api/index
    Github repository <https://github.com/hannes-holey/hans>

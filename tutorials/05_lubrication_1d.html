@@ -1,0 +1,815 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="../" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>5. Lubrication (1D) &#8212; GaPFlow  documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="../_static/styles/theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/bootstrap.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+<link href="../_static/styles/pydata-sphinx-theme.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+
+  
+  <link href="../_static/vendor/fontawesome/6.5.2/css/all.min.css?digest=dfe6caa3a7d634c4db9b" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="../_static/vendor/fontawesome/6.5.2/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/sphinx-book-theme.css?v=eba8b062" />
+    <link rel="stylesheet" type="text/css" href="../_static/mystnb.8ecb98da25f57f5357bf6f572d296f466b2cfe2517ffebfabe82451661e28f02.css" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b" />
+<link rel="preload" as="script" href="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b" />
+  <script src="../_static/vendor/fontawesome/6.5.2/js/all.min.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+    <script src="../_static/documentation_options.js?v=9eb32ce0"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'tutorials/05_lubrication_1d';</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="6. Lubrication (2D)" href="06_lubrication_2d.html" />
+    <link rel="prev" title="4. Dynamics of highly confined fluids" href="04_confined_fluids.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <div id="pst-skip-link" class="skip-link d-print-none"><a href="#main-content">Skip to main content</a></div>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>Back to top</button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-primary-sidebar-checkbox"/>
+  <label class="overlay overlay-primary" for="pst-primary-sidebar-checkbox"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          id="pst-secondary-sidebar-checkbox"/>
+  <label class="overlay overlay-secondary" for="pst-secondary-sidebar-checkbox"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="../search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search..."
+         aria-label="Search..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+
+  <div class="pst-async-banner-revealer d-none">
+  <aside id="bd-header-version-warning" class="d-none d-print-none" aria-label="Version warning"></aside>
+</div>
+
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar d-print-none">
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+      <div class="bd-sidebar-primary bd-sidebar">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+    
+    
+  </div>
+  
+    <div class="sidebar-primary-items__start sidebar-primary__section">
+        <div class="sidebar-primary-item">
+
+  
+    
+  
+
+<a class="navbar-brand logo" href="../index.html">
+  
+  
+  
+  
+  
+  
+    <p class="title logo__title">GaPFlow  documentation</p>
+  
+</a></div>
+        <div class="sidebar-primary-item">
+
+ <script>
+ document.write(`
+   <button class="btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script></div>
+        <div class="sidebar-primary-item"><nav class="bd-links bd-docs-nav" aria-label="Main">
+    <div class="bd-toc-item navbar-nav active">
+        <p aria-level="2" class="caption" role="heading"><span class="caption-text">Table of Contents</span></p>
+<ul class="current nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">GaPFlow</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../visualization.html">Visualization</a></li>
+<li class="toctree-l1 current active has-children"><a class="reference internal" href="index.html">Tutorials</a><details open="open"><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01_macro_equations.html">1. Governing equations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="02_stress_sympy.html">2. Viscous stress tensor calculation with wall slip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03_constitutive_laws.html">3. Constitutive laws</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04_confined_fluids.html">4. Dynamics of highly confined fluids</a></li>
+<li class="toctree-l2 current active"><a class="current reference internal" href="#">5. Lubrication (1D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06_lubrication_2d.html">6. Lubrication (2D)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07_gp_mock.html">7. Gaussian process regression and active learning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="08_gp_md.html">8. Gaussian process regression with MD data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="09_elastic_deformation.html">9. Elastic Deformation</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../api/index.html">API Reference</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Problem.html">GaPFlow.Problem</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.Database.html">GaPFlow.Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.integrate.html">GaPFlow.integrate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.gp.GaussianProcessSurrogate.html">GaPFlow.models.gp.GaussianProcessSurrogate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.Pressure.html">GaPFlow.models.Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.BulkStress.html">GaPFlow.models.BulkStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.WallStress.html">GaPFlow.models.WallStress</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.pressure.html">GaPFlow.models.pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.sound.html">GaPFlow.models.sound</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscosity.html">GaPFlow.models.viscosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.models.viscous.html">GaPFlow.models.viscous</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.MolecularDynamics.html">GaPFlow.md.MolecularDynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.Mock.html">GaPFlow.md.Mock</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.LennardJones.html">GaPFlow.md.LennardJones</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.GoldAlkane.html">GaPFlow.md.GoldAlkane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.md.moltemplate.html">GaPFlow.md.moltemplate</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.Topography.html">GaPFlow.topography.Topography</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.topography.ElasticDeformation.html">GaPFlow.topography.ElasticDeformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.animations.html">GaPFlow.viz.animations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api/summary/GaPFlow.viz.plotting.html">GaPFlow.viz.plotting</a></li>
+</ul>
+</details></li>
+<li class="toctree-l1"><a class="reference external" href="https://github.com/hannes-holey/hans">Github repository</a></li>
+</ul>
+
+    </div>
+</nav></div>
+    </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main" role="main">
+        
+        
+
+<div class="sbt-scroll-pixel-helper"></div>
+
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article d-print-none">
+<div class="header-article-items header-article__inner">
+  
+    <div class="header-article-items__start">
+      
+        <div class="header-article-item"><button class="sidebar-toggle primary-toggle btn btn-sm" title="Toggle primary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+  <span class="fa-solid fa-bars"></span>
+</button></div>
+      
+    </div>
+  
+  
+    <div class="header-article-items__end">
+      
+        <div class="header-article-item">
+
+<div class="article-header-buttons">
+
+
+
+
+
+<div class="dropdown dropdown-download-buttons">
+  <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Download this page">
+    <i class="fas fa-download"></i>
+  </button>
+  <ul class="dropdown-menu">
+      
+      
+      
+      <li><a href="../_sources/tutorials/05_lubrication_1d.ipynb" target="_blank"
+   class="btn btn-sm btn-download-source-button dropdown-item"
+   title="Download source file"
+   data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file"></i>
+  </span>
+<span class="btn__text-container">.ipynb</span>
+</a>
+</li>
+      
+      
+      
+      
+      <li>
+<button onclick="window.print()"
+  class="btn btn-sm btn-download-pdf-button dropdown-item"
+  title="Print to PDF"
+  data-bs-placement="left" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-file-pdf"></i>
+  </span>
+<span class="btn__text-container">.pdf</span>
+</button>
+</li>
+      
+  </ul>
+</div>
+
+
+
+
+<button onclick="toggleFullScreen()"
+  class="btn btn-sm btn-fullscreen-button"
+  title="Fullscreen mode"
+  data-bs-placement="bottom" data-bs-toggle="tooltip"
+>
+  
+
+<span class="btn__icon-container">
+  <i class="fas fa-expand"></i>
+  </span>
+
+</button>
+
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm nav-link pst-navbar-icon theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="theme-switch fa-solid fa-sun fa-lg" data-mode="light"></i>
+    <i class="theme-switch fa-solid fa-moon fa-lg" data-mode="dark"></i>
+    <i class="theme-switch fa-solid fa-circle-half-stroke fa-lg" data-mode="auto"></i>
+  </button>
+`);
+</script>
+
+
+<script>
+document.write(`
+  <button class="btn btn-sm pst-navbar-icon search-button search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+  </button>
+`);
+</script>
+<button class="sidebar-toggle secondary-toggle btn btn-sm" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="fa-solid fa-list"></span>
+</button>
+</div></div>
+      
+    </div>
+  
+</div>
+</div>
+              
+              
+
+<div id="jb-print-docs-body" class="onlyprint">
+    <h1>5. Lubrication (1D)</h1>
+    <!-- Table of contents -->
+    <div id="print-main-content">
+        <div id="jb-print-toc">
+            
+            <div>
+                <h2> Contents </h2>
+            </div>
+            <nav aria-label="Page">
+                <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#yaml-input">YAML Input</a></li>
+</ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+  <section class="tex2jax_ignore mathjax_ignore" id="lubrication-1d">
+<h1>5. Lubrication (1D)<a class="headerlink" href="#lubrication-1d" title="Link to this heading">#</a></h1>
+<p>The previous example dealt with the confined fluid close to equilibrium. The flow was induced by small perturbations out of equilibrium to eventually restore the equilibrium state. Now we look at a nonequilibrium case, where the movement of the walls constantly drives the fluid. This situation is commonly found in lubrication. In this tutorial, we’ll look at a journal bearing simulation defined by the following YAML input.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">journal_input</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">options:</span>
+<span class="s2">    output: data/journal</span>
+<span class="s2">    write_freq: 100</span>
+<span class="s2">    silent: False</span>
+<span class="s2">grid:</span>
+<span class="s2">    dx: 1.e-5</span>
+<span class="s2">    dy: 1.</span>
+<span class="s2">    Nx: 100</span>
+<span class="s2">    Ny: 1</span>
+<span class="s2">    xE: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    xW: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    yS: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">    yN: [&#39;P&#39;, &#39;P&#39;, &#39;P&#39;]</span>
+<span class="s2">geometry:</span>
+<span class="s2">    type: journal</span>
+<span class="s2">    CR: 1.e-2</span>
+<span class="s2">    eps: 0.7</span>
+<span class="s2">    U: 0.1</span>
+<span class="s2">    V: 0.</span>
+<span class="s2">numerics:</span>
+<span class="s2">    CFL: 0.5</span>
+<span class="s2">    adaptive: True</span>
+<span class="s2">    tol: 1e-8</span>
+<span class="s2">    dt: 1e-10</span>
+<span class="s2">    max_it: 10_000</span>
+<span class="s2">properties:</span>
+<span class="s2">    shear: 0.0794</span>
+<span class="s2">    bulk: 0.</span>
+<span class="s2">    EOS: DH</span>
+<span class="s2">    P0: 101325.</span>
+<span class="s2">    rho0: 877.7007</span>
+<span class="s2">    T0: 323.15</span>
+<span class="s2">    C1: 3.5e12</span>
+<span class="s2">    C2: 1.23</span>
+<span class="s2">&quot;&quot;&quot;</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow</span><span class="w"> </span><span class="kn">import</span> <span class="n">Problem</span>
+<span class="n">journal_problem</span> <span class="o">=</span> <span class="n">Problem</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">journal_input</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>*************************************************************
+*                       PROBLEM SETUP                       *
+*************************************************************
+- options:
+  - output                   : data/journal
+  - write_freq               : 100
+  - use_tstamp               : True
+  - silent                   : False
+- grid:
+  - Nx                       : 100
+  - dx                       : 1e-05
+  - Lx                       : 0.001
+  - Ny                       : 1
+  - dy                       : 1.0
+  - Ly                       : 1.0
+  - dim                      : 1
+  - bc_xE_P                  : [True, True, True]
+  - bc_xE_D                  : [False, False, False]
+  - bc_xE_N                  : [False, False, False]
+  - bc_xW_P                  : [True, True, True]
+  - bc_xW_D                  : [False, False, False]
+  - bc_xW_N                  : [False, False, False]
+  - bc_yS_P                  : [True, True, True]
+  - bc_yS_D                  : [False, False, False]
+  - bc_yS_N                  : [False, False, False]
+  - bc_yN_P                  : [True, True, True]
+  - bc_yN_D                  : [False, False, False]
+  - bc_yN_N                  : [False, False, False]
+- geometry:
+  - U                        : 0.1
+  - V                        : 0.0
+  - type                     : journal
+  - flip                     : False
+  - CR                       : 0.01
+  - eps                      : 0.7
+- numerics:
+  - tol                      : 1e-08
+  - max_it                   : 10000
+  - dt                       : 1e-10
+  - adaptive                 : True
+  - CFL                      : 0.5
+  - MC_order                 : 1
+- properties:
+  - shear                    : 0.0794
+  - bulk                     : 0.0
+  - EOS                      : DH
+  - rho0                     : 877.7007
+  - P0                       : 101325.0
+  - C1                       : 3500000000000.0
+  - C2                       : 1.23
+  - elastic:
+    - enabled                : False
+- gp:
+- db:
+- md:
+*************************************************************
+*                  PROBLEM SETUP COMPLETED                  *
+*************************************************************
+                                                             
+     Writing output into: data/2026-02-26_105649_journal
+</pre></div>
+</div>
+</div>
+</div>
+<p>The gap between the shaft and the bearing can be described by a <em>cosine</em> function.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">journal_problem</span><span class="o">.</span><span class="n">plot_topo</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/5a03b33097eabe0f64029a965da00443e4e75042634a9a7fcd1475550a5536f4.png" src="../_images/5a03b33097eabe0f64029a965da00443e4e75042634a9a7fcd1475550a5536f4.png" />
+</div>
+</div>
+<p>Before we run the simulation, let us unpack the different sections of the YAML file.</p>
+<section id="yaml-input">
+<h2>YAML Input<a class="headerlink" href="#yaml-input" title="Link to this heading">#</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">options</span></code> section contains some general options mainly on how and where the simulation output is stored:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">options</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">silent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span><span class="w">        </span><span class="c1"># If true, all output to stdout and to files is suppressed, the default is False</span>
+<span class="w">    </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">data/journal</span><span class="w"> </span><span class="c1"># The name of the simulation output directory, will raise an error if already existent</span>
+<span class="w">    </span><span class="nt">use_tstamp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">False</span><span class="w">    </span><span class="c1"># Prepend the simulation output directory with a time stamp (useful to avoid errors due to existent folders)</span>
+<span class="w">    </span><span class="nt">write_freq</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1000</span><span class="w">     </span><span class="c1"># Output frequency (both to stdout and NetCDF file)</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">geometry</span></code> section defines the lubrication problem. It specifies the type of the height profile and the velocities of the walls. Here we look at a journal bearing geometry which can be defined by the nondimensional parameters <span class="math notranslate nohighlight">\(\epsilon\)</span> and <span class="math notranslate nohighlight">\(\mathrm{CR}\)</span>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">geometry</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">journal</span><span class="w"> </span><span class="c1"># &#39;bearing&#39; type</span>
+<span class="w">    </span><span class="nt">CR</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.e-2</span><span class="w">     </span><span class="c1"># clearance ratio</span>
+<span class="w">    </span><span class="nt">eps</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.7</span><span class="w">      </span><span class="c1"># eccentricity</span>
+<span class="w">    </span><span class="nt">U</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.1</span><span class="w">        </span><span class="c1"># X velocity of the lower wall</span>
+<span class="w">    </span><span class="nt">V</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.</span><span class="w">         </span><span class="c1"># Y velocity of the lower wall</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">grid</span></code> section specifies the numerical discretization of the problem and the boundary conditions. For the journal bearing, it makes sense to use periodic boundary conditions.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">geometry</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">Lx</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.e-3</span><span class="w">           </span><span class="c1"># Length in X</span>
+<span class="w">    </span><span class="nt">Ly</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.</span><span class="w">              </span><span class="c1"># Length in Y: here 1D so irrelevant</span>
+<span class="w">    </span><span class="nt">Nx</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">100</span><span class="w">             </span><span class="c1"># Number of cells in X</span>
+<span class="w">    </span><span class="nt">Ny</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span><span class="w">               </span><span class="c1"># Number of cells in Y</span>
+<span class="w">    </span><span class="nt">xE</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># BC in x direction (East) for [density, fluxX, fluxY]; &#39;P&#39; = periodic (other &#39;D&#39; = Dirichlet, &#39;N&#39; = Neumann)</span>
+<span class="w">    </span><span class="nt">xW</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># BC in x direction (West) for [density, fluxX, fluxY]; &#39;P&#39; = periodic (other &#39;D&#39; = Dirichlet, &#39;N&#39; = Neumann)</span>
+<span class="w">    </span><span class="nt">yS</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># BC in y direction (South) for [density, fluxX, fluxY]; &#39;P&#39; = periodic (other &#39;D&#39; = Dirichlet, &#39;N&#39; = Neumann)</span>
+<span class="w">    </span><span class="nt">yN</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&#39;P&#39;</span><span class="p p-Indicator">]</span><span class="w"> </span><span class="c1"># BC in y direction (North) for [density, fluxX, fluxY]; &#39;P&#39; = periodic (other &#39;D&#39; = Dirichlet, &#39;N&#39; = Neumann)</span>
+</pre></div>
+</div>
+<p>Note that 1D simulations like this one should always use periodic BCs in the perpendicular direction (here y).
+If we’d want to use Dirichlet BCs, we would als need to specify the values to which the boundary cell is fixed, e.g.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="w">    </span><span class="nt">xE_D</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.</span>
+<span class="w">    </span><span class="nt">xW_D</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.</span>
+</pre></div>
+</div>
+<p>The time integration settings are defined in the <code class="docutils literal notranslate"><span class="pre">numerics</span></code> scetion.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">numerics</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">CFL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.5</span><span class="w">        </span><span class="c1"># Courant number used for the adaptive time-stepping</span>
+<span class="w">    </span><span class="nt">adaptive</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">True</span><span class="w">  </span><span class="c1"># Adaptive time stepping</span>
+<span class="w">    </span><span class="nt">tol</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-8</span><span class="w">       </span><span class="c1"># Numerical tolerance for convergence to steady state</span>
+<span class="w">    </span><span class="nt">dt</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1e-10</span><span class="w">       </span><span class="c1"># Time step size (for non-adaptive only)</span>
+<span class="w">    </span><span class="nt">max_it</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">10_000</span><span class="w">  </span><span class="c1"># Maximum number of time steps</span>
+</pre></div>
+</div>
+<p>We have already seen the <code class="docutils literal notranslate"><span class="pre">properties</span></code> section in previous notebooks. Next to the shear and bulk viscosity, the remaining parameters depend on the type of equation of state used to model the compressible fluid:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">properties</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">shear</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0794</span><span class="w">  </span><span class="c1"># Shear viscosity</span>
+<span class="w">    </span><span class="nt">bulk</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.</span><span class="w">       </span><span class="c1"># Bulk viscosity</span>
+<span class="w">    </span><span class="nt">EOS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DH</span><span class="w">        </span><span class="c1"># Equation of state (here: Dowson-Higginson)</span>
+<span class="w">    </span><span class="nt">P0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">101325.</span><span class="w">    </span><span class="c1"># Reference pressure (for DH-EoS)</span>
+<span class="w">    </span><span class="nt">rho0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">877.7007</span><span class="w"> </span><span class="c1"># Reference density (for DH-EoS)</span>
+<span class="w">    </span><span class="nt">T0</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">323.15</span><span class="w">     </span><span class="c1"># Reference temperature (for DH-EoS)</span>
+<span class="w">    </span><span class="nt">C1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3.5e12</span><span class="w">     </span><span class="c1"># Parameter 1</span>
+<span class="w">    </span><span class="nt">C2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.23</span><span class="w">       </span><span class="c1"># Parameter 2</span>
+</pre></div>
+</div>
+<p>Note that the <code class="docutils literal notranslate"><span class="pre">C1</span></code> parameter is four order of magnitude larger than values typically found in the literature. This is intended in order to mimic a (nearly) incompressible fluid with an equation of state as shown in the plot below, where the pressure-density relation is nearly vertical around the reference density.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">GaPFlow.models.pressure</span><span class="w"> </span><span class="kn">import</span> <span class="n">eos_pressure</span>
+
+<span class="n">props</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EOS&#39;</span><span class="p">:</span> <span class="s1">&#39;DH&#39;</span><span class="p">}</span> 
+<span class="n">props</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">rho0</span><span class="o">=</span><span class="mf">877.7007</span><span class="p">,</span> <span class="n">P0</span><span class="o">=</span><span class="mf">101325.</span><span class="p">,</span> <span class="n">C1</span><span class="o">=</span><span class="mf">3.5e8</span><span class="p">,</span> <span class="n">C2</span><span class="o">=</span><span class="mf">1.23</span><span class="p">)</span> <span class="c1"># default values</span>
+<span class="n">props_comp</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">props</span><span class="p">)</span>
+<span class="n">props</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">C1</span><span class="o">=</span><span class="mf">3.5e12</span><span class="p">)</span>
+
+<span class="n">dens</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">877.65</span><span class="p">,</span> <span class="mf">877.75</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">p_comp</span> <span class="o">=</span> <span class="n">eos_pressure</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">props_comp</span><span class="p">)</span>
+<span class="n">p_incomp</span> <span class="o">=</span> <span class="n">eos_pressure</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">props</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">p_comp</span><span class="p">,</span>  <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;compressible&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">dens</span><span class="p">,</span> <span class="n">p_incomp</span><span class="p">,</span> <span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;&quot;incompressible&quot;&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Density&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Pressure&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/3dc77e39d252a27198cbd08b72e9f88293c5cfd7c7f6695cc198751732408825.png" src="../_images/3dc77e39d252a27198cbd08b72e9f88293c5cfd7c7f6695cc198751732408825.png" />
+</div>
+</div>
+<p>Now we can use the simulation for the nearly incompressible fluids and compare to an analytic solution for incompressible isoviscous fluids and the journal bearing geometry.</p>
+<p>Note that the <em>Dowson-Higginson</em> equation of state does not include cavitation, i.e. the possibility of a gas phase. For our model this means that the fluid is assumed to sustain large tensile stresses (negative pressure) without cavitating. Despite not providing physical results in these cases, we use it here because it makes the problem simpler and, more importantly, there exist analytical solutions in literature that we can compare to.</p>
+<p>A more realistic behaviour can be obtained with an equation of state that considers cavitation and therefore does not output negative pressures. For that you can use e.g. the  <em>Bayada-Chupin</em> equation of state.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">journal_problem</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>-------------------------------------------------------------
+Step   Timestep   Time       CFL        Residual  
+-------------------------------------------------------------
+0      3.7972e-11 0.0000e+00 5.0000e-01 1.0000e+00
+100    3.7972e-11 3.7972e-09 5.0000e-01 9.6271e-03
+200    3.7972e-11 7.5944e-09 5.0000e-01 1.1241e-02
+300    3.7972e-11 1.1392e-08 5.0000e-01 2.9111e-03
+400    3.7972e-11 1.5189e-08 5.0000e-01 7.5891e-04
+500    3.7972e-11 1.8986e-08 5.0000e-01 1.1015e-03
+600    3.7972e-11 2.2783e-08 5.0000e-01 8.2644e-04
+700    3.7972e-11 2.6581e-08 5.0000e-01 4.1743e-04
+800    3.7972e-11 3.0378e-08 5.0000e-01 1.2197e-04
+900    3.7972e-11 3.4175e-08 5.0000e-01 1.3118e-05
+1000   3.7972e-11 3.7972e-08 5.0000e-01 4.5388e-05
+1100   3.7972e-11 4.1769e-08 5.0000e-01 3.6034e-05
+1200   3.7972e-11 4.5567e-08 5.0000e-01 1.8486e-05
+1300   3.7972e-11 4.9364e-08 5.0000e-01 5.8329e-06
+1400   3.7972e-11 5.3161e-08 5.0000e-01 1.8587e-07
+1500   3.7972e-11 5.6958e-08 5.0000e-01 1.8239e-06
+1600   3.7972e-11 6.0756e-08 5.0000e-01 1.5378e-06
+1700   3.7972e-11 6.4553e-08 5.0000e-01 8.2085e-07
+1800   3.7972e-11 6.8350e-08 5.0000e-01 2.7721e-07
+1900   3.7972e-11 7.2147e-08 5.0000e-01 7.6591e-09
+2000   3.7972e-11 7.5944e-08 5.0000e-01 7.2360e-08
+2024   3.7972e-11 7.6856e-08 5.0000e-01 2.4640e-09
+=================================
+Total walltime   :  0:00:08
+(237.50 steps/s)
+=================================
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s1">&#39;figure.figsize&#39;</span><span class="p">]</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="n">sx</span><span class="p">,</span> <span class="mi">2</span><span class="o">*</span><span class="n">sy</span><span class="p">))</span>
+<span class="n">journal_problem</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/9adcd519fbdd7e7086bb41d6174886b452199142e187af75a8cdf5a456005d36.png" src="../_images/9adcd519fbdd7e7086bb41d6174886b452199142e187af75a8cdf5a456005d36.png" />
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">sommerfeld_solution</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">U</span><span class="p">,</span> <span class="n">clearance_ratio</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">P0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analytical solution to the journal bearing problem for incompressible fluids.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray</span>
+<span class="sd">        Circumferential coordinate</span>
+<span class="sd">    Lx : float</span>
+<span class="sd">        Circumference</span>
+<span class="sd">    mu : float</span>
+<span class="sd">        Viscosity</span>
+<span class="sd">    U : float</span>
+<span class="sd">        Velocity</span>
+<span class="sd">    clearance_ratio : float</span>
+<span class="sd">        Clearance ratio</span>
+<span class="sd">    eps : float</span>
+<span class="sd">        Eccentricity ratio</span>
+<span class="sd">    P0 : float</span>
+<span class="sd">        Boundary pressure</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Pressure distribution</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">Rb</span> <span class="o">=</span> <span class="n">Lx</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">clearance_ratio</span> <span class="o">*</span> <span class="n">Rb</span>
+    <span class="n">omega</span> <span class="o">=</span> <span class="n">U</span> <span class="o">/</span> <span class="n">Rb</span>
+
+    <span class="n">prefac</span> <span class="o">=</span> <span class="mf">6.</span> <span class="o">*</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">omega</span> <span class="o">*</span> <span class="p">(</span><span class="n">Rb</span> <span class="o">/</span> <span class="n">c</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">eps</span>
+
+    <span class="n">P</span> <span class="o">=</span> <span class="n">P0</span> <span class="o">+</span> <span class="n">prefac</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">Rb</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">2.</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">Rb</span><span class="p">))</span> <span class="o">/</span> <span class="p">((</span><span class="mf">2.</span> <span class="o">+</span> <span class="n">eps</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">eps</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">Rb</span><span class="p">))</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">P</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">p_num</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">pressure</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+
+<span class="n">Lx</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="s1">&#39;Lx&#39;</span><span class="p">]</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">geo</span><span class="p">[</span><span class="s1">&#39;U&#39;</span><span class="p">]</span>
+<span class="n">CR</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">geo</span><span class="p">[</span><span class="s1">&#39;CR&#39;</span><span class="p">]</span>
+<span class="n">eps</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">geo</span><span class="p">[</span><span class="s1">&#39;eps&#39;</span><span class="p">]</span>
+<span class="n">mu</span> <span class="o">=</span> <span class="n">journal_problem</span><span class="o">.</span><span class="n">pressure</span><span class="o">.</span><span class="n">prop</span><span class="p">[</span><span class="s1">&#39;shear&#39;</span><span class="p">]</span>
+
+<span class="n">Nx</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">x_ana</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="n">Lx</span><span class="p">,</span> <span class="n">Nx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">x_num</span> <span class="o">=</span> <span class="p">(</span><span class="n">x_ana</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">x_ana</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mf">2.</span>
+
+<span class="n">dp</span> <span class="o">=</span> <span class="n">p_num</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">p_num</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">p_ana</span> <span class="o">=</span> <span class="n">sommerfeld_solution</span><span class="p">(</span><span class="n">x_num</span><span class="p">,</span>
+                            <span class="n">Lx</span><span class="p">,</span>
+                            <span class="n">mu</span><span class="p">,</span>
+                            <span class="n">U</span><span class="p">,</span>
+                            <span class="n">CR</span><span class="p">,</span>
+                            <span class="n">eps</span><span class="p">,</span>
+                            <span class="n">p_num</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">dp</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_num</span><span class="p">,</span> <span class="n">p_num</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Numerical solution&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_num</span><span class="p">,</span> <span class="n">p_ana</span><span class="p">,</span> <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;0.0&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Analytical solution&#39;</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Pressure&#39;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<img alt="../_images/b1766d2866aada738e2d14cc15c8135c3e794cba5948c325d7032dceb4a0c68f.png" src="../_images/b1766d2866aada738e2d14cc15c8135c3e794cba5948c325d7032dceb4a0c68f.png" />
+</div>
+</div>
+</section>
+</section>
+
+
+                </article>
+              
+
+              
+              
+              
+              
+                <footer class="prev-next-footer d-print-none">
+                  
+<div class="prev-next-area">
+    <a class="left-prev"
+       href="04_confined_fluids.html"
+       title="previous page">
+      <i class="fa-solid fa-angle-left"></i>
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">previous</p>
+        <p class="prev-next-title">4. Dynamics of highly confined fluids</p>
+      </div>
+    </a>
+    <a class="right-next"
+       href="06_lubrication_2d.html"
+       title="next page">
+      <div class="prev-next-info">
+        <p class="prev-next-subtitle">next</p>
+        <p class="prev-next-title">6. Lubrication (2D)</p>
+      </div>
+      <i class="fa-solid fa-angle-right"></i>
+    </a>
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
+
+
+  <div class="sidebar-secondary-item">
+  <div class="page-toc tocsection onthispage">
+    <i class="fa-solid fa-list"></i> Contents
+  </div>
+  <nav class="bd-toc-nav page-toc">
+    <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#yaml-input">YAML Input</a></li>
+</ul>
+  </nav></div>
+
+</div></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+<div class="bd-footer-content__inner container">
+  
+  <div class="footer-item">
+    
+<p class="component-author">
+By Hannes Holey
+</p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+
+  <p class="copyright">
+    
+      © Copyright 2025, Hannes Holey.
+      <br/>
+    
+  </p>
+
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+  <div class="footer-item">
+    
+  </div>
+  
+</div>
+          </footer>
+        
+
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="../_static/scripts/bootstrap.js?digest=dfe6caa3a7d634c4db9b"></script>
+<script src="../_static/scripts/pydata-sphinx-theme.js?digest=dfe6caa3a7d634c4db9b"></script>
+
+  <footer class="bd-footer">
+  </footer>
+  </body>
+</html>
