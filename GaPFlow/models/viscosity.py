@@ -1,5 +1,5 @@
 #
-# Copyright 2025 Hannes Holey
+# Copyright 2025-2026 Hannes Holey
 #
 # ### MIT License
 #
@@ -21,6 +21,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+
+"""Viscosity models.
+
+This module implements the non-Newtonian viscosity models for piezoviscosity and shear thinning.
+"""
+
 import numpy as np
 import numpy.typing as npt
 

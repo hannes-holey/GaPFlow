@@ -96,11 +96,11 @@ db:
     gp_s = os.path.join(os.path.dirname(fname_sol), 'gp_xz.csv')
 
     tol_p = np.array(pl.read_csv(gp_p)['variance_tol'])
-    tol_s = np.array(pl.read_csv(gp_s)['variance_tol'])
+    tol_t = np.array(pl.read_csv(gp_s)['variance_tol'])
 
     ani = _create_animation_1d_gp(filename=fname_sol,
                                   tol_p=tol_p,
-                                  tol_s=tol_s)
+                                  tol_t=tol_t)
 
     assert isinstance(ani, matplotlib.animation.FuncAnimation)
     assert ani._save_count == 11
