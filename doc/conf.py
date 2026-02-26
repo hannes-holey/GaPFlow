@@ -43,7 +43,7 @@ html_theme = 'sphinx_book_theme'
 # nb_execution_mode = "off"
 nb_execution_raise_on_error = False
 nb_execution_show_tb = True
-nb_execution_timeout = 1000
+nb_execution_timeout = 3600
 nb_merge_streams = True
 
 myst_enable_extensions = [
