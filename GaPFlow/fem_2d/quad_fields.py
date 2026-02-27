@@ -44,14 +44,14 @@ NDArray = npt.NDArray[np.floating]
 BASE_FIELDS = {
     'rho', 'jx', 'jy',
     'p', 'h', 'dh_dx', 'dh_dy', 'eta',
-    'U', 'V', 'Ls',
+    'U_bot', 'V_bot', 'U_top', 'V_top', 'Ls',
     'dp_drho',
     'rho_prev', 'jx_prev', 'jy_prev',
     'tau_mass',
     'tau_mom',
     'tau_pspg',
     'tau_gls',
-    'force_x', 'force_y',  # Body force components
+    'force_x', 'force_y',
 }
 
 STRESS_XZ_FIELDS = {
@@ -187,7 +187,14 @@ class QuadFieldManager:
     # =========================================================================
 
     def update_nodal_fields(self) -> None:
-        """Update nodal fields from problem state (pressure, viscosity, etc.)."""
+        """Update nodal fields from problem state.
+        
+        - pressure
+        - topography, deformation, and derivatives
+        - pressure gradients and viscosity
+        - temperature if energy is active
+        
+        """
         p = self.problem
 
         p.pressure.update()
@@ -199,13 +206,15 @@ class QuadFieldManager:
             dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
             dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
             p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy,
-                               p.topo.h, p.geo['U'], p.geo['V'])
+                               p.topo.h,
+                               p.geo['U_bot'], p.geo['V_bot'],
+                               p.geo['U_top'], p.geo['V_top'])
 
         if self.energy:
             p.energy.update_temperature()
 
     def update_quad_nodal(self) -> None:
-        """Copy problem state to nodal fields and interpolate to quad points."""
+        """Copy problem state to internal nodal fields and interpolate to quad points."""
         p = self.problem
 
         # Copy multi-component sources to single-component fields
@@ -229,8 +238,10 @@ class QuadFieldManager:
             self.interpolate_nodal_to_quad(name)
 
         # Broadcast constants
-        self.quad_fields['U'].pg[:] = p.geo['U']
-        self.quad_fields['V'].pg[:] = p.geo['V']
+        self.quad_fields['U_bot'].pg[:] = p.geo['U_bot']
+        self.quad_fields['V_bot'].pg[:] = p.geo['V_bot']
+        self.quad_fields['U_top'].pg[:] = p.geo['U_top']
+        self.quad_fields['V_top'].pg[:] = p.geo['V_top']
         self.quad_fields['Ls'].pg[:] = p.prop.get('slip_length', 0.0)
 
     def _apply_2d_vmap(self, func, *args):
@@ -415,6 +426,11 @@ class QuadFieldManager:
 
         Only computes on interior cells (excludes last row/column) where
         interpolation produced valid data. Ghost cells are left as zero.
+
+        - dp_drho
+        - stabilization parameters
+        - wall stresses and derivatives
+        - temperature and wall heat flux if energy is active
         """
         p = self.problem
         # Interior slice accessor (excludes ghost cells at x=Nx+1, y=Ny+1)
@@ -434,7 +450,7 @@ class QuadFieldManager:
 
         # Wall stress xz
         args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'),
-                   q('U'), q('V'), q('Ls'))
+                   q('U_bot'), q('V_bot'), q('U_top'), q('V_top'), q('Ls'))
         for name in ['tau_xz', 'dtau_xz_drho', 'dtau_xz_djx',
                      'tau_xz_bot', 'dtau_xz_bot_drho', 'dtau_xz_bot_djx']:
             self.quad_fields[name].pg[s] = apply(
@@ -442,7 +458,7 @@ class QuadFieldManager:
 
         # Wall stress yz
         args_yz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dy'),
-                   q('U'), q('V'), q('Ls'))
+                   q('U_bot'), q('V_bot'), q('U_top'), q('V_top'), q('Ls'))
         for name in ['tau_yz', 'dtau_yz_drho', 'dtau_yz_djy',
                      'tau_yz_bot', 'dtau_yz_bot_drho', 'dtau_yz_bot_djy']:
             self.quad_fields[name].pg[s] = apply(
@@ -464,7 +480,8 @@ class QuadFieldManager:
 
             # Wall heat flux (constants captured in closure, only arrays passed)
             args_S = (q('h'), q('eta'), q('rho'), q('E'), q('jx'), q('jy'),
-                      q('U'), q('V'), q('Tb_top'), q('Tb_bot'))
+                      q('U_bot'), q('V_bot'), q('Tb_top'), q('Tb_bot'))
+            # TODO: heatflux expressions need re-derivation for U_top, V_top
             for name, func in [('S', 'q_wall_sum'), ('dS_drho', 'q_wall_grad_rho'),
                                ('dS_djx', 'q_wall_grad_jx'),
                                ('dS_djy', 'q_wall_grad_jy'),

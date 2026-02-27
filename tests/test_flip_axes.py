@@ -72,8 +72,8 @@ def test_x_y():
     input_y = deepcopy(input_x)
 
     # Swap axes
-    input_y['geometry']['U'] = 0.
-    input_y['geometry']['V'] = input_x['geometry']['U']
+    input_y['geometry']['U_bot'] = 0.
+    input_y['geometry']['V_bot'] = input_x['geometry']['U_bot']
     input_y['geometry']['flip'] = True
 
     problem_x = Problem._from_dict(input_x)

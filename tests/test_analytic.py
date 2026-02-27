@@ -28,6 +28,18 @@ from GaPFlow.models.profiles import get_velocity_profiles, get_stress_profiles
 from GaPFlow.models.viscous import stress_avg, stress_top, stress_bottom
 
 
+def _slip_to_Ls(Ls, slip):
+    """Map legacy slip keyword to (Ls_bot, Ls_top) pair."""
+    if slip == "top":
+        return 0.0, Ls
+    elif slip == "both":
+        return Ls, Ls
+    elif slip == "bottom":
+        return Ls, 0.0
+    elif slip == "none":
+        return 0.0, 0.0
+
+
 @pytest.mark.parametrize('slip, Ls', [('both', 0.),
                                       ('both', 0.5),
                                       ('top', 0.),
@@ -43,7 +55,8 @@ def test_flow_rate(slip, Ls):
     z = np.linspace(0., hmax, Nz)
     q = np.array([1., 2., 1.])
 
-    u, v = get_velocity_profiles(z, q, Ls=Ls, U=1., V=1., slip=slip)
+    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
+    u, v = get_velocity_profiles(z, q, U_bot=1., V_bot=1., Ls_bot=Ls_bot, Ls_top=Ls_top)
 
     assert np.isclose(np.trapezoid(u, z) / hmax, q[1])
     assert np.isclose(np.trapezoid(v, z) / hmax, q[2])
@@ -62,19 +75,20 @@ def test_avg_stress(slip, Ls):
     Nz = 10_000
     z = np.linspace(0., 1., Nz)
 
+    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
     tau_xx, tau_yy, _, _, _, tau_xy = get_stress_profiles(z,
                                                           h_test,
                                                           q_test,
                                                           np.zeros(3),
                                                           np.zeros(3),
-                                                          U=1.,
-                                                          V=1.,
+                                                          U_bot=1.,
+                                                          V_bot=1.,
                                                           eta=1.,
                                                           zeta=1.,
-                                                          Ls=Ls,
-                                                          mode=slip)
+                                                          Ls_bot=Ls_bot,
+                                                          Ls_top=Ls_top)
 
-    tau_avg = stress_avg(q_test, h_test, U=1., V=1., eta=1., zeta=1., Ls=Ls, slip=slip)
+    tau_avg = stress_avg(q_test, h_test, 1., 1., 0., 0., 1., 1., Ls_bot, Ls_top)
 
     assert np.isclose(np.trapezoid(tau_xx, z) / tau_avg[0], 1.)
     assert np.isclose(np.trapezoid(tau_yy, z) / tau_avg[1], 1.)
@@ -94,20 +108,21 @@ def test_wall_stress(slip, Ls):
     Nz = 10_000
     z = np.linspace(0., 1., Nz)
 
+    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
     tau_xx, tau_yy, tau_zz, tau_yz, tau_xz, tau_xy = get_stress_profiles(z,
                                                                          h_test,
                                                                          q_test,
                                                                          np.zeros(3),
                                                                          np.zeros(3),
-                                                                         U=1.,
-                                                                         V=1.,
+                                                                         U_bot=1.,
+                                                                         V_bot=1.,
                                                                          eta=1.,
                                                                          zeta=1.,
-                                                                         Ls=Ls,
-                                                                         mode=slip)
+                                                                         Ls_bot=Ls_bot,
+                                                                         Ls_top=Ls_top)
 
-    tau_top = stress_top(q_test, h_test, U=1., V=1., eta=1., zeta=1., Ls=Ls, slip=slip)
-    tau_bot = stress_bottom(q_test, h_test, U=1., V=1., eta=1., zeta=1., Ls=Ls, slip=slip)
+    tau_top = stress_top(q_test, h_test, 1., 1., 0., 0., 1., 1., Ls_bot, Ls_top)
+    tau_bot = stress_bottom(q_test, h_test, 1., 1., 0., 0., 1., 1., Ls_bot, Ls_top)
 
     assert np.isclose(tau_bot[0], tau_xx[0])
     assert np.isclose(tau_top[0], tau_xx[-1])

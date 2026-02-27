@@ -23,6 +23,7 @@
 # SOFTWARE.
 #
 import os
+import warnings
 from datetime import datetime
 import yaml
 import polars as pl
@@ -251,8 +252,16 @@ def sanitize_geometry(d):
     available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d']
     out = {}
 
-    out['U'] = float(d.get('U', 1.))
-    out['V'] = float(d.get('V', 0.))
+    # Bottom wall velocities (backward compat: 'U'/'V' → 'U_bot'/'V_bot')
+    if 'U_bot' in d and 'U' in d:
+        warnings.warn("Both 'U' and 'U_bot' specified in geometry. Using 'U_bot'.")
+    if 'V_bot' in d and 'V' in d:
+        warnings.warn("Both 'V' and 'V_bot' specified in geometry. Using 'V_bot'.")
+
+    out['U_bot'] = float(d.get('U_bot', d.get('U', 1.)))
+    out['V_bot'] = float(d.get('V_bot', d.get('V', 0.)))
+    out['U_top'] = float(d.get('U_top', 0.))
+    out['V_top'] = float(d.get('V_top', 0.))
     out['type'] = str(d.get('type', 'none'))
     out['flip'] = bool(d.get('flip', False))
 

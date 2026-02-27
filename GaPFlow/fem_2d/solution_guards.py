@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 
 # Guard parameters
-MAX_DENSITY_CHANGE = 1.0  # Maximum relative density change per Newton step (10%)
+MAX_DENSITY_CHANGE = 1.0  # Maximum relative density change per Newton step
 RHO_MIN = 1e-10           # Minimum allowed density
 
 

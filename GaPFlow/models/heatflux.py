@@ -361,8 +361,8 @@ def get_T_z_at_cell(problem, i: int, j: int, z: NDArray) -> NDArray:
         E=problem.energy.energy[i, j],
         jx=problem.q[1, i, j],
         jy=problem.q[2, i, j],
-        U=problem.geo['U'],
-        V=problem.geo['V'],
+        U=problem.geo['U_bot'],  # TODO: heatflux needs re-derivation for U_top, V_top
+        V=problem.geo['V_bot'],
         T_bulk_top=problem.energy.Tb_top[i, j],
         T_bulk_bot=problem.energy.Tb_bot[i, j],
         z=z,
@@ -398,8 +398,8 @@ def get_heatflux_2d(problem) -> tuple[NDArray, NDArray]:
     E = problem.energy.energy
     jx = problem.q[1]
     jy = problem.q[2]
-    U = problem.geo['U']
-    V = problem.geo['V']
+    U = problem.geo['U_bot']  # TODO: heatflux needs re-derivation for U_top, V_top
+    V = problem.geo['V_bot']
     Tb_top = problem.energy.Tb_top
     Tb_bot = problem.energy.Tb_bot
     A = 1.0  # Not used in flux calculation

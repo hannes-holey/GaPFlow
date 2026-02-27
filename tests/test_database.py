@@ -33,7 +33,7 @@ def test_addition(tmp_path, method):
 
     db_config = {'init_size': 4, 'init_width': 0.01, 'init_method': method,
                  'init_seed': 42, 'dtool_path': str(tmp_path)}
-    geo = {'U': 1., 'V': 0.}
+    geo = {'U_bot': 1., 'V_bot': 0., 'U_top': 0., 'V_top': 0.}
     prop = {'shear': 1., 'bulk': 0., 'EOS': 'PL'}
     gp = {'press_gp': False, 'shear_gp': False}
 

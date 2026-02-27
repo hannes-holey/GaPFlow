@@ -172,8 +172,8 @@ class Assembly:
 
         # 2. Build matrix COO pattern
         # building upon block connectivity to create full local/global COO arrays 
-        # and block indices these are not sorted in any particular order since
-        # the COO lookup handles matching during template construction
+        # and block indices. These are not sorted in any particular order since
+        # the COO lookup handles the matching during template construction
         self._build_coo_pattern(grid_idx, inner_pts, contrib_pts, nb_vars, nb_res)
 
         # 3. Build COO lookup for template construction

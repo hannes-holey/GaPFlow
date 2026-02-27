@@ -101,7 +101,7 @@ def source(
     """
     out = np.zeros_like(q)
 
-    # Origin bottom, U_top = 0, U_bottom = U
+    # Origin bottom, wall velocities baked into stress tensors
     out[0] = (-q[1] * h[1] - q[2] * h[2]) / h[0]
 
     out[1] = ((stress[0] - stress_upper[0]) * h[1] +  # noqa: W504

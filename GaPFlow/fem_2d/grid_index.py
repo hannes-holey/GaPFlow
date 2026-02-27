@@ -23,8 +23,8 @@
 #
 """Grid index management for FEM assembly.
 
-Handles index masks, element connectivity, and boundary condition handling
-for triangular FEM on structured grids with domain decomposition support.
+Handles index masks and boundary condition handling for triangular FEM 
+on structured grids with domain decomposition support.
 """
 from functools import cached_property, lru_cache
 from typing import List, TYPE_CHECKING
@@ -48,19 +48,11 @@ class GridIndexManager:
     - Local-to-global point mapping
     - Boundary condition handling (Dirichlet removal, Neumann forwarding)
     - Does NOT know about triangular elements and quadrature
-
-    Parameters
-    ----------
-    decomp : DomainDecomposition
-        Domain decomposition object containing grid info and BC configuration.
-    variables : list of str
-        Variable names ['rho', 'jx', 'jy'] or ['rho', 'jx', 'jy', 'E'].
-    energy_spec : dict, optional
-        Energy specification dict with BC info (bc_xW, bc_xE, etc.).
-        Required if 'E' is in variables.
     """
 
-    def __init__(self, decomp: "DomainDecomposition", variables: List[str],
+    def __init__(self,
+                 decomp: "DomainDecomposition",
+                 variables: List[str],
                  energy_spec: dict = None):
         self._decomp = decomp
         self._variables = variables

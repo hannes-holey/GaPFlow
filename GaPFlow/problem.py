@@ -147,7 +147,9 @@ class Problem:
         # Solution field
         self.step = None
         self.__field = self.fc.real_field('solution', (3,))
-        self._initialize(rho0=prop['rho0'], U=geo['U'], V=geo['V'])
+        self._initialize(rho0=prop['rho0'],
+                         U_bot=geo['U_bot'], V_bot=geo['V_bot'],
+                         U_top=geo['U_top'], V_top=geo['V_top'])
 
         # Initialize extra field
         num_extra_features = 1 if database is None else database.num_features - 6
@@ -702,13 +704,14 @@ class Problem:
 
         return gpx, gpy, gpz
 
-    def _initialize(self, rho0: float, U: float, V: float) -> None:
+    def _initialize(self, rho0: float, U_bot: float, V_bot: float,
+                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
         """
         self.__field.pg[0] = rho0
-        self.__field.pg[1] = rho0 * U / 2.0
-        self.__field.pg[2] = rho0 * V / 2.0
+        self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.0
+        self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.0
 
         self.kinetic_energy_old = self.kinetic_energy
 

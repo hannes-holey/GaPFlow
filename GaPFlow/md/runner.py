@@ -348,12 +348,13 @@ class Mock(MolecularDynamics):
         key, subkey = jr.split(subkey)
         noise_s1 = jr.normal(key) * self.noise[1]
 
-        U, V = self.geo["U"], self.geo["V"]
+        U_bot, V_bot = self.geo["U_bot"], self.geo["V_bot"]
+        U_top, V_top = self.geo.get("U_top", 0.0), self.geo.get("V_top", 0.0)
         eta, zeta = self.prop["shear"], self.prop["bulk"]
 
         X = self.X
-        tau_bot = stress_bottom(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s0
-        tau_top = stress_top(X[:3], X[3:6], U, V, eta, zeta, X[6]) + noise_s1
+        tau_bot = stress_bottom(X[:3], X[3:6], U_bot, V_bot, U_top, V_top, eta, zeta, 0.0, X[6]) + noise_s0
+        tau_top = stress_top(X[:3], X[3:6], U_bot, V_bot, U_top, V_top, eta, zeta, 0.0, X[6]) + noise_s1
         press = eos_pressure(X[0:1], self.prop) + noise_p
 
         Y = jnp.hstack([press, tau_bot, tau_top]).T

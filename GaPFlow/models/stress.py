@@ -346,8 +346,8 @@ class WallStress(GaussianProcessSurrogate):
             shear_rate = shear_rate_avg(self.dp_dx,
                                         self.dp_dy,
                                         self.height,
-                                        self.geo['U'],
-                                        self.geo['V'],
+                                        np.hypot(self.geo['U_bot'], self.geo['V_bot']),
+                                        np.hypot(self.geo['U_top'], self.geo['V_top']),
                                         mu0)
 
             shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
@@ -357,20 +357,24 @@ class WallStress(GaussianProcessSurrogate):
 
         s_bot = stress_bottom(self.solution,
                               self.height_and_slopes,
-                              self.geo['U'],
-                              self.geo['V'],
+                              self.geo['U_bot'],
+                              self.geo['V_bot'],
+                              self.geo['U_top'],
+                              self.geo['V_top'],
                               shear_viscosity,
                               self.prop['bulk'],
-                              self.extra  # e.g. slip length
+                              0.0, self.extra  # Ls_bot=0, Ls_top=extra
                               )
 
         s_top = stress_top(self.solution,
                            self.height_and_slopes,
-                           self.geo['U'],
-                           self.geo['V'],
+                           self.geo['U_bot'],
+                           self.geo['V_bot'],
+                           self.geo['U_top'],
+                           self.geo['V_top'],
                            shear_viscosity,
                            self.prop['bulk'],
-                           self.extra  # e.g. slip length
+                           0.0, self.extra  # Ls_bot=0, Ls_top=extra
                            )
 
         self.__field.pg[:3] = s_bot[:3] / 2.
@@ -401,22 +405,22 @@ class WallStress(GaussianProcessSurrogate):
 
         if self.name == 'xz':
             # tau_xz functions (x-direction wall stress)
-            def get_tau(rho, jx, jy, h, hx, U, V, Ls):
+            def get_tau(rho, jx, jy, h, hx, U_bot, V_bot, U_top, V_top, Ls):
                 eta = get_shear_viscosity(self)
                 q = jnp.array([rho, jx, jy])
                 h_arr = jnp.array([h, hx])
-                tau_top = stress_top_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
-                tau_bot = stress_bottom_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                tau_top = stress_top_xz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
+                tau_bot = stress_bottom_xz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
                 return tau_top - tau_bot
 
-            def get_tau_bot(rho, jx, jy, h, hx, U, V, Ls):
+            def get_tau_bot(rho, jx, jy, h, hx, U_bot, V_bot, U_top, V_top, Ls):
                 eta = get_shear_viscosity(self)
                 q = jnp.array([rho, jx, jy])
                 h_arr = jnp.array([h, hx])
-                return stress_bottom_xz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                return stress_bottom_xz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
 
-            # For xz: V is constant (index 6), gradient w.r.t. jx (index 1)
-            map_axes = (0, 0, 0, 0, 0, 0, None, 0)
+            # For xz: V_bot (idx 6) and V_top (idx 8) are constant, grad w.r.t. jx (idx 1)
+            map_axes = (0, 0, 0, 0, 0, 0, None, 0, None, 0)
             grad_j_idx = 1  # jx
 
             # Set attribute names for xz
@@ -429,22 +433,22 @@ class WallStress(GaussianProcessSurrogate):
 
         else:  # self.name == 'yz'
             # tau_yz functions (y-direction wall stress)
-            def get_tau(rho, jx, jy, h, hy, U, V, Ls):
+            def get_tau(rho, jx, jy, h, hy, U_bot, V_bot, U_top, V_top, Ls):
                 eta = get_shear_viscosity(self)
                 q = jnp.array([rho, jx, jy])
                 h_arr = jnp.array([h, hy])
-                tau_top = stress_top_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
-                tau_bot = stress_bottom_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                tau_top = stress_top_yz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
+                tau_bot = stress_bottom_yz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
                 return tau_top - tau_bot
 
-            def get_tau_bot(rho, jx, jy, h, hy, U, V, Ls):
+            def get_tau_bot(rho, jx, jy, h, hy, U_bot, V_bot, U_top, V_top, Ls):
                 eta = get_shear_viscosity(self)
                 q = jnp.array([rho, jx, jy])
                 h_arr = jnp.array([h, hy])
-                return stress_bottom_yz(q, h_arr, U, V, eta, self.prop['bulk'], Ls)
+                return stress_bottom_yz(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
 
-            # For yz: U is constant (index 5), gradient w.r.t. jy (index 2)
-            map_axes = (0, 0, 0, 0, 0, None, 0, 0)
+            # For yz: U_bot (idx 5) and U_top (idx 7) are constant, grad w.r.t. jy (idx 2)
+            map_axes = (0, 0, 0, 0, 0, None, 0, None, 0, 0)
             grad_j_idx = 2  # jy
 
             # Set attribute names for yz
@@ -543,8 +547,8 @@ class BulkStress(GaussianProcessSurrogate):
             shear_rate = shear_rate_avg(self.dp_dx,
                                         self.dp_dy,
                                         self.height,
-                                        self.geo['U'],
-                                        self.geo['V'],
+                                        np.hypot(self.geo['U_bot'], self.geo['V_bot']),
+                                        np.hypot(self.geo['U_top'], self.geo['V_top']),
                                         mu0)
 
             shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,
@@ -554,11 +558,13 @@ class BulkStress(GaussianProcessSurrogate):
 
         self.__field.pg[:] = stress_avg(self.solution,
                                         self.height_and_slopes,
-                                        self.geo['U'],
-                                        self.geo['V'],
+                                        self.geo['U_bot'],
+                                        self.geo['V_bot'],
+                                        self.geo['U_top'],
+                                        self.geo['V_top'],
                                         shear_viscosity,
                                         self.prop['bulk'],
-                                        self.extra)
+                                        0.0, self.extra)
 
 
 class Pressure(GaussianProcessSurrogate):
@@ -757,8 +763,10 @@ class Viscosity():
                dp_dx: NDArray,
                dp_dy: NDArray,
                height: NDArray,
-               U: float,
-               V: float) -> None:
+               U_bot: float,
+               V_bot: float,
+               U_top: float = 0.0,
+               V_top: float = 0.0) -> None:
         """Update shear viscosity field using piezoviscosity and shear-thinning."""
         # piezoviscosity
         if 'piezo' in self.prop.keys():
@@ -773,8 +781,8 @@ class Viscosity():
             shear_rate = shear_rate_avg(dp_dx,
                                         dp_dy,
                                         height,
-                                        U,
-                                        V,
+                                        np.hypot(U_bot, V_bot),
+                                        np.hypot(U_top, V_top),
                                         mu0)
 
             shear_viscosity = mu0 * shear_thinning_factor(shear_rate, mu0,

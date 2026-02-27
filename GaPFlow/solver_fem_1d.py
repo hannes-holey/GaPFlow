@@ -144,7 +144,7 @@ class FEMSolver1D:
         nodal_fields = {'p', 'h', 'dh_dx', 'dh_dy', 'eta'}
 
         # Constants (broadcast)
-        constant_fields = {'U', 'V', 'Ls'}
+        constant_fields = {'U_bot', 'V_bot', 'U_top', 'V_top', 'Ls'}
 
         # Computed fields (pressure gradient)
         pressure_computed = {'dp_drho'}
@@ -218,7 +218,7 @@ class FEMSolver1D:
                 # Topography
                 'h': lambda nbq=nbq: self.get_quad('h', nbq),
                 'dh_dx': lambda nbq=nbq: self.get_quad('dh_dx', nbq),
-                'U': lambda nbq=nbq: self.get_quad('U', nbq),
+                'U_bot': lambda nbq=nbq: self.get_quad('U_bot', nbq),
 
                 # Previous timestep
                 'rho_prev': lambda nbq=nbq: self.get_quad('rho_prev', nbq),
@@ -272,7 +272,9 @@ class FEMSolver1D:
         # Need pressure gradient for shear-thinning
         dp_dx = np.gradient(p.pressure.pressure, p.grid['dx'], axis=0)
         dp_dy = np.gradient(p.pressure.pressure, p.grid['dy'], axis=1)
-        p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy, p.topo.h, p.geo['U'], p.geo['V'])
+        p.viscosity.update(p.pressure.pressure, dp_dx, dp_dy, p.topo.h,
+                           p.geo['U_bot'], p.geo['V_bot'],
+                           p.geo['U_top'], p.geo['V_top'])
 
         # Energy temperature
         if self.energy:
@@ -304,8 +306,10 @@ class FEMSolver1D:
         # Constants
         Ls = p.prop.get('slip_length', 0.0)
         constants = {
-            'U': p.geo['U'],
-            'V': p.geo['V'],
+            'U_bot': p.geo['U_bot'],
+            'V_bot': p.geo['V_bot'],
+            'U_top': p.geo['U_top'],
+            'V_top': p.geo['V_top'],
             'Ls': Ls,
         }
 
@@ -335,9 +339,9 @@ class FEMSolver1D:
                 self.quad_fields[('dp_drho', nb_quad)].p[:] = p.pressure.dp_drho(q('rho'))
 
             # Wall stress xz
-            # Args: rho, jx, jy, h, hx, U, V, Ls
+            # Args: rho, jx, jy, h, hx, U_bot, V_bot, U_top, V_top, Ls
             args_xz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dx'),
-                       q('U'), q('V'), q('Ls'))
+                       q('U_bot'), q('V_bot'), q('U_top'), q('V_top'), q('Ls'))
 
             if ('tau_xz', nb_quad) in self.quad_fields:
                 self.quad_fields[('tau_xz', nb_quad)].p[:] = p.wall_stress_xz.tau_xz(*args_xz)
@@ -352,10 +356,10 @@ class FEMSolver1D:
             if ('dtau_xz_bot_djx', nb_quad) in self.quad_fields:
                 self.quad_fields[('dtau_xz_bot_djx', nb_quad)].p[:] = p.wall_stress_xz.dtau_xz_bot_djx(*args_xz)
 
-            # Wall stress yz (uses dh_dy instead of dh_dx, and U is constant instead of V)
-            # Args: rho, jx, jy, h, hy, U, V, Ls
+            # Wall stress yz (uses dh_dy instead of dh_dx)
+            # Args: rho, jx, jy, h, hy, U_bot, V_bot, U_top, V_top, Ls
             args_yz = (q('rho'), q('jx'), q('jy'), q('h'), q('dh_dy'),
-                       q('U'), q('V'), q('Ls'))
+                       q('U_bot'), q('V_bot'), q('U_top'), q('V_top'), q('Ls'))
 
             if ('tau_yz', nb_quad) in self.quad_fields:
                 self.quad_fields[('tau_yz', nb_quad)].p[:] = p.wall_stress_yz.tau_yz(*args_yz)
@@ -388,7 +392,8 @@ class FEMSolver1D:
 
                 # Wall heat flux (constants captured in closure, only arrays passed)
                 args_S = (q('h'), q('eta'), q('rho'), q('E'), q('jx'), q('jy'),
-                          q('U'), q('V'), q('Tb_top'), q('Tb_bot'))
+                          q('U_bot'), q('V_bot'), q('Tb_top'), q('Tb_bot'))
+                # TODO: heatflux expressions need re-derivation for U_top, V_top
 
                 if ('S', nb_quad) in self.quad_fields:
                     self.quad_fields[('S', nb_quad)].p[:] = p.energy.q_wall_sum(*args_S)

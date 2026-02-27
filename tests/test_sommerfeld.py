@@ -124,7 +124,7 @@ def test_pressure_profile(setup, eps):
     p_num = problem.pressure.pressure[1:-1, 1]
 
     Lx = problem.grid['Lx']
-    U = problem.pressure.geo['U']
+    U = problem.pressure.geo['U_bot']
     CR = problem.pressure.geo['CR']
     mu = problem.pressure.prop['shear']
 

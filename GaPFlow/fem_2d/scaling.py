@@ -212,8 +212,8 @@ def _get_characteristic_velocity(problem: "Problem") -> float:
     float
         Characteristic velocity scale (always positive).
     """
-    # Wall velocity only (backward compatible)
-    u_wall_max = max(abs(problem.geo['U']), abs(problem.geo['V']))
+    u_wall_max = max(abs(problem.geo['U_bot']), abs(problem.geo['V_bot']),
+                     abs(problem.geo['U_top']), abs(problem.geo['V_top']))
 
     # Use wall velocity with a small floor to avoid division by zero
     return max(u_wall_max, 1e-10)
