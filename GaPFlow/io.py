@@ -119,7 +119,8 @@ def read_yaml_input(file):
                             'db': sanitize_db,
                             'md': sanitize_md,
                             'fem_solver': sanitize_fem_solver,
-                            'energy_spec': sanitize_energy
+                            'energy_spec': sanitize_energy,
+                            'force_balance': sanitize_force_balance
                             }
 
     sanitized_dict = {}
@@ -249,7 +250,7 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d']
+    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d', 'from_file']
     out = {}
 
     # Bottom wall velocities (backward compat: 'U'/'V' → 'U_bot'/'V_bot')
@@ -294,6 +295,8 @@ def sanitize_geometry(d):
     elif out['type'] == 'parabolic_2d':
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
+    elif out['type'] == 'from_file':
+        out['filepath'] = str(d.get('filepath'))
 
     print_dict(out)
 
@@ -541,6 +544,40 @@ def sanitize_fem_solver(d):
     out['equations'] = {}
     out['equations']['energy'] = out['physics']['energy']
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
+
+    print_dict(out)
+
+    return out
+
+
+def sanitize_force_balance(d):
+
+    out = {}
+
+    has_force = 'force' in d
+    has_pressure = 'pressure' in d
+
+    if has_force and has_pressure:
+        warnings.warn("Both 'force' and 'pressure' specified in force_balance. "
+                       "Using 'pressure'.")
+        out['pressure'] = float(d['pressure'])
+    elif has_pressure:
+        out['pressure'] = float(d['pressure'])
+    elif has_force:
+        out['force'] = float(d['force'])
+    else:
+        raise IOError("Need to specify either 'force' or 'pressure' in force_balance.")
+
+
+    idc = d.get('init_dry_contact', None)
+    if idc is not None and idc is not False:
+        out['init_dry_contact'] = {'enabled': True}
+        if isinstance(idc, dict):
+            out['init_dry_contact']['domain_inlet'] = float(idc.get('domain_inlet', 4.5))
+            out['init_dry_contact']['domain_outlet'] = float(idc.get('domain_outlet', 1.5))
+            out['init_dry_contact']['domain_sides'] = float(idc.get('domain_sides', 3.0))
+    else:
+        out['init_dry_contact'] = {'enabled': False}
 
     print_dict(out)
 

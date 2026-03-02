@@ -25,6 +25,7 @@
 import os
 import io
 import signal
+import sys
 import numpy as np
 from collections import deque
 from datetime import datetime
@@ -84,7 +85,8 @@ class Problem:
                  energy_spec: dict,
                  gp: dict | None = None,
                  database: Database | None = None,
-                 extra_field: npt.NDArray | None = None
+                 extra_field: npt.NDArray | None = None,
+                 force_balance: dict | None = None
                  ) -> None:
         """Constructor.
 
@@ -100,6 +102,10 @@ class Problem:
             Material properties.
         geo : dict
             Geometry settings.
+        fem_solver : dict
+            FEM solver settings.
+        energy_spec : dict
+            Energy equation settings.
         gp : dict or None
             Parameters controlling the GP surrogate models.
         database : GaPFlow.db.Database or None
@@ -107,6 +113,9 @@ class Problem:
         extra_field: numpy.ndarray or None
             An additional field, whose entries can be used as GP features
             (besides the solution itself and the topography).
+        force_balance : dict or None
+            Force balance / load control settings. Contains 'force', 'pressure',
+            and 'init_dry_contact' sub-dict.
         """
 
         if database is not None:
@@ -121,6 +130,7 @@ class Problem:
         self.prop = prop
         self.fem_solver = fem_solver
         self.energy_spec = energy_spec
+        self.force_balance = force_balance
 
         # Callback functions called after each time step
         self._callbacks = []
@@ -282,7 +292,8 @@ class Problem:
 
         return {'gp': gp,
                 'database': database,
-                'extra_field': None}
+                'extra_field': None,
+                'force_balance': input_dict.get('force_balance', None)}
 
     @classmethod
     def from_yaml(cls: Type[Self], fname: str) -> Self:
@@ -301,9 +312,10 @@ class Problem:
         """
         print(f"Reading input file: {fname}")
         with open(fname, "r") as ymlfile:
+            yaml_dir = os.path.dirname(os.path.abspath(fname))
             input_dict = read_yaml_input(ymlfile)
 
-        return cls._from_dict(input_dict)
+        return cls._from_dict(input_dict, dir=yaml_dir)
 
     @classmethod
     def from_string(cls: Type[Self], ymlstring: str) -> Self:
@@ -323,23 +335,35 @@ class Problem:
         with io.StringIO(ymlstring) as ymlfile:
             input_dict = read_yaml_input(ymlfile)
 
-        return cls._from_dict(input_dict)
+        return cls._from_dict(input_dict, dir=os.getcwd())
 
     @classmethod
-    def _from_dict(cls: Type[Self], input_dict: dict) -> Self:
+    def _from_dict(cls: Type[Self], input_dict: dict, dir: str) -> Self:
         """
         Create a Problem instance from a sanitized input dictionary.
 
         Parameters
         ----------
         input_dict : dict
-            Sanitized input dictionary
+            Sanitized input dictionary.
+        dir : str
+            Directory of the input YAML file or cwd, used for resolving relative paths.
 
         Returns
         -------
         Problem
             Instantiated `Problem` object.
         """
+
+        # If geometry type is from_file, set basepath to dir of YAML/cwd
+        if input_dict['geometry']['type'] == 'from_file':
+            input_dict['geometry']['basepath'] = dir
+
+        # Init with dry contact done before main because input dicts changes
+        if input_dict['force_balance']['init_dry_contact']['enabled']:
+            from .models.dry_contact import init_dry_contact
+            input_dict = init_dry_contact(input_dict, dir)
+
         return cls(*cls._get_mandatory_input(input_dict),
                    **cls._get_optional_input(input_dict))
 

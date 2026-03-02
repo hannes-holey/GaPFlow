@@ -22,6 +22,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import os
+
 import numpy as np
 import copy
 from muGrid import Field
@@ -174,15 +176,6 @@ def parabolic_2d(xx, yy, grid, geo):
         Grid parameters with keys 'Lx', 'Ly'.
     geo : dict
         Geometry parameters with keys 'hmin', 'hmax'.
-
-    Returns
-    -------
-    h : NDArray
-        Height field [m].
-    dh_dx : NDArray
-        Height gradient in x-direction [1].
-    dh_dy : NDArray
-        Height gradient in y-direction [1].
     """
     Lx = grid['Lx']
     Ly = grid['Ly']
@@ -199,6 +192,33 @@ def parabolic_2d(xx, yy, grid, geo):
     dh_dx = 2 * (hmax - hmin) * (xx - x_c) / r_max_sq
     dh_dy = 2 * (hmax - hmin) * (yy - y_c) / r_max_sq
 
+    return h, dh_dx, dh_dy
+
+def circular_contact(xx, yy, grid, geo):
+    """Circular contact topography.
+
+    Creates a circular contact area with specified radius and height.
+
+    Parameters
+    ----------
+    xx : NDArray
+        X-coordinate grid.
+    yy : NDArray
+        Y-coordinate grid.
+    grid : dict
+        Grid parameters with keys 'Lx', 'Ly'.
+    geo : dict
+        Geometry parameters with keys 'Rx', 'Ry', 'h_min'.
+    """
+    Lx = grid['Lx']
+    Ly = grid['Ly']
+    Rx = geo['Rx']
+    Ry = geo['Ry']
+    hmin = geo['hmin']
+
+    h = (xx-Lx/2)**2 / (2 * Rx) + (yy-Ly/2)**2 / (2 * Ry) + hmin
+    dh_dx = (xx - Lx/2) / Rx
+    dh_dy = (yy - Ly/2) / Ry
     return h, dh_dx, dh_dy
 
 
@@ -237,7 +257,76 @@ class Topography:
         self.dx = grid['dx']
         self.dy = grid['dy']
 
+        self.init_elastic(prop, grid, decomp, fc)
+
         xx, yy = decomp.xx, decomp.yy
+        
+        # From file reads global array while other types compute local array
+        # compute_topography is used externally - needs to be able to handle both
+        if geo['type'] == 'from_file':
+            h, _, _ = self.compute_topography(xx, grid, geo, yy)
+            self.set_global_height(h)  # scatter, padding and gradients
+        else:
+            h, dh_dx, dh_dy = self.compute_topography(xx, grid, geo, yy)
+            self.__field.pg[0] = h  # do not use h setter, we have analytic gradients
+            self.__field.pg[1] = dh_dx
+            self.__field.pg[2] = dh_dy
+            self.__field.pg[3] = np.zeros_like(h)
+            self.h_undeformed = h
+
+        self.check_flip(geo)
+
+    def check_flip(self, geo):
+
+        if geo['flip']:
+            h_ = np.copy(self.h.T)
+            self.h = h_  # setting h triggers gradient update
+
+    def init_elastic(self, prop, grid, decomp, fc):
+
+        self.__field.pg[3] = 0.
+
+        if prop['elastic']['enabled']:
+            self.elastic = True
+            self.__pressure = Field(fc.get_real_field('pressure'))
+
+            self.ElasticDeformation = ElasticDeformation(
+                E=prop['elastic']['E'],
+                v=prop['elastic']['v'],
+                alpha_underrelax=prop['elastic']['alpha_underrelax'],
+                grid=grid,
+                n_images=prop['elastic']['n_images'],
+                decomp=decomp
+            )
+            self._ref_point = self._parse_reference_point(
+                prop['elastic']['reference_point'], grid)
+        else:
+            self.elastic = False
+
+    @staticmethod
+    def compute_topography(xx, grid, geo, yy=None):
+        """Predefined topography functions. Also externally used by dry_contact.
+
+        Parameters
+        ----------
+        xx : NDArray
+            coordinate grid in x
+        grid : dict
+            Grid parameters with keys 'Lx', 'Ly'.
+        geo : dict
+            Geometry parameters with keys 'hmin', 'hmax'.
+        yy : NDArray, optional
+            coordinate grid in y, by default None
+
+        Returns
+        -------
+        h : NDArray
+            Height field [m].
+        dh_dx : NDArray
+            Height gradient in x-direction.
+        dh_dy : NDArray
+            Height gradient in y-direction.
+        """
 
         # 1D profiles
         if geo['type'] == 'journal':
@@ -254,42 +343,15 @@ class Topography:
             h, dh_dx, dh_dy = asperity(xx, yy, grid, geo)
         elif geo['type'] == 'parabolic_2d':
             h, dh_dx, dh_dy = parabolic_2d(xx, yy, grid, geo)
+        
+        # From file
+        elif geo['type'] == 'from_file':
+            base_path = geo['basepath']
+            file_path = geo['filepath']
+            h = np.load(os.path.join(base_path, file_path))
+            dh_dx, dh_dy = None, None
 
-        ix = 1
-        iy = 2
-        if geo['flip']:
-            h = h.T
-            dh_dx = dh_dx.T
-            dh_dy = dh_dy.T
-            ix = 2
-            iy = 1
-
-        # elastic deformation
-        if prop['elastic']['enabled']:
-            self.elastic = True
-            self.h_undeformed = h.copy()
-            self.__pressure = Field(fc.get_real_field('pressure'))
-
-            self.ElasticDeformation = ElasticDeformation(
-                E=prop['elastic']['E'],
-                v=prop['elastic']['v'],
-                alpha_underrelax=prop['elastic']['alpha_underrelax'],
-                grid=grid,
-                n_images=prop['elastic']['n_images'],
-                decomp=decomp
-            )
-        else:
-            self.elastic = False
-
-        # Parse reference point for elastic deformation
-        if self.elastic:
-            self._ref_point = self._parse_reference_point(
-                prop['elastic']['reference_point'], grid)
-
-        self.__field.pg[0] = h
-        self.__field.pg[ix] = dh_dx
-        self.__field.pg[iy] = dh_dy
-        self.__field.pg[3] = np.zeros_like(h)  # inital deformation set to zero
+        return h, dh_dx, dh_dy
 
     def update(self) -> None:
         """Updates the topography field in case of enabled elastic deformation.
