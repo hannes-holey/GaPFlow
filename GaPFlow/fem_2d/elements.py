@@ -42,19 +42,19 @@ class TriangleQuadrature:
     # 3-point Gauss quadrature (barycentric coords on reference triangle).
     # Row q = weights for [node0, node1, node2] at quadrature point q.
     BARY_COORDS = np.array([
-        [2/3, 1/6, 1/6],
-        [1/6, 2/3, 1/6],
-        [1/6, 1/6, 2/3],
+        [2 / 3, 1 / 6, 1 / 6],
+        [1 / 6, 2 / 3, 1 / 6],
+        [1 / 6, 1 / 6, 2 / 3],
     ])
-    WEIGHTS = np.array([1/6, 1/6, 1/6])
+    WEIGHTS = np.array([1 / 6, 1 / 6, 1 / 6])
 
     # 7-point stencil: self + 6 neighbors (cardinal + anti-diagonal).
     # Main-diagonal neighbors (-1,-1) and (1,1) are NOT connected.
     STENCIL_OFFSETS = [
-        ( 0,  0),           # self
-        (-1,  0), (1, 0),   # horizontal
-        ( 0, -1), (0, 1),   # vertical
-        (-1,  1), (1, -1),  # anti-diagonal
+        (0, 0),           # self
+        (-1, 0), (1, 0),  # horizontal
+        (0, -1), (0, 1),  # vertical
+        (-1, 1), (1, -1),  # anti-diagonal
     ]
 
     # ================================================================
@@ -180,7 +180,7 @@ class TriangleQuadrature:
             for q in range(3):
                 for k in range(3):
                     c = self.TRI_PTS[t, k]
-                    kernel[0, t*3 + q, 0, c % 2, c // 2] = self.N[k, q]
+                    kernel[0, t * 3 + q, 0, c % 2, c // 2] = self.N[k, q]
         return GenericLinearOperator([0, 0], kernel)
 
     @cached_property

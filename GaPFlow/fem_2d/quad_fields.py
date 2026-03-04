@@ -188,12 +188,11 @@ class QuadFieldManager:
 
     def update_nodal_fields(self) -> None:
         """Update nodal fields from problem state.
-        
+
         - pressure
         - topography, deformation, and derivatives
         - pressure gradients and viscosity
         - temperature if energy is active
-        
         """
         p = self.problem
 
@@ -372,11 +371,13 @@ class QuadFieldManager:
         # Diffusive contribution: C_I * nu^2 * G:G
         if p.fem_solver['physics'].get('plane_shear', False):
             eta = q('eta')
-            nu = eta / rho
-            G_sq = inv_dx2**2 + inv_dy2**2  # G:G = 1/dx^4 + 1/dy^4
-            tau_sq = tau_sq + C_I * nu**2 * G_sq
+            _ = eta / rho
+            # G:G = 1/dx^4 + 1/dy^4
+            # G_sq = inv_dx2**2 + inv_dy2**2
+            # tau_sq = tau_sq + C_I * nu**2 * G_sq
 
         tau = 1.0 / np.sqrt(tau_sq)
+        tau = tau * C_I
 
         # Optional boundary damping: tau *= 1 - exp(-dist / decay)
         decay = p.fem_solver.get('pspg_boundary_decay', 0.0)
@@ -415,11 +416,14 @@ class QuadFieldManager:
 
         if p.fem_solver['physics'].get('plane_shear', False):
             eta = q('eta')
-            nu = eta / rho
-            G_sq = inv_dx2**2 + inv_dy2**2
-            tau_sq = tau_sq + C_I * nu**2 * G_sq
+            _ = eta / rho
+            # G_sq = inv_dx2**2 + inv_dy2**2
+            # tau_sq = tau_sq + C_I * nu**2 * G_sq
 
-        self.quad_fields['tau_gls'].pg[s] = 1.0 / np.sqrt(tau_sq)
+        tau = 1.0 / np.sqrt(tau_sq)
+        tau = tau * C_I
+
+        self.quad_fields['tau_gls'].pg[s] = tau
 
     def update_quad_computed(self) -> None:
         """Compute derived quantities at quadrature points.

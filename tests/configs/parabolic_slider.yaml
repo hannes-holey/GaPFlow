@@ -47,3 +47,4 @@ fem_solver:
     physics:
         pspg: true
         gls: true
+    pspg_C_I: 2.

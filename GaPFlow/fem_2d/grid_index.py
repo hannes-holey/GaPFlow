@@ -23,7 +23,7 @@
 #
 """Grid index management for FEM assembly.
 
-Handles index masks and boundary condition handling for triangular FEM 
+Handles index masks and boundary condition handling for triangular FEM
 on structured grids with domain decomposition support.
 """
 from functools import cached_property, lru_cache
@@ -236,4 +236,3 @@ class GridIndexManager:
             m[sx, sy + 1],     # tl
             m[sx + 1, sy + 1]  # tr
         ])
-

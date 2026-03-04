@@ -29,7 +29,7 @@ import copy
 import os
 
 from ContactMechanics.Systems import NonSmoothContactSystem
-from ContactMechanics import PeriodicFFTElasticHalfSpace
+from ContactMechanics import FreeFFTElasticHalfSpace
 from SurfaceTopography import Topography
 
 from ..topography import Topography as GaPFlowTopography
@@ -62,22 +62,39 @@ class DryContact:
     def main(self):
 
         xx, yy = self.get_initial_grid()
-        h = self.get_topography(xx, yy)
+        h = self.get_height(xx, yy)
         p, u = self.solve_contact(h)
         contact_bounds = self.get_bounding_box(p, xx, yy)
         domain_bounds = self.get_domain_bounds(contact_bounds)
-        h_new = self.update_input_dict(h, domain_bounds)
+        dict_new, h_new = self.update_input_dict(h, domain_bounds)
 
         debug_plot(p, u, contact_bounds, domain_bounds, self.grid, h, h_new)
 
-        return self.input_dict_new
+        return dict_new
 
     def update_input_dict(self, h, domain_bounds):
+        """Updates input dictionary (self.input_dict_new).
+        Saves new height field to file and changes geometry type to 'from_file'.
+        Updates grid size and spacing.
 
-        self.input_dict_new = copy.deepcopy(self.input_dict)
-        grid = self.input_dict_new['grid']
-        geo = self.input_dict_new['geometry']
+        Parameters
+        ----------
+        h : NDArray
+            Original height field.
+        domain_bounds : tuple
+            New domain bounds.
 
+        Returns
+        -------
+        input_dict_new : dict
+            Updated input dictionary.
+        """
+
+        dict_new = copy.deepcopy(self.input_dict)
+        grid = dict_new['grid']
+        geo = dict_new['geometry']
+
+        # Update grid size and spacing
         xmin, xmax, ymin, ymax = domain_bounds
         grid['Lx'] = xmax - xmin
         grid['Ly'] = ymax - ymin
@@ -98,8 +115,8 @@ class DryContact:
             grid['dy'] = grid['Ly'] / grid['Ny']
 
         else:
-            x = np.linspace(xmin + grid['dx']/2, xmax - grid['dx']/2, grid['Nx'])
-            y = np.linspace(ymin + grid['dy']/2, ymax - grid['dy']/2, grid['Ny'])
+            x = np.linspace(xmin + grid['dx'] / 2, xmax - grid['dx'] / 2, grid['Nx'])
+            y = np.linspace(ymin + grid['dy'] / 2, ymax - grid['dy'] / 2, grid['Ny'])
             xx, yy = np.meshgrid(x, y, indexing='ij')
             # We need to use the original grid and geo here
             h_new, _, _ = GaPFlowTopography.compute_topography(xx, self.grid, self.geo, yy)
@@ -115,7 +132,7 @@ class DryContact:
         geo['basepath'] = self.dir
         geo['filepath'] = os.path.join(folder, filename)
 
-        return h_new
+        return dict_new, h_new
 
     def get_domain_bounds(self, contact_bounds):
 
@@ -149,23 +166,33 @@ class DryContact:
         return xmin, xmax, ymin, ymax
 
     def solve_contact(self, h):
-        
         Nx, Ny = self.grid['Nx'], self.grid['Ny']
         Lx, Ly = self.grid['Lx'], self.grid['Ly']
 
-        substrate = PeriodicFFTElasticHalfSpace(
+        substrate = FreeFFTElasticHalfSpace(
             (Nx, Ny),
             young=self.elastic['E'],
             physical_sizes=(Lx, Ly),
-            poisson=self.elastic['v']
+            # poisson=self.elastic['v']
         )
 
         # Invert height field for CM
         topography = Topography(-h, physical_sizes=(Lx, Ly))
         system = NonSmoothContactSystem(substrate, topography)
+        print(self.force)
         result = system.minimize_proxy(external_force=self.force)
-        p, u = result.jac, result.x
+
+        print("Result success:", result.success)
+
+        f, u = result.jac, result.x
+        p = f / (self.grid['dx'] * self.grid['dy'])
         print(f"Max contact pressure: {p.max():.5f}")
+
+        print("h min/max:", h.min(), h.max())
+        print("Force:", self.force)
+        print("Total force from solution:", f.sum())
+        print("Mean pressure:", f.sum() / (Lx * Ly))
+        print("Contact fraction:", (p > 0).mean())
 
         return p, u
 
@@ -196,10 +223,14 @@ class DryContact:
 
         return xx, yy
 
-    def get_topography(self, xx, yy):
+    def get_height(self, xx, yy):
         """Returns height field of inner domain.
         """
-        h, _, _ = GaPFlowTopography.compute_topography(xx, self.grid, self.geo, yy)
+        if self.geo['type'] == 'from_file':
+            h = GaPFlowTopography.height_from_file(self.geo)
+        else:
+            h, _, _ = GaPFlowTopography.compute_topography(xx, self.grid, self.geo, yy)
+
         return h
 
 

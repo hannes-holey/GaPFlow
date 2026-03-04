@@ -194,6 +194,7 @@ def parabolic_2d(xx, yy, grid, geo):
 
     return h, dh_dx, dh_dy
 
+
 def circular_contact(xx, yy, grid, geo):
     """Circular contact topography.
 
@@ -216,9 +217,9 @@ def circular_contact(xx, yy, grid, geo):
     Ry = geo['Ry']
     hmin = geo['hmin']
 
-    h = (xx-Lx/2)**2 / (2 * Rx) + (yy-Ly/2)**2 / (2 * Ry) + hmin
-    dh_dx = (xx - Lx/2) / Rx
-    dh_dy = (yy - Ly/2) / Ry
+    h = (xx - Lx / 2)**2 / (2 * Rx) + (yy - Ly / 2)**2 / (2 * Ry) + hmin
+    dh_dx = (xx - Lx / 2) / Rx
+    dh_dy = (yy - Ly / 2) / Ry
     return h, dh_dx, dh_dy
 
 
@@ -260,31 +261,47 @@ class Topography:
         self.init_elastic(prop, grid, decomp, fc)
 
         xx, yy = decomp.xx, decomp.yy
-        
-        # From file reads global array while other types compute local array
-        # compute_topography is used externally - needs to be able to handle both
+
         if geo['type'] == 'from_file':
-            h, _, _ = self.compute_topography(xx, grid, geo, yy)
+            h = self.height_from_file(geo)
             self.set_global_height(h)  # scatter, padding and gradients
         else:
             h, dh_dx, dh_dy = self.compute_topography(xx, grid, geo, yy)
-            self.__field.pg[0] = h  # do not use h setter, we have analytic gradients
-            self.__field.pg[1] = dh_dx
-            self.__field.pg[2] = dh_dy
-            self.__field.pg[3] = np.zeros_like(h)
-            self.h_undeformed = h
+            self.set_local_topography(h, dh_dx, dh_dy)
 
         self.check_flip(geo)
+
+    def set_local_topography(self, h, dh_dx, dh_dy):
+        """Sets local topography field.
+        """
+        self.__field.pg[0] = h
+        self.dh_dx = dh_dx
+        self.dh_dy = dh_dy
+        self.deformation = np.zeros_like(h)
+        self.h_undeformed = h
 
     def check_flip(self, geo):
 
         if geo['flip']:
-            h_ = np.copy(self.h.T)
-            self.h = h_  # setting h triggers gradient update
+            h = np.copy(self.h)
+            dh_dx = np.copy(self.dh_dx)
+            dh_dy = np.copy(self.dh_dy)
+            h = h.T
+            dh_dx = dh_dx.T
+            dh_dy = dh_dy.T
+            ix = 2
+            iy = 1
+
+            self.__field.pg[0] = h
+            self.__field.pg[ix] = dh_dx
+            self.__field.pg[iy] = dh_dy
 
     def init_elastic(self, prop, grid, decomp, fc):
+        """Initializes elastic deformation object and reference point.
+        Deformation field is initialized to 0.
+        """
 
-        self.__field.pg[3] = 0.
+        self.deformation = 0.
 
         if prop['elastic']['enabled']:
             self.elastic = True
@@ -343,18 +360,22 @@ class Topography:
             h, dh_dx, dh_dy = asperity(xx, yy, grid, geo)
         elif geo['type'] == 'parabolic_2d':
             h, dh_dx, dh_dy = parabolic_2d(xx, yy, grid, geo)
-        
-        # From file
-        elif geo['type'] == 'from_file':
-            base_path = geo['basepath']
-            file_path = geo['filepath']
-            h = np.load(os.path.join(base_path, file_path))
-            dh_dx, dh_dy = None, None
+        elif geo['type'] == 'circular_contact':
+            h, dh_dx, dh_dy = circular_contact(xx, yy, grid, geo)
 
         return h, dh_dx, dh_dy
 
+    @staticmethod
+    def height_from_file(geo):
+        base_path = geo['basepath']
+        file_path = geo['filepath']
+        h = np.load(os.path.join(base_path, file_path))
+        return h
+
     def update(self) -> None:
         """Updates the topography field in case of enabled elastic deformation.
+        For full periodicity, no reference needed (displacement sum is zero).
+        For half/no periodicity, displacement at reference point is kept to zero.
         """
         if self.elastic:
             if self.ElasticDeformation.periodicity in ['half', 'none']:
@@ -555,10 +576,18 @@ class Topography:
         """Height gradient field (∂h/∂x)"""
         return self.__field.pg[1]
 
+    @dh_dx.setter
+    def dh_dx(self, value: NDArray) -> None:
+        self.__field.pg[1] = value
+
     @property
     def dh_dy(self) -> NDArray:
         """Height gradient field (∂h/∂y)"""
         return self.__field.pg[2]
+
+    @dh_dy.setter
+    def dh_dy(self, value: NDArray) -> None:
+        self.__field.pg[2] = value
 
     # ---------------------------
     # Coordinate and shape properties (forwarded from decomp)

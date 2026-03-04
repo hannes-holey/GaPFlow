@@ -25,7 +25,6 @@
 import os
 import io
 import signal
-import sys
 import numpy as np
 from collections import deque
 from datetime import datetime
@@ -338,7 +337,7 @@ class Problem:
         return cls._from_dict(input_dict, dir=os.getcwd())
 
     @classmethod
-    def _from_dict(cls: Type[Self], input_dict: dict, dir: str) -> Self:
+    def _from_dict(cls: Type[Self], input_dict: dict, dir: str = os.getcwd()) -> Self:
         """
         Create a Problem instance from a sanitized input dictionary.
 
@@ -360,7 +359,10 @@ class Problem:
             input_dict['geometry']['basepath'] = dir
 
         # Init with dry contact done before main because input dicts changes
-        if input_dict['force_balance']['init_dry_contact']['enabled']:
+        force_balance = input_dict.get('force_balance') or {}
+        init_dry_contact = force_balance.get('init_dry_contact') or {}
+
+        if init_dry_contact.get('enabled'):
             from .models.dry_contact import init_dry_contact
             input_dict = init_dry_contact(input_dict, dir)
 
@@ -729,7 +731,7 @@ class Problem:
         return gpx, gpy, gpz
 
     def _initialize(self, rho0: float, U_bot: float, V_bot: float,
-                     U_top: float = 0.0, V_top: float = 0.0) -> None:
+                    U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
         """

@@ -200,7 +200,7 @@ class FEMSolver2D:
             return
 
         res_deriv = self.get_res_deriv_vals(term, dep_var)  # (6, sq_per_row, sq_per_col)
-        res_vals = res_deriv.ravel()[template.flat_field_idx] # (nb_sq * 54) = (3 * 3 * np_quad)
+        res_vals = res_deriv.ravel()[template.flat_field_idx]  # (nb_sq * 54) = (3 * 3 * np_quad)
 
         # Compute actual COO indices from template + block offset
         actual_coo_idx = template.template_coo_idx + ref.block_offset

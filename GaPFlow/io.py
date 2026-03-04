@@ -250,7 +250,8 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d', 'from_file']
+    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d',
+                 'circular_contact', 'from_file']
     out = {}
 
     # Bottom wall velocities (backward compat: 'U'/'V' → 'U_bot'/'V_bot')
@@ -259,7 +260,7 @@ def sanitize_geometry(d):
     if 'V_bot' in d and 'V' in d:
         warnings.warn("Both 'V' and 'V_bot' specified in geometry. Using 'V_bot'.")
 
-    out['U_bot'] = float(d.get('U_bot', d.get('U', 1.)))
+    out['U_bot'] = float(d.get('U_bot', d.get('U', 0.)))
     out['V_bot'] = float(d.get('V_bot', d.get('V', 0.)))
     out['U_top'] = float(d.get('U_top', 0.))
     out['V_top'] = float(d.get('V_top', 0.))
@@ -295,6 +296,10 @@ def sanitize_geometry(d):
     elif out['type'] == 'parabolic_2d':
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
+    elif out['type'] == 'circular_contact':
+        out['Rx'] = float(d.get('Rx'))
+        out['Ry'] = float(d.get('Ry'))
+        out['hmin'] = float(d.get('hmin'))
     elif out['type'] == 'from_file':
         out['filepath'] = str(d.get('filepath'))
 
@@ -559,7 +564,7 @@ def sanitize_force_balance(d):
 
     if has_force and has_pressure:
         warnings.warn("Both 'force' and 'pressure' specified in force_balance. "
-                       "Using 'pressure'.")
+                      "Using 'pressure'.")
         out['pressure'] = float(d['pressure'])
     elif has_pressure:
         out['pressure'] = float(d['pressure'])
@@ -567,7 +572,6 @@ def sanitize_force_balance(d):
         out['force'] = float(d['force'])
     else:
         raise IOError("Need to specify either 'force' or 'pressure' in force_balance.")
-
 
     idc = d.get('init_dry_contact', None)
     if idc is not None and idc is not False:
