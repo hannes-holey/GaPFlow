@@ -107,7 +107,8 @@ class QuadFieldManager:
         # ---- P2 nodal fields ----
         fc_P2 = self.decomp.fc_P2
         for name in NODAL_P2:
-            self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
+            if name in self.variables:
+                self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
 
         # ---- Quadrature fields ----
         nb_quad_sq = self.elements.n_tri * self.elements.Quadrature.nb_points
@@ -212,10 +213,13 @@ class QuadFieldManager:
         """Sync FEM-owned nodal fields back to problem.q."""
         p = self.problem
         p.q[0] = self.nf('rho')
-        p.q[1] = self.nf('jx')[::2, ::2]
-        p.q[2] = self.nf('jy')[::2, ::2]
+        base_slots = len(self.variables) - len(self.add_fields)
+        if 'jx' in self.variables:
+            p.q[1] = self.nf('jx')[::2, ::2]
+        if 'jy' in self.variables:
+            p.q[2] = self.nf('jy')[::2, ::2]
         for i, name in enumerate(self.add_fields):
-            p.q[3 + i] = self.nf(name)
+            p.q[base_slots + i] = self.nf(name)
 
     def sync_from_problem_q(self) -> None:
         """Initial state copy of problem.q to FEM-owned nodal fields."""
@@ -229,15 +233,19 @@ class QuadFieldManager:
         self.nf('p')[:] = self._call_computed('p_from_rho', self.nf)
         self.problem.pressure.pressure[:] = self.nf('p')
 
+        base_slots = len(self.variables) - len(self.add_fields)
         for i, name in enumerate(self.add_fields):
-            self.nf(name)[:] = p.q[3 + i]
+            self.nf(name)[:] = p.q[base_slots + i]
 
         # P2 fields
-        Nx_p, Ny_p = self.decomp.local_shape_padded
-        Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
-        zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
-        self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
-        self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
+        if 'jx' in self.variables or 'jy' in self.variables:
+            Nx_p, Ny_p = self.decomp.local_shape_padded
+            Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
+            zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
+            if 'jx' in self.variables:
+                self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
+            if 'jy' in self.variables:
+                self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
 
     # =========================================================================
     # Field updates  (called once per Newton step)
@@ -302,9 +310,11 @@ class QuadFieldManager:
         for name in self.nodal_field_keys | set(self.variables):
             self.interpolate_nodal_to_quad(name)
 
-        # Compute 'dh_dx'/'dh_dy' quad values directly from nodal 'h'
-        self.quad_fields['dh_dx'].pg[s] = self._deriv_pg('h', 'x')
-        self.quad_fields['dh_dy'].pg[s] = self._deriv_pg('h', 'y')
+        # Compute 'dh_dx'/'dh_dy' quad values directly from nodal 'h', if needed
+        if 'dh_dx' in self.quad_fields:
+            self.quad_fields['dh_dx'].pg[s] = self._deriv_pg('h', 'x')
+        if 'dh_dy' in self.quad_fields:
+            self.quad_fields['dh_dy'].pg[s] = self._deriv_pg('h', 'y')
 
         # Special case for: rho_quad <- p_quad: we need an initial guess for rho_quad
         self.interpolate_nodal_to_quad('rho')

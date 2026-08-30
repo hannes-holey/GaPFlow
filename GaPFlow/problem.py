@@ -425,13 +425,19 @@ class Problem:
 
     @property
     def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar), globally reduced across MPI ranks."""
+        """Total kinetic energy (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_ekin = np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
         return self.decomp._mpi_comm.allreduce(local_ekin, op=MPI.SUM)
 
     @property
     def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar), globally reduced across MPI ranks."""
+        """Maximum speed in the domain (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_vmax = np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
         return self.decomp._mpi_comm.allreduce(local_vmax, op=MPI.MAX)
 
@@ -803,10 +809,12 @@ class Problem:
                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
+        No jx/jy rows if the solution field has no jx/jy DOFs (e.g. Reynolds mode).
         """
         self.__field.pg[0] = rho0
-        self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
-        self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
+        if self.solver.nb_sol >= 3:
+            self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
+            self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
 
         self.kinetic_energy_old = self.kinetic_energy
 

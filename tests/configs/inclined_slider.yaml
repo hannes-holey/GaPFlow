@@ -1,13 +1,14 @@
 options:
     output: /tmp/inclined_slider_{solver}
-    write_freq: 1000
+    write_freq: 1
     save_output: False
+    print_config: False
 
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 100
-    Ny: {Ny}
+    Nx: 300
+    Ny: 1
     xE: ['D', 'N', 'N']
     xW: ['D', 'N', 'N']
     yS: ['P', 'P', 'P']
@@ -24,11 +25,8 @@ geometry:
 
 numerics:
     solver: {solver}
-    dt: {dt}
+    dt: 1.0
     tol: 1e-08
-    max_it: {max_it}
-    adaptive: {adaptive}
-    CFL: {CFL}
 
 properties:
     EOS: PL
@@ -39,9 +37,4 @@ properties:
     alpha: 0.
 
 fem_solver:
-    R_norm_tol: 1e-10
-    physics:
-        pspg: false
-        gls: false
-    pspg_C_I: 2.
-    pspg_boundary_decay: 2.0
+    alpha: 1.0

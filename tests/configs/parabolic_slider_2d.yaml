@@ -1,14 +1,14 @@
-# Parabolic slider bearing — solver comparison template
+# Parabolic slider bearing — genuinely 2D solver comparison template
 #
-# Geometry: parabolic gap, hmin=2.54e-5 m, hmax=5.08e-5 m, U=4.57 m/s
-# Dirichlet density BC at inlet/outlet, periodic in y (effectively 1D).
+# Geometry: parabolic gap (both x and y), hmin=2.54e-5 m, hmax=5.08e-5 m, U=0.7 m/s
+# Dirichlet pressure BC on all four sides.
 #
 # Fluid: Dowson-Higginson EOS
 #   rho0 = 877.7 kg/m³  at  P0 = 101325 Pa
 #   shear = 0.039 Pa·s
 
 options:
-    output: /tmp/parabolic_slider_{solver}
+    output: /tmp/parabolic_slider_2d_{solver}
     write_freq: 1
     save_output: False
     output_plots: False
@@ -16,27 +16,29 @@ options:
 
 grid:
     Lx: 0.0762
-    Ly: 0.004
-    Nx: 100
-    Ny: 1
+    Ly: 0.0762
+    Nx: 150
+    Ny: 150
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
-    yS: ['P', 'P', 'P']
-    yN: ['P', 'P', 'P']
-    xW_D: {rho_bc}
-    xE_D: {rho_bc}
+    yS: ['D', 'N', 'N']
+    yN: ['D', 'N', 'N']
+    xW_P: 101325
+    xE_P: 101325
+    yS_P: 101325
+    yN_P: 101325
 
 geometry:
-    type: parabolic
+    type: parabolic_2d
     hmin: 2.54e-5
     hmax: 5.08e-5
-    U: 4.57
-    V: 0.
+    U: 0.7
+    V: 0.0
 
 numerics:
     solver: {solver}
     dt: 1.0
-    tol: 1e-13
+    tol: 1e-14
 
 properties:
     EOS: DH
@@ -49,3 +51,5 @@ properties:
 
 fem_solver:
     alpha: 1.0
+    max_iter: 1
+    linear_solver: direct

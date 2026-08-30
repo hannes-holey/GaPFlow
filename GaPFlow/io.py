@@ -50,8 +50,11 @@ def print_header(s, n=60, f0='*', f1=' '):
     print(w * f0)
 
 
+_print_config = True
+
+
 def print_dict(d):
-    if MPI.COMM_WORLD.Get_rank() != 0:
+    if MPI.COMM_WORLD.Get_rank() != 0 or not _print_config:
         return
     for k, v in d.items():
         if not isinstance(v, dict):
@@ -120,10 +123,15 @@ def history_to_csv(fname, out):
 
 def read_yaml_input(file):
 
+    global _print_config
+
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    if rank == 0:
+    raw_dict = yaml.full_load(file)
+    _print_config = bool(raw_dict.get('options', {}).get('print_config', True))
+
+    if rank == 0 and _print_config:
         print_header("PROBLEM SETUP")
 
     # TODO: check if complete
@@ -142,15 +150,13 @@ def read_yaml_input(file):
 
     sanitized_dict = {}
 
-    raw_dict = yaml.full_load(file)
-
     for key, func in sanitizing_functions.items():
-        if rank == 0:
+        if rank == 0 and _print_config:
             print(f'- {key}:')
         val = raw_dict.get(key)
         sanitized_dict[key] = func(val) if val is not None else None
 
-    if rank == 0:
+    if rank == 0 and _print_config:
         print_header("PROBLEM SETUP COMPLETED")
 
     return sanitized_dict
@@ -176,6 +182,8 @@ def sanitize_options(d):
         out['print_metrics'] = bool(d['output_metrics'])
     else:
         out['print_metrics'] = bool(d.get('print_metrics', False))
+
+    out['print_config'] = bool(d.get('print_config', True))
 
     out['output_plots'] = bool(d.get('output_plots', False))
 
@@ -426,15 +434,11 @@ def sanitize_properties(d):
     # Cavitation threshold (penalty solver); falls back to P0 if not specified
     out['p_cav'] = float(d.get('p_cav', out.get('P0', 0.0)))
 
-    # Viscosity field underrelaxation / AD control (independent of piezo/thinning model)
+    # Viscosity field underrelaxation
     out['viscosity'] = {}
     viscosity_d = d.get('viscosity', {})
     out['viscosity']['alpha_underrelax'] = float(viscosity_d.get('alpha_underrelax', 1.0))
     out['viscosity']['freeze_gradient'] = bool(viscosity_d.get('freeze_gradient', False))
-    # Only meaningful when freeze_gradient=False (freeze_gradient short-circuits
-    # before this is checked): use the underrelaxed eta as the tangential-stress
-    # value, but still inject alpha_underrelax * analytic deta/dp (from the live
-    # pressure) into the Newton tangent matrix.
     out['viscosity']['underrelax_gradient_value'] = bool(
         viscosity_d.get('underrelax_gradient_value', False))
 
@@ -659,6 +663,7 @@ def sanitize_fem_solver(d):
     out['equations']['energy'] = out['physics']['energy']
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
     out['equations']['cavitation'] = bool(d.get('equations', {}).get('cavitation', False))
+    out['equations']['reynolds'] = bool(d.get('equations', {}).get('reynolds', False))
 
     out['scaling_update_interval'] = int(d.get('scaling_update_interval', 100))
     out['scaling_ruiz_iter'] = int(d.get('scaling_ruiz_iter', 10))

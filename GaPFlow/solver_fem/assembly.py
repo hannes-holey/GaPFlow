@@ -95,7 +95,8 @@ class Assembly:
         self.res_to_grid = {s.name: s.grid for s in res_specs}
         self.var_spec = {s.name: s for s in var_specs}
         self.res_spec = {s.name: s for s in res_specs}
-        self.p_factor = sum(1 for s in var_specs if s.grid == 'P1')
+        self.p1_factor = sum(1 for s in var_specs if s.grid == 'P1')
+        self.p2_factor = sum(1 for s in var_specs if s.grid == 'P2')
 
         # Ordered list of all (res, var) block combinations
         # holds block-specific info: 'res_grid', 'var_grid', 'nnz_idx_start', 'nb_nnz'
@@ -259,8 +260,8 @@ class Assembly:
             inner_pts_global_idx = self.apply_l2g(rg, inner_pts)
             contrib_pts_global_idx = self.apply_l2g(vg, contrib_pts)
 
-            global_rows = field_to_global(inner_pts_global_idx, self.res_spec[res], self.grid_idx, self.p_factor)
-            global_cols = field_to_global(contrib_pts_global_idx, self.var_spec[var], self.grid_idx, self.p_factor)
+            global_rows = field_to_global(inner_pts_global_idx, self.res_spec[res], self.grid_idx, self.p1_factor, self.p2_factor)
+            global_cols = field_to_global(contrib_pts_global_idx, self.var_spec[var], self.grid_idx, self.p1_factor, self.p2_factor)
             self.nnz_global_rows = np.concatenate([self.nnz_global_rows, global_rows])
             self.nnz_global_cols = np.concatenate([self.nnz_global_cols, global_cols])
 
@@ -327,7 +328,7 @@ class Assembly:
                         else self.grid_idx.Nx_P1_inner * self.grid_idx.Ny_P1_inner)
 
             global_field_indices = self.apply_l2g(spec.grid, np.arange(nb_inner, dtype=np.int32))
-            rows.append(field_to_global(global_field_indices, spec, self.grid_idx, self.p_factor))
+            rows.append(field_to_global(global_field_indices, spec, self.grid_idx, self.p1_factor, self.p2_factor))
 
         self.rhs_global_rows: IntArray = np.concatenate(rows)
 
@@ -444,6 +445,8 @@ class Assembly:
         G3 = self._build_greens_function(elastic_deformation)
 
         for res in ('mass', 'momentum_x', 'momentum_y'):
+            if res not in self.residuals:
+                continue
             w, entries_per_quad = self._build_weighting_elastic(res, G3)
             self.elastic_templates[res] = AssemblyTemplate(
                 w=w,
