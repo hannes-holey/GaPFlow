@@ -226,6 +226,8 @@ def load_state(solver: "FEMSolver", path: str) -> None:
                 value = value.tolist()
             elif key == 'residual_buffer':
                 value = deque(value.tolist(), maxlen=100)
+            elif isinstance(value, np.ndarray) and value.ndim == 0:
+                value = value.item()
             obj, attr = _resolve_parent(solver, entry['source'])
             if obj is None:
                 continue

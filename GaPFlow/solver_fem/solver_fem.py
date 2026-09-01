@@ -23,7 +23,7 @@
 #
 
 # flake8: noqa: W503
-"""Taylor-Hood P2P1 FEM Solver.
+"""Taylor-Hood Q2Q1 FEM Solver.
 
 Wires GridIndexManager, QuadFieldManager, Assembly, and linear solver into a
 Newton iteration loop.
@@ -36,7 +36,7 @@ import numpy as np
 import numpy.typing as npt
 
 from ..parallel import MPI
-from .elements import TaylorHoodP2P1
+from .elements import TaylorHoodQ2Q1
 from .grid_index import GridIndexManager
 from .quad_fields import QuadFieldManager
 from .assembly import Assembly
@@ -60,7 +60,7 @@ NDArray = npt.NDArray[np.floating]
 
 
 class FEMSolver:
-    """FEM Solver for 2D Taylor-Hood P2P1 problems.
+    """FEM Solver for 2D Taylor-Hood Q2Q1 problems.
 
     Parameters
     ----------
@@ -80,7 +80,7 @@ class FEMSolver:
 
         self._build_variable_and_residual_lists()
 
-        self.elements = TaylorHoodP2P1(problem.grid['dx'], problem.grid['dy'])
+        self.elements = TaylorHoodQ2Q1(problem.grid['dx'], problem.grid['dy'])
         self.grid_idx = GridIndexManager(problem.decomp, self)
 
         self._get_active_terms()

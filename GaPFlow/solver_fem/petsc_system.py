@@ -43,7 +43,7 @@ NDArray = npt.NDArray[np.floating]
 
 
 class PETScSystem:
-    """PETSc-based sparse linear solver for the Taylor-Hood P2P1 FEM solver.
+    """PETSc-based sparse linear solver for the Taylor-Hood Q2Q1 FEM solver.
 
     Provides the same .assemble() / .solve() interface as ScipySystem.
     solve() returns a flat 1-D solution vector; the caller unpacks per-variable

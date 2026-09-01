@@ -31,8 +31,8 @@ import numpy.typing as npt
 from muGrid import Field
 from scipy.ndimage import zoom
 
-from .elements import TaylorHoodP2P1
-from .fieldspec import NODAL_P1, NODAL_P2, NODAL_Q1, QUAD_FIELD_REGISTRY, resolve_source, categorize_registry_fields
+from .elements import TaylorHoodQ2Q1
+from .fieldspec import NODAL_P1, NODAL_P2, QUAD_FIELD_REGISTRY, resolve_source, categorize_registry_fields
 from .terms import collect_required_fields
 
 
@@ -44,7 +44,7 @@ NDArray = npt.NDArray[np.floating]
 
 
 class QuadFieldManager:
-    """Manages nodal and quadrature fields for Taylor-Hood P2P1 assembly.
+    """Manages nodal and quadrature fields for Taylor-Hood Q2Q1 assembly.
 
     Parameters
     ----------
@@ -54,7 +54,7 @@ class QuadFieldManager:
         Whether the energy equation is active.
     variables : list of str
         Newton variables in order, e.g. ['jx', 'jy', 'rho'] or with 'E'.
-    elements : TaylorHoodP2P1
+    elements : TaylorHoodQ2Q1
         Element instance carrying P1 and P2 operators.
     decomp : DomainDecomposition
         Decomposition holding both coarse (_p) and fine (_P2) grid info.
@@ -65,7 +65,7 @@ class QuadFieldManager:
                  cavitation: bool,
                  variables: List[str],
                  add_fields: List[str],
-                 elements: TaylorHoodP2P1,
+                 elements: TaylorHoodQ2Q1,
                  decomp: "DomainDecomposition",
                  terms: list) -> None:
 
@@ -111,7 +111,7 @@ class QuadFieldManager:
                 self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
 
         # ---- Quadrature fields ----
-        nb_quad_sq = self.elements.n_tri * self.elements.Quadrature.nb_points
+        nb_quad_sq = self.elements.Quadrature.nb_points
         fc.set_nb_sub_pts('quad', nb_quad_sq)
 
         for name in self.quad_field_keys | set(self.variables):
@@ -155,10 +155,8 @@ class QuadFieldManager:
 
     def _element_for(self, name: str):
         if name in NODAL_P2:
-            return self.elements.P2
-        if name in NODAL_Q1:
-            return self.elements.Q1
-        return self.elements.P1
+            return self.elements.Q2
+        return self.elements.Q1
 
     def _deriv_pg(self, name: str, axis: str) -> NDArray:
         """Derivative of nodal field `name` along `axis` ('x' or 'y') at quad points.

@@ -24,7 +24,7 @@
 
 # flake8: noqa: W503
 
-"""Linear system scaling for Taylor-Hood P2P1 FEM solver conditioning."""
+"""Linear system scaling for Taylor-Hood Q2Q1 FEM solver conditioning."""
 
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, TYPE_CHECKING
@@ -149,7 +149,7 @@ def build_scaling(
 ) -> ScalingInfo:
     """Build scaling factors for linear system conditioning.
 
-    Works for Taylor-Hood P2P1 where different variables can have different
+    Works for Taylor-Hood Q2Q1 where different variables can have different
     numbers of inner points (nb_inner_P2 for jx/jy, nb_inner_p for rho/e).
     The assembly.var_block_idx and res_block_idx / rhs_res_block_idx arrays
     (added in Phase 7) provide the per-entry variable/residual indices.

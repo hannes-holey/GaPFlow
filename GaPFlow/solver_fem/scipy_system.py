@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""SciPy-based sparse linear solver for serial Taylor-Hood P2P1 execution."""
+"""SciPy-based sparse linear solver for serial Taylor-Hood Q2Q1 execution."""
 
 import numpy as np
 import numpy.typing as npt
