@@ -27,75 +27,46 @@
 from ..terms import Term
 
 __all__ = [
-    'R11x_supg_x1', 'R11x_supg_x2', 'R11x_supg_y1', 'R11x_supg_y2',
-    'R11y_supg_y1', 'R11y_supg_y2', 'R11y_supg_x1', 'R11y_supg_x2',
+    'R11x_supg_x1', 'R11x_supg_y1',
+    'R11y_supg_y1', 'R11y_supg_x1',
     'R11Sx_supg_x', 'R11Sy_supg_x', 'R11Sx_supg_y', 'R11Sy_supg_y',
     'R1T_cav_supg_x', 'R1T_cav_supg_y', 'R1Th_cav_supg_x', 'R1Th_cav_supg_y',
     'SUPG_TERMS', 'SUPG_SQUEEZE_TERMS',
 ]
 
 # -----------------------------------------------------------------------------
-# R11x_cav SUPG companions (split into two terms each -- see module docstring)
+# R11x_cav SUPG companions.
 #
-# Naming: <base>_supg_<dir><n>, where <dir> is the test-function integration
-# direction ('x' or 'y') and <n> in {1, 2} distinguishes the two strong-form
-# pieces of the same companion (product-rule split of d/d<dir>((1-theta)*j)).
+# Naming: <base>_supg_<dir>, where <dir> is the test-function integration
+# direction ('x' or 'y'). R11x_cav/R11y_cav carry no (1-theta) flux factor,
+# so their strong form is plain d/d<dir>(j) -- a single SUPG term each,
+# no product-rule split against theta needed.
 # -----------------------------------------------------------------------------
 
 R11x_supg_x1 = Term(
     name='R11x_supg_x1',
-    description='SUPG x: flux divergence x Elrod-Adams, strong-form piece (1-theta)*d_dx_jx',
+    description='SUPG x: flux divergence x, strong-form piece d_dx_jx',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=['f_x', 'd_dx_jx'],
-    fun=lambda ctx: lambda jx, theta: ctx['f_x']() * (1 - theta) * ctx['d_dx_jx'](),
+    fun=lambda ctx: lambda jx: ctx['f_x']() * ctx['d_dx_jx'](),
     der_funs=[
-        lambda ctx: lambda jx, theta: ctx['f_x']() * (1 - theta),
-        lambda ctx: lambda jx, theta: -ctx['f_x']() * ctx['d_dx_jx'](),
+        lambda ctx: lambda jx: ctx['f_x'](),
     ],
-    trial_deriv=['x', None],
-    test_deriv='x')
-
-R11x_supg_x2 = Term(
-    name='R11x_supg_x2',
-    description='SUPG x: flux divergence x Elrod-Adams, strong-form piece -jx*d_dx_theta',
-    res='mass',
-    dep_vars=['jx', 'theta'],
-    dep_vals=['f_x', 'd_dx_theta'],
-    fun=lambda ctx: lambda jx, theta: -ctx['f_x']()* jx * ctx['d_dx_theta'](),
-    der_funs=[
-        lambda ctx: lambda jx, theta: -ctx['f_x']() * ctx['d_dx_theta'](),
-        lambda ctx: lambda jx, theta: -ctx['f_x']() * jx,
-    ],
-    trial_deriv=[None, 'x'],
+    trial_deriv='x',
     test_deriv='x')
 
 R11x_supg_y1 = Term(
     name='R11x_supg_y1',
-    description='SUPG y companion of R11x_cav, strong-form piece (1-theta)*d_dy_jx',
+    description='SUPG y companion of R11x_cav, strong-form piece d_dy_jx',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=['f_y', 'd_dy_jx'],
-    fun=lambda ctx: lambda jx, theta: ctx['f_y']() * (1 - theta) * ctx['d_dy_jx'](),
+    fun=lambda ctx: lambda jx: ctx['f_y']() * ctx['d_dy_jx'](),
     der_funs=[
-        lambda ctx: lambda jx, theta: ctx['f_y']() * (1 - theta),
-        lambda ctx: lambda jx, theta: -ctx['f_y']() * ctx['d_dy_jx'](),
+        lambda ctx: lambda jx: ctx['f_y'](),
     ],
-    trial_deriv=['y', None],
-    test_deriv='y')
-
-R11x_supg_y2 = Term(
-    name='R11x_supg_y2',
-    description='SUPG y companion of R11x_cav, strong-form piece -jx*d_dy_theta',
-    res='mass',
-    dep_vars=['jx', 'theta'],
-    dep_vals=['f_y', 'd_dy_theta'],
-    fun=lambda ctx: lambda jx, theta: -ctx['f_y']() * jx * ctx['d_dy_theta'](),
-    der_funs=[
-        lambda ctx: lambda jx, theta: -ctx['f_y']() * ctx['d_dy_theta'](),
-        lambda ctx: lambda jx, theta: -ctx['f_y']() * jx,
-    ],
-    trial_deriv=[None, 'y'],
+    trial_deriv='x',
     test_deriv='y')
 
 # -----------------------------------------------------------------------------
@@ -104,59 +75,29 @@ R11x_supg_y2 = Term(
 
 R11y_supg_y1 = Term(
     name='R11y_supg_y1',
-    description='SUPG y: flux divergence y Elrod-Adams, strong-form piece (1-theta)*d_dy_jy',
+    description='SUPG y: flux divergence y, strong-form piece d_dy_jy',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=['f_y', 'd_dy_jy'],
-    fun=lambda ctx: lambda jy, theta: ctx['f_y']() *(1 - theta) * ctx['d_dy_jy'](),
+    fun=lambda ctx: lambda jy: ctx['f_y']() * ctx['d_dy_jy'](),
     der_funs=[
-        lambda ctx: lambda jy, theta: ctx['f_y']() * (1 - theta),
-        lambda ctx: lambda jy, theta: -ctx['f_y']() * ctx['d_dy_jy'](),
+        lambda ctx: lambda jy: ctx['f_y'](),
     ],
-    trial_deriv=['y', None],
-    test_deriv='y')
-
-R11y_supg_y2 = Term(
-    name='R11y_supg_y2',
-    description='SUPG y: flux divergence y Elrod-Adams, strong-form piece -jy*d_dy_theta',
-    res='mass',
-    dep_vars=['jy', 'theta'],
-    dep_vals=['f_y', 'd_dy_theta'],
-    fun=lambda ctx: lambda jy, theta: -ctx['f_y']() * jy * ctx['d_dy_theta'](),
-    der_funs=[
-        lambda ctx: lambda jy, theta: -ctx['f_y']() * ctx['d_dy_theta'](),
-        lambda ctx: lambda jy, theta: -ctx['f_y']() * jy,
-    ],
-    trial_deriv=[None, 'y'],
-    test_deriv='y')
+    trial_deriv='y',
+    test_deriv='x')
 
 R11y_supg_x1 = Term(
     name='R11y_supg_x1',
-    description='SUPG x companion of R11y_cav, strong-form piece (1-theta)*d_dx_jy',
+    description='SUPG x companion of R11y_cav, strong-form piece d_dx_jy',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=['f_x', 'd_dx_jy'],
-    fun=lambda ctx: lambda jy, theta: ctx['f_x']() * (1 - theta) * ctx['d_dx_jy'](),
+    fun=lambda ctx: lambda jy: ctx['f_x']() * ctx['d_dx_jy'](),
     der_funs=[
-        lambda ctx: lambda jy, theta: ctx['f_x']() * (1 - theta),
-        lambda ctx: lambda jy, theta: -ctx['f_x']() * ctx['d_dx_jy'](),
+        lambda ctx: lambda jy: ctx['f_x'](),
     ],
-    trial_deriv=['x', None],
-    test_deriv='x')
-
-R11y_supg_x2 = Term(
-    name='R11y_supg_x2',
-    description='SUPG x companion of R11y_cav, strong-form piece -jy*d_dx_theta',
-    res='mass',
-    dep_vars=['jy', 'theta'],
-    dep_vals=['f_x', 'd_dx_theta'],
-    fun=lambda ctx: lambda jy, theta: -ctx['f_x']() * jy * ctx['d_dx_theta'](),
-    der_funs=[
-        lambda ctx: lambda jy, theta: -ctx['f_x']() * ctx['d_dx_theta'](),
-        lambda ctx: lambda jy, theta: -ctx['f_x']() * jy,
-    ],
-    trial_deriv=[None, 'x'],
-    test_deriv='x')
+    trial_deriv='y',
+    test_deriv='y')
 
 # -----------------------------------------------------------------------------
 # Direct SUPG duplicates (base terms already have test_deriv=None, so each
@@ -165,53 +106,49 @@ R11y_supg_x2 = Term(
 
 R11Sx_supg_x = Term(
     name='R11Sx_supg_x',
-    description='SUPG x: flux divergence height source x Elrod-Adams',
+    description='SUPG x: flux divergence height source x',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=['f_x', 'h', 'dh_dx'],
-    fun=lambda ctx: lambda jx, theta:  ctx['f_x']() / ctx['h']() * ctx['dh_dx']() * (1 - theta) * jx,
+    fun=lambda ctx: lambda jx:  ctx['f_x']() / ctx['h']() * ctx['dh_dx']() * jx,
     der_funs=[
-        lambda ctx: lambda jx, theta:  ctx['f_x']() / ctx['h']() * ctx['dh_dx']() * (1 - theta),
-        lambda ctx: lambda jx, theta: -ctx['f_x']() / ctx['h']() * ctx['dh_dx']() * jx,
+        lambda ctx: lambda jx:  ctx['f_x']() / ctx['h']() * ctx['dh_dx'](),
     ],
     test_deriv='x')
 
 R11Sy_supg_x = Term(
     name='R11Sy_supg_x',
-    description='SUPG x: flux divergence height source y Elrod-Adams',
+    description='SUPG x: flux divergence height source y',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=['f_x', 'h', 'dh_dy'],
-    fun=lambda ctx: lambda jy, theta:  ctx['f_x']() / ctx['h']() * ctx['dh_dy']() * (1 - theta) * jy,
+    fun=lambda ctx: lambda jy:  ctx['f_x']() / ctx['h']() * ctx['dh_dy']() * jy,
     der_funs=[
-        lambda ctx: lambda jy, theta:  ctx['f_x']() / ctx['h']() * ctx['dh_dy']() * (1 - theta),
-        lambda ctx: lambda jy, theta: -ctx['f_x']() / ctx['h']() * ctx['dh_dy']() * jy,
+        lambda ctx: lambda jy:  ctx['f_x']() / ctx['h']() * ctx['dh_dy'](),
     ],
     test_deriv='x')
 
 R11Sx_supg_y = Term(
     name='R11Sx_supg_y',
-    description='SUPG y: flux divergence height source x Elrod-Adams',
+    description='SUPG y: flux divergence height source x',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=['f_y', 'h', 'dh_dx'],
-    fun=lambda ctx: lambda jx, theta:  ctx['f_y']() / ctx['h']() * ctx['dh_dx']() * (1 - theta) * jx,
+    fun=lambda ctx: lambda jx:  ctx['f_y']() / ctx['h']() * ctx['dh_dx']() * jx,
     der_funs=[
-        lambda ctx: lambda jx, theta:  ctx['f_y']() / ctx['h']() * ctx['dh_dx']() * (1 - theta),
-        lambda ctx: lambda jx, theta: -ctx['f_y']() / ctx['h']() * ctx['dh_dx']() * jx,
+        lambda ctx: lambda jx:  ctx['f_y']() / ctx['h']() * ctx['dh_dx'](),
     ],
     test_deriv='y')
 
 R11Sy_supg_y = Term(
     name='R11Sy_supg_y',
-    description='SUPG y: flux divergence height source y Elrod-Adams',
+    description='SUPG y: flux divergence height source y',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=['f_y', 'h', 'dh_dy'],
-    fun=lambda ctx: lambda jy, theta:  ctx['f_y']() / ctx['h']() * ctx['dh_dy']() * (1 - theta) * jy,
+    fun=lambda ctx: lambda jy:  ctx['f_y']() / ctx['h']() * ctx['dh_dy']() * jy,
     der_funs=[
-        lambda ctx: lambda jy, theta:  ctx['f_y']() / ctx['h']() * ctx['dh_dy']() * (1 - theta),
-        lambda ctx: lambda jy, theta: -ctx['f_y']() / ctx['h']() * ctx['dh_dy']() * jy,
+        lambda ctx: lambda jy:  ctx['f_y']() / ctx['h']() * ctx['dh_dy'](),
     ],
     test_deriv='y')
 
@@ -269,8 +206,8 @@ R1Th_cav_supg_y = Term(
 
 
 SUPG_TERMS = [
-    R11x_supg_x1, R11x_supg_x2, R11x_supg_y1, R11x_supg_y2,
-    R11y_supg_y1, R11y_supg_y2, R11y_supg_x1, R11y_supg_x2,
+    R11x_supg_x1, R11x_supg_y1,
+    R11y_supg_y1, R11y_supg_x1,
     R11Sx_supg_x, R11Sy_supg_x, R11Sx_supg_y, R11Sy_supg_y,
     R1T_cav_supg_x, R1T_cav_supg_y,
 ]

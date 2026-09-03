@@ -111,7 +111,7 @@ class FEMSolver:
             self.variables.append('theta')
             self.residuals.append('fb')
             self.add_fields.append('theta')
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             self.variables.append('xi')
             self.residuals.append('R_oss')
             self.add_fields.append('xi')
@@ -177,7 +177,7 @@ class FEMSolver:
             specs.append(BoundarySpec(field, 'P1', rho_bc_type,
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
 
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             field = self.quad_mgr.nodal_fields['xi']
             specs.append(BoundarySpec(field, 'P1', ['D', 'D', 'D', 'D'],
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))

@@ -134,6 +134,8 @@ from .terms_lib.terms_cav import *
 from .terms_lib.terms_cav_oss import *
 from .terms_lib.terms_cav_supg import *
 from .terms_lib.terms_reynolds import *
+from .terms_lib.terms_reynolds_cav import *
+from .terms_lib.terms_reynolds_cav_supg import *
 
 
 def get_active_terms(fem_solver: dict) -> List[Term]:
@@ -159,14 +161,22 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
     Reynolds mode (fem_solver['equations']['reynolds']):
     - No-squeeze scalar Reynolds equation, DOF `p` only, residual `mass` only
       (Rey_R1T, Rey_R11x/y, Rey_R11Sx/y). Mutually exclusive with all other
-      equation/physics flags -- see sanitize_fem_solver in io.py.
+      physics flags -- see sanitize_fem_solver in io.py.
+    - With cavitation also enabled: DOF `p`, `theta`, terms from REYNOLDS_CAV_TERMS
+      plus R_cav (Fischer-Burmeister complementarity condition). If
+      stabilization.mass_supg is also set, adds REYNOLDS_CAV_SUPG_TERMS.
     """
     physics = fem_solver['physics']
     stab = fem_solver['stabilization']
     cavitation = fem_solver['equations']['cavitation']
 
-    if fem_solver['equations'].get('reynolds', False):
-        return list(REYNOLDS_TERMS)
+    if fem_solver['equations']['reynolds']:
+        if not cavitation:
+            return list(REYNOLDS_TERMS)
+        terms = [*REYNOLDS_CAV_TERMS, R_cav]
+        if stab['mass_supg']:
+            terms += REYNOLDS_CAV_SUPG_TERMS
+        return terms
 
     if cavitation:
         terms = [*CAV_MASS_TERMS, R21x, R21y, R2Tx, R2Ty, R_cav]

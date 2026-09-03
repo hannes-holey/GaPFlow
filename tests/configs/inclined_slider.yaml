@@ -7,7 +7,7 @@ options:
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 300
+    Nx: 100
     Ny: 1
     xE: ['D', 'N', 'N']
     xW: ['D', 'N', 'N']
@@ -38,3 +38,7 @@ properties:
 
 fem_solver:
     alpha: 1.0
+    stabilization:
+        mass_supg: False
+    equations:
+        cavitation: True

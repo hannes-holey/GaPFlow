@@ -106,6 +106,37 @@ def print_reynolds_timing(results):
         print(f"  {solver:<20} {results[solver]['time']:>6.2f} s")
 
 
+def run_reynolds_cav_solver(template, solver, topo_fn=None, **overrides):
+    """Like run_reynolds_solver, but also extracts theta (cavitation
+    fraction). p and theta are looked up by name via
+    problem.solver.quad_mgr.nf, which indexes nodal fields by name rather
+    than DOF position (position differs between fem_ns and fem_reynolds).
+
+    topo_fn, if given, is called as topo_fn(problem) after Problem.from_string
+    and before problem.run(), to inject a height field that isn't expressible
+    via geometry.type (e.g. regen_twin_parabolic_slider_id)."""
+    print(f"Running solver: {solver}")
+    yaml_str = build_reynolds_config(template, solver, **overrides)
+    problem = Problem.from_string(yaml_str)
+    if topo_fn is not None:
+        topo_fn(problem)
+    t0 = time.perf_counter()
+    problem.run()
+    elapsed = time.perf_counter() - t0
+    nf = problem.solver.quad_mgr.nf
+    p = nf('p')[1:-1, 0].copy()
+    theta = nf('theta')[1:-1, 0].copy()
+    return p, theta, elapsed
+
+
+def run_reynolds_cav_comparison(template, topo_fn=None, **common_overrides):
+    results = {}
+    for solver in ['fem_ns', 'fem_reynolds']:
+        p, theta, elapsed = run_reynolds_cav_solver(template, solver, topo_fn=topo_fn, **common_overrides)
+        results[solver] = {'p': p, 'theta': theta, 'time': elapsed}
+    return results
+
+
 def run_reynolds_solver_2d(template, solver, **overrides):
     """Like run_reynolds_solver, but keeps the full 2D rho field (no y=0 slice)
     for genuinely 2D (non-periodic-in-y) geometries."""

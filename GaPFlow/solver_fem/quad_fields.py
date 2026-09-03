@@ -345,11 +345,15 @@ class QuadFieldManager:
         # Hardcoded quad fields
         if 'dh_dt' in self.quad_field_keys:
             self._update_squeeze_quad_fields(q)
-        if 'xi' in self.variables:
+        if 'xi' in self.variables and not self.problem.fem_solver['equations']['reynolds']:
             self._update_oss_quad_fields(q)
         if self.problem.fem_solver['stabilization']['fc']:
             self._update_fc_quad_fields(q)
-        if self.problem.fem_solver['stabilization']['mass_supg']:
+        if self.problem.fem_solver['equations']['reynolds']:
+            self._update_reynolds_quad_fields(q)
+            if self.problem.fem_solver['stabilization']['mass_supg']:
+                self._update_reynolds_supg_quad_fields(q)
+        elif self.problem.fem_solver['stabilization']['mass_supg']:
             self._update_mass_supg_quad_fields(q)
 
     def _update_squeeze_quad_fields(self, q) -> None:
@@ -391,6 +395,16 @@ class QuadFieldManager:
         )
 
         q('fc_tau')[:] = (h_elem**2 / 2.0) * beta * np.abs(R_mass) * 1e05
+
+    def _update_reynolds_quad_fields(self, q) -> None:
+        """Compute mean surface velocity U_m at quad points."""
+        geo = self.problem.geo
+        q('U_m')[:] = 0.5 * (geo['U_bot'] + geo['U_top'])
+
+    def _update_reynolds_supg_quad_fields(self, q) -> None:
+        """Compute SUPG stabilization coefficient tau_supg at quad points."""
+        alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
+        q('tau_supg')[:] = 0.5 * alpha * self.dx * q('U_m')
 
     def _update_mass_supg_quad_fields(self, q) -> None:
         """Compute SUPG stabilization coefficients f_x, f_y at quad points."""

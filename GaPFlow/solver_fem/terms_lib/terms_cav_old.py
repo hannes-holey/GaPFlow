@@ -29,10 +29,10 @@ import numpy as np
 from ..terms import Term
 
 __all__ = [
-    'R11x_cav', 'R11y_cav', 'R11Sx_cav', 'R11Sy_cav',
-    'R1T_cav', 'R1Th_cav', 'R_cav', 'R1STx', 'R1STy',
-    'R24x_cav', 'R24y_cav',
-    'CAV_MASS_TERMS', 'THETA_TERMS_AD', 'THETA_TERMS_WALL_STRESS',
+    'R11x_cav_old', 'R11y_cav_old', 'R11Sx_cav_old', 'R11Sy_cav_old',
+    'R1T_cav_old', 'R1Th_cav_old', 'R_cav_old', 'R1STx_old', 'R1STy_old',
+    'R24x_cav_old', 'R24y_cav_old',
+    'CAV_MASS_TERMS_old', 'THETA_TERMS_AD_old', 'THETA_TERMS_WALL_STRESS_old',
 ]
 
 
@@ -46,60 +46,64 @@ def _fb_denom(a, b):
 # mass conservation: fluxes with cavity fraction (theta)
 # -----------------------------------------------------------------------------
 
-R11x_cav = Term(
-    name='R11x_cav',
+R11x_cav_old = Term(
+    name='R11x_cav_old',
     description='flux divergence x Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jx'],
+    dep_vars=['jx', 'theta'],
     dep_vals=[],
-    fun=lambda ctx: lambda jx: - jx,
+    fun=lambda ctx: lambda jx, theta: - (1 - theta) * jx,
     der_funs=[
-        lambda ctx: lambda jx: np.full_like(jx, -1.0),
+        lambda ctx: lambda jx, theta: - (1 - theta),
+        lambda ctx: lambda jx, theta:  jx,
     ],
     test_deriv='x')
 
-R11y_cav = Term(
-    name='R11y_cav',
+R11y_cav_old = Term(
+    name='R11y_cav_old',
     description='flux divergence y Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jy'],
+    dep_vars=['jy', 'theta'],
     dep_vals=[],
-    fun=lambda ctx: lambda jy: - jy,
+    fun=lambda ctx: lambda jy, theta: - (1 - theta) * jy,
     der_funs=[
-        lambda ctx: lambda jy: np.full_like(jy, -1.0),
+        lambda ctx: lambda jy, theta: - (1 - theta),
+        lambda ctx: lambda jy, theta:  jy,
     ],
     test_deriv='y')
 
-R11Sx_cav = Term(
-    name='R11Sx_cav',
+R11Sx_cav_old = Term(
+    name='R11Sx_cav_old',
     description='flux divergence height source x Elrod-Adams',
     res='mass',
-    dep_vars=['jx'],
+    dep_vars=['jx', 'theta'],
     dep_vals=['h', 'dh_dx'],
-    fun=lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx']() * jx,
+    fun=lambda ctx: lambda jx, theta: -1 / ctx['h']() * ctx['dh_dx']() * (1 - theta) * jx,
     der_funs=[
-        lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx'](),
+        lambda ctx: lambda jx, theta: -1 / ctx['h']() * ctx['dh_dx']() * (1 - theta),
+        lambda ctx: lambda jx, theta:  1 / ctx['h']() * ctx['dh_dx']() * jx,
     ],
-    der_h=lambda ctx: lambda jx: 1 / ctx['h']() ** 2 * ctx['dh_dx']() * jx)
+    der_h=lambda ctx: lambda jx, theta: 1 / ctx['h']() ** 2 * ctx['dh_dx']() * (1 - theta) * jx)
 
-R11Sy_cav = Term(
-    name='R11Sy_cav',
+R11Sy_cav_old = Term(
+    name='R11Sy_cav_old',
     description='flux divergence height source y Elrod-Adams',
     res='mass',
-    dep_vars=['jy'],
+    dep_vars=['jy', 'theta'],
     dep_vals=['h', 'dh_dy'],
-    fun=lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy']() * jy,
+    fun=lambda ctx: lambda jy, theta: - 1 / ctx['h']() * ctx['dh_dy']() * (1 - theta) * jy,
     der_funs=[
-        lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy'](),
+        lambda ctx: lambda jy, theta: - 1 / ctx['h']() * ctx['dh_dy']() * (1 - theta),
+        lambda ctx: lambda jy, theta:  1 / ctx['h']() * ctx['dh_dy']() * jy,
     ],
-    der_h=lambda ctx: lambda jy: 1 / ctx['h']() ** 2 * ctx['dh_dy']() * jy)
+    der_h=lambda ctx: lambda jy, theta: 1 / ctx['h']() ** 2 * ctx['dh_dy']() * (1 - theta) * jy)
 
 # -----------------------------------------------------------------------------
 # mass conservation: time-dependent terms
 # -----------------------------------------------------------------------------
 
-R1T_cav = Term(
-    name='R1T_cav',
+R1T_cav_old = Term(
+    name='R1T_cav_old',
     description='local pressure change',
     res='mass',
     dep_vars=['p', 'theta'],
@@ -110,8 +114,8 @@ R1T_cav = Term(
         lambda ctx: lambda p, theta: ctx['rho']() / ctx['dt'](),
     ])
 
-R1Th_cav = Term(
-    name='R1Th_cav',
+R1Th_cav_old = Term(
+    name='R1Th_cav_old',
     description='squeeze source term',
     res='mass',
     dep_vars=['p', 'theta'],
@@ -127,8 +131,8 @@ R1Th_cav = Term(
 # Fischer-Burmeister complementarity condition
 # -----------------------------------------------------------------------------
 
-R_cav = Term(
-    name='R_cav',
+R_cav_old = Term(
+    name='R_cav_old',
     description='Fischer-Burmeister complementarity condition',
     res='fb',
     dep_vars=['p', 'theta'],
@@ -150,8 +154,8 @@ R_cav = Term(
 # Artificial diffusion stabilization (stabilization.ad: true)
 # -----------------------------------------------------------------------------
 
-R1STx = Term(
-    name='R1STx',
+R1STx_old = Term(
+    name='R1STx_old',
     description='theta diffusion stabilization in mass equation x',
     res='mass',
     dep_vars=['theta'],
@@ -163,8 +167,8 @@ R1STx = Term(
     trial_deriv='x',
     test_deriv='x')
 
-R1STy = Term(
-    name='R1STy',
+R1STy_old = Term(
+    name='R1STy_old',
     description='theta diffusion stabilization in mass equation y',
     res='mass',
     dep_vars=['theta'],
@@ -181,8 +185,8 @@ R1STy = Term(
 # Wall stress with theta-dependent effective density (replaces R24x/y when cavitation: true)
 # -----------------------------------------------------------------------------
 
-R24x_cav = Term(
-    name='R24x_cav',
+R24x_cav_old = Term(
+    name='R24x_cav_old',
     description='wall stress x with theta-dependent effective density',
     res='momentum_x',
     dep_vars=['p', 'jx', 'theta'],
@@ -195,8 +199,8 @@ R24x_cav = Term(
     ],
     der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_xz']() + 1 / ctx['h']() * ctx['dtau_xz_dh']())
 
-R24y_cav = Term(
-    name='R24y_cav',
+R24y_cav_old = Term(
+    name='R24y_cav_old',
     description='wall stress y with theta-dependent effective density',
     res='momentum_y',
     dep_vars=['p', 'jy', 'theta'],
@@ -210,11 +214,11 @@ R24y_cav = Term(
     der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_yz']() + 1 / ctx['h']() * ctx['dtau_yz_dh']())
 
 
-CAV_MASS_TERMS = [
-    R11x_cav, R11y_cav, R11Sx_cav, R11Sy_cav,
-    R1T_cav
+CAV_MASS_TERMS_old = [
+    R11x_cav_old, R11y_cav_old, R11Sx_cav_old, R11Sy_cav_old,
+    R1T_cav_old
 ]
 
-THETA_TERMS_AD = [R1STx, R1STy]
+THETA_TERMS_AD_old = [R1STx_old, R1STy_old]
 
-THETA_TERMS_WALL_STRESS = [R24x_cav, R24y_cav]
+THETA_TERMS_WALL_STRESS_old = [R24x_cav_old, R24y_cav_old]

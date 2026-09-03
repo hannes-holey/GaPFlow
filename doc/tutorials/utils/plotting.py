@@ -201,6 +201,69 @@ def plot_reynolds_comparison_rho(results, title):
     plt.show()
 
 
+def plot_reynolds_cav_comparison(results, title, p_divisor=1e5, p_unit='bar',
+                                 ref_csv=None, ref_label=None,
+                                 ref_x_scale=1.0, ref_p_scale=1.0):
+    """Plot pressure and cavitation fraction (theta) profiles comparing
+    FEM NS vs FEM Reynolds, both with Fischer-Burmeister cavitation.
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with solver names as keys and result dicts as values.
+        Each result dict must contain 'p' and 'theta' arrays.
+        Expected keys: 'fem_ns', 'fem_reynolds'
+    title : str
+        Title for the figure
+    ref_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
+    ref_label : str, optional
+        Legend label for the reference data.
+    ref_x_scale : float
+        Multiplier applied to the reference x-column (to map onto x/L in [0, 1]).
+    ref_p_scale : float
+        Multiplier applied to the reference y-column to convert to Pa.
+
+    Example
+    -------
+    >>> results = {
+    ...     'fem_ns': {'p': p_ns, 'theta': theta_ns, 'time': t_ns},
+    ...     'fem_reynolds': {'p': p_rey, 'theta': theta_rey, 'time': t_rey},
+    ... }
+    >>> plot_reynolds_cav_comparison(results, 'Parabolic Slider (Cavitation)')
+    """
+    fig, (ax_p, ax_theta) = plt.subplots(1, 2, figsize=(11, 4))
+    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
+    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
+
+    Nx = len(list(results.values())[0]['p'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        ax_p.plot(x, res['p'] / p_divisor, color=colors[name], label=labels[name], lw=1.5)
+        ax_theta.plot(x, res['theta'], color=colors[name], label=labels[name], lw=1.5)
+
+    if ref_csv is not None:
+        ref = pd.read_csv(ref_csv, skipinitialspace=True)
+        ax_p.scatter(ref['x'].values * ref_x_scale,
+                     ref['y'].values * ref_p_scale / p_divisor,
+                     color='#1f77b4', s=14, zorder=5, label=ref_label)
+
+    ax_p.set_xlabel('x / L')
+    ax_p.set_ylabel(f'p [{p_unit}]')
+    ax_p.legend()
+    ax_p.grid(True, alpha=0.3)
+
+    ax_theta.set_xlabel('x / L')
+    ax_theta.set_ylabel(r'$\theta$ [-]')
+    ax_theta.legend()
+    ax_theta.grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_reynolds_comparison_rho_2d(results, title):
     """Plot 2D density fields (FEM NS, FEM Reynolds) plus their mid-section
     (y = Ly/2) profiles, for genuinely 2D (non-periodic-in-y) geometries.

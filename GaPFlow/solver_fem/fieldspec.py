@@ -180,6 +180,11 @@ QUAD_FIELD_REGISTRY = {
     # SUPG stabilization (computed inline in _update_supg_quad_fields)
     'f_x': {'type': 'computed', 'source': None, 'args': []},
     'f_y': {'type': 'computed', 'source': None, 'args': []},
+
+    # Reynolds mode: mean surface velocity, SUPG stabilization
+    # (computed inline in _update_reynolds_supg_quad_fields)
+    'U_m': {'type': 'computed', 'source': None, 'args': []},
+    'tau_supg': {'type': 'computed', 'source': None, 'args': []},
 }
 
 
