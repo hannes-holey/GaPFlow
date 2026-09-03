@@ -477,7 +477,7 @@ class WallStress(GaussianProcessSurrogate):
             # central functions: only argument difference for x/y is dh
             def _tau(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy, eta_in):
                 eta = _eta(rho, dp_dx, dp_dy, h, eta_in)
-                q = jnp.array([rho, jx / (1.0 - theta), jy / (1.0 - theta)])
+                q = jnp.array([rho * (1.0 - theta), jx * (1.0 - theta), jy * (1.0 - theta)])
                 h_arr = jnp.array([h, dh])
                 tau_top = stress_top_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
                 tau_bot = stress_bot_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
@@ -486,7 +486,7 @@ class WallStress(GaussianProcessSurrogate):
             # required for energy
             def _tau_bot(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy, eta_in):
                 eta = _eta(rho, dp_dx, dp_dy, h, eta_in)
-                q = jnp.array([rho, jx / (1.0 - theta), jy / (1.0 - theta)])
+                q = jnp.array([rho * (1.0 - theta), jx * (1.0 - theta), jy * (1.0 - theta)])
                 h_arr = jnp.array([h, dh])
                 tau_bot = stress_bot_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
                 return (1.0 - theta) * tau_bot

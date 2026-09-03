@@ -539,11 +539,14 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
         theta = problem.q[3][1:-1, 1:-1]
         rho_eff = rho * (1 - theta)
 
+    j_x = problem.q[1][1:-1, 1:-1]
     p_x = p_arr.mean(axis=1)
     theta_x = theta.mean(axis=1)
     rho_eff_x = rho_eff.mean(axis=1)
 
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3), facecolor='white',
+    u = j_x / rho
+
+    fig, axes = plt.subplots(1, 5, figsize=(12, 3), facecolor='white',
                              constrained_layout=True)
     fig.suptitle(title, fontweight='bold')
 
@@ -569,6 +572,18 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
     ax.fill_between(x * 1e3, 0, rho_eff_x, alpha=0.25, color='#2ca02c')
     ax.plot(x * 1e3, rho_eff_x, color='#2ca02c', lw=1.5)
     ax.set(xlabel='x [mm]', ylabel=r'$\rho_{\rm eff}$ [kg/m³]', title='Effective density')
+    ax.grid(True, alpha=0.3)
+
+    ax = axes[3]
+    ax.fill_between(x * 1e3, 0, j_x.mean(axis=1), alpha=0.25, color='#9467bd')
+    ax.plot(x * 1e3, j_x.mean(axis=1), color='#9467bd', lw=1.5)
+    ax.set(xlabel='x [mm]', ylabel=r'$j_x$ [kg/(m²s)]', title='x-momentum')
+    ax.grid(True, alpha=0.3)
+
+    ax = axes[4]
+    ax.fill_between(x * 1e3, 0, u.mean(axis=1), alpha=0.25, color='#ff7f0e')
+    ax.plot(x * 1e3, u.mean(axis=1), color='#ff7f0e', lw=1.5)
+    ax.set(xlabel='x [mm]', ylabel=r'$u$ [m/s]', title='x-velocity')
     ax.grid(True, alpha=0.3)
 
     plt.show()

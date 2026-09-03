@@ -31,7 +31,7 @@ from ..terms import Term
 __all__ = [
     'R11x_cav', 'R11y_cav', 'R11Sx_cav', 'R11Sy_cav',
     'R1T_cav', 'R1Th_cav', 'R_cav', 'R1STx', 'R1STy',
-    'R24x_cav', 'R24y_cav',
+    'R2Tx_cav', 'R2Ty_cav', 'R24x_cav', 'R24y_cav',
     'CAV_MASS_TERMS', 'THETA_TERMS_AD', 'THETA_TERMS_WALL_STRESS',
 ]
 
@@ -180,6 +180,29 @@ R1STy = Term(
     trial_deriv='y',
     test_deriv='y')
 
+# -----------------------------------------------------------------------------
+# Momentum time derivatives with theta
+# -----------------------------------------------------------------------------
+
+R2Tx_cav = Term(
+    name='R2Tx_cav',
+    description='time derivative momentum_x',
+    res='momentum_x',
+    dep_vars=['jx', 'theta'],
+    dep_vals=['jx_prev', 'theta_prev'],
+    fun=lambda ctx: lambda jx, theta: - (jx * (1-theta) - ctx['jx_prev']() * ctx['theta_prev']()) / ctx['dt'](),
+    der_funs=[lambda ctx: lambda jx, theta: - (1-theta) / ctx['dt'](),
+              lambda ctx: lambda jx, theta: jx / ctx['dt']()])
+
+R2Ty_cav = Term(
+    name='R2Ty_cav',
+    description='time derivative momentum_y',
+    res='momentum_y',
+    dep_vars=['jy', 'theta'],
+    dep_vals=['jy_prev', 'theta_prev'],
+    fun=lambda ctx: lambda jy, theta: - (jy * (1-theta) - ctx['jy_prev']() * ctx['theta_prev']()) / ctx['dt'](),
+    der_funs=[lambda ctx: lambda jy, theta: - (1-theta) / ctx['dt'](),
+              lambda ctx: lambda jy, theta: jy / ctx['dt']()])
 
 # -----------------------------------------------------------------------------
 # Wall stress with theta-dependent effective density (replaces R24x/y when cavitation: true)

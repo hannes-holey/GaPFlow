@@ -160,6 +160,7 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
     cavitation = fem_solver['equations']['cavitation']
 
     if cavitation:
+        #terms = [*CAV_MASS_TERMS, R21x, R21y, R2Tx_cav, R2Ty_cav, R_cav]
         terms = [*CAV_MASS_TERMS, R21x, R21y, R2Tx, R2Ty, R_cav]
     else:
         terms = [R11x, R11y, R11Sx, R11Sy, R1T,
