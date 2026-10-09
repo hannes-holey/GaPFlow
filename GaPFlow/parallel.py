@@ -350,6 +350,11 @@ class DomainDecomposition:
         grid = self.grid
         dx, Lx = grid['dx'], grid['Lx']
         xx = self.icoordsg[0] * dx + dx / 2.0
+        # If we are at the domain boundary and we make use of ghostcell,
+        # the icoordsg[0] or [-1] point to the master cell index of the ghost cell.
+        # However we want the position to be the position of the ghost cell.
+        # The following resets the position to be the position of the ghost cell and not of the coords
+        # This is important for example when using xx for computing finite differences
         if self.is_at_xW:
             xx[0, :] = -dx / 2.0
         if self.is_at_xE:
