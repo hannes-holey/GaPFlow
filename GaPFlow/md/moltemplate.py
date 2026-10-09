@@ -301,7 +301,7 @@ def _get_num_fluid_molecules(name, volume, density):
     return Nf, Nf * nC_per_mol
 
 
-def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
+def config_fluid(file, Lx, Ly, H, density, buffer=25.):
     """Calculate an initial molecule grid given the box dimensions and
     adjust the gap height for the initial setup to fit all molecules
     without overlap.
@@ -321,8 +321,6 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
         Target fluid density
     buffer : float
         "Safety distance" between the outermost fluid layer and the wall
-    flat : bool
-        Flags flat systems in which a slight density correction is applied.
 
     Returns
     -------
@@ -345,16 +343,6 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
 
     volume = Lx * Ly * H
     num_fluid_mol, num_fluid_atoms = _get_num_fluid_molecules(name, volume, density)
-
-    # In flat sections the achieved density is usually too high
-    # We reduce by removing molecules that would "fit" into the depletion zone
-    if flat:
-        sig = (3.92 + 2.63) / 2.
-        dH = sig / 2.
-        excess_vol = Lx * Ly * dH
-        excess_mol, excess_atoms = _get_num_fluid_molecules(name, excess_vol, density)
-        num_fluid_mol -= excess_mol
-        num_fluid_atoms -= excess_atoms
 
     coords = _read_coords_from_lt(file)
     lx, ly, lz = coords.max(0) - coords.min(0)
@@ -567,6 +555,7 @@ def write_settings(args):
     rotation = args.get("rotation", 0.)
     if abs(rotation) > 4.:
         angle_sf = 1.99
+        offset -= 0.9  # small correction to gap height when walls are not flat
     else:
         angle_sf = 1.
 
@@ -697,7 +686,6 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     target_density = args.get("density")  # g/mol/A^3
     target_gap = args.get("gap_height")  # Angstrom
     target_rotation = args.get("rotation", 0.)  # degrees
-    is_flat = abs(target_rotation) < .1
 
     # solid, create ASE Atoms object
     nx = args.get("nx", 21)
@@ -724,7 +712,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     name = args.get("molecule", "pentane")
     molecule_file = os.path.join(template_dir, f"{name}.lt")
     fluid_grid, num_fluid_mol, num_fluid_atoms, initial_gap = config_fluid(
-        molecule_file, lx, ly, target_gap, target_density, buffer=buffer, flat=is_flat)
+        molecule_file, lx, ly, target_gap, target_density, buffer=buffer)
 
     # move top wall up
     slab_top.positions += np.array([0., 0., lz + initial_gap])

@@ -44,7 +44,7 @@ properties:
         reference_point: [0,25]
 
 fem_solver:
-    linear_solver: iterative
+    linear_solver: direct
     max_iter: 10
     R_norm_tol: 1e-09
     pspg_boundary_decay: 2.0

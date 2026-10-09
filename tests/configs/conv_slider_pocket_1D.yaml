@@ -9,7 +9,7 @@ grid:
     Lx: 0.020
     Ly: 0.004
     Nx: 200
-    Ny: 4
+    Ny: 1
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
     yS: ['P', 'P', 'P']
@@ -18,7 +18,7 @@ grid:
     xE_P: 1e5
 
 geometry:
-    type: inclined      # placeholder — overwritten by _regen_topography in notebook
+    type: inclined  # placeholder — overwritten by _regen_topography in notebook
     hmax: 1.1e-6
     hmin: 1.0e-6
     U: 1.0
@@ -27,9 +27,9 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1.0
+    dt: 0.1
     tol: 0.0
-    max_it: 20
+    max_it: 50
 
 properties:
     EOS: DH
@@ -38,7 +38,7 @@ properties:
         aB: 1.2e-8
     rho0: 850.
     P0: 1e5
-    C1: 10.62e9
+    C1: 2.22e9
     C2: 1.66
     p_cav: 0.0
     shear: 0.01
@@ -46,15 +46,16 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.05 # 0.05 for coarse grid
+    newton_relax: 0.1
     equations:
         cavitation: True
     physics:
         gap_shear: true
-        inertia: false
     stabilization:
-        oss: true
+        oss: false
         oss_alpha: 1.0
-    max_iter: 5
+        mass_supg: true
+        mass_supg_factor: 1.0
+    max_iter: 3
     R_norm_tol: 1e-9
     scaling: True

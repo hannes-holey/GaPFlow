@@ -1,5 +1,5 @@
 #
-# Copyright 2025 Christoph Huber
+# Copyright 2026 Christoph Huber
 #
 # ### MIT License
 #
@@ -21,7 +21,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""PETSc-based sparse linear solver for Taylor-Hood P2P1 FEM solver."""
 
 import numpy as np
 import numpy.typing as npt
@@ -38,13 +37,13 @@ if not HAS_PETSC:
 from petsc4py import PETSc
 
 if TYPE_CHECKING:
-    from .assembly import P2P1AssemblyInfo
+    from .assembly import GlobalIndexPattern
 
 NDArray = npt.NDArray[np.floating]
 
 
 class PETScSystem:
-    """PETSc-based sparse linear solver for the Taylor-Hood P2P1 FEM solver.
+    """PETSc-based sparse linear solver for the Taylor-Hood Q2Q1 FEM solver.
 
     Provides the same .assemble() / .solve() interface as ScipySystem.
     solve() returns a flat 1-D solution vector; the caller unpacks per-variable
@@ -52,7 +51,7 @@ class PETScSystem:
 
     Parameters
     ----------
-    info : P2P1AssemblyInfo
+    info : GlobalIndexPattern
         Precomputed assembly info (sizes and global indices).
     solver_type : str, optional
         "direct" (MUMPS LU) or "iterative" (GMRES). Default: "direct".
@@ -60,18 +59,17 @@ class PETScSystem:
 
     _ILU2_THRESHOLD = 110000
 
-    def __init__(self, info: "P2P1AssemblyInfo", solver_type: str = "direct"):
+    def __init__(self, info: "GlobalIndexPattern", solver_type: str = "direct",
+                 print_mumps_diagnostics: bool = False):
         self._info = info
         self._solver_type = solver_type
+        self.print_mumps_diagnostics = print_mumps_diagnostics
         self.comm = PETSc.COMM_WORLD
         self._create_petsc_objects()
 
     def _create_petsc_objects(self):
         info = self._info
         local_size = info.local_size
-        # In the single-process case global_size == local_size.
-        # In MPI, global_size must be summed across ranks; use PETSc's
-        # DETERMINE (-1) sentinel so it computes the global automatically.
         global_size = PETSc.DECIDE
 
         self.mat = PETSc.Mat().create(self.comm)
@@ -88,6 +86,10 @@ class PETScSystem:
 
         self.vec_rhs = self.mat.createVecLeft()
         self.vec_sol = self.mat.createVecRight()
+
+        self._sol_local = PETSc.Vec().createSeq(local_size, comm=PETSc.COMM_SELF)
+        sol_is = PETSc.IS().createGeneral(info.rhs_global_rows, comm=self.comm)
+        self._sol_scatter = PETSc.Scatter().create(self.vec_sol, sol_is, self._sol_local, None)
 
         self.ksp = PETSc.KSP().create(self.comm)
         self.ksp.setOperators(self.mat)
@@ -160,7 +162,23 @@ class PETScSystem:
                     print(f"  MUMPS INFOG(1)={info}, INFOG(2)={info2}")
                 except Exception as e:
                     print(f"  (could not get MUMPS info: {e})")
-        return self.vec_sol.getArray().copy()[self._info.rhs_global_rows]
+
+        if self._solver_type == "direct" and self.print_mumps_diagnostics:
+            try:
+                F = self.ksp.getPC().getFactorMatrix()
+                error_code = F.getMumpsInfo(1)
+                n_negative_pivots = F.getMumpsInfo(12)
+                n_tiny_pivots = F.getMumpsInfo(25)
+                print(f"  [LinSolve] MUMPS: error_code={error_code} "
+                      f"negative_pivots={n_negative_pivots} "
+                      f"tiny_pivots_perturbed={n_tiny_pivots}")
+                if error_code < 0:
+                    print(f"  WARNING: MUMPS reported error INFOG(1)={error_code}")
+            except Exception as e:
+                print(f"  (could not get MUMPS diagnostics: {e})")
+
+        self._sol_scatter.scatter(self.vec_sol, self._sol_local)
+        return self._sol_local.getArray().copy()
 
     def get_convergence_info(self) -> dict:
         reason = self.ksp.getConvergedReason()

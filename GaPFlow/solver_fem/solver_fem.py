@@ -23,31 +23,36 @@
 #
 
 # flake8: noqa: W503
-"""Taylor-Hood P2P1 FEM Solver.
+"""Taylor-Hood Q2Q1 FEM Solver.
 
 Wires GridIndexManager, QuadFieldManager, Assembly, and linear solver into a
 Newton iteration loop.
 """
 
 import time
-from typing import List, Tuple, TYPE_CHECKING
+from typing import Callable, List, Tuple, TYPE_CHECKING
 
 import numpy as np
 import numpy.typing as npt
-from mpi4py import MPI
 
-from .elements import TaylorHoodP2P1
+from ..parallel import MPI
+from .elements import TaylorHoodQ2Q1
 from .grid_index import GridIndexManager
 from .quad_fields import QuadFieldManager
 from .assembly import Assembly
 from .fieldspec import FieldSpec, VAR_GRID, RES_GRID, patch_registry_for_gp
 from .scipy_system import ScipySystem
 
-from ..bc import GhostUpdater, BoundarySpec, sample_bc_spec, translate_bc_rho_to_p, resolve_pressure_bcs
-from .solution_guards import solve_linear_system, line_search, viscosity_growth_guard_scale
-from .bayada_stabilization import bayada_linearization_guard
+from ..bc import (GhostUpdater, BoundarySpec, BND_IDX, sample_bc_spec,
+                  translate_bc_rho_to_p, resolve_pressure_bcs)
+from ..models.pressure import eos_rho
+from .solution_guards import clamp_solution
 from .terms import get_active_terms
-from .scaling import build_scaling
+from .scaling import build_scaling, build_scaling_from_blocks
+from . import checkpoint
+from ..logging import get_logger
+
+logger = get_logger("gapflow.run")
 
 if TYPE_CHECKING:
     from ..problem import Problem
@@ -56,7 +61,7 @@ NDArray = npt.NDArray[np.floating]
 
 
 class FEMSolver:
-    """FEM Solver for 2D Taylor-Hood P2P1 problems.
+    """FEM Solver for 2D Taylor-Hood Q2Q1 problems.
 
     Parameters
     ----------
@@ -72,10 +77,14 @@ class FEMSolver:
         self.problem = problem
         self.R_norm_history: List[List[float]] = []
         self.rank = problem.decomp.rank
+        self.cb_list: List[Callable[["FEMSolver"], None]] = []
 
         self._build_variable_and_residual_lists()
 
-        self.elements = TaylorHoodP2P1(problem.grid['dx'], problem.grid['dy'])
+        if self.cavitation and 'rho_l' not in problem.prop:
+            problem.prop['rho_l'] = float(eos_rho(problem.prop['p_cav'], problem.prop))
+
+        self.elements = TaylorHoodQ2Q1(problem.grid['dx'], problem.grid['dy'])
         self.grid_idx = GridIndexManager(problem.decomp, self)
 
         self._get_active_terms()
@@ -87,9 +96,15 @@ class FEMSolver:
         self.energy = p.fem_solver['equations']['energy']
         self.cavitation = p.fem_solver['equations']['cavitation']
         self.oss = p.fem_solver['stabilization']['oss']
+        self.reynolds = p.fem_solver['equations']['reynolds']
 
-        self.variables = ['jx', 'jy', 'p']
-        self.residuals = ['momentum_x', 'momentum_y', 'mass']
+        if self.reynolds:
+            self.variables = ['p']
+            self.residuals = ['mass']
+        else:
+            self.variables = ['jx', 'jy', 'p']
+            self.residuals = ['momentum_x', 'momentum_y', 'mass']
+
         self.add_fields = []
 
         if self.energy:
@@ -100,7 +115,7 @@ class FEMSolver:
             self.variables.append('theta')
             self.residuals.append('fb')
             self.add_fields.append('theta')
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             self.variables.append('xi')
             self.residuals.append('R_oss')
             self.add_fields.append('xi')
@@ -120,6 +135,18 @@ class FEMSolver:
     # Boundary conditions
     # =========================================================================
 
+    def _apply_bc_callbacks(self, var_name, bc_type):
+        """Override bc_type/bc_functions at boundaries with a registered
+        problem.set_bc_function callback."""
+        callbacks = self.problem._bc_callbacks.get(var_name, {})
+        bc_type = list(bc_type)
+        bc_functions = [None] * 4
+        for bnd, fn in callbacks.items():
+            idx = BND_IDX[bnd]
+            bc_type[idx] = 'F'
+            bc_functions[idx] = fn
+        return bc_type, bc_functions
+
     def build_boundary_conditions(self):
         """Build the list of BoundarySpec objects for BC application.
         Note: bc_spec needs to be sampled in the same order as variables."""
@@ -128,28 +155,33 @@ class FEMSolver:
         specs = []
         no_fun = [None] * 4
 
-        field = self.quad_mgr.nodal_fields['jx']
-        jx_bc_type, jx_bc_vals = sample_bc_spec(self.problem.grid, 1)
-        specs.append(BoundarySpec(field, 'P2', jx_bc_type,
-                                  jx_bc_vals, no_fun, self.problem.decomp))
+        if 'jx' in self.variables:
+            field = self.quad_mgr.nodal_fields['jx']
+            jx_bc_type, jx_bc_vals = sample_bc_spec(self.problem.grid, 1)
+            jx_bc_type, jx_bc_fun = self._apply_bc_callbacks('jx', jx_bc_type)
+            specs.append(BoundarySpec(field, 'P2', jx_bc_type,
+                                      jx_bc_vals, jx_bc_fun, self.problem.decomp))
 
-        field = self.quad_mgr.nodal_fields['jy']
-        jy_bc_type, jy_bc_vals = sample_bc_spec(self.problem.grid, 2)
-        specs.append(BoundarySpec(field, 'P2', jy_bc_type,
-                                  jy_bc_vals, no_fun, self.problem.decomp))
+        if 'jy' in self.variables:
+            field = self.quad_mgr.nodal_fields['jy']
+            jy_bc_type, jy_bc_vals = sample_bc_spec(self.problem.grid, 2)
+            jy_bc_type, jy_bc_fun = self._apply_bc_callbacks('jy', jy_bc_type)
+            specs.append(BoundarySpec(field, 'P2', jy_bc_type,
+                                      jy_bc_vals, jy_bc_fun, self.problem.decomp))
 
         field = self.quad_mgr.nodal_fields['p']
         rho_bc_type, rho_bc_vals = sample_bc_spec(self.problem.grid, 0)
         p_bc_vals = translate_bc_rho_to_p(rho_bc_type, rho_bc_vals, self.problem)
+        rho_bc_type, rho_bc_fun = self._apply_bc_callbacks('rho', rho_bc_type)
         specs.append(BoundarySpec(field, 'P1', rho_bc_type,
-                                  p_bc_vals, no_fun, self.problem.decomp))
+                                  p_bc_vals, rho_bc_fun, self.problem.decomp))
 
         if self.cavitation:
             field = self.quad_mgr.nodal_fields['theta']
             specs.append(BoundarySpec(field, 'P1', rho_bc_type,
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
 
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             field = self.quad_mgr.nodal_fields['xi']
             specs.append(BoundarySpec(field, 'P1', ['D', 'D', 'D', 'D'],
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
@@ -179,7 +211,7 @@ class FEMSolver:
 
     @property
     def nb_sol(self):
-        return 3 + len(self.add_fields)
+        return len(self.variables)
 
     def _get_active_terms(self) -> None:
         self.terms = get_active_terms(self.fem_spec)
@@ -230,7 +262,7 @@ class FEMSolver:
             ctx['ad_alpha'] = lambda: p.fem_solver['stabilization']['ad_alpha']
             ctx['fc_beta'] = lambda: p.fem_solver['stabilization']['fc_beta']
             ctx['p_cav'] = lambda: p.prop['p_cav']
-            ctx['fb_p_ref'] = lambda: p.prop['P0']
+            ctx['fb_p_ref'] = lambda: 1e05
             ctx['dx'] = lambda: p.grid['dx']
             ctx['dy'] = lambda: p.grid['dy']
 
@@ -250,61 +282,33 @@ class FEMSolver:
         if HAS_PETSC:
             from .petsc_system import PETScSystem
             self.linear_solver = PETScSystem(petsc_info,
-                                             solver_type=solver_type)
+                                             solver_type=solver_type,
+                                             print_mumps_diagnostics=self.problem.fem_solver.get(
+                                                 'print_mumps_diagnostics', False))
         else:
             if MPI.COMM_WORLD.size > 1:
                 raise RuntimeError(
                     "PETSc required for parallel execution.")
             self.linear_solver = ScipySystem(petsc_info,
-                                             solver_type=solver_type)
+                                             solver_type=solver_type,
+                                             assembly=self.assembly)
 
         self.scaling = build_scaling(
             self.problem, self.energy, self.variables, self.assembly,
             cavitation=self.cavitation)
 
-        debug_from = self.problem.fem_solver['newton_debug']
-        if debug_from is not None:
-            from .newton_debug import NewtonDebugger
-            self.debugger = NewtonDebugger(
-                output_dir=self.problem.options['output'],
-                variables=self.variables,
-                residuals=self.residuals,
-                res_slices=self.assembly._res_slices,
-                sol_slices=self.assembly._sol_slices,
-                Nx_p=self.grid_idx.Nx_P1_inner,
-                Ny_p=self.grid_idx.Ny_P1_inner,
-                Nx_P2=self.grid_idx.Nx_P2_inner,
-                Ny_P2=self.grid_idx.Ny_P2_inner,
-                terms=self.terms,
-                problem=self.problem,
-                quad_mgr=self.quad_mgr,
-            )
-            self._debug_from = debug_from
-            self._debug_steps_done = 0
-        else:
-            self.debugger = None
-            self._debug_from = None
-            self._debug_steps_done = 0
-
-    @property
-    def _debug_active(self) -> bool:
-        """True when newton_debug is enabled and the step threshold has been reached."""
-        return (
-            self.debugger is not None
-            and self.problem.step >= self._debug_from
-            and self._debug_steps_done < 5
-        )
-
     # =========================================================================
     # Quadrature field update
     # =========================================================================
 
-    def update_quad(self) -> dict:
-        self.quad_mgr.update_physics()
+    def update_quad(self, it: int = 0, **kwargs) -> dict:
+        """Update models and quadrature fields for the current solution guess."""
+        self.quad_mgr.update_physics(it, **kwargs)
         self.quad_mgr.update_quad_fields()
         return self.quad_mgr.collect_quad_fields()
 
     def update_prev_quad(self) -> None:
+        """Update 'previous' quadrature fields for time-dependent terms."""
         self.quad_mgr.store_prev_values()
 
     # =========================================================================
@@ -335,7 +339,7 @@ class FEMSolver:
         return self.assembly.assemble_matrix(qf)
 
     def get_M_dense(self) -> NDArray:
-        """Assemble Jacobian as a dense (res_size, res_size) matrix in block ordering."""
+        """Debug/test helper: assemble Jacobian as a dense (res_size, res_size) matrix in block ordering."""
         coo = self.get_M()
         n_nnz = len(coo)
         block_rows = np.empty(n_nnz, dtype=np.int64)
@@ -363,25 +367,22 @@ class FEMSolver:
     # Solver step
     # =========================================================================
 
-    def update_quad_and_assemble(self) -> Tuple[NDArray, NDArray]:
+    def update_quad_and_assemble(self, it: int = 0) -> Tuple[NDArray, NDArray]:
         """Update models, quadrature fields, and assemble M and R."""
-
-        qf = self.update_quad()
-
+        qf = self.update_quad(it)
         M = self.get_M(qf)
         R = self.get_R_(qf).copy()
-
-        if self._debug_active:
-            self._last_R_per_term = self.assembly.assemble_rhs_per_term(qf)
         return M, R
 
-    def get_R(self, q_guess: NDArray) -> float:
+    def get_R(self, q_guess: NDArray, it: int = 1) -> float:
+        """Compute the local residual vector for a given solution guess."""
         self.update_q_nodal(q_guess)
-        qf = self.update_quad()
+        qf = self.update_quad(it)
         R = self.get_R_(qf).copy()
         return R
 
     def get_R_norm_global(self, R: NDArray) -> float:
+        """Compute the L2 norm of the global residual vector."""
         p = self.problem
         comm = p.decomp._mpi_comm
         R_norm_local_sq = float(np.linalg.norm(R) ** 2)
@@ -389,118 +390,33 @@ class FEMSolver:
         R_norm_global = float(np.sqrt(R_norm_global_sq))
         return R_norm_global
 
-    THETA_MAX = 0.99
-
-    def _clamp_cavitation(self, q: NDArray) -> NDArray:
-        """Clamp p >= p_cav and 0 <= theta <= THETA_MAX, with singularity guard at (a,theta)=(0,0)."""
-        p_sl = self._sol_slices['p']
-        theta_sl = self._sol_slices['theta']
-        p_cav = float(self.problem.prop['p_cav'])
-        theta_min = np.finfo(float).eps
-        q[p_sl] = np.maximum(q[p_sl], p_cav)
-        th = np.clip(q[theta_sl], 0.0, self.THETA_MAX)
-        a = q[p_sl] - p_cav
-        q[theta_sl] = np.where(
-            (np.abs(a) < theta_min) & (th < theta_min),
-            theta_min, th)
-        return q
-
     # =========================================================================
     # Output helpers
     # =========================================================================
 
+    def update_gp_models(self) -> None:
+        """GP training and active learning, once per time step on the previous converged
+        solution. Rebuilds the JIT functions of retrained models, since they capture the
+        GP state at build time."""
+        p = self.problem
+        for model in (p.pressure, p.wall_stress_xz, p.wall_stress_yz):
+            if model.is_gp_model:
+                gp_before = model.gp
+                model.update(residuals=p.residual_buffer, predictor=True)
+                if model.gp is not gp_before:
+                    model.build_grad()
+
     def update_output_fields(self) -> None:
         """Update stress models to ensure output fields are up to date before writing."""
-
         p = self.problem
         self.quad_mgr.sync_to_problem_q()
-        p.wall_stress_xz.update()
-        p.wall_stress_yz.update()
-        if hasattr(p, 'bulk_stress'):
+        p.pressure.update(residuals=p.residual_buffer)
+        if 'jx' in self.variables:
+            p.wall_stress_xz.update(residuals=p.residual_buffer)
+        if 'jy' in self.variables:
+            p.wall_stress_yz.update(residuals=p.residual_buffer)
+        if hasattr(p, 'bulk_stress') and 'jx' in self.variables and 'jy' in self.variables:
             p.bulk_stress.update()
-
-    # =========================================================================
-    # Time step
-    # =========================================================================
-
-    def check_residual(self, R: NDArray, it: int) -> float:
-        """Check residual norm and return True if converged."""
-
-        R_norm = self.get_R_norm_global(R)
-        if self.rank == 0:
-            self.R_norm_history[-1].append(R_norm)
-        if R_norm < self.tol and it > 0:
-            return True
-        return False
-
-    def post_solve(self, q: NDArray, dq: NDArray, R: NDArray, it: int, M_scaled: NDArray) -> None:
-        """Post-process obtained solution update: debug output, line search, viscosity
-        guard, and cavitation clamping."""
-
-        if self._debug_active:
-            self.debugger.step(
-                timestep=self.problem.step, it=it, R=R, dq=dq, q=q,
-                R_per_term=self._last_R_per_term, M_scaled=M_scaled)
-            self._debug_steps_done += 1
-
-        if self.problem.fem_solver['viscosity_guard']:
-            eta_prev = self.quad_mgr.nodal_fields['eta'].p[0].copy()
-            f_visc, _ = viscosity_growth_guard_scale(q, self.alpha * dq, self, eta_prev)
-            step = f_visc * self.alpha * dq
-        else:
-            step = self.alpha * dq
-
-        if self.problem.fem_solver['line_search']:
-            q = line_search(q, step, self.R_norm, self)
-        else:
-            if self.problem.prop.get('EOS') == 'Bayada':
-                q, _ = bayada_linearization_guard(q, step, self)
-            else:
-                q = q + step
-
-        if self.cavitation:
-            q = self._clamp_cavitation(q)
-
-        return q
-
-    def wrap_up_timestep(self, it: int, tic: float) -> None:
-        """Wrap up the finished timstep."""
-
-        toc = time.time()
-        self.time_inner = toc - tic
-        self.inner_iterations = it + 1
-
-        if self.debugger is not None and self._debug_steps_done >= 5:
-            self.problem._stop = True
-
-        self.print_status()
-
-    def update(self) -> None:
-        """Perform one time step with Newton iteration."""
-
-        p = self.problem
-        tic = time.time()
-        max_iter = 1 if self._debug_active else self.max_iter
-
-        self.update_prev_quad()
-        q = self.get_q_nodal().copy()
-
-        if self.rank == 0:
-            self.R_norm_history.append([])
-
-        # Inner Newton loop
-        for it in range(max_iter):
-
-            M, R = self.update_quad_and_assemble()
-            if self.check_residual(R, it):
-                break
-            dq, M_scaled = solve_linear_system(M, R, self, it)
-            q = self.post_solve(q, dq, R, it, M_scaled)
-            self.update_q_nodal(q)
-
-        self.wrap_up_timestep(it, tic)
-        self.update_output_fields()
-        p._post_update()
 
     # =========================================================================
     # Pre-run setup
@@ -527,11 +443,13 @@ class FEMSolver:
         self.build_boundary_conditions()
         self._build_terms()
         self.assembly.build_assembly_templates()
+        if p.topo.elastic and p.fem_solver['physics']['einm']:
+            self.assembly.build_elastic_templates(p.topo.ElasticDeformation)
         self._init_linear_solver()
 
         self.quad_mgr.sync_from_problem_q()
 
-        self.update_quad()
+        self.update_quad(**kwargs)
         self.update_prev_quad()
         self.update_output_fields()
 
@@ -543,24 +461,145 @@ class FEMSolver:
         self.max_iter = p.fem_solver['max_iter']
 
     # =========================================================================
+    # Time step
+    # =========================================================================
+
+    def check_residual(self, R: NDArray, it: int) -> float:
+        """Check residual norm and return True if converged."""
+        R_norm = self.get_R_norm_global(R)
+        if self.rank == 0:
+            self.R_norm_history[-1].append(R_norm)
+        if R_norm < self.tol and it > 0:
+            return True
+        return False
+
+    def post_solve(self, q: NDArray, dq: NDArray) -> None:
+        """Post-process obtained solution update: Newton step and cavitation clamping."""
+        q = q + self.alpha * dq
+        q = clamp_solution(q, self)
+        return q
+
+    def run_callbacks(self) -> None:
+        """Run per-Newton-iteration callbacks."""
+        for cb in self.cb_list:
+            cb(self)
+
+    def wrap_up_timestep(self, it: int, tic: float) -> None:
+        """Wrap up the finished timstep."""
+
+        toc = time.time()
+        self.time_inner = toc - tic
+        self.inner_iterations = it + 1
+
+    def update(self) -> None:
+        """Perform one time step with Newton iteration."""
+
+        p = self.problem
+        tic = time.time()
+
+        self.update_prev_quad()
+        self.update_gp_models()
+        q = self.get_q_nodal().copy()
+
+        if self.rank == 0:
+            self.R_norm_history.append([])
+
+        # Inner Newton loop
+        for it in range(self.max_iter):
+
+            M, R = self.update_quad_and_assemble(it)
+            if self.check_residual(R, it):
+                break
+            dq, M_scaled = self.solve_linear_system(M, R, it)
+            q = self.post_solve(q, dq)
+            self.run_callbacks()
+            self.update_q_nodal(q)
+
+        self.wrap_up_timestep(it, tic)
+        self.update_output_fields()
+        p._post_update()
+
+    def solve_linear_system(self, M: NDArray, R: NDArray, it: int = 0) -> tuple:
+        """Scale the system, solve for dq, and unscale. Returns M_scaled for debugging.
+
+        Returns
+        -------
+        dq : ndarray
+            Unscaled Newton update.
+        M_scaled : ndarray
+            The matrix passed to the linear solver (M itself if scaling is off).
+        """
+        fem_solver = self.problem.fem_solver
+        if fem_solver['scaling']:
+            scale_interval = fem_solver['scaling_update_interval']
+            step = self.problem.step
+            if (it == 0
+                    and (step == 0 or step % scale_interval == 0)):
+                self.scaling = build_scaling_from_blocks(
+                    M, self.variables, self.residuals, self.assembly,
+                    n_iter=fem_solver['scaling_ruiz_iter'])
+            M_scaled, R_scaled = self.scaling.scale_system(M, R)
+            self.linear_solver.assemble(M_scaled, R_scaled)
+            dq = self.scaling.unscale_solution(self.linear_solver.solve())
+        else:
+            M_scaled = M
+            self.linear_solver.assemble(M, R)
+            dq = self.linear_solver.solve()
+
+        return dq, M_scaled
+
+    # =========================================================================
+    # Checkpointing (warm restart)
+    # =========================================================================
+
+    def save_state(self, path: str) -> None:
+        """Save a full checkpoint of the current simulation state. See `Problem.save_state`."""
+        checkpoint.save_state(self, path)
+
+    def load_state(self, path: str) -> None:
+        """Restore a checkpoint written by `save_state`. See `Problem.load_state`."""
+        checkpoint.load_state(self, path)
+
+    # =========================================================================
     # Status / diagnostics
     # =========================================================================
 
     def print_status_header(self) -> None:
         p = self.problem
         if p.options.get('print_progress') and p.decomp.rank == 0:
-            print(78 * '-')
-            print(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} "
-                  f"{'Iter':<6s} {'Conv. Time':<12s} {'Residual':<12s} {'|R| Newton':<14s}")
-            print(78 * '-')
+            logger.info(78 * '-')
+            logger.info(f"{'Step':<6s} {'Timestep':<12s} {'Time':<12s} "
+                        f"{'Iter':<6s} {'Conv. Time':<12s} {'Residual':<12s} {'|R| Newton':<14s}")
+            logger.info(78 * '-')
+        self.print_status()
         if p.options.get('save_output'):
-            p.write(params=False)
+            p.write()
 
-    def print_status(self, scalars=None) -> None:
+    def print_status(self) -> None:
+        """
+        Log the current status line, if enabled.
+        """
         p = self.problem
-        if scalars and p.options.get('print_progress') and p.decomp.rank == 0:
+        if p.options.get('print_progress') and p.decomp.rank == 0:
             history = self.R_norm_history
             R_newton = history[-1][-1] if history and history[-1] else float('nan')
-            print(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
-                  f"{self.inner_iterations:<6d} "
-                  f"{self.time_inner:<12.4e} {p.residual:<12.4e} {R_newton:<14.4e}")
+            logger.info(f"{p.step:<6d} {p.dt:<12.4e} {p.simtime:<12.4e} "
+                        f"{self.inner_iterations:<6d} "
+                        f"{self.time_inner:<12.4e} {p.residual:<12.4e} {R_newton:<14.4e}")
+
+    def status_record(self) -> dict:
+        """
+        Scalar values recorded to history.csv for the current step.
+        """
+        p = self.problem
+        history = self.R_norm_history
+        R_newton = history[-1][-1] if history and history[-1] else float('nan')
+        return {
+            "step": p.step,
+            "dt": p.dt,
+            "time": p.simtime,
+            "inner_iterations": self.inner_iterations,
+            "time_inner": self.time_inner,
+            "residual": p.residual,
+            "R_newton": R_newton,
+        }

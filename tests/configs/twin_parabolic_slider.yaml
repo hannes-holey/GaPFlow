@@ -50,7 +50,9 @@ fem_solver:
         gap_shear: true
     stabilization:
         oss: true
-        oss_alpha: 2.0
+        oss_alpha: 1.0
+        mass_supg: false
+        mass_supg_factor: 1.0
     max_iter: 1
     R_norm_tol: 1e-9
     scaling: False

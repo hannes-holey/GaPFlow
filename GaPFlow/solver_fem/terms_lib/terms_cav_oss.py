@@ -25,7 +25,16 @@
 # flake8: noqa: E501
 
 import numpy as np
-from .terms import Term
+
+from ..terms import Term
+
+__all__ = [
+    'R_OSS_advx', 'R_OSS_advy', 'R_OSS_proj',
+    'R_OSS_mass_xx', 'R_OSS_mass_yy', 'R_OSS_mass_xy', 'R_OSS_mass_yx',
+    'R_OSS_corrx', 'R_OSS_corry',
+    'R_FC_x', 'R_FC_y',
+    'OSS_TERMS', 'OSS_TERM_NAMES', 'FC_TERMS',
+]
 
 
 # ---------------------------------------------------------------------------

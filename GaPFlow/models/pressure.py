@@ -258,10 +258,10 @@ def bwr(dens, T, gamma=3.):
     """
 
     config = os.path.join(os.path.dirname(__file__), "bwr_coeffs.txt")
-    x = np.loadtxt(config)
+    x = jnp.array(np.loadtxt(config))
 
     p = dens * T +\
-        dens**2 * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
+        dens**2 * (x[0] * T + x[1] * jnp.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
         dens**3 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
         dens**4 * (x[9] * T + x[10] + x[11] / T) +\
         dens**5 * x[12] +\
@@ -269,7 +269,7 @@ def bwr(dens, T, gamma=3.):
         dens**7 * (x[15] / T) +\
         dens**8 * (x[16] / T + x[17] / T**2) + \
         dens**9 * (x[18] / T**2) +\
-        np.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
+        jnp.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
                                     dens**5 * (x[21] / T**2 + x[22] / T**4) +  # noqa: W504
                                     dens**7 * (x[23] / T**2 + x[24] / T**3) +  # noqa: W504
                                     dens**9 * (x[25] / T**2 + x[26] / T**4) +  # noqa: W504

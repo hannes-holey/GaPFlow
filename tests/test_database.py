@@ -32,7 +32,7 @@ from GaPFlow.md import Mock
 def test_addition(tmp_path, method):
 
     db_config = {'init_size': 4,
-                 'init_width': 0.01,
+                 'init_halfwidth': [0.01, 0.5, 0.5],
                  'init_method': method,
                  'init_seed': 42,
                  'dtool_path': str(tmp_path),
@@ -46,12 +46,12 @@ def test_addition(tmp_path, method):
 
     db = Database(md, db_config, num_extra_features=1)
 
-    Xtest = np.random.uniform(size=(100, 7))
+    Xtest = np.random.uniform(size=(100, 9))
     db.initialize(Xtest)
 
     assert db.size == db_config['init_size']
 
-    Xnew = np.random.uniform(size=(10, 7))
+    Xnew = np.random.uniform(size=(10, 9))
     db.add_data(Xnew)
     assert db.size == 14
 

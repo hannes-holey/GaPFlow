@@ -59,12 +59,11 @@ force_balance:
         domain_sides: 3.0
     rigid_height_variation:
         enabled: true
-        method: PID
+        method: bisection
         init_min_height:
         ambient_pressure: 0.0
-        Kp: 1.0e-6
-        Ki: 1.0e-7
-        Kd: 1.0e-7
+        force_tol: 0.01
+        h_min_step_divisor: 50.0
 
 fem_solver:
     linear_solver: direct

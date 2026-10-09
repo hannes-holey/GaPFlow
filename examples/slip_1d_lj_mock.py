@@ -55,7 +55,7 @@ gp:
      obs_stddev: 4.e-3
      max_steps: 10
      active_dims:     # optional, default is [0, 1, 3] (x) and [0, 2, 3] (y)
-        x: [0, 1, 6]  # density, flux, slip length
+        x: [0, 1, 8]  # density, flux, slip length
 db:
  init_size: 10
  init_method: lhc
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     md_runner = Mock(prop, geo, gp)
 
-    database = Database(md_runner, db)
+    database = Database(md_runner, db, num_extra_features=1)
 
     problem = Problem(options,
                       grid,

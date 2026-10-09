@@ -16,7 +16,7 @@
 
 options:
     output: /tmp/conv_slider_pocket_1D_hansen
-    write_freq: 5
+    write_freq: 2
     save_output: False
     output_plots: False
     residual_analysis: False
@@ -24,8 +24,8 @@ options:
 grid:
     Lx: 0.010
     Ly: 0.1
-    Nx: 150
-    Ny: 12
+    Nx: 200
+    Ny: 1
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
     yS: ['P', 'P', 'P']
@@ -43,7 +43,7 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1.0
+    dt: 0.1
     tol: 0.0
     max_it: 70
 
@@ -51,7 +51,7 @@ properties:
     EOS: DH
     rho0: 850.
     P0: 2e5
-    C1: 2.22e9
+    C1: 20e9
     C2: 1.66
     p_cav: 0.0
     shear: 0.01
@@ -59,7 +59,7 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.03
+    newton_relax: 0.05
     equations:
         cavitation: True
     physics:
@@ -67,9 +67,9 @@ fem_solver:
         inertia: false
     stabilization:
         oss: true
-        ad: false
         oss_alpha: 1.0
-        ad_alpha: 0.00002
-    max_iter: 5
+        mass_supg: true
+        mass_supg_factor: 1.0
+    max_iter: 2
     R_norm_tol: 1e-9
     scaling: True

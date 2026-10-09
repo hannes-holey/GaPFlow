@@ -29,10 +29,9 @@ from typing import Dict, List, Tuple
 import numpy as np
 import numpy.typing as npt
 
-from .elements import TaylorHoodP2P1
+from .elements import TaylorHoodQ2Q1
 from .grid_index import GridIndexManager
 from .global_matrix import field_to_global
-from .terms import Term
 from .fieldspec import FieldSpec
 
 NDArray = npt.NDArray[np.floating]
@@ -66,7 +65,7 @@ class Assembly:
     Parameters
     ----------
     grid_idx : GridIndexManager
-    element : TaylorHoodP2P1
+    element : TaylorHoodQ2Q1
     var_specs : list of FieldSpec
         Active variables in block order.
     res_specs : list of FieldSpec
@@ -77,7 +76,7 @@ class Assembly:
 
     def __init__(self,
                  grid_idx: GridIndexManager,
-                 element: TaylorHoodP2P1,
+                 element: TaylorHoodQ2Q1,
                  var_specs: List[FieldSpec],
                  res_specs: List[FieldSpec],
                  terms: list,
@@ -96,7 +95,8 @@ class Assembly:
         self.res_to_grid = {s.name: s.grid for s in res_specs}
         self.var_spec = {s.name: s for s in var_specs}
         self.res_spec = {s.name: s for s in res_specs}
-        self.p_factor = sum(1 for s in var_specs if s.grid == 'P1')
+        self.p1_factor = sum(1 for s in var_specs if s.grid == 'P1')
+        self.p2_factor = sum(1 for s in var_specs if s.grid == 'P2')
 
         # Ordered list of all (res, var) block combinations
         # holds block-specific info: 'res_grid', 'var_grid', 'nnz_idx_start', 'nb_nnz'
@@ -126,17 +126,24 @@ class Assembly:
         self._nnz_buf = np.zeros(len(self.nnz_global_rows) + 1, dtype=np.float64)
         self._rhs_buf = np.zeros(self.res_size + 1, dtype=np.float64)
 
+        # Weighting templates for the effective influence Newton method
+        self.elastic_templates: Dict[str, AssemblyTemplate] = {}
+        self.elastic_templates_dhdx: Dict[str, AssemblyTemplate] = {}
+        self.elastic_templates_dhdy: Dict[str, AssemblyTemplate] = {}
+        self._nnz_cache: Dict[Tuple[str, str], IntArray] = {}
+
     # ======================================================================
     # Block connectivity — stencil-based
     # ======================================================================
 
     @staticmethod
-    def _compute_stencils(element: TaylorHoodP2P1):
+    def _compute_stencils(element: TaylorHoodQ2Q1):
         """Compute stencils for all four block types from the fine-grid stencils.
+        Just a block-specific resampling of the stencils in elements.py.
         """
 
         stencil = {}
-        stencil[3] = {
+        stencil[3] = {  # P2-P2 has all
             (0, 0): np.array(element.stencil_even_even, dtype=np.int32),
             (1, 1): np.array(element.stencil_odd_odd, dtype=np.int32),
             (0, 1): np.array(element.stencil_even_odd, dtype=np.int32),
@@ -151,14 +158,14 @@ class Assembly:
 
             for origin in stencil[3].keys():
 
-                if res == 'P1' and origin != (0, 0):
+                if res == 'P1' and origin != (0, 0):  # only use origin (0, 0) for P1 residuals
                     continue
 
                 if var == 'P2':
-                    stencil[idx][origin] = stencil[3][origin]
+                    stencil[idx][origin] = stencil[3][origin]  # use all
                     continue
 
-                # var = 'P1'
+                # var = 'P1', filter for even-even
                 points = stencil[3][origin]
                 stencil[idx][origin] = np.empty((0, 2), dtype=np.int32)
                 for point in points:
@@ -205,6 +212,8 @@ class Assembly:
             pts = inner_pts_2d[sel]
             idx = inner_idx[sel]
 
+            # iterate through stencil offsets; compile all res-var pairs simultaneously
+            # using grid index masks
             for dx, dy in offsets:
                 nx = pts[:, 0] + dx
                 ny = pts[:, 1] + dy
@@ -234,7 +243,8 @@ class Assembly:
     # ======================================================================
 
     def _build_coo_pattern(self, connectivity) -> None:
-        """Build nnz list. Ordering determined by self._block_order
+        """Build nnz list. Ordering determined by self._block_order.
+        Stacks the block-specific connectivity pairs from apply_stencil into a single list.
         """
         self.nnz_local_to = np.empty((0,), dtype=np.int32)
         self.nnz_local_from = np.empty((0,), dtype=np.int32)
@@ -254,8 +264,8 @@ class Assembly:
             inner_pts_global_idx = self.apply_l2g(rg, inner_pts)
             contrib_pts_global_idx = self.apply_l2g(vg, contrib_pts)
 
-            global_rows = field_to_global(inner_pts_global_idx, self.res_spec[res], self.grid_idx, self.p_factor)
-            global_cols = field_to_global(contrib_pts_global_idx, self.var_spec[var], self.grid_idx, self.p_factor)
+            global_rows = field_to_global(inner_pts_global_idx, self.res_spec[res], self.grid_idx, self.p1_factor, self.p2_factor)
+            global_cols = field_to_global(contrib_pts_global_idx, self.var_spec[var], self.grid_idx, self.p1_factor, self.p2_factor)
             self.nnz_global_rows = np.concatenate([self.nnz_global_rows, global_rows])
             self.nnz_global_cols = np.concatenate([self.nnz_global_cols, global_cols])
 
@@ -275,30 +285,30 @@ class Assembly:
     # ======================================================================
 
     def _build_coo_lookups(self):
-        """Build one dict per (res, var) block.
-
-        Maps (res_local_idx, var_local_idx) -> absolute flat nnz index.
-        """
+        """Build one sorted-key lookup per (res, var) block."""
         lookups = {}
         for (res, var), block in self.block_order.items():
             rg, vg = block['res_grid'], block['var_grid']
             inner_pts, contrib_pts, nb_nnz = self.conn[(rg, vg)]
             start = block['nnz_idx_start']
-            d = {}
-            for k in range(nb_nnz):
-                pair = (int(inner_pts[k]), int(contrib_pts[k]))
-                d[pair] = start + k
-            lookups[(res, var)] = d
+            contrib_stride = int(contrib_pts.max()) + 1 if nb_nnz else 1
+            keys = inner_pts.astype(np.int64) * contrib_stride + contrib_pts.astype(np.int64)
+            values = start + np.arange(nb_nnz, dtype=np.int32)
+            order = np.argsort(keys)
+            lookups[(res, var)] = (keys[order], values[order], contrib_stride)
         return lookups
 
-    def lookup_nnz(self, res, res_local_idx, var, var_local_idx):
-        """Uses above built lookup and returns absolute flat nnz index for
-        (res, res_local_idx, var, var_local_idx).
-
-        Returns -1 if pair not in the sparsity pattern.
-        """
-        return self.coo_lookups[(res, var)].get(
-            (int(res_local_idx), int(var_local_idx)), -1)
+    def _lookup_nnz_vec(self, res: str, var: str, res_idx: IntArray, var_idx: IntArray) -> IntArray:
+        """Vectorized lookup of absolute flat nnz index."""
+        keys_sorted, values_sorted, contrib_stride = self.coo_lookups[(res, var)]
+        both_valid = (res_idx >= 0) & (var_idx >= 0)
+        res_safe = np.where(both_valid, res_idx, 0)
+        var_safe = np.where(both_valid, var_idx, 0)
+        query_keys = res_safe.astype(np.int64) * contrib_stride + var_safe.astype(np.int64)
+        pos = np.searchsorted(keys_sorted, query_keys)
+        pos_clipped = np.clip(pos, 0, len(keys_sorted) - 1)
+        found = both_valid & (pos < len(keys_sorted)) & (keys_sorted[pos_clipped] == query_keys)
+        return np.where(found, values_sorted[pos_clipped], -1).astype(np.int32)
 
     # ======================================================================
     # RHS pattern
@@ -322,7 +332,7 @@ class Assembly:
                         else self.grid_idx.Nx_P1_inner * self.grid_idx.Ny_P1_inner)
 
             global_field_indices = self.apply_l2g(spec.grid, np.arange(nb_inner, dtype=np.int32))
-            rows.append(field_to_global(global_field_indices, spec, self.grid_idx, self.p_factor))
+            rows.append(field_to_global(global_field_indices, spec, self.grid_idx, self.p1_factor, self.p2_factor))
 
         self.rhs_global_rows: IntArray = np.concatenate(rows)
 
@@ -413,7 +423,7 @@ class Assembly:
             self.assembly_templates[(res, var, dd, td)] = AssemblyTemplate(
                 w=w,
                 entries_per_quad=entries_per_quad,
-                nnz=self._build_nnz(res, var),
+                nnz=self._get_nnz(res, var),
             )
 
         # Residual-only keys for assemble_rhs (one key per term: (res, dd, td))
@@ -428,6 +438,117 @@ class Assembly:
                     nnz=self._build_nnz_res(term.res),
                 )
 
+    def build_elastic_templates(self, elastic_deformation) -> None:
+        """Precompute injection templates for the Effective Influence Newton
+        Method's elastic-influence Jacobian contribution
+
+        Parameters
+        ----------
+        elastic_deformation : GaPFlow.topography.ElasticDeformation
+        """
+        G3 = self._build_greens_function(elastic_deformation)
+
+        for res in ('mass', 'momentum_x', 'momentum_y'):
+            if res not in self.residuals:
+                continue
+            w, entries_per_quad = self._build_weighting_elastic(res, G3)
+            self.elastic_templates[res] = AssemblyTemplate(
+                w=w,
+                entries_per_quad=entries_per_quad,
+                nnz=self._get_nnz(res, 'p'),
+            )
+
+        for deriv, templates in (('x', self.elastic_templates_dhdx),
+                                    ('y', self.elastic_templates_dhdy)):
+            w, entries_per_quad = self._build_weighting_elastic('mass', G3, deriv=deriv)
+            templates['mass'] = AssemblyTemplate(
+                w=w,
+                entries_per_quad=entries_per_quad,
+                nnz=self._get_nnz('mass', 'p'),
+            )
+
+    def _build_greens_function(self, elastic_deformation) -> NDArray:
+        """Return the 3x3 P1 elastic Green's function block; dx, dy in {-1, 0, 1}."""
+        decomp = self.grid_idx.decomp
+        Nx_padded = self.grid_idx.Nx_P1_padded
+        Ny_padded = self.grid_idx.Ny_P1_padded
+
+        p_impulse = np.zeros((Nx_padded, Ny_padded))
+        if decomp.rank == 0:
+            ix, iy = Nx_padded // 2, Ny_padded // 2
+            p_impulse[ix, iy] = 1.0
+
+        disp = elastic_deformation.get_deformation(p_impulse)
+
+        G3 = np.zeros((3, 3))
+        if decomp.rank == 0:
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    G3[dx + 1, dy + 1] = disp[ix + dx, iy + dy]
+
+        decomp._mpi_comm.Bcast(G3, root=0)
+        return G3
+
+    def _interpolate_G_quad(self, G_sub: NDArray, coords: NDArray, deriv: str = None) -> float:
+        """Bilinearly (Q1) interpolate a 2x2 block of G3 to a quad point."""
+        x, y = coords
+        if deriv is None:
+            return ((1 - x) * (1 - y) * G_sub[0, 0] + x * (1 - y) * G_sub[1, 0]
+                    + (1 - x) * y * G_sub[0, 1] + x * y * G_sub[1, 1])
+        elif deriv == 'x':
+            return (-(1 - y) * G_sub[0, 0] + (1 - y) * G_sub[1, 0]
+                    - y * G_sub[0, 1] + y * G_sub[1, 1]) / self.element.dx
+        elif deriv == 'y':
+            return (-(1 - x) * G_sub[0, 0] - x * G_sub[1, 0]
+                    + (1 - x) * G_sub[0, 1] + x * G_sub[1, 1]) / self.element.dy
+
+    # G3 sub-block (2x2) to use for each Q1 corner's dh/dp interpolation,
+    # picked so the corner's own physical position is included in the block.
+    _G_SUB_SLICES = [
+        (slice(1, 3), slice(1, 3)),  # bl
+        (slice(0, 2), slice(1, 3)),  # br
+        (slice(1, 3), slice(0, 2)),  # tl
+        (slice(0, 2), slice(0, 2)),  # tr
+    ]
+
+    def _build_weighting_elastic(self, res: str, G3: NDArray, deriv: str = None):
+        """Build the elastic-influence shape_weighting for a P1-grid."""
+        Q1 = self.element.Q1
+        n_var = Q1.nodes_per_element
+        n_quad = self.element.Quadrature.nb_points
+
+        elem_res = self.element.Q1 if self.res_to_grid[res] == 'P1' else self.element.Q2
+
+        n_res = elem_res.nodes_per_element
+        n_entries_per_quad = n_res * n_var
+        res_N = elem_res.N  # shape (n_quad, n_res)
+
+        quad_coords = self.element.Quadrature.coordinates  # shape (n_quad, 2)
+        weights = self.element.Quadrature.weights  # shape (n_quad,)
+
+        # Compute dh/dp_i at quad points
+        dh_dp_quad = np.zeros((n_quad, n_var))
+
+        for quad_idx in range(n_quad):
+            coords = quad_coords[quad_idx]
+
+            for node_idx in range(n_var):
+                row_sl, col_sl = self._G_SUB_SLICES[node_idx]
+                G_sub = G3[row_sl, col_sl]
+
+                dh_dp_quad[quad_idx, node_idx] = self._interpolate_G_quad(
+                    G_sub, coords, deriv=deriv)
+
+        # Repeat for all residual nodes in the square
+        dh_dp_quad_ = dh_dp_quad.repeat(n_res, axis=1).reshape(n_quad, n_var, n_res)
+
+        # Assemble weighting and residual shape function vectors
+        area = self.element.sq_area
+        weights_vec = np.repeat(weights * area, n_entries_per_quad)
+        res_N_vec = np.tile(res_N, (1, n_var)).ravel()  # shape (n_quad * n_res * n_var,)
+
+        return dh_dp_quad_.ravel() * res_N_vec * weights_vec, n_entries_per_quad
+
     def _build_weighting(self, res: str, var: str,
                          depvar_deriv: str, test_deriv):
         """Build shape_weighting for one (res, var, depvar_deriv, test_deriv)
@@ -437,83 +558,100 @@ class Assembly:
         """
         res_grid, var_grid = self.res_to_grid[res], self.var_to_grid[var]
 
-        res_element = self.element.P1 if res_grid == 'P1' else self.element.P2
-        var_element = self.element.P1 if var_grid == 'P1' else self.element.P2
+        res_element = self.element.Q1 if res_grid == 'P1' else self.element.Q2
+        var_element = self.element.Q1 if var_grid == 'P1' else self.element.Q2
 
-        nodes_tri_res = res_element.nodes_per_tri
-        nodes_tri_var = var_element.nodes_per_tri
+        nodes_res = res_element.nodes_per_element
+        nodes_var = var_element.nodes_per_element
 
         # --- Trial function (var) shape functions ---
         deriv_scale = 1.0
         if depvar_deriv == 'none':
-            var_N_tri = var_element.N
-            var_N = np.tile(var_N_tri, (2, 1))
+            var_N = var_element.N
         else:
-            var_N_tri = var_element.dN_dx if depvar_deriv == 'x' else var_element.dN_dy
+            var_N = var_element.dN_dx if depvar_deriv == 'x' else var_element.dN_dy
             d = self.element.dx if depvar_deriv == 'x' else self.element.dy
-            var_N = np.concatenate((var_N_tri, -var_N_tri))
             deriv_scale *= 1.0 / d
 
         # --- Test function (res) shape functions ---
         if not test_deriv:
-            res_N_tri = res_element.N
-            res_N = np.tile(res_N_tri, (2, 1))
+            res_N = res_element.N
         else:
-            res_N_tri = res_element.dN_dx if test_deriv == 'x' else res_element.dN_dy
+            res_N = res_element.dN_dx if test_deriv == 'x' else res_element.dN_dy
             d = self.element.dx if test_deriv == 'x' else self.element.dy
-            res_N = np.concatenate((res_N_tri, -res_N_tri))
             deriv_scale *= -1.0 / d
 
-        entries_per_quad = nodes_tri_res * nodes_tri_var
+        entries_per_quad = nodes_res * nodes_var
 
-        weights = self.element.Quadrature.weights  # shape (n_quad_tri,)
+        weights = self.element.Quadrature.weights  # shape (nb_quad,)
         area = self.element.sq_area
-        weights_vec = np.tile(np.repeat(weights * area * deriv_scale, entries_per_quad), 2)
+        weights_vec = np.repeat(weights * area * deriv_scale, entries_per_quad)
 
-        var_N_vec = var_N.repeat(nodes_tri_res, axis=1).ravel()
-        res_N_vec = np.tile(res_N, (1, nodes_tri_var)).ravel()
+        var_N_vec = var_N.repeat(nodes_res, axis=1).ravel()
+        res_N_vec = np.tile(res_N, (1, nodes_var)).ravel()
 
         return weights_vec * var_N_vec * res_N_vec, entries_per_quad
+
+    def _get_nnz(self, res: str, var: str) -> IntArray:
+        """Cached accessor for _build_nnz, keyed on (res, var) only since the
+        result is identical across all derivative combos sharing that block.
+        """
+        key = (res, var)
+        if key not in self._nnz_cache:
+            self._nnz_cache[key] = self._build_nnz(res, var)
+        return self._nnz_cache[key]
 
     def _build_nnz(self, res: str, var: str) -> IntArray:
         """Build nnz injection indices for one (res, var) block.
         Note: same for all derivative combos.
 
         Ordering: 0->0, 0->1, ... residual moves faster than variable
+        (must match _build_weighting's entries_per_quad ordering exactly)
         """
 
-        TO_P2 = self.grid_idx.sq_TO_inner_P2  # (n_sq, 9)
-        TO_P1 = self.grid_idx.sq_TO_inner_P1  # (n_sq, 4)
-        FROM_P2 = self.grid_idx.sq_FROM_padded_P2(var)  # (n_sq, 9)
-        FROM_P1 = self.grid_idx.sq_FROM_padded_P1(var)  # (n_sq, 4)
-        n_sq = self.grid_idx.nb_sq
+        TO_Q2 = self.grid_idx.sq_TO_inner_P2  # (n_sq, 9)
+        TO_Q1 = self.grid_idx.sq_TO_inner_P1  # (n_sq, 4)
+        FROM_Q2 = self.grid_idx.sq_FROM_padded_P2(var)  # (n_sq, 9)
+        FROM_Q1 = self.grid_idx.sq_FROM_padded_P1(var)  # (n_sq, 4)
 
-        res_sq_to_nodes = TO_P1 if self.res_to_grid[res] == 'P1' else TO_P2
-        var_sq_to_nodes = FROM_P1 if self.var_to_grid[var] == 'P1' else FROM_P2
+        res_sq_to_nodes = TO_Q1 if self.res_to_grid[res] == 'P1' else TO_Q2  # (n_sq, nodes_res)
+        var_sq_to_nodes = FROM_Q1 if self.var_to_grid[var] == 'P1' else FROM_Q2  # (n_sq, nodes_var)
 
-        res_element = self.element.P1 if self.res_to_grid[res] == 'P1' else self.element.P2
-        var_element = self.element.P1 if self.var_to_grid[var] == 'P1' else self.element.P2
+        n_sq, nodes_res = res_sq_to_nodes.shape
+        nodes_var = var_sq_to_nodes.shape[1]
 
-        nb_nnz = n_sq * 2 * res_element.nodes_per_tri * var_element.nodes_per_tri
-        nnz = np.empty((nb_nnz), dtype=np.int32)
-        nnz_idx = 0
+        res_idx = np.broadcast_to(res_sq_to_nodes[:, None, :], (n_sq, nodes_var, nodes_res))
+        var_idx = np.broadcast_to(var_sq_to_nodes[:, :, None], (n_sq, nodes_var, nodes_res))
+        nnz = self._lookup_nnz_vec(res, var, res_idx, var_idx)
 
-        for sq_idx in range(n_sq):
-            for tri_idx in (0, 1):
-                res_nodes_on_sq = res_sq_to_nodes[sq_idx]
-                var_nodes_on_sq = var_sq_to_nodes[sq_idx]
+        return nnz.ravel().astype(np.int32)
 
-                res_nodes_on_tri = res_nodes_on_sq[res_element.idx_to_std[tri_idx]]
-                var_nodes_on_tri = var_nodes_on_sq[var_element.idx_to_std[tri_idx]]
+    def _scatter_quad_contribution(self, res_quad_field: NDArray, tmpl: AssemblyTemplate) -> None:
+        """Core of the assembly process; from quadrature values to matrix entries. Steps:
+        - repeat quad values by entries per quad
+        - tile shape weighting by number of squares
+        - multiply and reduce from per-quad to per-square contributions
+        - accumulate into the nnz buffer
 
-                for var_node in var_nodes_on_tri:
-                    for res_node in res_nodes_on_tri:
-                        # Find local nnz index for (res_node, var_node)
-                        local_idx = self.lookup_nnz(res, res_node, var, var_node)
-                        nnz[nnz_idx] = local_idx
-                        nnz_idx += 1
+        Parameters
+        ----------
+        res_quad_field : NDArray
+            shape (n_sq, n_quad_sq)
+        tmpl : AssemblyTemplate
+            Template for the assembly process
+        """
+        nb_sq = self.grid_idx.nb_sq
+        quad_per_sq = self.element.Quadrature.nb_points
+        sw = tmpl.w
+        entries_per_quad = tmpl.entries_per_quad
 
-        return nnz
+        quad_val_vec = np.repeat(res_quad_field.flatten(), entries_per_quad)
+        sw_vec = np.tile(sw, nb_sq)
+        q_vec = quad_val_vec * sw_vec
+
+        ele_vec = q_vec.reshape(-1, quad_per_sq, entries_per_quad).sum(axis=1).reshape(-1)
+
+        np.add.at(self._nnz_buf, tmpl.nnz, ele_vec)
 
     def assemble_matrix(self,
                         quad_fields: Dict[str, NDArray],
@@ -529,101 +667,93 @@ class Assembly:
         self._nnz_buf[:] = 0.0
 
         for term in self.assembly_terms:
-
             td = term.test_deriv
             dep_vars = [quad_fields[v] for v in term.dep_vars]
             res = term.res
-            nb_sq = self.grid_idx.nb_sq
-            quad_per_tri = self.element.Quadrature.nb_points
 
             for var in term.dep_vars:
-
                 dd = term.depvar_deriv_for(var)
                 key = (res, var, dd, td)
                 tmpl = self.assembly_templates[key]
-                sw = tmpl.w
-                entries_per_quad = tmpl.entries_per_quad
 
-                res_quad_field = term.evaluate_deriv(var, *dep_vars)  # shape (n_sq, n_quad_sq)
+                res_quad_field = term.evaluate_deriv(var, *dep_vars)
+                self._scatter_quad_contribution(res_quad_field, tmpl)
 
-                # shape (n_sq * n_quad_sq * entries_per_quad,)
-                quad_val_vec = np.repeat(res_quad_field.flatten(), entries_per_quad)
-                sw_vec = np.tile(sw, nb_sq)
-                q_vec = quad_val_vec * sw_vec
+            if term.der_h is not None and res in self.elastic_templates:
+                dRdh = term.der_h(*dep_vars)
+                self._scatter_quad_contribution(dRdh, self.elastic_templates[res])
 
-                # size is boiled down by factor: quad_per_tri
-                ele_vec = q_vec.reshape(-1, quad_per_tri, entries_per_quad).sum(axis=1).reshape(-1)
+            if term.der_h_dx is not None and res in self.elastic_templates_dhdx:
+                dRdhdx = term.der_h_dx(*dep_vars)
+                self._scatter_quad_contribution(dRdhdx, self.elastic_templates_dhdx[res])
 
-                np.add.at(self._nnz_buf, tmpl.nnz, ele_vec)
+            if term.der_h_dy is not None and res in self.elastic_templates_dhdy:
+                dRdhdy = term.der_h_dy(*dep_vars)
+                self._scatter_quad_contribution(dRdhdy, self.elastic_templates_dhdy[res])
 
         return self._nnz_buf[:-1]
 
     def _build_res_weighting(self, res: str, depvar_deriv: str, test_deriv):
-        """Residual weighting arrays (n_quad_sq * nodes_tri_res,)
+        """Residual weighting arrays (n_quad_sq * nodes_res,)
         """
         res_grid = self.res_to_grid[res]
 
-        res_element = self.element.P1 if res_grid == 'P1' else self.element.P2
+        res_element = self.element.Q1 if res_grid == 'P1' else self.element.Q2
 
-        nodes_tri_res = res_element.nodes_per_tri
+        nodes_res = res_element.nodes_per_element
 
         if not test_deriv:
-            res_N_tri = res_element.N
-            res_N = np.tile(res_N_tri, (2, 1))
+            res_N = res_element.N
             factor = 1.0
         else:
-            res_N_tri = res_element.dN_dx if test_deriv == 'x' else res_element.dN_dy
-            res_N = np.concatenate((res_N_tri, -res_N_tri))
+            res_N = res_element.dN_dx if test_deriv == 'x' else res_element.dN_dy
             factor = -1.0 / self.element.dx if test_deriv == 'x' else -1.0 / self.element.dy
 
-        # shape (n_quad_sq * nodes_tri_res,)
+        # shape (n_quad_sq * nodes_res,)
         # (q0, N0), (q0, N1), (q0, N2), (q1, N0), ...
         res_N_vec = res_N.reshape(-1)
 
         # weights compensate for area on square
-        weights = self.element.Quadrature.weights  # shape (n_quad_tri,)
+        weights = self.element.Quadrature.weights  # shape (nb_quad,)
         area = self.element.sq_area
 
-        weights_vec = np.tile(np.repeat(weights * area * factor, nodes_tri_res), 2)
+        weights_vec = np.repeat(weights * area * factor, nodes_res)
 
         res_weighting = weights_vec * res_N_vec
 
-        return res_weighting, nodes_tri_res
+        return res_weighting, nodes_res
 
     def _build_nnz_res(self, res: str) -> IntArray:
         """Build nnz_index for residual-only weighting. Same for all derivative combos.
 
         Ordering: 0->0, 0->1, ... residual moves faster than variable
+        (must match _build_res_weighting's ordering exactly)
         """
 
-        TO_P2 = self.grid_idx.sq_TO_inner_P2  # (n_sq, 9)
-        TO_P1 = self.grid_idx.sq_TO_inner_P1  # (n_sq, 4)
+        TO_Q2 = self.grid_idx.sq_TO_inner_P2  # (n_sq, 9)
+        TO_Q1 = self.grid_idx.sq_TO_inner_P1  # (n_sq, 4)
         n_sq = self.grid_idx.nb_sq
 
-        res_sq_to_nodes = TO_P1 if self.res_to_grid[res] == 'P1' else TO_P2
-        res_element = self.element.P1 if self.res_to_grid[res] == 'P1' else self.element.P2
+        res_sq_to_nodes = TO_Q1 if self.res_to_grid[res] == 'P1' else TO_Q2
+        res_element = self.element.Q1 if self.res_to_grid[res] == 'P1' else self.element.Q2
 
-        nb_nnz = n_sq * 2 * res_element.nodes_per_tri
+        nb_nnz = n_sq * res_element.nodes_per_element
         nnz = np.empty((nb_nnz), dtype=np.int32)
         nnz_idx = 0
 
         res_slice_start = self._res_slices[res].start
 
         for sq_idx in range(n_sq):
-            for tri_idx in (0, 1):
-                res_nodes_on_sq = res_sq_to_nodes[sq_idx]
-                res_nodes_on_tri = res_nodes_on_sq[res_element.idx_to_std[tri_idx]]
+            res_nodes_on_sq = res_sq_to_nodes[sq_idx]
 
-                for res_node in res_nodes_on_tri:
-                    local_idx = res_slice_start + res_node if res_node >= 0 else -1
-                    nnz[nnz_idx] = local_idx
-                    nnz_idx += 1
+            for res_node in res_nodes_on_sq:
+                local_idx = res_slice_start + res_node if res_node >= 0 else -1
+                nnz[nnz_idx] = local_idx
+                nnz_idx += 1
 
         return nnz
 
-    def assemble_rhs(self,
-                     quad_fields: Dict[str, NDArray],
-                     ) -> NDArray:
+    def assemble_rhs(self, quad_fields: Dict[str, NDArray]) -> NDArray:
         """Accumulate residual term contributions and return a view on the result.
 
         Returns
@@ -661,43 +791,3 @@ class Assembly:
             np.add.at(self._rhs_buf, nnz, ele_vec)
 
         return self._rhs_buf[:-1]
-
-    def assemble_rhs_per_term(self,
-                              quad_fields: Dict[str, NDArray],
-                              ) -> Dict[str, NDArray]:
-        """Assemble residual contribution of each term individually.
-
-        Returns
-        -------
-        dict
-            Mapping term.name -> NDArray of shape (res_size,) for that term's
-            contribution to the residual vector.
-        """
-        result = {}
-        for term in self.assembly_terms:
-            self._rhs_buf[:] = 0.0
-
-            dd, td = term.deriv_key
-            res = term.res
-            nb_sq = self.grid_idx.nb_sq
-            quad_per_tri = self.element.Quadrature.nb_points
-
-            key_res = (res, dd, td)
-            tmpl = self.assembly_templates[key_res]
-            nnz = tmpl.nnz
-            entries_per_quad = tmpl.entries_per_quad
-            sw = tmpl.w
-
-            dep_vars_rhs = [quad_fields[v] for v in term.dep_vars]
-            quad_vals = term.evaluate(*dep_vars_rhs)
-
-            quad_val_vec = np.repeat(quad_vals.flatten(), entries_per_quad)
-            sw_vec = np.tile(sw, nb_sq)
-            ele_vec = (quad_val_vec * sw_vec).reshape(
-                -1, quad_per_tri, entries_per_quad).sum(axis=1).reshape(-1)
-
-            term_buf = np.zeros_like(self._rhs_buf)
-            np.add.at(term_buf, nnz, ele_vec)
-            result[term.name] = term_buf[:-1].copy()
-
-        return result

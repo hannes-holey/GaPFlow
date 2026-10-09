@@ -1,0 +1,63 @@
+# Parabolic slider bearing — Fischer-Burmeister cavitation, solver comparison template
+#
+# Geometry: parabolic gap, hmin=2.54e-5 m, hmax=5.08e-5 m, U=4.57 m/s
+# Dirichlet p=0 at inlet/outlet, periodic in y (effectively 1D).
+#
+# Fluid: Dowson-Higginson EOS
+#   rho0 = 877.7 kg/m³  at  P0 = 101325 Pa
+#   p_cav = 0 Pa
+#   shear = 0.039 Pa·s
+
+options:
+    output: /tmp/parabolic_slider_cav_{solver}
+    write_freq: 5
+    save_output: False
+    print_config: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.004
+    Nx: 800
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 3.36e05
+    xE_P: 0
+
+geometry:
+    type: parabolic
+    hmin: 4e-06
+    hmax: 8e-06
+    U: 4.57
+    V: 0.
+
+numerics:
+    solver: {solver}
+    dt: 1.0
+    tol: -1.
+    max_it: 35
+
+properties:
+    EOS: DH
+    rho0: 877.7007
+    P0: 101325
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0
+    shear: 0.039
+    bulk: 0.0
+
+fem_solver:
+    linear_solver: direct
+    newton_relax: 0.5
+    p_init: 103338.25
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        oss: false
+        mass_supg: true
+    max_iter: 1

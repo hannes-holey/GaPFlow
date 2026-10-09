@@ -26,8 +26,8 @@ options:
 grid:
     Lx: 0.010
     Ly: 0.004
-    Nx: 100
-    Ny: 4
+    Nx: 300
+    Ny: 1
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
     yS: ['P', 'P', 'P']
@@ -45,33 +45,33 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 1.0
+    dt: 0.1
     tol: 0.0
-    max_it: 200
+    max_it: 40
 
 properties:
     EOS: DH
     rho0: 850.
     P0: 0.1e5
-    C1: 6.22e9
-    C2: 1.66
+    C1: 20e9
+    C2: 1.2
     p_cav: 0.0
-    shear: 0.01
+    shear: 0.0001
     bulk: 0.0
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.004
+    newton_relax: 0.1
     equations:
         cavitation: True
     physics:
         gap_shear: true
-        inertia: true
+        inertia: false
     stabilization:
         oss: true
-        ad: false
-        oss_alpha: 2.0
-        ad_alpha: 0.0001
+        oss_alpha: 1.0
+        mass_supg: false
+        mass_supg_factor: 1.0
     max_iter: 5
     R_norm_tol: 1e-9
     scaling: False

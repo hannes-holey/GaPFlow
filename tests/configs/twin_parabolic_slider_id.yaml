@@ -8,14 +8,14 @@ options:
 grid:
     Lx: 0.0762
     Ly: 0.004
-    Nx: 200
-    Ny: 4
+    Nx: 400
+    Ny: 1
     xW: ['D', 'N', 'N']
-    xE: ['N', 'N', 'N']
+    xE: ['D', 'N', 'N']
     yS: ['P', 'P', 'P']
     yN: ['P', 'P', 'P']
-    xW_P: 3.36414e5
-    xE_P: 1e3
+    xW_P: 3.36e5
+    xE_P: 0
 
 geometry:
     type: inclined
@@ -27,9 +27,9 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 0.1
-    tol: 0.0
-    max_it: 300
+    dt: 1.0
+    tol: -1.
+    max_it: 80
 
 properties:
     EOS: DH
@@ -43,14 +43,15 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.04
+    newton_relax: 0.1
     equations:
-        cavitation: True
+        cavitation: true
     physics:
         gap_shear: true
     stabilization:
+        mass_supg: false
+        mass_supg_factor: 1.0
         oss: true
-        oss_alpha: 2.0
     max_iter: 1
     R_norm_tol: 1e-9
     scaling: False

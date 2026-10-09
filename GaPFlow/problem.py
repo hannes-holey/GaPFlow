@@ -29,10 +29,8 @@ import numpy as np
 from copy import deepcopy
 from collections import deque
 from datetime import datetime
-from itertools import islice
 from muGrid import FileIONetCDF
-from mpi4py import MPI
-from .parallel import DomainDecomposition
+from .parallel import DomainDecomposition, MPI
 
 from typing import Type
 import numpy.typing as npt
@@ -48,7 +46,7 @@ from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from .analysis import compute_metrics, print_metrics, create_overview_plot
-from .utils import handle_signals, get_termination_signals
+from .utils import handle_signals, get_termination_signals, above_tolerance
 from .models import WallStress, BulkStress, Pressure, Energy, Viscosity
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
@@ -56,8 +54,8 @@ from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
 from .viz.animations import animate_1d, animate_1d_gp, animate_2d
 from .logging import get_logger
 
-# Configure module logger writing to gapflow_problem.log via centralized helper
-logger = get_logger("gapflow.problem")
+# Configure module logger writing to log.run via centralized helper
+logger = get_logger("gapflow.run")
 
 
 class Problem:
@@ -163,8 +161,14 @@ class Problem:
                          U_bot=geo['U_bot'], V_bot=geo['V_bot'],
                          U_top=geo['U_top'], V_top=geo['V_top'])
 
-        # Initialize extra field
-        num_extra_features = 1 if database is None else database.num_features - 6
+        # Initialize extra field (only allocate if extra data is actually present).
+        if database is not None:
+            num_extra_features = database.num_extra_features
+        elif extra_field is not None:
+            num_extra_features = extra_field.shape[0]
+        else:
+            num_extra_features = 0
+
         extra = self.fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
             extra.pg[:] = extra_field
@@ -187,9 +191,7 @@ class Problem:
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
         self.viscosity = Viscosity(self.fc, prop)
         self.topo = Topography(self.fc, self.grid, geo, prop, decomp=self.decomp,
-                               force_balance=force_balance)
-        if self.topo.force_balance:
-            self.topo._fb_controller.set_problem(self)
+                               force_balance=force_balance, problem=self)
 
         self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
         if self.bEnergy:
@@ -207,7 +209,7 @@ class Problem:
 
             # Reconfigure module loggers to write into the simulation output directory
             # so all components write into the same outdir logfile(s).
-            get_logger("gapflow.problem", outdir=self.outdir, force=True)
+            get_logger("gapflow.run", outdir=self.outdir, force=True)
 
             if database is not None:
                 # Set training path inside output path
@@ -300,7 +302,10 @@ class Problem:
                 elif md['system'] == 'mol':
                     MD = GoldAlkane(md)
 
-            database = Database(MD, db)
+            derived_exprs = gp.get('derived_features', []) if gp else []
+            database = Database(MD, db,
+                                num_derived_features=len(derived_exprs),
+                                derived_expressions=derived_exprs)
         else:
             database = None
 
@@ -325,7 +330,7 @@ class Problem:
             Instantiated `Problem` object.
         """
         logger.info(f"Reading input file: {fname}")
-        with open(fname, "r") as ymlfile:
+        with open(fname, "r", encoding="utf-8") as ymlfile:
             yaml_dir = os.path.dirname(os.path.abspath(fname))
             input_dict = read_yaml_input(ymlfile)
 
@@ -420,13 +425,19 @@ class Problem:
 
     @property
     def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar), globally reduced across MPI ranks."""
+        """Total kinetic energy (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_ekin = np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
         return self.decomp._mpi_comm.allreduce(local_ekin, op=MPI.SUM)
 
     @property
     def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar), globally reduced across MPI ranks."""
+        """Maximum speed in the domain (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_vmax = np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
         return self.decomp._mpi_comm.allreduce(local_vmax, op=MPI.MAX)
 
@@ -443,14 +454,7 @@ class Problem:
     @property
     def converged(self) -> bool:
         """Return True if residuals in the buffer are below tolerance."""
-        return not self._residuals_above_tolerance(self.tol, num=5)
-
-    def _residuals_above_tolerance(self, tol: float, num: int | None = None) -> bool:
-        """Return True if any of the last `num` residuals are above `tol` (all if `num` is None)."""
-        buf = self.residual_buffer
-        if num is None:
-            return any(v > tol for v in buf)
-        return any(v > tol for v in islice(reversed(buf), num))
+        return not above_tolerance(self.residual_buffer, self.tol, num=5)
 
     # ---------------------------
     # Simulation run utilities
@@ -473,13 +477,7 @@ class Problem:
 
         self._stop = False
 
-        self.history = {
-            "step": [],
-            "time": [],
-            "ekin": [],
-            "residual": [],
-            "vsound": []
-        }
+        self.history = {}
 
         self.solver.print_status_header()
 
@@ -493,10 +491,9 @@ class Problem:
             self.update()
 
             if self.step % self.options['write_freq'] == 0:
-                if self.options['print_progress']:
-                    self.solver.print_status(True)
+                self.solver.print_status()
                 if self.options['save_output']:
-                    self.write(scalars=False)
+                    self.write()
 
             handle_signals(self._receive_signal)
 
@@ -541,11 +538,10 @@ class Problem:
 
     def _post_run(self) -> None:
         """
-        Finalize run: write history, print timing and GP timing info.
+        Finalize run: print timing and GP timing info.
         """
         # Print metrics if requested
         if self.options.get('print_metrics', False):
-            from mpi4py import MPI
             metrics = compute_metrics(self)
             print_metrics(metrics, MPI.COMM_WORLD)
 
@@ -563,7 +559,8 @@ class Problem:
         walltime = datetime.now() - self._tic
 
         if self.step % self.options['write_freq'] != 0 and self.options['save_output']:
-            self.write(scalars=False)
+            self.solver.print_status()
+            self.write()
 
         speed = self.step / walltime.total_seconds()
 
@@ -586,8 +583,6 @@ class Problem:
         logger.info(33 * '=')
 
         if self.options['save_output']:
-            history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
-
             if self.pressure.is_gp_model:
                 with open(os.path.join(self.outdir, 'gp_zz.txt'), 'w') as f:
                     print(self.pressure.gp, file=f)
@@ -629,15 +624,15 @@ class Problem:
             Boundary: 'W', 'E', 'S', or 'N'
         callback : callable
             Function: callback(ctx: BCContext) -> np.ndarray
-            The BCContext contains: problem, required_shape, ghost_slice,
-            interior_slice, x_norm, y_norm.
+            The BCContext contains: problem, required_shape, slice_ghost,
+            slice_interior, x_norm, y_norm.
             Returns array with shape matching ctx.required_shape.
 
         Example
         -------
         def jx_lid(ctx):
             u_wall = 1.0
-            rho_ghost = ctx.problem.q[0][ctx.ghost_slice]
+            rho_ghost = ctx.problem.q[0][ctx.slice_ghost]
             return rho_ghost * u_wall
 
         problem.set_bc_function('jx', 'N', jx_lid)
@@ -704,9 +699,9 @@ class Problem:
             logger.warning('Negative density detected.')
 
         self.q = q0
-        self.pressure.update(predictor=False, compute_var=True)
-        self.wall_stress_xz.update(predictor=False, compute_var=True)
-        self.wall_stress_yz.update(predictor=False, compute_var=True)
+        self.pressure.update(self.residual_buffer, predictor=False, compute_var=True)
+        self.wall_stress_xz.update(self.residual_buffer, predictor=False, compute_var=True)
+        self.wall_stress_yz.update(self.residual_buffer, predictor=False, compute_var=True)
         self.bulk_stress.update()
 
         logger.info('Writing previous step and aborting simulation.')
@@ -716,11 +711,13 @@ class Problem:
     # I/O and state writing
     # ---------------------------
 
-    def write(self, scalars: bool = True, fields: bool = True, params: bool = True) -> None:
+    def write(self, fields: bool = True) -> None:
         """
-        Write scalars, fields and hyperparameters to disk as configured.
+        Record history and write fields to disk as configured.
         """
-        self.solver.print_status(scalars)
+        for key, value in self.solver.status_record().items():
+            self.history.setdefault(key, []).append(value)
+        history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
 
         if fields:
             self.file = FileIONetCDF(self.filename, open_mode='append')
@@ -746,6 +743,39 @@ class Problem:
             self.topofile.append_frame().write()
             self.topofile.close()
 
+    def save_state(self, path: str) -> None:
+        """
+        Save a full simulation checkpoint for a later warm restart via :meth:`load_state`.
+
+        Independent of the regular trajectory output (:meth:`write`); captures everything
+        needed to continue the simulation seamlessly, including solver-internal state not
+        otherwise written to disk. Currently only supported for the FEM solver.
+
+        Parameters
+        ----------
+        path : str
+            Destination file path (``.npz``).
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("save_state is only implemented for the FEM solver.")
+        self.solver.save_state(path)
+
+    def load_state(self, path: str) -> None:
+        """
+        Restore a simulation checkpoint written by :meth:`save_state`.
+
+        Must be called on a freshly constructed `Problem` (same grid/geometry/config as the
+        checkpointed run), before :meth:`run`. Currently only supported for the FEM solver.
+
+        Parameters
+        ----------
+        path : str
+            Path to a checkpoint file written by :meth:`save_state`.
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("load_state is only implemented for the FEM solver.")
+        self.solver.load_state(path)
+
     # ---------------------------
     # Initialization and update helpers
     # ---------------------------
@@ -755,6 +785,8 @@ class Problem:
         Select active GP models
         """
         if gp is not None:
+            derived = gp.get('derived_features', [])
+
             if self.grid['dim'] == 1:
                 gpz = gp.get('press')
                 gpx = gp.get('shear')
@@ -764,6 +796,10 @@ class Problem:
                 gpx = gp.get('shear')
                 gpy = gp.get('shear')
 
+            # Inject top-level derived_features into each model sub-dict.
+            for sub in [gpx, gpy, gpz]:
+                if sub is not None:
+                    sub['derived_features'] = derived
         else:
             gpx, gpy, gpz = None, None, None
 
@@ -773,10 +809,12 @@ class Problem:
                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
+        No jx/jy rows if the solution field has no jx/jy DOFs (e.g. Reynolds mode).
         """
         self.__field.pg[0] = rho0
-        self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
-        self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
+        if self.solver.nb_sol >= 3:
+            self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
+            self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
 
         self.kinetic_energy_old = self.kinetic_energy
 

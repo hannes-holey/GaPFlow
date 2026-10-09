@@ -46,7 +46,6 @@ fem_solver:
         gap_shear: False
         plane_shear: True
         body_force: True
-    newton_debug: False
 
 options:
     output: /tmp/poiseuille_2d_test

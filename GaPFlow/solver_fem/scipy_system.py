@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
-"""SciPy-based sparse linear solver for serial Taylor-Hood P2P1 execution."""
+"""SciPy-based sparse linear solver for serial Taylor-Hood Q2Q1 execution."""
 
 import numpy as np
 import numpy.typing as npt
@@ -31,7 +31,7 @@ from scipy.sparse import csc_matrix, coo_matrix
 from scipy.sparse.linalg import splu, gmres
 
 if TYPE_CHECKING:
-    from .assembly import P2P1AssemblyInfo
+    from .assembly import GlobalIndexPattern, Assembly
 
 NDArray = npt.NDArray[np.floating]
 
@@ -46,28 +46,25 @@ class ScipySystem:
 
     Parameters
     ----------
-    info : P2P1AssemblyInfo
+    info : GlobalIndexPattern
         Precomputed assembly info (sizes and global indices).
     solver_type : str, optional
         "direct" (SuperLU) or "iterative" (GMRES). Default: "direct".
     """
 
-    def __init__(self, info: "P2P1AssemblyInfo", solver_type: str = "direct"):
+    def __init__(self, info: "GlobalIndexPattern", solver_type: str = "direct",
+                 assembly: "Assembly" = None):
         self._info = info
         self._solver_type = solver_type
         self._size = info.local_size
         self._rhs_rows = info.rhs_global_rows
+        self._assembly = assembly
 
         self._rhs: NDArray = np.zeros(self._size)
         self._iterations = 0
         self._converged = True
 
-        print('using scipy')
-
         # Build CSC structure once from the fixed sparsity pattern.
-        # COO (rows, cols) have no duplicates, so tocsc() merely sorts entries —
-        # no summation. We capture the permutation from COO order to CSC data
-        # order so future assemble() calls only update mat.data in-place.
         dummy = csc_matrix(
             (np.ones(len(info.mat_global_rows), dtype=np.float64),
              (info.mat_global_rows, info.mat_global_cols)),
@@ -129,6 +126,7 @@ class ScipySystem:
         return {
             'converged': self._converged,
             'iterations': self._iterations,
-            'residual_norm': 0.0,
+            'residual_norm': getattr(self, '_residual_norm', 0.0),
+            'relative_residual_norm': getattr(self, '_relative_residual_norm', 0.0),
             'reason': 1 if self._converged else -1,
         }

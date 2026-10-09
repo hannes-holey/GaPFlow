@@ -31,7 +31,7 @@ import numpy.typing as npt
 from muGrid import Field
 from scipy.ndimage import zoom
 
-from .elements import TaylorHoodP2P1
+from .elements import TaylorHoodQ2Q1
 from .fieldspec import NODAL_P1, NODAL_P2, QUAD_FIELD_REGISTRY, resolve_source, categorize_registry_fields
 from .terms import collect_required_fields
 
@@ -44,7 +44,7 @@ NDArray = npt.NDArray[np.floating]
 
 
 class QuadFieldManager:
-    """Manages nodal and quadrature fields for Taylor-Hood P2P1 assembly.
+    """Manages nodal and quadrature fields for Taylor-Hood Q2Q1 assembly.
 
     Parameters
     ----------
@@ -54,7 +54,7 @@ class QuadFieldManager:
         Whether the energy equation is active.
     variables : list of str
         Newton variables in order, e.g. ['jx', 'jy', 'rho'] or with 'E'.
-    elements : TaylorHoodP2P1
+    elements : TaylorHoodQ2Q1
         Element instance carrying P1 and P2 operators.
     decomp : DomainDecomposition
         Decomposition holding both coarse (_p) and fine (_P2) grid info.
@@ -65,7 +65,7 @@ class QuadFieldManager:
                  cavitation: bool,
                  variables: List[str],
                  add_fields: List[str],
-                 elements: TaylorHoodP2P1,
+                 elements: TaylorHoodQ2Q1,
                  decomp: "DomainDecomposition",
                  terms: list) -> None:
 
@@ -107,10 +107,11 @@ class QuadFieldManager:
         # ---- P2 nodal fields ----
         fc_P2 = self.decomp.fc_P2
         for name in NODAL_P2:
-            self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
+            if name in self.variables:
+                self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
 
         # ---- Quadrature fields ----
-        nb_quad_sq = self.elements.n_tri * self.elements.Quadrature.nb_points
+        nb_quad_sq = self.elements.Quadrature.nb_points
         fc.set_nb_sub_pts('quad', nb_quad_sq)
 
         for name in self.quad_field_keys | set(self.variables):
@@ -152,10 +153,15 @@ class QuadFieldManager:
     # transpose from (nb_quad_sq, sq_per_row, sq_per_col) to (nb_sq, nb_quad_sq)
     # =========================================================================
 
+    def _element_for(self, name: str):
+        if name in NODAL_P2:
+            return self.elements.Q2
+        return self.elements.Q1
+
     def _deriv_pg(self, name: str, axis: str) -> NDArray:
         """Derivative of nodal field `name` along `axis` ('x' or 'y') at quad points.
         Returns raw pg shape (nb_quad_sq, Nx-1, Ny-1), trimmed to inner squares."""
-        el = self.elements.P2 if name in NODAL_P2 else self.elements.P1
+        el = self._element_for(name)
         getattr(el, f'd{axis}_operator').apply(self.nodal_fields[name], self._deriv_placeholder)
         return self._deriv_placeholder.pg[..., :-1, :-1] / getattr(self, f'd{axis}')
 
@@ -179,7 +185,7 @@ class QuadFieldManager:
     def interpolate_nodal_to_quad(self, name: str) -> None:
         """Interpolate a single nodal field to its quad output field.
         No return, but updates self.quad_fields[name] in-place."""
-        el = self.elements.P2 if name in NODAL_P2 else self.elements.P1
+        el = self._element_for(name)
         el.interpolation_operator.apply(self.nodal_fields[name], self.quad_fields[name])
 
     # =========================================================================
@@ -205,10 +211,13 @@ class QuadFieldManager:
         """Sync FEM-owned nodal fields back to problem.q."""
         p = self.problem
         p.q[0] = self.nf('rho')
-        p.q[1] = self.nf('jx')[::2, ::2]
-        p.q[2] = self.nf('jy')[::2, ::2]
+        base_slots = len(self.variables) - len(self.add_fields)
+        if 'jx' in self.variables:
+            p.q[1] = self.nf('jx')[::2, ::2]
+        if 'jy' in self.variables:
+            p.q[2] = self.nf('jy')[::2, ::2]
         for i, name in enumerate(self.add_fields):
-            p.q[3 + i] = self.nf(name)
+            p.q[base_slots + i] = self.nf(name)
 
     def sync_from_problem_q(self) -> None:
         """Initial state copy of problem.q to FEM-owned nodal fields."""
@@ -222,21 +231,25 @@ class QuadFieldManager:
         self.nf('p')[:] = self._call_computed('p_from_rho', self.nf)
         self.problem.pressure.pressure[:] = self.nf('p')
 
+        base_slots = len(self.variables) - len(self.add_fields)
         for i, name in enumerate(self.add_fields):
-            self.nf(name)[:] = p.q[3 + i]
+            self.nf(name)[:] = p.q[base_slots + i]
 
         # P2 fields
-        Nx_p, Ny_p = self.decomp.local_shape_padded
-        Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
-        zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
-        self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
-        self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
+        if 'jx' in self.variables or 'jy' in self.variables:
+            Nx_p, Ny_p = self.decomp.local_shape_padded
+            Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
+            zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
+            if 'jx' in self.variables:
+                self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
+            if 'jy' in self.variables:
+                self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
 
     # =========================================================================
     # Field updates  (called once per Newton step)
     # =========================================================================
 
-    def update_physics(self) -> None:
+    def update_physics(self, it: int = 0, **kwargs) -> None:
         """Update physics model fields after solution field update."""
         p = self.problem
 
@@ -249,7 +262,7 @@ class QuadFieldManager:
         self.sync_to_problem_q()
 
         # height update (needs updated p in pressure module)
-        p.topo.update()
+        p.topo.update(it, **kwargs)
 
         # viscosity
         dp_dx = np.gradient(p_nodal, self.dx, axis=0)
@@ -294,7 +307,14 @@ class QuadFieldManager:
         # Nodal fields - interpolate to quad
         for name in self.nodal_field_keys | set(self.variables):
             self.interpolate_nodal_to_quad(name)
-        # rho must be interpolated before rho_from_p so it can serve as initial guess
+
+        # Compute 'dh_dx'/'dh_dy' quad values directly from nodal 'h', if needed
+        if 'dh_dx' in self.quad_fields:
+            self.quad_fields['dh_dx'].pg[s] = self._deriv_pg('h', 'x')
+        if 'dh_dy' in self.quad_fields:
+            self.quad_fields['dh_dy'].pg[s] = self._deriv_pg('h', 'y')
+
+        # Special case for: rho_quad <- p_quad: we need an initial guess for rho_quad
         self.interpolate_nodal_to_quad('rho')
         q('rho')[:] = self._call_computed('rho_from_p', q)
 
@@ -312,9 +332,9 @@ class QuadFieldManager:
 
         # rho_avg must be ready before the computed loop (d2p_drho2 depends on it)
         if 'rho_avg' in self.quad_fields:
-            q('rho_avg')[:] = 0.5 * (q('rho') + q('rho_before'))
+            q('rho_avg')[:] = 0.5 * (q('rho') + q('rho_prev'))
 
-        # computed: call physics method with quad field arguments
+        # Computed fields
         for name in self.quad_field_keys:
             if name in self._reg_computed:
                 entry = QUAD_FIELD_REGISTRY[name]
@@ -322,27 +342,34 @@ class QuadFieldManager:
                 args = tuple(q(a) for a in entry['args'])
                 q(name)[:] = apply(func, *args)
 
-        # Squeeze hardcoded
+        # Hardcoded quad fields
         if 'dh_dt' in self.quad_field_keys:
             self._update_squeeze_quad_fields(q)
-
-        # OSS still hardcoded right now
-        if 'xi' in self.variables:
+        if 'xi' in self.variables and not self.problem.fem_solver['equations']['reynolds']:
             self._update_oss_quad_fields(q)
-
         if self.problem.fem_solver['stabilization']['fc']:
             self._update_fc_quad_fields(q)
+        if self.problem.fem_solver['equations']['reynolds']:
+            self._update_reynolds_quad_fields(q)
+            if self.problem.fem_solver['stabilization']['mass_supg']:
+                self._update_reynolds_supg_quad_fields(q)
+        elif self.problem.fem_solver['stabilization']['mass_supg']:
+            self._update_mass_supg_quad_fields(q)
 
     def _update_squeeze_quad_fields(self, q) -> None:
-        """Compute dh_dt at quad points from h and h_before."""
+        """Compute dh_dt at quad points from h and h_prev."""
         dt = self.problem.numerics['dt']
-        q('dh_dt')[:] = (q('h') - q('h_before')) / dt
+        q('dh_dt')[:] = (q('h') - q('h_prev')) / dt
 
     def _update_oss_quad_fields(self, q) -> None:
         """Compute OSS stabilisation fields (a_vec, tau, one_minus_theta) at quad points."""
+        rho_l = self.problem.prop['rho_l']
+        geo = self.problem.geo
+        U_m = 0.5 * (geo['U_bot'] + geo['U_top'])
+        V_m = 0.5 * (geo['V_bot'] + geo['V_top'])
 
-        a_vec_x = q('dp_drho') * q('jx')
-        a_vec_y = q('dp_drho') * q('jy')
+        a_vec_x = rho_l * U_m
+        a_vec_y = rho_l * V_m
         q('a_vec_x')[:] = a_vec_x
         q('a_vec_y')[:] = a_vec_y
 
@@ -358,27 +385,48 @@ class QuadFieldManager:
         q('tau_a_y')[:] = alpha * tau * a_vec_y
 
     def _update_fc_quad_fields(self, q) -> None:
-        """Compute flux-capturing diffusion coefficient fc_tau at quad points.
-
-        fc_tau = (h_elem² / 2) * fc_beta * |R_mass_strong|
-        R_mass_strong has units [Pa/s]; h_elem² gives [Pa·m²/s] which is
-        the correct unit for the diffusivity in the weak-form mass integral.
-        fc_beta is a dimensionless O(1) coefficient.
-        """
+        """Compute flux-capturing diffusion coefficient fc_tau at quad points."""
         h_elem = min(self.dx, self.dy)
         beta = self.problem.fem_solver['stabilization']['fc_beta']
 
         R_mass = (
-            -q('dp_drho') * (
+            -(
                 (1 - q('theta')) * (q('d_dx_jx') + q('d_dy_jy'))
                 - q('jx') * q('d_dx_theta')
                 - q('jy') * q('d_dy_theta')
                 + (1 - q('theta')) / q('h') * (q('dh_dx') * q('jx') + q('dh_dy') * q('jy'))
             )
-            - (q('p') - q('p_before')) / self.problem.numerics['dt']
+            - (q('rho') * (1 - q('theta')) - q('rho_prev') * (1 - q('theta_prev'))) / self.problem.numerics['dt']
         )
 
         q('fc_tau')[:] = (h_elem**2 / 2.0) * beta * np.abs(R_mass) * 1e05
+
+    def _update_reynolds_quad_fields(self, q) -> None:
+        """Compute mean surface velocity U_m at quad points."""
+        geo = self.problem.geo
+        q('U_m')[:] = 0.5 * (geo['U_bot'] + geo['U_top'])
+
+    def _update_reynolds_supg_quad_fields(self, q) -> None:
+        """Compute UPG stabilization coefficient tau_supg at quad points."""
+        geo = self.problem.geo
+        U = 0.5 * (geo['U_bot'] + geo['U_top'])
+        alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
+        q('tau_supg')[:] = 0.5 * alpha * self.dx * np.sign(U)
+
+    def _update_mass_supg_quad_fields(self, q) -> None:
+        """Compute SUPG stabilization coefficients f_x, f_y at quad points."""
+        alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
+        supg_type = self.problem.fem_solver['stabilization']['mass_supg_type']
+
+        if supg_type == 'flux':
+            q('f_x')[:] = 0.5 * alpha * self.dx * np.sign(q('jx'))
+            q('f_y')[:] = 0.5 * alpha * self.dy * np.sign(q('jy'))
+        else:
+            geo = self.problem.geo
+            U = 0.5 * (geo['U_bot'] + geo['U_top'])
+            V = 0.5 * (geo['V_bot'] + geo['V_top'])
+            q('f_x')[:] = 0.5 * alpha * self.dx * np.sign(U)
+            q('f_y')[:] = 0.5 * alpha * self.dy * np.sign(V)
 
     def collect_quad_fields(self) -> dict:
         return {name: self.get_quad_sq(name) for name in self.quad_fields}
@@ -389,11 +437,11 @@ class QuadFieldManager:
             prev_key = f'{var}_prev'
             if var in self.quad_fields and prev_key in self.quad_fields:
                 self.qf(prev_key)[:] = self.qf(var).copy()
-        if 'h_before' in self.quad_fields:
-            self.qf('h_before')[:] = self.qf('h').copy()
-        if 'rho_before' in self.quad_fields:
-            self.qf('rho_before')[:] = self.qf('rho').copy()
-        if 'dp_drho_before' in self.quad_fields:
-            self.qf('dp_drho_before')[:] = self.qf('dp_drho').copy()
-        if 'p_before' in self.quad_fields:
-            self.qf('p_before')[:] = self.qf('p').copy()
+        if 'h_prev' in self.quad_fields:
+            self.qf('h_prev')[:] = self.qf('h').copy()
+        if 'rho_prev' in self.quad_fields:
+            self.qf('rho_prev')[:] = self.qf('rho').copy()
+        if 'dp_drho_prev' in self.quad_fields:
+            self.qf('dp_drho_prev')[:] = self.qf('dp_drho').copy()
+        if 'p_prev' in self.quad_fields:
+            self.qf('p_prev')[:] = self.qf('p').copy()

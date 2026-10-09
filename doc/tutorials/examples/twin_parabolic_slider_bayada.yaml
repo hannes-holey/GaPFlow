@@ -1,6 +1,6 @@
 options:
     output: /tmp/twin_parabolic_slider_bayada
-    write_freq: 1
+    write_freq: 2
     save_output: False
     output_plots: False
 
@@ -28,7 +28,7 @@ numerics:
     solver: fem
     dt: 0.08
     tol: 0.
-    max_it: 1000
+    max_it: 50
 
 properties:
     rho0: 850.

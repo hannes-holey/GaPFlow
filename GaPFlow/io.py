@@ -30,11 +30,12 @@ Mainly functions that sanitize the user input from YAML configuration files.
 
 
 import os
+import shutil
 import warnings
 from datetime import datetime
 import yaml
 import polars as pl
-from mpi4py import MPI
+from .parallel import MPI
 
 
 def print_header(s, n=60, f0='*', f1=' '):
@@ -49,8 +50,11 @@ def print_header(s, n=60, f0='*', f1=' '):
     print(w * f0)
 
 
+_print_config = True
+
+
 def print_dict(d):
-    if MPI.COMM_WORLD.Get_rank() != 0:
+    if MPI.COMM_WORLD.Get_rank() != 0 or not _print_config:
         return
     for k, v in d.items():
         if not isinstance(v, dict):
@@ -86,7 +90,16 @@ def create_output_directory(name, use_tstamp=True):
     if rank == 0:
         os.makedirs(outdir, exist_ok=True)
         if len(os.listdir(outdir)) > 0:
-            raise RuntimeError('Output path exists and is not empty.')
+            answer = input(f"Output path '{outdir}' exists and is not empty. "
+                           "Overwrite? [y/N] ")
+            if answer.strip().lower() not in ('y', 'yes'):
+                raise RuntimeError('Output path exists and is not empty.')
+            for entry in os.listdir(outdir):
+                path = os.path.join(outdir, entry)
+                if os.path.isdir(path) and not os.path.islink(path):
+                    shutil.rmtree(path)
+                else:
+                    os.remove(path)
 
     # Synchronize all ranks before proceeding
     comm.Barrier()
@@ -110,10 +123,15 @@ def history_to_csv(fname, out):
 
 def read_yaml_input(file):
 
+    global _print_config
+
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    if rank == 0:
+    raw_dict = yaml.full_load(file)
+    _print_config = bool(raw_dict.get('options', {}).get('print_config', True))
+
+    if rank == 0 and _print_config:
         print_header("PROBLEM SETUP")
 
     # TODO: check if complete
@@ -132,15 +150,13 @@ def read_yaml_input(file):
 
     sanitized_dict = {}
 
-    raw_dict = yaml.full_load(file)
-
     for key, func in sanitizing_functions.items():
-        if rank == 0:
+        if rank == 0 and _print_config:
             print(f'- {key}:')
         val = raw_dict.get(key)
         sanitized_dict[key] = func(val) if val is not None else None
 
-    if rank == 0:
+    if rank == 0 and _print_config:
         print_header("PROBLEM SETUP COMPLETED")
 
     return sanitized_dict
@@ -166,6 +182,8 @@ def sanitize_options(d):
         out['print_metrics'] = bool(d['output_metrics'])
     else:
         out['print_metrics'] = bool(d.get('print_metrics', False))
+
+    out['print_config'] = bool(d.get('print_config', True))
 
     out['output_plots'] = bool(d.get('output_plots', False))
 
@@ -288,8 +306,8 @@ def sanitize_grid(d):
 
 def sanitize_geometry(d):
 
-    available = ['journal', 'inclined', 'parabolic', 'cdc', 'asperity', 'parabolic_2d',
-                 'circular_contact', 'from_file']
+    available = ['journal', 'inclined', 'parabolic', 'cdc', 'circular_1d', 'asperity',
+                 'parabolic_2d', 'circular_contact', 'from_file']
     out = {}
 
     # Bottom wall velocities (backward compat: 'U'/'V' → 'U_bot'/'V_bot')
@@ -304,15 +322,17 @@ def sanitize_geometry(d):
     out['V_top'] = float(d.get('V_top', 0.))
     out['type'] = str(d.get('type', 'none'))
     out['flip'] = bool(d.get('flip', False))
+    out['x_contact_center'] = None if d.get('x_contact_center') is None else float(d['x_contact_center'])
+    out['y_contact_center'] = None if d.get('y_contact_center') is None else float(d['y_contact_center'])
 
     if out['type'] not in available:
         raise IOError("Specify a valid geometry type")
 
     if out['type'] == 'journal':
-        if "CR" and 'eps' in d.keys():
+        if "CR" in d.keys() and 'eps' in d.keys():
             out["CR"] = float(d.get("CR"))
             out["eps"] = float(d.get("eps"))
-        elif "hmin" and 'hmax' in d.keys():
+        elif "hmin" in d.keys() and 'hmax' in d.keys():
             out["hmin"] = float(d.get("hmin"))
             out["hmax"] = float(d.get("hmax"))
         else:
@@ -327,6 +347,9 @@ def sanitize_geometry(d):
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
         out['b'] = float(d.get('b'))
+    elif out['type'] == 'circular_1d':
+        out['Rx'] = float(d.get('Rx'))
+        out['hmin'] = float(d.get('hmin'))
     elif out['type'] == 'asperity':
         out['hmin'] = float(d.get('hmin'))
         out['hmax'] = float(d.get('hmax'))
@@ -411,6 +434,14 @@ def sanitize_properties(d):
     # Cavitation threshold (penalty solver); falls back to P0 if not specified
     out['p_cav'] = float(d.get('p_cav', out.get('P0', 0.0)))
 
+    # Viscosity field underrelaxation
+    out['viscosity'] = {}
+    viscosity_d = d.get('viscosity', {})
+    out['viscosity']['alpha_underrelax'] = float(viscosity_d.get('alpha_underrelax', 1.0))
+    out['viscosity']['freeze_gradient'] = bool(viscosity_d.get('freeze_gradient', False))
+    out['viscosity']['underrelax_gradient_value'] = bool(
+        viscosity_d.get('underrelax_gradient_value', False))
+
     # Non-Newtonian behavior
     # Piezoviscosity: Barus, Roelands
     available_piezo = ['Barus', 'Roelands', 'Dukler', 'McAdams']
@@ -430,7 +461,16 @@ def sanitize_properties(d):
 
         if out['piezo']['name'] in available_piezo:
             for k, de in zip(keys, defaults):
-                out['piezo'][k] = float(d['piezo'].get(k, de))
+                v = d['piezo'].get(k, de)
+                out['piezo'][k] = float(v) if v is not None else None
+
+        # Optional viscosity cap, applied generically to any piezo model's
+        # result (soft-saturating regularization -- see piezoviscosity()).
+        eta_max = d['piezo'].get('eta_max', None)
+        out['piezo']['eta_max'] = float(eta_max) if eta_max is not None else None
+
+        eta_blend_cut = d['piezo'].get('eta_blend_cut', None)
+        out['piezo']['eta_blend_cut'] = float(eta_blend_cut) if eta_blend_cut is not None else None
 
     # Shear-thinning:
     available_thinning = ['Carreau', 'Eyring']
@@ -459,6 +499,7 @@ def sanitize_properties(d):
         out['elastic']['alpha_underrelax'] = float(d['elastic'].get('alpha_underrelax', 1e-03))
         out['elastic']['n_images'] = int(d['elastic'].get('n_images', 10))
         out['elastic']['reference_point'] = d['elastic'].get('reference_point', 'corner')
+        out['elastic']['turn_off_reference'] = bool(d['elastic'].get('turn_off_reference', False))
         thickness = d['elastic'].get('thickness', None)
         out['elastic']['thickness'] = float(thickness) if thickness is not None else None
     else:
@@ -501,24 +542,29 @@ def sanitize_gp(d):
     out['press_gp'] = bool(use_press_gp)
     out['shear_gp'] = bool(use_shear_gp)
 
+    # Derived features are shared across all GP models (same _Xtest layout).
+    out['derived_features'] = list(d.get('derived_features', []))
+
     for sk, active in zip(['press', 'shear'], [use_press_gp, use_shear_gp]):
         if active:
             out[sk] = {}
             ds = d[sk]
-            out[sk]['tol'] = ds.get('tol', 'delta')
-            out[sk]['atol'] = float(ds.get('atol', 1.))
-            out[sk]['rtol'] = float(ds.get('rtol', 0.))
             out[sk]['obs_stddev'] = float(ds.get('obs_stddev', 0.))
             out[sk]['fix_noise'] = bool(ds.get('fix_noise', True))
             out[sk]['max_steps'] = int(ds.get('max_steps', 5))
-            out[sk]['pause_steps'] = int(ds.get('pause_steps', 100))
+            out[sk]['pause_steps'] = int(ds.get('pause_steps', 1000))
             out[sk]['active_learning'] = bool(ds.get('active_learning', True))
-            out[sk]['similarity_check'] = bool(ds.get('similarity_check', True))
+            out[sk]['similarity_check'] = bool(ds.get('similarity_check', False))
             out[sk]['allowed_skips'] = int(ds.get('allowed_skips', 0))
-            out[sk]['perturb_target'] = bool(ds.get('perturb_target', False))
             out[sk]['pause_on_high_residual'] = bool(ds.get('pause_on_high_residual', False))
 
-            assert out[sk]['tol'] in ['absmax', 'delta', 'snr']
+            out[sk]['tolerance_protocol'] = ds.get('tolerance_protocol', 'rtol_delta')
+            assert out[sk]['tolerance_protocol'] in ['rtol_delta', 'sigmoid', 'linear']
+            out[sk]['atol'] = float(ds.get('atol', 1.))
+            out[sk]['rtol'] = float(ds.get('rtol', 0.))
+            out[sk]['atol_reduction_factor'] = float(ds.get('atol_reduction_factor', 0.5))
+            out[sk]['tol_rmid'] = float(ds.get('tol_rmid', 1e-6))
+            out[sk]['tol_alpha'] = float(ds.get('tol_alpha', 2.))
 
             # For shear/2D: need to distinguish (x and y)
             if sk == 'press':
@@ -540,12 +586,13 @@ def sanitize_db(d):
     out['dtool_path'] = d.get('dtool_path', None)
     out['init_size'] = int(d.get('init_size', 5))
     out['init_method'] = str(d.get('init_method', 'lhc'))
-    out['init_width'] = float(d.get('init_width', 1e-2))
-    out['init_seed'] = int(d.get('init_width', 123))
+    out['init_halfwidth'] = list(d.get('init_halfwidth', [1e-2, 0.5, 0.5]))
+    out['init_seed'] = int(d.get('init_seed', 123))
 
     out['normalizer_X'] = d.get('normalizer_X', 'minmax')
     out['normalizer_Y'] = d.get('normalizer_Y', 'standard')
 
+    assert len(out['init_halfwidth']) == 3
     assert out['init_method'] in ['rand', 'lhc', 'sobol']
     assert out['normalizer_X'] in ['max', 'minmax', 'standard', 'none']
     assert out['normalizer_Y'] in ['max', 'minmax', 'standard', 'none']
@@ -570,15 +617,9 @@ def sanitize_fem_solver(d):
     out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
     # newton_relax: support both new name and legacy 'alpha'
     out['newton_relax'] = float(d.get('newton_relax', d.get('alpha', 1.0)))
-    raw = d.get('newton_debug', False)
-    if raw is False:
-        out['newton_debug'] = None
-    elif raw is True:
-        out['newton_debug'] = 0
-    else:
-        out['newton_debug'] = int(raw)
     out['scaling'] = bool(d.get('scaling', True))
     out['linear_solver'] = str(d.get('linear_solver', 'direct'))
+    out['print_mumps_diagnostics'] = bool(d.get('print_mumps_diagnostics', False))
 
     physics = d.get('physics', {})
     out['physics'] = {
@@ -588,6 +629,7 @@ def sanitize_fem_solver(d):
         'inertia': bool(physics.get('inertia', False)),
         'body_force': bool(physics.get('body_force', False)),
         'squeeze': bool(physics.get('squeeze', False)),
+        'einm': bool(physics.get('einm', False)),
         # Energy physics (sub-flags only relevant if energy=True)
         'energy': bool(physics.get('energy', False)),
         'energy_convection': bool(physics.get('energy_convection', True)),
@@ -605,6 +647,9 @@ def sanitize_fem_solver(d):
         'oss_alpha': float(stab.get('oss_alpha', 1.0)),
         'fc': bool(stab.get('fc', False)),
         'fc_beta': float(stab.get('fc_beta', 0.7)),
+        'mass_supg': bool(stab.get('mass_supg', False)),
+        'mass_supg_factor': float(stab.get('mass_supg_factor', 1.0)),
+        'mass_supg_type': str(stab.get('mass_supg_type', 'Couette')),
     }
 
     if 'p_init' in d:
@@ -618,12 +663,10 @@ def sanitize_fem_solver(d):
     out['equations']['energy'] = out['physics']['energy']
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
     out['equations']['cavitation'] = bool(d.get('equations', {}).get('cavitation', False))
+    out['equations']['reynolds'] = bool(d.get('equations', {}).get('reynolds', False))
 
     out['scaling_update_interval'] = int(d.get('scaling_update_interval', 100))
     out['scaling_ruiz_iter'] = int(d.get('scaling_ruiz_iter', 10))
-    out['line_search'] = bool(d.get('line_search', False))
-    out['line_search_alpha_min'] = float(d.get('line_search_alpha_min', 1e-12))
-    out['viscosity_guard'] = bool(d.get('viscosity_guard', False))
 
     print_dict(out)
 
@@ -649,7 +692,8 @@ def sanitize_force_balance(d):
         raise IOError("Need to specify either 'force' or 'pressure' in force_balance.")
 
     idc = d.get('init_dry_contact', None)
-    if idc is not None and idc is not False:
+    idc_enabled = bool(idc) if not isinstance(idc, dict) else idc.get('enabled', True)
+    if idc_enabled:
         out['init_dry_contact'] = {'enabled': True}
         if isinstance(idc, dict):
             out['init_dry_contact']['domain_inlet'] = float(idc.get('domain_inlet', 4.5))
@@ -658,6 +702,8 @@ def sanitize_force_balance(d):
             out['init_dry_contact']['use_deformed_height'] = bool(idc.get('use_deformed_height', False))
             if out['init_dry_contact']['use_deformed_height']:
                 out['init_dry_contact']['h_min_init'] = float(idc['h_min_init'])
+            if 'force' in idc:
+                out['init_dry_contact']['force'] = float(idc['force'])
     else:
         out['init_dry_contact'] = {'enabled': False}
 
@@ -667,13 +713,11 @@ def sanitize_force_balance(d):
     if rhv is not None and rhv.get('enabled', False):
         out['rigid_height_variation'] = {
             'enabled': True,
-            'method': str(rhv.get('method', 'PID')),
+            'method': str(rhv.get('method', 'bisection')),
             'ambient_pressure': float(rhv.get('ambient_pressure', 0.0)),
+            'force_tol': float(rhv.get('force_tol', 0.01)),
+            'h_min_step_divisor': float(rhv.get('h_min_step_divisor', 50.0)),
         }
-        if out['rigid_height_variation']['method'] == 'PID':
-            out['rigid_height_variation']['Kp'] = float(rhv['Kp'])
-            out['rigid_height_variation']['Ki'] = float(rhv['Ki'])
-            out['rigid_height_variation']['Kd'] = float(rhv['Kd'])
     else:
         out['rigid_height_variation'] = {'enabled': False}
 

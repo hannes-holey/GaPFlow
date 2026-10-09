@@ -79,10 +79,13 @@ RES_GRID = {
 
 NODAL_P1 = ['rho', 'p']
 NODAL_P2 = ['jx', 'jy']
+NODAL_Q1 = ['h', 'dh_dx', 'dh_dy', 'rho', 'eta']
 
 # Shared arg lists for groups of computed fields with identical inputs
-_ARGS_XZ = ['rho', 'jx', 'jy', 'h', 'dh_dx', 'U_bot', 'V_bot', 'U_top', 'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p']
-_ARGS_YZ = ['rho', 'jx', 'jy', 'h', 'dh_dy', 'U_bot', 'V_bot', 'U_top', 'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p']
+_ARGS_XZ = ['rho', 'jx', 'jy', 'h', 'dh_dx', 'U_bot', 'V_bot', 'U_top',
+            'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p', 'eta']
+_ARGS_YZ = ['rho', 'jx', 'jy', 'h', 'dh_dy', 'U_bot', 'V_bot', 'U_top',
+            'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p', 'eta']
 _ARGS_T = ['rho', 'jx', 'jy', 'E']
 _ARGS_S = ['h', 'eta', 'rho', 'E', 'jx', 'jy', 'U_bot', 'V_bot', 'Tb_top', 'Tb_bot']
 
@@ -122,20 +125,24 @@ QUAD_FIELD_REGISTRY = {
     'dtau_xz_drho': {'type': 'computed', 'source': 'wall_stress_xz.dtau_drho', 'args': _ARGS_XZ},
     'dtau_xz_djx': {'type': 'computed', 'source': 'wall_stress_xz.dtau_djx', 'args': _ARGS_XZ},
     'dtau_xz_dtheta': {'type': 'computed', 'source': 'wall_stress_xz.dtau_dtheta', 'args': _ARGS_XZ},
+    'dtau_xz_dh': {'type': 'computed', 'source': 'wall_stress_xz.dtau_dh', 'args': _ARGS_XZ},
     'tau_xz_bot': {'type': 'computed', 'source': 'wall_stress_xz.tau_bot', 'args': _ARGS_XZ},
     'dtau_xz_bot_drho': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_drho', 'args': _ARGS_XZ},
     'dtau_xz_bot_djx': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_djx', 'args': _ARGS_XZ},
     'dtau_xz_bot_dtheta': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_dtheta', 'args': _ARGS_XZ},
+    'dtau_xz_bot_dh': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_dh', 'args': _ARGS_XZ},
 
     # wall stress yz
     'tau_yz': {'type': 'computed', 'source': 'wall_stress_yz.tau', 'args': _ARGS_YZ},
     'dtau_yz_drho': {'type': 'computed', 'source': 'wall_stress_yz.dtau_drho', 'args': _ARGS_YZ},
     'dtau_yz_djy': {'type': 'computed', 'source': 'wall_stress_yz.dtau_djy', 'args': _ARGS_YZ},
     'dtau_yz_dtheta': {'type': 'computed', 'source': 'wall_stress_yz.dtau_dtheta', 'args': _ARGS_YZ},
+    'dtau_yz_dh': {'type': 'computed', 'source': 'wall_stress_yz.dtau_dh', 'args': _ARGS_YZ},
     'tau_yz_bot': {'type': 'computed', 'source': 'wall_stress_yz.tau_bot', 'args': _ARGS_YZ},
     'dtau_yz_bot_drho': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_drho', 'args': _ARGS_YZ},
     'dtau_yz_bot_djy': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_djy', 'args': _ARGS_YZ},
     'dtau_yz_bot_dtheta': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_dtheta', 'args': _ARGS_YZ},
+    'dtau_yz_bot_dh': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_dh', 'args': _ARGS_YZ},
 
     # temperature
     'T': {'type': 'computed', 'source': 'energy.T_func', 'args': _ARGS_T},
@@ -152,28 +159,39 @@ QUAD_FIELD_REGISTRY = {
     'dS_dE': {'type': 'computed', 'source': 'energy.q_wall_grad_E', 'args': _ARGS_S},
 
     # Squeeze (computed inline in _update_squeeze_quad_fields / store_prev_values)
-    'h_before': {'type': 'computed', 'source': None, 'args': []},
-    'rho_before': {'type': 'computed', 'source': None, 'args': []},
-    'dp_drho_before': {'type': 'computed', 'source': None, 'args': []},
-    'p_before': {'type': 'computed', 'source': None, 'args': []},
-    'rho_avg': {'type': 'computed', 'source': None, 'args': ['rho_before']},
-    'dh_dt': {'type': 'computed', 'source': None, 'args': ['h_before']},
+    'h_prev': {'type': 'computed', 'source': None, 'args': []},
+    'rho_prev': {'type': 'computed', 'source': None, 'args': []},
+    'dp_drho_prev': {'type': 'computed', 'source': None, 'args': []},
+    'p_prev': {'type': 'computed', 'source': None, 'args': []},
+    'rho_avg': {'type': 'computed', 'source': None, 'args': ['rho_prev']},
+    'dh_dt': {'type': 'computed', 'source': None, 'args': ['h_prev']},
 
     # OSS stabilization (computed inline in _update_oss_quad_fields)
-    'a_vec_x': {'type': 'computed', 'source': None, 'args': ['dp_drho', 'jx']},
-    'a_vec_y': {'type': 'computed', 'source': None, 'args': ['dp_drho', 'jy']},
-    'tau_a_x': {'type': 'computed', 'source': None, 'args': ['dp_drho', 'jx', 'jy']},
-    'tau_a_y': {'type': 'computed', 'source': None, 'args': ['dp_drho', 'jx', 'jy']},
+    'a_vec_x': {'type': 'computed', 'source': None, 'args': ['jx']},
+    'a_vec_y': {'type': 'computed', 'source': None, 'args': ['jy']},
+    'tau_a_x': {'type': 'computed', 'source': None, 'args': ['jx', 'jy']},
+    'tau_a_y': {'type': 'computed', 'source': None, 'args': ['jx', 'jy']},
 
     # Flux-capturing stabilization (computed inline in _update_fc_quad_fields)
     'fc_tau': {'type': 'computed', 'source': None,
-               'args': ['dp_drho', 'jx', 'jy', 'h', 'dh_dx', 'dh_dy', 'd_dx_jx',
-                        'd_dy_jy', 'd_dx_theta', 'd_dy_theta', 'p_before']},
+               'args': ['jx', 'jy', 'h', 'dh_dx', 'dh_dy', 'd_dx_jx',
+                        'd_dy_jy', 'd_dx_theta', 'd_dy_theta', 'rho', 'rho_prev', 'theta_prev']},
+
+    # SUPG stabilization (computed inline in _update_supg_quad_fields)
+    'f_x': {'type': 'computed', 'source': None, 'args': []},
+    'f_y': {'type': 'computed', 'source': None, 'args': []},
+
+    # Reynolds mode: mean surface velocity, SUPG stabilization
+    # (computed inline in _update_reynolds_supg_quad_fields)
+    'U_m': {'type': 'computed', 'source': None, 'args': []},
+    'tau_supg': {'type': 'computed', 'source': None, 'args': []},
 }
 
+
+# TODO: we need to allow arbitrary arg-combinations
 _GP_ARGS_PRESSURE = {
     'p_from_rho': ['rho', 'h'],
-    'rho_from_p': ['p', 'h', 'rho'],
+    'rho_from_p': ['p', 'h', 'rho'],  # rho for initial guess
     'dp_drho': ['rho', 'h'],
     'drho_dp': ['rho', 'h'],
     'd2p_drho2': ['rho', 'h'],
@@ -184,10 +202,12 @@ _GP_ARGS_WALL_STRESS_XZ = {
     'dtau_xz_drho': ['rho', 'jx', 'h'],
     'dtau_xz_djx': ['rho', 'jx', 'h'],
     'dtau_xz_dtheta': ['rho', 'jx', 'h'],
+    'dtau_xz_dh': ['rho', 'jx', 'h'],
     'tau_xz_bot': ['rho', 'jx', 'h'],
     'dtau_xz_bot_drho': ['rho', 'jx', 'h'],
     'dtau_xz_bot_djx': ['rho', 'jx', 'h'],
     'dtau_xz_bot_dtheta': ['rho', 'jx', 'h'],
+    'dtau_xz_bot_dh': ['rho', 'jx', 'h'],
 }
 
 _GP_ARGS_WALL_STRESS_YZ = {
@@ -195,10 +215,12 @@ _GP_ARGS_WALL_STRESS_YZ = {
     'dtau_yz_drho': ['rho', 'jy', 'h'],
     'dtau_yz_djy': ['rho', 'jy', 'h'],
     'dtau_yz_dtheta': ['rho', 'jy', 'h'],
+    'dtau_yz_dh': ['rho', 'jy', 'h'],
     'tau_yz_bot': ['rho', 'jy', 'h'],
     'dtau_yz_bot_drho': ['rho', 'jy', 'h'],
     'dtau_yz_bot_djy': ['rho', 'jy', 'h'],
     'dtau_yz_bot_dtheta': ['rho', 'jy', 'h'],
+    'dtau_yz_bot_dh': ['rho', 'jy', 'h'],
 }
 
 

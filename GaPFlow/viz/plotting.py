@@ -538,19 +538,29 @@ def _plot_multiple_frames_1d(filename, every=1):
     return fig, ax
 
 
+# (column, label, log scale) candidates for history panels, in order of preference.
+# The explicit solver records ekin/residual/vsound, the FEM solver residual/R_newton/inner_iterations.
+_HISTORY_PANELS = [
+    ('ekin', 'Kinetic energy', False),
+    ('residual', 'Residual', True),
+    ('vsound', 'Max. sound velocity', False),
+    ('R_newton', 'Newton residual', True),
+    ('inner_iterations', 'Inner iterations', False),
+    ('dt', 'Time step', True),
+]
+
+
 def _plot_history(ax, filename='history.csv'):
 
     df = pl.read_csv(filename)
 
-    ax[0].plot(df['time'], df['ekin'])
-    ax[0].set_ylabel('Kinetic energy')
+    panels = [p for p in _HISTORY_PANELS if p[0] in df.columns][:len(ax)]
 
-    ax[1].plot(df['time'], df['residual'])
-    ax[1].set_yscale('log')
-    ax[1].set_ylabel('Residual')
-
-    ax[2].plot(df['time'], df['vsound'])
-    ax[2].set_ylabel('Max. sound velocity')
+    for axis, (col, label, log) in zip(ax, panels):
+        axis.plot(df['time'], df[col])
+        axis.set_ylabel(label)
+        if log:
+            axis.set_yscale('log')
 
     ax[-1].set_xlabel('Time')
 

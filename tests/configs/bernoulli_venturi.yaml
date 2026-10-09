@@ -54,7 +54,6 @@ fem_solver:
         gap_shear: False
         plane_shear: False
         inertia: True
-    newton_debug: False
 
 options:
     output: /tmp/bernoulli_quasi1d

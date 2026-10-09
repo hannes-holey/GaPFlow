@@ -26,7 +26,14 @@
 
 import numpy as np
 
-from .terms import Term
+from ..terms import Term
+
+__all__ = [
+    'R11x_cav', 'R11y_cav', 'R11Sx_cav', 'R11Sy_cav',
+    'R1T_cav', 'R1Th_cav', 'R_cav', 'R1STx', 'R1STy',
+    'R2Tx_cav', 'R2Ty_cav', 'R24x_cav', 'R24y_cav',
+    'CAV_MASS_TERMS', 'THETA_TERMS_AD', 'THETA_TERMS_WALL_STRESS',
+]
 
 
 def _fb_denom(a, b):
@@ -39,95 +46,53 @@ def _fb_denom(a, b):
 # mass conservation: fluxes with cavity fraction (theta)
 # -----------------------------------------------------------------------------
 
-R11x_fb = Term(
-    name='R11x_fb',
+R11x_cav = Term(
+    name='R11x_cav',
     description='flux divergence x Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jx', 'theta'],
-    dep_vals=['dp_drho'],
-    fun=lambda ctx: lambda jx, theta: -ctx['dp_drho']() * (1 - theta) * jx,
+    dep_vars=['jx'],
+    dep_vals=[],
+    fun=lambda ctx: lambda jx: - jx,
     der_funs=[
-        lambda ctx: lambda jx, theta: -ctx['dp_drho']() * (1 - theta),
-        lambda ctx: lambda jx, theta:  ctx['dp_drho']() * jx,
+        lambda ctx: lambda jx: np.full_like(jx, -1.0),
     ],
     test_deriv='x')
 
-R11y_fb = Term(
-    name='R11y_fb',
+R11y_cav = Term(
+    name='R11y_cav',
     description='flux divergence y Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jy', 'theta'],
-    dep_vals=['dp_drho'],
-    fun=lambda ctx: lambda jy, theta: -ctx['dp_drho']() * (1 - theta) * jy,
+    dep_vars=['jy'],
+    dep_vals=[],
+    fun=lambda ctx: lambda jy: - jy,
     der_funs=[
-        lambda ctx: lambda jy, theta: -ctx['dp_drho']() * (1 - theta),
-        lambda ctx: lambda jy, theta:  ctx['dp_drho']() * jy,
+        lambda ctx: lambda jy: np.full_like(jy, -1.0),
     ],
     test_deriv='y')
 
-R11Sx_fb = Term(
-    name='R11Sx_fb',
+R11Sx_cav = Term(
+    name='R11Sx_cav',
     description='flux divergence height source x Elrod-Adams',
     res='mass',
-    dep_vars=['jx', 'theta'],
-    dep_vals=['h', 'dh_dx', 'dp_drho'],
-    fun=lambda ctx: lambda jx, theta: -ctx['dp_drho']() / ctx['h']() * ctx['dh_dx']() * (1 - theta) * jx,
+    dep_vars=['jx'],
+    dep_vals=['h', 'dh_dx'],
+    fun=lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx']() * jx,
     der_funs=[
-        lambda ctx: lambda jx, theta: -ctx['dp_drho']() / ctx['h']() * ctx['dh_dx']() * (1 - theta),
-        lambda ctx: lambda jx, theta:  ctx['dp_drho']() / ctx['h']() * ctx['dh_dx']() * jx,
-    ])
+        lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx'](),
+    ],
+    der_h=lambda ctx: lambda jx: 1 / ctx['h']() ** 2 * ctx['dh_dx']() * jx)
 
-R11Sy_fb = Term(
-    name='R11Sy_fb',
+R11Sy_cav = Term(
+    name='R11Sy_cav',
     description='flux divergence height source y Elrod-Adams',
     res='mass',
-    dep_vars=['jy', 'theta'],
-    dep_vals=['h', 'dh_dy', 'dp_drho'],
-    fun=lambda ctx: lambda jy, theta: -ctx['dp_drho']() / ctx['h']() * ctx['dh_dy']() * (1 - theta) * jy,
+    dep_vars=['jy'],
+    dep_vals=['h', 'dh_dy'],
+    fun=lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy']() * jy,
     der_funs=[
-        lambda ctx: lambda jy, theta: -ctx['dp_drho']() / ctx['h']() * ctx['dh_dy']() * (1 - theta),
-        lambda ctx: lambda jy, theta:  ctx['dp_drho']() / ctx['h']() * ctx['dh_dy']() * jy,
-    ])
-
-# Jacobian correction for the implicit p-dependence of dp_drho in R11*_fb.
-# Zero residual contribution — Jacobian-only.
-R11x_fb_corr = Term(
-    name='R11x_fb_corr',
-    description='flux divergence x FB Jacobian correction (d(dp_drho)/dp, theta-weighted)',
-    res='mass',
-    dep_vars=['p'],
-    dep_vals=['d2p_drho2', 'drho_dp', 'jx', 'theta'],
-    fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: -ctx['d2p_drho2']() * ctx['drho_dp']() * (1 - ctx['theta']()) * ctx['jx']()],
-    test_deriv='x')
-
-R11y_fb_corr = Term(
-    name='R11y_fb_corr',
-    description='flux divergence y FB Jacobian correction (d(dp_drho)/dp, theta-weighted)',
-    res='mass',
-    dep_vars=['p'],
-    dep_vals=['d2p_drho2', 'drho_dp', 'jy', 'theta'],
-    fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: -ctx['d2p_drho2']() * ctx['drho_dp']() * (1 - ctx['theta']()) * ctx['jy']()],
-    test_deriv='y')
-
-R11Sx_fb_corr = Term(
-    name='R11Sx_fb_corr',
-    description='flux divergence height source x FB Jacobian correction',
-    res='mass',
-    dep_vars=['p'],
-    dep_vals=['d2p_drho2', 'drho_dp', 'jx', 'h', 'dh_dx', 'theta'],
-    fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: -ctx['d2p_drho2']() * ctx['drho_dp']() * (1 - ctx['theta']()) / ctx['h']() * ctx['dh_dx']() * ctx['jx']()])
-
-R11Sy_fb_corr = Term(
-    name='R11Sy_fb_corr',
-    description='flux divergence height source y FB Jacobian correction',
-    res='mass',
-    dep_vars=['p'],
-    dep_vals=['d2p_drho2', 'drho_dp', 'jy', 'h', 'dh_dy', 'theta'],
-    fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: -ctx['d2p_drho2']() * ctx['drho_dp']() * (1 - ctx['theta']()) / ctx['h']() * ctx['dh_dy']() * ctx['jy']()])
+        lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy'](),
+    ],
+    der_h=lambda ctx: lambda jy: 1 / ctx['h']() ** 2 * ctx['dh_dy']() * jy)
 
 # -----------------------------------------------------------------------------
 # mass conservation: time-dependent terms
@@ -138,13 +103,11 @@ R1T_cav = Term(
     description='local pressure change',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['dp_drho', 'dp_drho_before', 'd2p_drho2', 'drho_dp', 'rho', 'rho_before', 'theta_prev'],
-    fun=lambda ctx: lambda p, theta: -0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * (
-        ctx['rho']() * (1 - theta) - ctx['rho_before']() * (1 - ctx['theta_prev']())) / ctx['dt'](),
+    dep_vals=['rho', 'rho_prev', 'theta_prev'],
+    fun=lambda ctx: lambda p, theta: - (ctx['rho']() * (1 - theta) - ctx['rho_prev']() * (1 - ctx['theta_prev']())) / ctx['dt'](),
     der_funs=[
-        lambda ctx: lambda p, theta: -0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * ctx['drho_dp']() * (1 - theta) / ctx['dt']()
-            - 0.5 * ctx['d2p_drho2']() * ctx['drho_dp']() * (ctx['rho']() * (1 - theta) - ctx['rho_before']() * (1 - ctx['theta_prev']())) / ctx['dt'](),
-        lambda ctx: lambda p, theta: 0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * ctx['rho']() / ctx['dt'](),
+        lambda ctx: lambda p, theta: - ctx['drho_dp']() * (1 - theta) / ctx['dt'](),
+        lambda ctx: lambda p, theta: ctx['rho']() / ctx['dt'](),
     ])
 
 R1Th_cav = Term(
@@ -152,12 +115,13 @@ R1Th_cav = Term(
     description='squeeze source term',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['dp_drho', 'dp_drho_before', 'd2p_drho2', 'drho_dp', 'rho', 'h_before', 'dh_dt'],
-    fun=lambda ctx: lambda p, theta: -0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * ctx['rho']() * (1 - theta) / ctx['h_before']() * ctx['dh_dt'](),
+    dep_vals=['drho_dp', 'rho', 'h_prev', 'dh_dt'],
+    fun=lambda ctx: lambda p, theta: - ctx['rho']() * (1 - theta) / ctx['h_prev']() * ctx['dh_dt'](),
     der_funs=[
-        lambda ctx: lambda p, theta: -(0.5 * ctx['d2p_drho2']() * ctx['drho_dp']() * ctx['rho']() + 0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * ctx['drho_dp']()) * (1 - theta) / ctx['h_before']() * ctx['dh_dt'](),
-        lambda ctx: lambda p, theta: 0.5 * (ctx['dp_drho']() + ctx['dp_drho_before']()) * ctx['rho']() / ctx['h_before']() * ctx['dh_dt'](),
-    ])
+        lambda ctx: lambda p, theta: - ctx['drho_dp']() * (1 - theta) / ctx['h_prev']() * ctx['dh_dt'](),
+        lambda ctx: lambda p, theta: ctx['rho']() / ctx['h_prev']() * ctx['dh_dt'](),
+    ],
+    der_h=lambda ctx: lambda p, theta: - ctx['rho']() * (1 - theta) / ctx['h_prev']() / ctx['dt']())
 
 # -----------------------------------------------------------------------------
 # Fischer-Burmeister complementarity condition
@@ -191,10 +155,10 @@ R1STx = Term(
     description='theta diffusion stabilization in mass equation x',
     res='mass',
     dep_vars=['theta'],
-    dep_vals=['dp_drho', 'jx', 'jy', 'd_dx_theta'],
-    fun=lambda ctx: lambda theta: -(ctx['ad_alpha']() * ctx['dp_drho']()
+    dep_vals=['jx', 'jy', 'd_dx_theta'],
+    fun=lambda ctx: lambda theta: -(ctx['ad_alpha']()
                                     * np.sqrt(ctx['jx']()**2 + ctx['jy']()**2 + 1e-30) * ctx['d_dx_theta']()),
-    der_funs=[lambda ctx: lambda theta: -(ctx['ad_alpha']() * ctx['dp_drho']()
+    der_funs=[lambda ctx: lambda theta: -(ctx['ad_alpha']()
                                           * np.sqrt(ctx['jx']()**2 + ctx['jy']()**2 + 1e-30))],
     trial_deriv='x',
     test_deriv='x')
@@ -204,53 +168,76 @@ R1STy = Term(
     description='theta diffusion stabilization in mass equation y',
     res='mass',
     dep_vars=['theta'],
-    dep_vals=['dp_drho', 'jx', 'jy', 'd_dy_theta'],
-    fun=lambda ctx: lambda theta: -(ctx['ad_alpha']() * ctx['dp_drho']()
+    dep_vals=['jx', 'jy', 'd_dy_theta'],
+    fun=lambda ctx: lambda theta: -(ctx['ad_alpha']()
                                     * np.sqrt(ctx['jx']()**2 + ctx['jy']()**2 + 1e-30) * ctx['d_dy_theta']()),
-    der_funs=[lambda ctx: lambda theta: -(ctx['ad_alpha']() * ctx['dp_drho']()
+    der_funs=[lambda ctx: lambda theta: -(ctx['ad_alpha']()
                                           * np.sqrt(ctx['jx']()**2 + ctx['jy']()**2 + 1e-30))],
     trial_deriv='y',
     test_deriv='y')
 
+# -----------------------------------------------------------------------------
+# Momentum time derivatives with theta
+# -----------------------------------------------------------------------------
+
+R2Tx_cav = Term(
+    name='R2Tx_cav',
+    description='time derivative momentum_x',
+    res='momentum_x',
+    dep_vars=['jx', 'theta'],
+    dep_vals=['jx_prev', 'theta_prev'],
+    fun=lambda ctx: lambda jx, theta: - (jx * (1-theta) - ctx['jx_prev']() * ctx['theta_prev']()) / ctx['dt'](),
+    der_funs=[lambda ctx: lambda jx, theta: - (1-theta) / ctx['dt'](),
+              lambda ctx: lambda jx, theta: jx / ctx['dt']()])
+
+R2Ty_cav = Term(
+    name='R2Ty_cav',
+    description='time derivative momentum_y',
+    res='momentum_y',
+    dep_vars=['jy', 'theta'],
+    dep_vals=['jy_prev', 'theta_prev'],
+    fun=lambda ctx: lambda jy, theta: - (jy * (1-theta) - ctx['jy_prev']() * ctx['theta_prev']()) / ctx['dt'](),
+    der_funs=[lambda ctx: lambda jy, theta: - (1-theta) / ctx['dt'](),
+              lambda ctx: lambda jy, theta: jy / ctx['dt']()])
 
 # -----------------------------------------------------------------------------
 # Wall stress with theta-dependent effective density (replaces R24x/y when cavitation: true)
 # -----------------------------------------------------------------------------
 
-R24x_fb = Term(
-    name='R24x_fb',
+R24x_cav = Term(
+    name='R24x_cav',
     description='wall stress x with theta-dependent effective density',
     res='momentum_x',
     dep_vars=['p', 'jx', 'theta'],
-    dep_vals=['h', 'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx', 'dtau_xz_dtheta', 'drho_dp'],
+    dep_vals=['h', 'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx', 'dtau_xz_dtheta', 'dtau_xz_dh', 'drho_dp'],
     fun=lambda ctx: lambda *args: 1 / ctx['h']() * ctx['tau_xz'](),
     der_funs=[
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_drho']() * ctx['drho_dp'](),
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_djx'](),
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_dtheta'](),
-    ])
+    ],
+    der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_xz']() + 1 / ctx['h']() * ctx['dtau_xz_dh']())
 
-R24y_fb = Term(
-    name='R24y_fb',
+R24y_cav = Term(
+    name='R24y_cav',
     description='wall stress y with theta-dependent effective density',
     res='momentum_y',
     dep_vars=['p', 'jy', 'theta'],
-    dep_vals=['h', 'tau_yz', 'dtau_yz_drho', 'dtau_yz_djy', 'dtau_yz_dtheta', 'drho_dp'],
+    dep_vals=['h', 'tau_yz', 'dtau_yz_drho', 'dtau_yz_djy', 'dtau_yz_dtheta', 'dtau_yz_dh', 'drho_dp'],
     fun=lambda ctx: lambda *args: 1 / ctx['h']() * ctx['tau_yz'](),
     der_funs=[
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_yz_drho']() * ctx['drho_dp'](),
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_yz_djy'](),
         lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_yz_dtheta'](),
-    ])
-
+    ],
+    der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_yz']() + 1 / ctx['h']() * ctx['dtau_yz_dh']())
 
 
 CAV_MASS_TERMS = [
-    R11x_fb, R11y_fb, R11Sx_fb, R11Sy_fb,
-    R11x_fb_corr, R11y_fb_corr, R11Sx_fb_corr, R11Sy_fb_corr,
+    R11x_cav, R11y_cav, R11Sx_cav, R11Sy_cav,
     R1T_cav
 ]
 
 THETA_TERMS_AD = [R1STx, R1STy]
 
-THETA_TERMS_WALL_STRESS = [R24x_fb, R24y_fb]
+THETA_TERMS_WALL_STRESS = [R24x_cav, R24y_cav]

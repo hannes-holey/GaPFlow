@@ -6,8 +6,8 @@ options:
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 50
-    Ny: 50
+    Nx: 10
+    Ny: 10
     xE: ['P', 'P', 'P']
     xW: ['P', 'P', 'P']
     yS: ['P', 'P', 'P']

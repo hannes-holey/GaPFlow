@@ -34,7 +34,7 @@ numerics:
     solver: fem
     dt: 10.
     tol: 5e-07
-    max_it: 40
+    max_it: 10
 
 properties:
     EOS: PL
@@ -49,10 +49,12 @@ properties:
 fem_solver:
     R_norm_tol: 1e-8
     max_iter: 2
-    alpha: 0.1
+    alpha: 0.3
     linear_solver: direct
     physics:
         gap_shear: False
         plane_shear: True
         inertia: True
-    newton_debug: False
+        mass_supg: True
+        mass_supg_type: 'flux'
+    scaling: true

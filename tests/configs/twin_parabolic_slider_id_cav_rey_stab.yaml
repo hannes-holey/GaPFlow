@@ -1,0 +1,69 @@
+# Twin parabolic slider bearing (inclined-pad, id variant) — Fischer-Burmeister
+# cavitation, stabilization comparison template (NS-OSS / NS-SUPG / NS-both /
+# Reynolds-SUPG). Height profile injected via regen_twin_parabolic_slider_id
+# (not expressible via geometry.type alone). Nx is templated so it can be
+# swept to probe the stability limit of each stabilization combination.
+#
+# Geometry: inclined gap, hmax=50.2e-6 m, hmin=25.4e-6 m, U=4.57 m/s.
+# Dirichlet p at inlet/outlet, periodic in y (effectively 1D).
+#
+# Fluid: Dowson-Higginson EOS
+#   rho0 = 400 kg/m^3  at  P0 = 1e5 Pa
+#   p_cav = 0 Pa
+#   shear = 0.039 Pa.s
+
+options:
+    output: /tmp/twin_parabolic_slider_id_cav_stab_{solver}
+    write_freq: 50
+    save_output: False
+    print_config: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.004
+    Nx: {Nx}
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 3.36e5
+    xE_P: 0.
+
+geometry:
+    type: inclined
+    hmax: 50.2e-6
+    hmin: 25.4e-6
+    U: 4.57
+    V: 0.0
+    flip: false
+
+numerics:
+    solver: {solver}
+    dt: 1.0
+    tol: -1.
+    max_it: 120
+
+properties:
+    EOS: DH
+    rho0: 400.
+    P0: 1e5
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 0.039
+    bulk: 0.0
+
+fem_solver:
+    linear_solver: direct
+    newton_relax: 0.1
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        mass_supg: {mass_supg}
+        oss: {oss}
+    max_iter: 1
+    R_norm_tol: 1e-9
+    scaling: False

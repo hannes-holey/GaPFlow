@@ -316,7 +316,7 @@ class GhostUpdater:
                 d_cell = self._get_d_cell(bnd)
                 bc_type = bc_spec.get_bc_type(bnd)
 
-                if bc_type == 'D':
+                if bc_type == 'D' or bc_type == 'F':
                     if grid_type == 'P1':
                         field[ghost_outer] = bc_arr
                     else:

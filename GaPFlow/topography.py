@@ -29,7 +29,6 @@ from typing import Tuple, Any
 import numpy as np
 import numpy.typing as npt
 from muGrid import Field
-from mpi4py import MPI
 
 from ContactMechanics.FFTElasticHalfSpace import (
     PeriodicFFTElasticHalfSpace,
@@ -37,7 +36,7 @@ from ContactMechanics.FFTElasticHalfSpace import (
     SemiPeriodicFFTElasticHalfSpace,
 )
 
-from .parallel import DomainDecomposition, FFTDomainTranslation
+from .parallel import DomainDecomposition, FFTDomainTranslation, MPI
 
 _MPI_MIN = MPI.MIN
 
@@ -84,12 +83,17 @@ def parabolic_slider(xx, grid, geo):
     Lx = grid['Lx']
     h0 = geo['hmin']
     h1 = geo['hmax']
+    cx = geo['x_contact_center']
     # slope = (h1 - h0) / Lx
 
     prefac = 4. / Lx**2 * (h1 - h0)
 
-    h = prefac * (xx - Lx / 2.)**2 + h0
-    dh_dx = 2 * prefac * (xx - Lx / 2.)
+    dx = grid['dx']
+    xx_ = (xx - 1.5 * dx) * Lx / (Lx - 3 * dx)
+    xx_ = np.clip(xx_, 0.0, Lx)
+
+    h = prefac * (xx_ - cx)**2 + h0
+    dh_dx = 2 * prefac * (xx_ - cx)
     dh_dy = np.zeros_like(h)
 
     return h, dh_dx, dh_dy
@@ -196,6 +200,32 @@ def parabolic_2d(xx, yy, grid, geo):
     return h, dh_dx, dh_dy
 
 
+def circular_1d(xx, grid, geo):
+    """Line-contact (1D, Ny=1) cylinder topography, parameterized by curvature
+    radius Rx instead of an hmin/hmax pair.
+
+    Parameters
+    ----------
+    xx : NDArray
+        X-coordinate grid.
+    grid : dict
+        Grid parameters with keys 'Lx', 'Ly'.
+    geo : dict
+        Geometry parameters with keys 'Rx', 'hmin', 'x_contact_center'
+        (contact apex location).
+    """
+
+    cx = geo['x_contact_center']
+    Rx = geo['Rx']
+    hmin = geo['hmin']
+
+    h = (xx - cx)**2 / (2 * Rx) + hmin
+    dh_dx = (xx - cx) / Rx
+    dh_dy = np.zeros_like(h)
+
+    return h, dh_dx, dh_dy
+
+
 def circular_contact(xx, yy, grid, geo):
     """Circular contact topography.
 
@@ -210,17 +240,20 @@ def circular_contact(xx, yy, grid, geo):
     grid : dict
         Grid parameters with keys 'Lx', 'Ly'.
     geo : dict
-        Geometry parameters with keys 'Rx', 'Ry', 'h_min'.
+        Geometry parameters with keys 'Rx', 'Ry', 'h_min', 'x_contact_center',
+        'y_contact_center' (contact apex location).
     """
-    Lx = grid['Lx']
-    Ly = grid['Ly']
+
+    cx = geo['x_contact_center']
+    cy = geo['y_contact_center']
+
     Rx = geo['Rx']
     Ry = geo['Ry']
     hmin = geo['hmin']
 
-    h = (xx - Lx / 2)**2 / (2 * Rx) + (yy - Ly / 2)**2 / (2 * Ry) + hmin
-    dh_dx = (xx - Lx / 2) / Rx
-    dh_dy = (yy - Ly / 2) / Ry
+    h = (xx - cx)**2 / (2 * Rx) + (yy - cy)**2 / (2 * Ry) + hmin
+    dh_dx = (xx - cx) / Rx
+    dh_dy = (yy - cy) / Ry
     return h, dh_dx, dh_dy
 
 
@@ -237,7 +270,8 @@ class Topography:
                  geo: dict,
                  prop: dict,
                  decomp: DomainDecomposition = None,
-                 force_balance: dict = None) -> None:
+                 force_balance: dict = None,
+                 problem: Any = None) -> None:
         """Constructor
 
         Parameters
@@ -254,8 +288,11 @@ class Topography:
             Domain decomposition for MPI-parallel coordinate creation.
         force_balance : dict or None
             Force balance / load control settings.
+        problem : Problem or None
+            Owning Problem instance, used to read FEM Newton solver guard state.
         """
         self._decomp = decomp
+        self._problem = problem
         self._topo_field = fc.get_real_field('topography')
         self.__field = Field(self._topo_field)
 
@@ -265,6 +302,7 @@ class Topography:
 
         self.elastic = prop['elastic']['enabled']
         self.force_balance = force_balance is not None and force_balance['rigid_height_variation']['enabled']
+        self._suspended = False
 
         xx, yy = decomp.xx, decomp.yy
 
@@ -272,12 +310,12 @@ class Topography:
         if idc and idc['enabled'] and idc['use_deformed_height']:
             h, u = self.height_and_defo_from_file(geo)
             self.h0 = idc['h_min_init'] - (h + u).min()
-            self.set_global_height(h)  # scatter, padding and gradients
+            self.set_global_height(h)
             self.set_global_deformation(u)
 
         elif geo['type'] == 'from_file':
             h = self.height_from_file(geo)
-            self.set_global_height(h)  # scatter, padding and gradients
+            self.set_global_height(h)
 
         else:
             h, dh_dx, dh_dy = self.compute_topography(xx, grid, geo, yy)
@@ -293,8 +331,7 @@ class Topography:
 
     def init_force_balance(self, force_balance, grid, decomp):
         """Initialise rigid-height-variation force balance controller."""
-        self._fb_hold_next = False
-        self._fb_controller = ForceBalance(force_balance, grid, decomp)
+        self._fb_controller = ForceBalance(force_balance, grid, decomp, problem=self._problem)
         self.rhv_history = []
 
     def set_local_topography(self, h, dh_dx, dh_dy):
@@ -339,6 +376,7 @@ class Topography:
         )
         self._ref_point = self._parse_reference_point(
             prop['elastic']['reference_point'], grid)
+        self.turn_off_reference = prop['elastic']['turn_off_reference']
 
     @staticmethod
     def compute_topography(xx, grid, geo, yy=None):
@@ -365,6 +403,11 @@ class Topography:
             Height gradient in y-direction.
         """
 
+        if geo['x_contact_center'] is None:
+            geo['x_contact_center'] = grid['Lx'] / 2
+        if geo['y_contact_center'] is None:
+            geo['y_contact_center'] = grid['Ly'] / 2
+
         # 1D profiles
         if geo['type'] == 'journal':
             h, dh_dx, dh_dy = journal_bearing(xx, grid, geo)
@@ -374,6 +417,8 @@ class Topography:
             h, dh_dx, dh_dy = parabolic_slider(xx, grid, geo)
         elif geo['type'] == 'cdc':
             h, dh_dx, dh_dy = cdc(xx, grid, geo)
+        elif geo['type'] == 'circular_1d':
+            h, dh_dx, dh_dy = circular_1d(xx, grid, geo)
 
         # 2D profiles
         elif geo['type'] == 'asperity':
@@ -399,15 +444,20 @@ class Topography:
         u = np.load(os.path.join(base_path, geo['deformation_filepath']))
         return h, u
 
-    def update(self) -> None:
+    def update(self, it: int = 0, suspend_fb: bool = False, suspend_def: bool = False) -> None:
         """Updates the topography field in case of enabled elastic deformation
         and/or rigid-height-variation force balance.
         For full periodicity, no reference needed (displacement sum is zero).
         For half/no periodicity, displacement at reference point is kept to zero.
+
+        `it` is the current Newton inner-iteration index. Elastic deformation is
+        recomputed every iteration, but the force-balance bisection step on `h0` only
+        fires on the first iteration (`it == 0`) of each outer timestep, so the
+        remaining inner iterations stabilize against a fixed `h0`.
         """
         defo_disc = 0.0
-        if self.elastic:
-            if self.ElasticDeformation.periodicity in ['half', 'none']:
+        if self.elastic and not self._suspended and not suspend_def:
+            if self.ElasticDeformation.periodicity in ['half', 'none'] and not self.turn_off_reference:
                 p_ref = self.get_reference_pressure()
                 p = self.__pressure.pg - p_ref
                 deformation, defo_disc = self._calc_deformation(p)
@@ -419,16 +469,11 @@ class Topography:
             defo_disc = self._decomp._mpi_comm.allreduce(defo_disc, op=MPI.MAX)
             self.deformation = deformation
 
-        if self.force_balance:
+        if self.force_balance and it == 0 and not self._suspended and not suspend_fb:
             pid_hold_tol = self._fb_controller._pid_hold_tol
             defo_hold = pid_hold_tol > 0. and defo_disc > pid_hold_tol
-            guard_hold = self._fb_hold_next
-            self._fb_hold_next = False
             if defo_hold:
                 print(f"  [ForceBalance] PID on hold: defo_disc={defo_disc:.3e} > tol={pid_hold_tol:.3e}")
-                self.rhv_history.append(self.h0)
-            elif guard_hold:
-                print("  [ForceBalance] PID on hold: solution guard fired in previous Newton step")
                 self.rhv_history.append(self.h0)
             else:
                 self.h0 = self._fb_controller.update(self)
@@ -533,16 +578,19 @@ class Topography:
         # Handle MPI decomposition (only for FEM 2D parallel runs)
         d = self._decomp
         if d is not None and d.size > 1:
+            x_start = d.subdomain_locations[0]
+            x_end = x_start + d.nb_subdomain_grid_pts[0]
             y_start = d.subdomain_locations[1]
             y_end = y_start + d.nb_subdomain_grid_pts[1]
-            owns = (gj >= y_start and gj < y_end)
+            owns = (gi >= x_start and gi < x_end) and (gj >= y_start and gj < y_end)
+            local_i = (gi - x_start) + 1
             local_j = (gj - y_start) + 1
         else:
             # Single rank: always owns the point
             owns = True
+            local_i = gi + 1
             local_j = gj + 1
 
-        local_i = gi + 1  # +1 ghost offset (X not decomposed)
         return (owns, local_i, local_j)
 
     def get_reference_pressure(self) -> float:
@@ -586,15 +634,19 @@ class Topography:
         # 1. Sync h ghost cells from MPI neighbors
         d.exchange_ghosts(self._topo_field)
 
-        # 2. At domain boundaries: linear extrapolation of h (overrides periodic wrap)
+        # 2. At domain boundaries: linear extrapolation of h
         if d.is_at_xW and not d.periodic_x:
-            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
         if d.is_at_xE and not d.periodic_x:
-            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
         if d.is_at_yS and not d.periodic_y:
-            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
         if d.is_at_yN and not d.periodic_y:
-            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
 
         # 3. Compute gradients on inner points (ghost h is now correct)
         self.dh_dx[1:-1, 1:-1] = (self.h[2:, 1:-1] - self.h[:-2, 1:-1]) / (2 * self.dx)
@@ -603,7 +655,21 @@ class Topography:
         # 4. Sync gradient ghost cells from MPI neighbors
         d.exchange_ghosts(self._topo_field)
 
-        # 5. At domain boundaries: copy gradient from first inner line (overrides periodic wrap)
+        # 5. At domain boundaries: override periodic wrap again: linear extrapolation of h
+        # and copy gradient from first inner line
+        if d.is_at_xW and not d.periodic_x:
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
+        if d.is_at_xE and not d.periodic_x:
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
+        if d.is_at_yS and not d.periodic_y:
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
+        if d.is_at_yN and not d.periodic_y:
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
+
         if d.is_at_xW and not d.periodic_x:
             self.dh_dx[0, :] = self.dh_dx[1, :]
             self.dh_dy[0, :] = self.dh_dy[1, :]
@@ -695,20 +761,21 @@ class Topography:
 
 
 class ForceBalance:
-    """PID-controlled rigid-height-variation for load/force balance.
+    """Bisection-controlled rigid-height-variation for load/force balance.
 
     Each timestep (after pressure is updated) computes the total film force,
     compares it to the imposed load, and adjusts the rigid body height offset
-    h0 via a discrete PID controller.
+    h0 via a two-phase bisection controller.
 
     The update is always performed on rank 0 (which holds the global pressure)
     and the resulting h0 is broadcast to all ranks.
     """
 
-    def __init__(self, fb_dict: dict, grid: dict, decomp) -> None:
+    def __init__(self, fb_dict: dict, grid: dict, decomp, problem: Any = None) -> None:
         self._fb_dict = fb_dict
         self._decomp = decomp
         self._comm = decomp._mpi_comm
+        self._problem = problem
 
         self._dA = grid['dx'] * grid['dy']
         self._p_ambient = fb_dict['rigid_height_variation']['ambient_pressure']
@@ -716,15 +783,16 @@ class ForceBalance:
         self._h0_prev = 0.
         self._pid_hold_tol = float(fb_dict.get('pid_hold_tol', 0.0))
 
-        method = fb_dict['rigid_height_variation']['method']
-        if method == 'PID':
-            if decomp.rank == 0:
-                rhv = fb_dict['rigid_height_variation']
-                self._pid = PIDController(rhv['Kp'], rhv['Ki'], rhv['Kd'])
-            else:
-                self._pid = None
+        self._method = fb_dict['rigid_height_variation']['method']
+        if self._method != 'bisection':
+            raise IOError(f"Unknown rigid_height_variation method: '{self._method}'")
+
+        if decomp.rank == 0:
+            rhv = fb_dict['rigid_height_variation']
+            self.controller = BisectionForceController(
+                rhv['force_tol'], rhv['h_min_step_divisor'], problem.solver)
         else:
-            raise IOError(f"Unknown rigid_height_variation method: '{method}'")
+            self.controller = None
 
     def _get_force_imposed(self, grid):
         fb = self._fb_dict
@@ -737,16 +805,12 @@ class ForceBalance:
         assert force > 0., "force_balance: imposed force must be positive."
         return force
 
-    def set_problem(self, problem) -> None:
-        """Bind the Problem instance so pressure can be read each timestep."""
-        self._problem = problem
-
     def update(self, topo) -> float:
         """Compute new rigid height offset h0.
 
         Gathers the global pressure field to rank 0, evaluates the total film
-        force, computes the normalised residual, runs the PID step, applies
-        solution guards, and broadcasts h0 to all ranks.
+        force, computes the normalised residual, runs the bisection step, and
+        broadcasts h0 to all ranks.
 
         Parameters
         ----------
@@ -762,59 +826,130 @@ class ForceBalance:
         p_local = np.maximum(self._problem.pressure.pressure, 0.)
         p_global = self._decomp.gather_global(p_local)
 
-        h_min = self._comm.allreduce(float(np.min(topo.h[1:-1, 1:-1])), op=_MPI_MIN)
+        qf_h = self._problem.solver.quad_mgr.qf('h')[..., :-1, :-1]
+        qf_h_min = float(np.min(qf_h)) if np.any(qf_h) else float(np.min(topo.h[1:-1, 1:-1]))
+        h_min = self._comm.allreduce(qf_h_min, op=_MPI_MIN)
 
         if self._decomp.rank == 0:
             p_reduced = p_global - self._p_ambient
             force_measured = float(np.sum(p_reduced * self._dA))
             p_max = float(np.max(p_global))
             residual = force_measured / self._force_imposed - 1.
-            print(f"  [ForceBalance] h_min={h_min:.3e}  p_max={p_max:.4g}  "
-                  f"F_film={force_measured:.4g}  F_imposed={self._force_imposed:.4g}  "
-                  f"residual={residual:.4g}")
-            h0 = self._pid.update(residual)
-            h0 = self._solution_guard(h0, h_min)
-            print(f"  [ForceBalance] h0={h0:.4e}")
+            h0 = self.controller.update(residual, self._h0_prev, h_min)
+            print(f"\033[36m  [FB] h_min={h_min:.3e}  p_max={p_max:.4g}  "
+                  f"F_film={force_measured:.4g}  F_imposed={self._force_imposed:.4g} h0={h0:.4e} "
+                  f"\033[0m")
         else:
             h0 = None
 
         self._h0_prev = self._comm.bcast(h0, root=0)
         return self._h0_prev
 
-    def _solution_guard(self, h0: float, h_min: float) -> float:
-        """Limit downward steps that would drive h_min to zero.
 
-        If the proposed step dh0 is negative and its magnitude exceeds h_min,
-        scale it down so the film cannot collapse in one step.
-        """
-        dh0 = h0 - self._h0_prev
-        if dh0 < 0:
-            divisor = max(1., abs(dh0) / h_min * 50.)
-            if divisor > 1.:
-                print(f"  [ForceBalance] solution_guard divisor={divisor:.2f}")
-            dh0 = dh0 / divisor
-        return self._h0_prev + dh0
+class BisectionForceController:
+    """Two-phase bisection controller for rigid-height-variation force balance.
 
+    Phase 1 ("descent"): starting from the initial h0 (film force too low),
+    decrease h0 in h_min/h_min_step_divisor-sized steps (same limiter as
+    `ForceBalance._solution_guard`) until the film force first exceeds the
+    imposed force. That overshoot ends phase 1.
 
-class PIDController:
-    """Discrete PID controller for scalar error signals.
+    Phase 2 ("bisect"): step h0 by a fixed magnitude `step` (initialised to
+    half the last phase-1 step) in whichever direction reduces the residual.
+    `step` is only halved when the residual's sign flips relative to the
+    previous applied step (i.e. on overshoot), not on every iteration.
 
-    out = Kp * e + Ki * integral(e) + Kd * d(e)/dt
+    Each proposed h0 change is only trusted/applied once at least 5
+    effective-relaxation-equivalent Newton iterations (`sum(alpha)`) have
+    accumulated since the last change, via `accumulate()` registered as a
+    callback on `FEMSolver.cb_list`. This approximates "the Newton solve
+    has settled enough to trust the force reading" for this
+    pseudo-timestepping / quasi-steady-state setup.
     """
 
-    def __init__(self, Kp: float, Ki: float, Kd: float) -> None:
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self._integral = 0.
-        self._prev = 0.
+    SETTLE_THRESHOLD = 5.0
 
-    def update(self, residual: float) -> float:
-        self._integral += self._prev
-        derivative = residual - self._prev
-        out = self.Kp * residual + self.Ki * self._integral + self.Kd * derivative
-        self._prev = residual
-        return out
+    def __init__(self, force_tol: float, h_min_step_divisor: float, solver) -> None:
+        self.force_tol = force_tol
+        self.h_min_step_divisor = h_min_step_divisor
+        self.phase = 'descent'
+        self.step = None
+        self.last_dh0 = None
+        self.last_residual_sign = None
+        self.sum_alpha = 0.0
+        self.converged = False
+
+        solver.cb_list.append(self.accumulate)
+
+    def accumulate(self, solver) -> None:
+        self.sum_alpha += solver.alpha
+
+    def reset(self) -> None:
+        self.sum_alpha = 0.0
+
+    def is_trustworthy(self) -> bool:
+        return self.sum_alpha > self.SETTLE_THRESHOLD
+
+    def restart_for_new_target(self) -> None:
+        """Reset all controller state to start bisecting toward a new imposed force.
+
+        Use after changing `ForceBalance._force_imposed` mid-run (e.g. a force
+        sweep): the previous target's converged phase/step/sign history is not
+        valid for a different target force.
+        """
+        self.phase = 'descent'
+        self.step = None
+        self.last_dh0 = None
+        self.last_residual_sign = None
+        self.sum_alpha = 0.0
+        self.converged = False
+
+    def update(self, residual: float, h0_prev: float, h_min: float) -> float:
+        if self.phase == 'descent':
+            return self._update_descent(residual, h0_prev, h_min)
+        return self._update_bisect(residual, h0_prev)
+
+    def _update_descent(self, residual: float, h0_prev: float, h_min: float) -> float:
+        if residual > 0.:
+            # First overshoot: end phase 1, seed phase 2's step from the last
+            # phase-1 step. Do not move h0 further this call.
+            self.phase = 'bisect'
+            self.step = (abs(self.last_dh0) / 2. if self.last_dh0 is not None
+                         else h_min / self.h_min_step_divisor / 2.)
+            self.last_residual_sign = np.sign(residual)
+            print(f"  [FB-bisect] overshoot detected, switching to bisect phase "
+                  f"(step={self.step:.3e})")
+            return h0_prev
+
+        dh0 = -h_min / self.h_min_step_divisor
+        self.last_dh0 = dh0
+        self.reset()
+        print(f"  [FB-bisect] descent step dh0={dh0:.3e}")
+        return h0_prev + dh0
+
+    def _update_bisect(self, residual: float, h0_prev: float) -> float:
+        if not self.is_trustworthy():
+            print(f"  [FB-bisect] held: not settled yet (sum_alpha={self.sum_alpha:.3e} "
+                  f"<= {self.SETTLE_THRESHOLD:.1f})")
+            return h0_prev
+
+        if abs(residual) <= self.force_tol:
+            if not self.converged:
+                print(f"  [FB-bisect] converged: |residual|={abs(residual):.3e} <= tol={self.force_tol:.3e}")
+            self.converged = True
+            return h0_prev
+
+        residual_sign = np.sign(residual)
+        if self.last_residual_sign is not None and residual_sign != self.last_residual_sign:
+            self.step /= 2.
+            print(f"  [FB-bisect] sign flip, halving step to {self.step:.3e}")
+        self.last_residual_sign = residual_sign
+
+        # residual > 0 -> force too high -> increase h0 (larger gap)
+        dh0 = self.step if residual > 0. else -self.step
+        self.reset()
+        print(f"  [FB-bisect] bisect step dh0={dh0:.3e}")
+        return h0_prev + dh0
 
 
 class ElasticDeformation:
@@ -876,17 +1011,18 @@ class ElasticDeformation:
         if (perX != perY) and ((perY and grid['Ny'] == 1) or (perX and grid['Nx'] == 1)):
             warnings.warn(
                 "You specified a semi-periodic 1D problem.\n"
-                "For the calculation of elastic deformation, we assume a line contact with "
-                "non-periodic boundary conditions in both directions.\n"
-                "For the calculation of the effective force F=p*A per cell, "
-                "we assume a unit length of {} = 1."
-                .format("Ly" if perY else "Lx"))
+                "For the calculation of elastic deformation, we assume a line contact, "
+                "approximated via periodic images (n_images={}) along the {} == 1 "
+                "direction; internally this solver's own copy of {} is set to 1 "
+                "(force per cell F=p*A is computed from the grid's own physical "
+                "{}, unaffected by this internal override)."
+                .format(n_images, "Ny" if perY else "Nx",
+                        "Ly" if perY else "Lx", "Ly" if perY else "Lx"))
             grid = copy.deepcopy(grid)  # do not modify original grid
             if perY:
                 grid['Ly'] = 1.0
             else:
                 grid['Lx'] = 1.0
-            n_images = 0  # make it effectively non-periodic
 
         # Create FFTDomainTranslation for MPI redistribution
         self.fft_translation = FFTDomainTranslation(decomp)
@@ -992,7 +1128,8 @@ class ElasticDeformation:
             Zero if h is None.
         """
         u_computed = self.get_deformation(p)
-        u_relaxed = (1 - self.alpha_underrelax) * self.u_prev + self.alpha_underrelax * u_computed
+        alpha = self.alpha_underrelax
+        u_relaxed = (1 - alpha) * self.u_prev + alpha * u_computed
         self.u_prev = u_relaxed.copy()
 
         if h is not None:

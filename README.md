@@ -157,6 +157,8 @@ After successful completion, you should find the following files.
 - `Xtrain.npy` (Optional): Training data inputs
 - `Ytrain.npy` (Optional): Training data observations
 - `Ytrain_err.npy` (Optional): Training data observation error
+- `log.run`: Log file with the solver's per-step status output (also printed to stdout).
+- `log.gp` / `log.md` (Optional): Log files for the GP surrogate and MD components, when active.
 
 The code comes with a few handy [command line tools](GaPFlow/cli/) for
 visualizations like this one

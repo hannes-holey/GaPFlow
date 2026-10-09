@@ -49,7 +49,6 @@ db:
     dtool_path: data/train_lj  # defaults to options['output']/train   
     init_size: 5
     init_method: rand
-    init_width: 0.01 # default (for density)
 md:
     system: lj
     ncpu: 6

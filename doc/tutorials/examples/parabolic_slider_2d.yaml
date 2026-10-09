@@ -7,8 +7,8 @@ options:
 grid:
     Lx: 0.1
     Ly: 0.1
-    Nx: 128
-    Ny: 128
+    Nx: 80
+    Ny: 80
     xE: ['D', 'N', 'N']
     xW: ['D', 'N', 'N']
     yS: ['D', 'N', 'N']
@@ -29,7 +29,7 @@ numerics:
     solver: fem
     dt: 10.
     tol: 0.
-    max_it: 10
+    max_it: 5
 
 properties:
     EOS: PL
@@ -41,9 +41,5 @@ properties:
 
 fem_solver:
     linear_solver: direct
+    max_iter: 1
     R_norm_tol: 1e-11
-    pspg_boundary_decay: 2.0
-    physics:
-        pspg: true
-        gls: true
-    newton_debug: True
