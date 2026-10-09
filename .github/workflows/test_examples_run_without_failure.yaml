@@ -38,7 +38,7 @@ jobs:
         python3 -m pip install -v .[test,parallel]
 
     - name: run examples
-      run:
+      run: |
         cd examples 
         pytest test_config_files_run.py
 
