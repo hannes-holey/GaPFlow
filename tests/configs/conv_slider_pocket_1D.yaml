@@ -52,9 +52,9 @@ fem_solver:
     physics:
         gap_shear: true
     stabilization:
-        oss: true
+        oss: false
         oss_alpha: 1.0
-        mass_supg: false
+        mass_supg: true
         mass_supg_factor: 1.0
     max_iter: 3
     R_norm_tol: 1e-9

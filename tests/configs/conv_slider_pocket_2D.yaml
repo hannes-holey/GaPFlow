@@ -27,8 +27,8 @@ options:
 grid:
     Lx: 0.020
     Ly: 0.010
-    Nx: 120
-    Ny: 60
+    Nx: 240
+    Ny: 100
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
     yS: ['D', 'N', 'N']
@@ -48,9 +48,9 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 0.1
+    dt: 0.2
     tol: 0.0
-    max_it: 12
+    max_it: 6
 
 properties:
     EOS: DH
@@ -70,15 +70,16 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.15
+    newton_relax: 0.3
     equations:
         cavitation: True
     physics:
         gap_shear: true
         inertia: false
     stabilization:
-        oss: true
-        oss_alpha: 1.0
+        oss: false
+        oss_alpha: 0.5
+        mass_supg: true
     max_iter: 5
     R_norm_tol: 1e-9
-    scaling: False
+    scaling: True

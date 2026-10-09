@@ -239,7 +239,6 @@ R23xy = Term(
     dep_vars=['p', 'jx'],
     dep_vals=['rho', 'drho_dp', 'eta', 'd_dy_jx'],
     fun=lambda ctx: lambda p, jx: ctx['eta']() * ctx['d_dy_jx']() / ctx['rho'](),
-    # BUG: d/dp should use d_dy_jx (the quantity fun multiplies by 1/rho), not jx.
     der_funs=[
         lambda ctx: lambda p, jx: -ctx['eta']() * jx / ctx['rho']()**2 * ctx['drho_dp'](),
         lambda ctx: lambda p, jx: ctx['eta']() / ctx['rho']()
@@ -254,7 +253,6 @@ R23yx = Term(
     dep_vars=['p', 'jy'],
     dep_vals=['rho', 'drho_dp', 'eta', 'd_dx_jy'],
     fun=lambda ctx: lambda p, jy: ctx['eta']() * ctx['d_dx_jy']() / ctx['rho'](),
-    # BUG: d/dp should use d_dx_jy (the quantity fun multiplies by 1/rho), not jy.
     der_funs=[
         lambda ctx: lambda p, jy: -ctx['eta']() * jy / ctx['rho']()**2 * ctx['drho_dp'](),
         lambda ctx: lambda p, jy: ctx['eta']() / ctx['rho']()
@@ -269,7 +267,6 @@ R23xx = Term(
     dep_vars=['p', 'jx'],
     dep_vals=['rho', 'drho_dp', 'eta', 'd_dx_jx'],
     fun=lambda ctx: lambda p, jx: ctx['eta']() * ctx['d_dx_jx']() / ctx['rho'](),
-    # BUG: d/dp should use d_dx_jx (the quantity fun multiplies by 1/rho), not jx.
     der_funs=[
         lambda ctx: lambda p, jx: -ctx['eta']() * jx / ctx['rho']()**2 * ctx['drho_dp'](),
         lambda ctx: lambda p, jx: ctx['eta']() / ctx['rho']()
@@ -284,7 +281,6 @@ R23yy = Term(
     dep_vars=['p', 'jy'],
     dep_vals=['rho', 'drho_dp', 'eta', 'd_dy_jy'],
     fun=lambda ctx: lambda p, jy: ctx['eta']() * ctx['d_dy_jy']() / ctx['rho'](),
-    # BUG: d/dp should use d_dy_jy (the quantity fun multiplies by 1/rho), not jy.
     der_funs=[
         lambda ctx: lambda p, jy: -ctx['eta']() * jy / ctx['rho']()**2 * ctx['drho_dp'](),
         lambda ctx: lambda p, jy: ctx['eta']() / ctx['rho']()

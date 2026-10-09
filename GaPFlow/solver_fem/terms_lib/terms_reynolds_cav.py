@@ -110,13 +110,13 @@ Rey_R11Sx_cav_b = Term(
 
 Rey_R11Sx_cav_c = Term(
     name='Rey_R11Sx_cav_c',
-    description='Wedge (Couette) term x, strong form part c: -U_m * rho * (1-theta) * d_dx_h',
+    description='Wedge (Couette) term x, strong form part c: -U_m * rho * (1-theta) * dh_dx',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['h', 'rho', 'drho_dp', 'U_m', 'd_dx_h'],
-    fun=lambda ctx: lambda p, theta: - ctx['U_m']() * ctx['rho']() * (1 - theta) * ctx['d_dx_h'](),
-    der_funs=[lambda ctx: lambda p, theta: - ctx['U_m']() * ctx['drho_dp']() * (1 - theta) * ctx['d_dx_h'](),
-              lambda ctx: lambda p, theta: ctx['U_m']() * ctx['rho']() * ctx['d_dx_h']()])
+    dep_vals=['h', 'rho', 'drho_dp', 'U_m', 'dh_dx'],
+    fun=lambda ctx: lambda p, theta: - ctx['U_m']() * ctx['rho']() * (1 - theta) * ctx['dh_dx'](),
+    der_funs=[lambda ctx: lambda p, theta: - ctx['U_m']() * ctx['drho_dp']() * (1 - theta) * ctx['dh_dx'](),
+              lambda ctx: lambda p, theta: ctx['U_m']() * ctx['rho']() * ctx['dh_dx']()])
 
 Rey_R11Sy_cav = Term(
     name='Rey_R11Sy_cav',

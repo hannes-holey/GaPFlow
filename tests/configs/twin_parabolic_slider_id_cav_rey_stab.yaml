@@ -1,5 +1,8 @@
 # Twin parabolic slider bearing (inclined-pad, id variant) — Fischer-Burmeister
-# cavitation, solver comparison template.
+# cavitation, stabilization comparison template (NS-OSS / NS-SUPG / NS-both /
+# Reynolds-SUPG). Height profile injected via regen_twin_parabolic_slider_id
+# (not expressible via geometry.type alone). Nx is templated so it can be
+# swept to probe the stability limit of each stabilization combination.
 #
 # Geometry: inclined gap, hmax=50.2e-6 m, hmin=25.4e-6 m, U=4.57 m/s.
 # Dirichlet p at inlet/outlet, periodic in y (effectively 1D).
@@ -10,7 +13,7 @@
 #   shear = 0.039 Pa.s
 
 options:
-    output: /tmp/twin_parabolic_slider_id_cav_{solver}
+    output: /tmp/twin_parabolic_slider_id_cav_stab_{solver}
     write_freq: 50
     save_output: False
     print_config: False
@@ -18,7 +21,7 @@ options:
 grid:
     Lx: 0.0762
     Ly: 0.004
-    Nx: 400
+    Nx: {Nx}
     Ny: 1
     xW: ['D', 'N', 'N']
     xE: ['D', 'N', 'N']
@@ -59,8 +62,8 @@ fem_solver:
     physics:
         gap_shear: true
     stabilization:
-        mass_supg: true
-        oss: true
+        mass_supg: {mass_supg}
+        oss: {oss}
     max_iter: 1
     R_norm_tol: 1e-9
     scaling: False

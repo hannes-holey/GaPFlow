@@ -30,6 +30,8 @@ from ..terms import Term
 
 __all__ = [
     'Rey_R1T_supg', 'Rey_R11Sx_supg_a', 'Rey_R11Sx_supg_b', 'Rey_R11Sx_supg_c',
+    'Rey_R11x_supg_rho', 'Rey_R11x_supg_h', 'Rey_R11x_supg_h_drho',
+    'Rey_R11x_supg_eta', 'Rey_R11x_supg_eta_drho',
     'REYNOLDS_CAV_SUPG_TERMS',
 ]
 
@@ -76,16 +78,86 @@ Rey_R11Sx_supg_b = Term(
 
 Rey_R11Sx_supg_c = Term(
     name='Rey_R11Sx_supg_c',
-    description='rho (1-theta) d_dx_h',
+    description='rho (1-theta) dh_dx',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['h', 'rho', 'drho_dp', 'U_bot', 'U_top', 'U_m', 'tau_supg', 'd_dx_h'],
-    fun=lambda ctx: lambda p, theta: ctx['tau_supg']() * ctx['U_m']() * ctx['rho']() * (1 - theta) * ctx['d_dx_h'](),
-    der_funs=[lambda ctx: lambda p, theta: ctx['tau_supg']() * ctx['U_m']() * ctx['drho_dp']() * (1 - theta) * ctx['d_dx_h'](),
-              lambda ctx: lambda p, theta: - ctx['tau_supg']() * ctx['U_m']() * ctx['rho']() * ctx['d_dx_h']()],
+    dep_vals=['h', 'rho', 'drho_dp', 'U_bot', 'U_top', 'U_m', 'tau_supg', 'dh_dx'],
+    fun=lambda ctx: lambda p, theta: ctx['tau_supg']() * ctx['U_m']() * ctx['rho']() * (1 - theta) * ctx['dh_dx'](),
+    der_funs=[lambda ctx: lambda p, theta: ctx['tau_supg']() * ctx['U_m']() * ctx['drho_dp']() * (1 - theta) * ctx['dh_dx'](),
+              lambda ctx: lambda p, theta: - ctx['tau_supg']() * ctx['U_m']() * ctx['rho']() * ctx['dh_dx']()],
     test_deriv='x'
 )
 
+# Poiseuille (diffusion) coefficient-gradient part: d/dx(rho h^3/12eta) * dp/dx,
+# minus the rho*h^3/12eta * d2p/dx2 piece (identically zero on Q1 p, per element).
+#   R = (h^3/12eta) * drho_dx * dp_dx
+#     + (rho h^2/4eta) * dh_dx * dp_dx
+#     - (rho h^3/12eta^2) * deta_dx * dp_dx
+# drho_dx = drho_dp * d_dx_p (chain rule, as in Rey_R11Sx_supg_b).
+
+Rey_R11x_supg_rho = Term(
+    name='Rey_R11x_supg_rho',
+    description='SUPG Poiseuille coeff-grad, rho(p) part: (h^3/12eta) * drho_dx * dp_dx',
+    res='mass',
+    dep_vars=['p'],
+    dep_vals=['h', 'eta', 'drho_dp', 'd_dx_p', 'tau_supg'],
+    fun=lambda ctx: lambda p: - ctx['tau_supg']() * ctx['h']() ** 3 / (12 * ctx['eta']())
+        * ctx['drho_dp']() * ctx['d_dx_p']() * ctx['d_dx_p'](),
+    der_funs=[lambda ctx: lambda p: - ctx['tau_supg']() * ctx['h']() ** 3 / (12 * ctx['eta']())
+        * ctx['drho_dp']() * 2 * ctx['d_dx_p']()],
+    trial_deriv='x',
+    test_deriv='x')
+
+Rey_R11x_supg_h = Term(
+    name='Rey_R11x_supg_h',
+    description='SUPG Poiseuille coeff-grad, h part: (rho h^2/4eta) * dh_dx * dp_dx',
+    res='mass',
+    dep_vars=['p'],
+    dep_vals=['h', 'eta', 'rho', 'dh_dx', 'd_dx_p', 'tau_supg'],
+    fun=lambda ctx: lambda p: - ctx['tau_supg']() * ctx['rho']() * ctx['h']() ** 2 / (4 * ctx['eta']())
+        * ctx['dh_dx']() * ctx['d_dx_p'](),
+    der_funs=[lambda ctx: lambda p: - ctx['tau_supg']() * ctx['rho']() * ctx['h']() ** 2 / (4 * ctx['eta']())
+        * ctx['dh_dx']()],
+    trial_deriv='x',
+    test_deriv='x')
+
+Rey_R11x_supg_h_drho = Term(
+    name='Rey_R11x_supg_h_drho',
+    description='SUPG Poiseuille coeff-grad, h part, d/dp chain rule through rho(p) (Jacobian-only, fun=0)',
+    res='mass',
+    dep_vars=['p'],
+    dep_vals=['h', 'eta', 'drho_dp', 'dh_dx', 'd_dx_p', 'tau_supg'],
+    fun=lambda ctx: lambda p: np.zeros_like(p),
+    der_funs=[lambda ctx: lambda p: - ctx['tau_supg']() * ctx['drho_dp']() * ctx['h']() ** 2 / (4 * ctx['eta']())
+        * ctx['dh_dx']() * ctx['d_dx_p']()],
+    test_deriv='x')
+
+Rey_R11x_supg_eta = Term(
+    name='Rey_R11x_supg_eta',
+    description='SUPG Poiseuille coeff-grad, eta part: -(rho h^3/12eta^2) * deta_dx * dp_dx',
+    res='mass',
+    dep_vars=['p'],
+    dep_vals=['h', 'eta', 'rho', 'd_dx_eta', 'd_dx_p', 'tau_supg'],
+    fun=lambda ctx: lambda p: ctx['tau_supg']() * ctx['rho']() * ctx['h']() ** 3 / (12 * ctx['eta']() ** 2)
+        * ctx['d_dx_eta']() * ctx['d_dx_p'](),
+    der_funs=[lambda ctx: lambda p: ctx['tau_supg']() * ctx['rho']() * ctx['h']() ** 3 / (12 * ctx['eta']() ** 2)
+        * ctx['d_dx_eta']()],
+    trial_deriv='x',
+    test_deriv='x')
+
+Rey_R11x_supg_eta_drho = Term(
+    name='Rey_R11x_supg_eta_drho',
+    description='SUPG Poiseuille coeff-grad, eta part, d/dp chain rule through rho(p) (Jacobian-only, fun=0)',
+    res='mass',
+    dep_vars=['p'],
+    dep_vals=['h', 'eta', 'drho_dp', 'd_dx_eta', 'd_dx_p', 'tau_supg'],
+    fun=lambda ctx: lambda p: np.zeros_like(p),
+    der_funs=[lambda ctx: lambda p: ctx['tau_supg']() * ctx['drho_dp']() * ctx['h']() ** 3 / (12 * ctx['eta']() ** 2)
+        * ctx['d_dx_eta']() * ctx['d_dx_p']()],
+    test_deriv='x')
+
 REYNOLDS_CAV_SUPG_TERMS = [
-    Rey_R1T_supg, Rey_R11Sx_supg_a, Rey_R11Sx_supg_b, Rey_R11Sx_supg_c
+    Rey_R1T_supg, Rey_R11Sx_supg_a, Rey_R11Sx_supg_b, Rey_R11Sx_supg_c,
+    Rey_R11x_supg_rho, Rey_R11x_supg_h, Rey_R11x_supg_h_drho,
+    Rey_R11x_supg_eta, Rey_R11x_supg_eta_drho,
 ]

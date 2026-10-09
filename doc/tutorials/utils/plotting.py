@@ -264,6 +264,72 @@ def plot_reynolds_cav_comparison(results, title, p_divisor=1e5, p_unit='bar',
     plt.show()
 
 
+def plot_stab_comparison(results, title, p_divisor=1e5, p_unit='bar',
+                         ref_csv=None, ref_label=None,
+                         ref_x_scale=1.0, ref_p_scale=1.0):
+    """Plot pressure and cavitation fraction (theta) profiles comparing
+    the four stabilization variants (NS-OSS, NS-SUPG, NS-both, Reynolds-SUPG).
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with variant names as keys and result dicts as values.
+        Each result dict must contain 'p' and 'theta' arrays.
+        Expected keys: 'ns_oss', 'ns_supg', 'ns_both', 'rey_supg'
+    title : str
+        Title for the figure
+    ref_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
+    ref_label : str, optional
+        Legend label for the reference data.
+    ref_x_scale : float
+        Multiplier applied to the reference x-column (to map onto x/L in [0, 1]).
+    ref_p_scale : float
+        Multiplier applied to the reference y-column to convert to Pa.
+
+    Example
+    -------
+    >>> results = {
+    ...     'ns_oss': {'p': p1, 'theta': th1, 'time': t1},
+    ...     'ns_supg': {'p': p2, 'theta': th2, 'time': t2},
+    ...     'ns_both': {'p': p3, 'theta': th3, 'time': t3},
+    ...     'rey_supg': {'p': p4, 'theta': th4, 'time': t4},
+    ... }
+    >>> plot_stab_comparison(results, 'Twin Parabolic Slider, Identical')
+    """
+    fig, (ax_p, ax_theta) = plt.subplots(1, 2, figsize=(11, 4))
+    colors = {'ns_oss': 'C0', 'ns_supg': 'C1', 'ns_both': 'C2', 'rey_supg': 'C3'}
+    labels = {'ns_oss': 'NS-OSS', 'ns_supg': 'NS-SUPG', 'ns_both': 'NS-OSS+SUPG',
+              'rey_supg': 'Reynolds-SUPG'}
+
+    Nx = len(list(results.values())[0]['p'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        ax_p.plot(x, res['p'] / p_divisor, color=colors[name], label=labels[name], lw=1.5)
+        ax_theta.plot(x, res['theta'], color=colors[name], label=labels[name], lw=1.5)
+
+    if ref_csv is not None:
+        ref = pd.read_csv(ref_csv, skipinitialspace=True)
+        ax_p.scatter(ref['x'].values * ref_x_scale,
+                     ref['y'].values * ref_p_scale / p_divisor,
+                     color='#1f77b4', s=14, zorder=5, label=ref_label)
+
+    ax_p.set_xlabel('x / L')
+    ax_p.set_ylabel(f'p [{p_unit}]')
+    ax_p.legend()
+    ax_p.grid(True, alpha=0.3)
+
+    ax_theta.set_xlabel('x / L')
+    ax_theta.set_ylabel(r'$\theta$ [-]')
+    ax_theta.legend()
+    ax_theta.grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_reynolds_comparison_rho_2d(results, title):
     """Plot 2D density fields (FEM NS, FEM Reynolds) plus their mid-section
     (y = Ly/2) profiles, for genuinely 2D (non-periodic-in-y) geometries.
@@ -698,11 +764,14 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
         theta = problem.q[3][1:-1, 1:-1]
         rho_eff = rho * (1 - theta)
 
+    j_x = problem.q[1][1:-1, 1:-1]
     p_x = p_arr.mean(axis=1)
     theta_x = theta.mean(axis=1)
     rho_eff_x = rho_eff.mean(axis=1)
 
-    fig, axes = plt.subplots(1, 3, figsize=(12, 3), facecolor='white',
+    u = j_x / rho_eff
+
+    fig, axes = plt.subplots(1, 5, figsize=(12, 3), facecolor='white',
                              constrained_layout=True)
     fig.suptitle(title, fontweight='bold')
 
@@ -728,6 +797,18 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
     ax.fill_between(x * 1e3, 0, rho_eff_x, alpha=0.25, color='#2ca02c')
     ax.plot(x * 1e3, rho_eff_x, color='#2ca02c', lw=1.5)
     ax.set(xlabel='x [mm]', ylabel=r'$\rho_{\rm eff}$ [kg/m³]', title='Effective density')
+    ax.grid(True, alpha=0.3)
+
+    ax = axes[3]
+    ax.fill_between(x * 1e3, 0, j_x.mean(axis=1), alpha=0.25, color='#9467bd')
+    ax.plot(x * 1e3, j_x.mean(axis=1), color='#9467bd', lw=1.5)
+    ax.set(xlabel='x [mm]', ylabel=r'$j_x$ [kg/(m²s)]', title='x-momentum')
+    ax.grid(True, alpha=0.3)
+
+    ax = axes[4]
+    ax.fill_between(x * 1e3, 0, u.mean(axis=1), alpha=0.25, color='#ff7f0e')
+    ax.plot(x * 1e3, u.mean(axis=1), color='#ff7f0e', lw=1.5)
+    ax.set(xlabel='x [mm]', ylabel=r'$u$ [m/s]', title='x-velocity')
     ax.grid(True, alpha=0.3)
 
     plt.show()

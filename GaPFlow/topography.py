@@ -88,8 +88,12 @@ def parabolic_slider(xx, grid, geo):
 
     prefac = 4. / Lx**2 * (h1 - h0)
 
-    h = prefac * (xx - cx)**2 + h0
-    dh_dx = 2 * prefac * (xx - cx)
+    dx = grid['dx']
+    xx_ = (xx - 1.5 * dx) * Lx / (Lx - 3 * dx)
+    xx_ = np.clip(xx_, 0.0, Lx)
+
+    h = prefac * (xx_ - cx)**2 + h0
+    dh_dx = 2 * prefac * (xx_ - cx)
     dh_dy = np.zeros_like(h)
 
     return h, dh_dx, dh_dy
@@ -632,13 +636,17 @@ class Topography:
 
         # 2. At domain boundaries: linear extrapolation of h
         if d.is_at_xW and not d.periodic_x:
-            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
         if d.is_at_xE and not d.periodic_x:
-            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
         if d.is_at_yS and not d.periodic_y:
-            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
         if d.is_at_yN and not d.periodic_y:
-            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
 
         # 3. Compute gradients on inner points (ghost h is now correct)
         self.dh_dx[1:-1, 1:-1] = (self.h[2:, 1:-1] - self.h[:-2, 1:-1]) / (2 * self.dx)
@@ -650,13 +658,17 @@ class Topography:
         # 5. At domain boundaries: override periodic wrap again: linear extrapolation of h
         # and copy gradient from first inner line
         if d.is_at_xW and not d.periodic_x:
-            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
         if d.is_at_xE and not d.periodic_x:
-            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
         if d.is_at_yS and not d.periodic_y:
-            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
         if d.is_at_yN and not d.periodic_y:
-            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
 
         if d.is_at_xW and not d.periodic_x:
             self.dh_dx[0, :] = self.dh_dx[1, :]

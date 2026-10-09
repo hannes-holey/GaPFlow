@@ -28,7 +28,7 @@ numerics:
     solver: fem
     dt: 0.1
     tol: 0.
-    max_it: 450
+    max_it: 550
 
 properties:
     rho0: 850.
@@ -39,6 +39,7 @@ properties:
     c_v: 352.0
     shear: 0.039
     bulk: 0.0
+    p_cav: -1.
 
 fem_solver:
     linear_solver: direct
@@ -47,6 +48,10 @@ fem_solver:
         gap_shear: true
         plane_shear: false
         inertia: false
-    max_iter: 20
+    stabilization:
+        mass_supg: true
+    equations:
+        cavitation: true
+    max_iter: 10
     R_norm_tol: 0.
     scaling: True

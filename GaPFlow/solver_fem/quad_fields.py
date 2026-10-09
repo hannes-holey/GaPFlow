@@ -363,8 +363,13 @@ class QuadFieldManager:
 
     def _update_oss_quad_fields(self, q) -> None:
         """Compute OSS stabilisation fields (a_vec, tau, one_minus_theta) at quad points."""
-        a_vec_x = q('jx')
-        a_vec_y = q('jy')
+        rho_l = self.problem.prop['rho_l']
+        geo = self.problem.geo
+        U_m = 0.5 * (geo['U_bot'] + geo['U_top'])
+        V_m = 0.5 * (geo['V_bot'] + geo['V_top'])
+
+        a_vec_x = rho_l * U_m
+        a_vec_y = rho_l * V_m
         q('a_vec_x')[:] = a_vec_x
         q('a_vec_y')[:] = a_vec_y
 
@@ -402,9 +407,11 @@ class QuadFieldManager:
         q('U_m')[:] = 0.5 * (geo['U_bot'] + geo['U_top'])
 
     def _update_reynolds_supg_quad_fields(self, q) -> None:
-        """Compute SUPG stabilization coefficient tau_supg at quad points."""
+        """Compute UPG stabilization coefficient tau_supg at quad points."""
+        geo = self.problem.geo
+        U = 0.5 * (geo['U_bot'] + geo['U_top'])
         alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
-        q('tau_supg')[:] = 0.5 * alpha * self.dx * q('U_m')
+        q('tau_supg')[:] = 0.5 * alpha * self.dx * np.sign(U)
 
     def _update_mass_supg_quad_fields(self, q) -> None:
         """Compute SUPG stabilization coefficients f_x, f_y at quad points."""
@@ -412,8 +419,8 @@ class QuadFieldManager:
         supg_type = self.problem.fem_solver['stabilization']['mass_supg_type']
 
         if supg_type == 'flux':
-            q('f_x')[:] = 0.5 * alpha * self.dx * q('jx') / q('rho')
-            q('f_y')[:] = 0.5 * alpha * self.dy * q('jy') / q('rho')
+            q('f_x')[:] = 0.5 * alpha * self.dx * np.sign(q('jx'))
+            q('f_y')[:] = 0.5 * alpha * self.dy * np.sign(q('jy'))
         else:
             geo = self.problem.geo
             U = 0.5 * (geo['U_bot'] + geo['U_top'])

@@ -45,6 +45,7 @@ from .scipy_system import ScipySystem
 
 from ..bc import (GhostUpdater, BoundarySpec, BND_IDX, sample_bc_spec,
                   translate_bc_rho_to_p, resolve_pressure_bcs)
+from ..models.pressure import eos_rho
 from .solution_guards import clamp_solution
 from .terms import get_active_terms
 from .scaling import build_scaling, build_scaling_from_blocks
@@ -79,6 +80,9 @@ class FEMSolver:
         self.cb_list: List[Callable[["FEMSolver"], None]] = []
 
         self._build_variable_and_residual_lists()
+
+        if self.cavitation and 'rho_l' not in problem.prop:
+            problem.prop['rho_l'] = float(eos_rho(problem.prop['p_cav'], problem.prop))
 
         self.elements = TaylorHoodQ2Q1(problem.grid['dx'], problem.grid['dy'])
         self.grid_idx = GridIndexManager(problem.decomp, self)

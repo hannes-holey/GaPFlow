@@ -20,6 +20,7 @@ from .plotting import (
     plot_reynolds_comparison_rho,
     plot_reynolds_comparison_rho_2d,
     plot_reynolds_cav_comparison,
+    plot_stab_comparison,
     animate_advection,
     animate_3d_surface,
     animate_3d_advection,
@@ -44,6 +45,11 @@ from .solver_comparison import (  # noqa: F401
     run_reynolds_cav_comparison,
     run_reynolds_solver_2d,
     run_reynolds_comparison_2d,
+    STAB_VARIANTS,
+    build_stab_config,
+    run_stab_solver,
+    run_stab_comparison,
+    print_stab_timing,
 )
 
 from .analytics import heat_equation_1d
@@ -61,6 +67,7 @@ __all__ = [
     'plot_reynolds_comparison_rho',
     'plot_reynolds_comparison_rho_2d',
     'plot_reynolds_cav_comparison',
+    'plot_stab_comparison',
     'animate_advection',
     'animate_3d_surface',
     'animate_3d_advection',
@@ -70,4 +77,9 @@ __all__ = [
     'plot_overview_2d',
     'plot_midsection_2d',
     'heat_equation_1d',
+    'STAB_VARIANTS',
+    'build_stab_config',
+    'run_stab_solver',
+    'run_stab_comparison',
+    'print_stab_timing',
 ]
