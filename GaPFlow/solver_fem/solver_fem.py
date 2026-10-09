@@ -382,6 +382,18 @@ class FEMSolver:
     # Output helpers
     # =========================================================================
 
+    def update_gp_models(self) -> None:
+        """GP training and active learning, once per time step on the previous converged
+        solution. Rebuilds the JIT functions of retrained models, since they capture the
+        GP state at build time."""
+        p = self.problem
+        for model in (p.pressure, p.wall_stress_xz, p.wall_stress_yz):
+            if model.is_gp_model:
+                gp_before = model.gp
+                model.update(residuals=p.residual_buffer, predictor=True)
+                if model.gp is not gp_before:
+                    model.build_grad()
+
     def update_output_fields(self) -> None:
         """Update stress models to ensure output fields are up to date before writing."""
         p = self.problem
@@ -472,6 +484,7 @@ class FEMSolver:
         tic = time.time()
 
         self.update_prev_quad()
+        self.update_gp_models()
         q = self.get_q_nodal().copy()
 
         if self.rank == 0:

@@ -665,12 +665,14 @@ class GaussianProcessSurrogate:
             cooldown = above_tolerance(residuals, tol=1e-3) and self.pause_on_high_residual
         pause_acquisition = after_failed_attempt or cooldown
 
+        # Compute variance tolerance (also while acquisition is paused, for the history output)
+        if self.use_active_learning and predictor:
+            self.variance_tol = self._get_tolerance(m, residuals)
+
         if self.use_active_learning \
                 and predictor \
                 and not pause_acquisition:
 
-            # Compute variance tolerance
-            self.variance_tol = self._get_tolerance(m, residuals)
             before = deepcopy(self.maximum_variance / self.variance_tol)
 
             # Active learning loop
@@ -689,7 +691,7 @@ class GaussianProcessSurrogate:
                 tic = datetime.now()
                 m, v = self._infer(compute_var=True)
                 toc = datetime.now()
-                self._cumtime_infer += tic - toc
+                self._cumtime_infer += toc - tic
 
                 # Re-compute variance tolerance
                 self.variance_tol = self._get_tolerance(m, residuals)
