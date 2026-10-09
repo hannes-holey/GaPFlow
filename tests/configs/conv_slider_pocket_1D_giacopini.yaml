@@ -61,7 +61,7 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.2
+    newton_relax: 0.1
     equations:
         cavitation: True
     physics:
@@ -71,7 +71,7 @@ fem_solver:
         oss: true
         oss_alpha: 1.0
         mass_supg: false
-        mass_supg_factor: 0.8
+        mass_supg_factor: 1.0
     max_iter: 5
     R_norm_tol: 1e-9
     scaling: False

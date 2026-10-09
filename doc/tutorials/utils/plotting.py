@@ -161,6 +161,231 @@ def plot_solver_comparison_rho_jx(results, title):
     plt.show()
 
 
+def plot_reynolds_comparison_rho(results, title):
+    """Plot density profiles comparing FEM NS vs FEM Reynolds.
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with solver names as keys and result dicts as values.
+        Each result dict must contain a 'rho' array.
+        Expected keys: 'fem_ns', 'fem_reynolds'
+    title : str
+        Title for the figure
+
+    Example
+    -------
+    >>> results = {
+    ...     'fem_ns': {'rho': rho_ns, 'time': t_ns},
+    ...     'fem_reynolds': {'rho': rho_rey, 'time': t_rey},
+    ... }
+    >>> plot_reynolds_comparison_rho(results, 'Inclined Slider')
+    """
+    fig, ax = plt.subplots(figsize=(6, 4))
+    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
+    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
+
+    Nx = len(list(results.values())[0]['rho'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        ax.plot(x, res['rho'], color=colors[name], label=labels[name], lw=1.5)
+
+    ax.set_xlabel('x / L')
+    ax.set_ylabel(r'$\rho$ [kg/m³]')
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_reynolds_cav_comparison(results, title, p_divisor=1e5, p_unit='bar',
+                                 ref_csv=None, ref_label=None,
+                                 ref_x_scale=1.0, ref_p_scale=1.0):
+    """Plot pressure and cavitation fraction (theta) profiles comparing
+    FEM NS vs FEM Reynolds, both with Fischer-Burmeister cavitation.
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with solver names as keys and result dicts as values.
+        Each result dict must contain 'p' and 'theta' arrays.
+        Expected keys: 'fem_ns', 'fem_reynolds'
+    title : str
+        Title for the figure
+    ref_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
+    ref_label : str, optional
+        Legend label for the reference data.
+    ref_x_scale : float
+        Multiplier applied to the reference x-column (to map onto x/L in [0, 1]).
+    ref_p_scale : float
+        Multiplier applied to the reference y-column to convert to Pa.
+
+    Example
+    -------
+    >>> results = {
+    ...     'fem_ns': {'p': p_ns, 'theta': theta_ns, 'time': t_ns},
+    ...     'fem_reynolds': {'p': p_rey, 'theta': theta_rey, 'time': t_rey},
+    ... }
+    >>> plot_reynolds_cav_comparison(results, 'Parabolic Slider (Cavitation)')
+    """
+    fig, (ax_p, ax_theta) = plt.subplots(1, 2, figsize=(11, 4))
+    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
+    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
+
+    Nx = len(list(results.values())[0]['p'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        ax_p.plot(x, res['p'] / p_divisor, color=colors[name], label=labels[name], lw=1.5)
+        ax_theta.plot(x, res['theta'], color=colors[name], label=labels[name], lw=1.5)
+
+    if ref_csv is not None:
+        ref = pd.read_csv(ref_csv, skipinitialspace=True)
+        ax_p.scatter(ref['x'].values * ref_x_scale,
+                     ref['y'].values * ref_p_scale / p_divisor,
+                     color='#1f77b4', s=14, zorder=5, label=ref_label)
+
+    ax_p.set_xlabel('x / L')
+    ax_p.set_ylabel(f'p [{p_unit}]')
+    ax_p.legend()
+    ax_p.grid(True, alpha=0.3)
+
+    ax_theta.set_xlabel('x / L')
+    ax_theta.set_ylabel(r'$\theta$ [-]')
+    ax_theta.legend()
+    ax_theta.grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_stab_comparison(results, title, p_divisor=1e5, p_unit='bar',
+                         ref_csv=None, ref_label=None,
+                         ref_x_scale=1.0, ref_p_scale=1.0):
+    """Plot pressure and cavitation fraction (theta) profiles comparing
+    the four stabilization variants (NS-OSS, NS-SUPG, NS-both, Reynolds-SUPG).
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with variant names as keys and result dicts as values.
+        Each result dict must contain 'p' and 'theta' arrays.
+        Expected keys: 'ns_oss', 'ns_supg', 'ns_both', 'rey_supg'
+    title : str
+        Title for the figure
+    ref_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
+    ref_label : str, optional
+        Legend label for the reference data.
+    ref_x_scale : float
+        Multiplier applied to the reference x-column (to map onto x/L in [0, 1]).
+    ref_p_scale : float
+        Multiplier applied to the reference y-column to convert to Pa.
+
+    Example
+    -------
+    >>> results = {
+    ...     'ns_oss': {'p': p1, 'theta': th1, 'time': t1},
+    ...     'ns_supg': {'p': p2, 'theta': th2, 'time': t2},
+    ...     'ns_both': {'p': p3, 'theta': th3, 'time': t3},
+    ...     'rey_supg': {'p': p4, 'theta': th4, 'time': t4},
+    ... }
+    >>> plot_stab_comparison(results, 'Twin Parabolic Slider, Identical')
+    """
+    fig, (ax_p, ax_theta) = plt.subplots(1, 2, figsize=(11, 4))
+    colors = {'ns_oss': 'C0', 'ns_supg': 'C1', 'ns_both': 'C2', 'rey_supg': 'C3'}
+    labels = {'ns_oss': 'NS-OSS', 'ns_supg': 'NS-SUPG', 'ns_both': 'NS-OSS+SUPG',
+              'rey_supg': 'Reynolds-SUPG'}
+
+    Nx = len(list(results.values())[0]['p'])
+    x = np.linspace(0, 1, Nx)
+
+    for name, res in results.items():
+        ax_p.plot(x, res['p'] / p_divisor, color=colors[name], label=labels[name], lw=1.5)
+        ax_theta.plot(x, res['theta'], color=colors[name], label=labels[name], lw=1.5)
+
+    if ref_csv is not None:
+        ref = pd.read_csv(ref_csv, skipinitialspace=True)
+        ax_p.scatter(ref['x'].values * ref_x_scale,
+                     ref['y'].values * ref_p_scale / p_divisor,
+                     color='#1f77b4', s=14, zorder=5, label=ref_label)
+
+    ax_p.set_xlabel('x / L')
+    ax_p.set_ylabel(f'p [{p_unit}]')
+    ax_p.legend()
+    ax_p.grid(True, alpha=0.3)
+
+    ax_theta.set_xlabel('x / L')
+    ax_theta.set_ylabel(r'$\theta$ [-]')
+    ax_theta.legend()
+    ax_theta.grid(True, alpha=0.3)
+
+    fig.suptitle(title, fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_reynolds_comparison_rho_2d(results, title):
+    """Plot 2D density fields (FEM NS, FEM Reynolds) plus their mid-section
+    (y = Ly/2) profiles, for genuinely 2D (non-periodic-in-y) geometries.
+
+    Parameters
+    ----------
+    results : dict
+        Dictionary with solver names as keys and result dicts as values.
+        Each result dict must contain a 2D 'rho' array, shape (Nx, Ny), and
+        'Lx'/'Ly' (domain size in m).
+        Expected keys: 'fem_ns', 'fem_reynolds'
+    title : str
+        Title for the figure
+
+    Example
+    -------
+    >>> results = {
+    ...     'fem_ns': {'rho': rho_ns, 'time': t_ns, 'Lx': Lx, 'Ly': Ly},
+    ...     'fem_reynolds': {'rho': rho_rey, 'time': t_rey, 'Lx': Lx, 'Ly': Ly},
+    ... }
+    >>> plot_reynolds_comparison_rho_2d(results, 'Parabolic Slider 2D')
+    """
+    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
+    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
+    solvers = ['fem_ns', 'fem_reynolds']
+
+    Nx, Ny = results[solvers[0]]['rho'].shape
+    Lx, Ly = results[solvers[0]]['Lx'], results[solvers[0]]['Ly']
+    dx, dy = Lx / Nx, Ly / Ny
+    x = np.linspace(dx / 2, Lx - dx / 2, Nx)
+    y = np.linspace(dy / 2, Ly - dy / 2, Ny)
+    X, Y = np.meshgrid(x, y, indexing='ij')
+    mid = Ny // 2
+
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4), facecolor='white',
+                             constrained_layout=True)
+    fig.suptitle(title, fontweight='bold')
+
+    for ax, name in zip(axes[:2], solvers):
+        im = ax.pcolormesh(X * 1e3, Y * 1e3, results[name]['rho'],
+                           cmap='RdBu_r', shading='auto')
+        plt.colorbar(im, ax=ax, label=r'$\rho$ [kg/m³]')
+        ax.set(xlabel='x [mm]', ylabel='y [mm]', title=labels[name])
+
+    for name in solvers:
+        axes[2].plot(x / Lx, results[name]['rho'][:, mid],
+                     color=colors[name], label=labels[name], lw=1.5)
+    axes[2].set_xlabel('x / L')
+    axes[2].set_ylabel(r'$\rho$ [kg/m³]')
+    axes[2].set_title('Mid-section (y = Ly/2)', fontsize=10)
+    axes[2].legend()
+    axes[2].grid(True, alpha=0.3)
+
+    plt.show()
+
+
 def animate_advection(x_vec, t_vec, T_numeric, L, U_avg, T_min=None, T_max=None,
                       save_path=None):
     """Animated visualization of temperature advection.
@@ -544,7 +769,7 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
     theta_x = theta.mean(axis=1)
     rho_eff_x = rho_eff.mean(axis=1)
 
-    u = j_x / rho
+    u = j_x / rho_eff
 
     fig, axes = plt.subplots(1, 5, figsize=(12, 3), facecolor='white',
                              constrained_layout=True)

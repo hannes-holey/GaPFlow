@@ -1,9 +1,19 @@
+# Twin parabolic slider bearing (inclined-pad, id variant) — Fischer-Burmeister
+# cavitation, solver comparison template.
+#
+# Geometry: inclined gap, hmax=50.2e-6 m, hmin=25.4e-6 m, U=4.57 m/s.
+# Dirichlet p at inlet/outlet, periodic in y (effectively 1D).
+#
+# Fluid: Dowson-Higginson EOS
+#   rho0 = 400 kg/m^3  at  P0 = 1e5 Pa
+#   p_cav = 0 Pa
+#   shear = 0.039 Pa.s
+
 options:
-    output: /tmp/twin_parabolic_slider_id
+    output: /tmp/twin_parabolic_slider_id_cav_{solver}
     write_freq: 50
     save_output: False
-    output_plots: False
-    residual_analysis: False
+    print_config: False
 
 grid:
     Lx: 0.0762
@@ -15,7 +25,7 @@ grid:
     yS: ['P', 'P', 'P']
     yN: ['P', 'P', 'P']
     xW_P: 3.36e5
-    xE_P: 0
+    xE_P: 0.
 
 geometry:
     type: inclined
@@ -26,10 +36,10 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
+    solver: {solver}
     dt: 1.0
     tol: -1.
-    max_it: 80
+    max_it: 120
 
 properties:
     EOS: DH
@@ -45,12 +55,11 @@ fem_solver:
     linear_solver: direct
     newton_relax: 0.1
     equations:
-        cavitation: true
+        cavitation: True
     physics:
         gap_shear: true
     stabilization:
-        mass_supg: false
-        mass_supg_factor: 1.0
+        mass_supg: true
         oss: true
     max_iter: 1
     R_norm_tol: 1e-9

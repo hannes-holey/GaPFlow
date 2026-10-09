@@ -43,9 +43,9 @@ geometry:
 
 numerics:
     solver: fem
-    dt: 0.02
+    dt: 0.1
     tol: 0.0
-    max_it: 30
+    max_it: 70
 
 properties:
     EOS: DH
@@ -59,7 +59,7 @@ properties:
 
 fem_solver:
     linear_solver: direct
-    newton_relax: 0.8
+    newton_relax: 0.05
     equations:
         cavitation: True
     physics:
@@ -69,7 +69,7 @@ fem_solver:
         oss: true
         oss_alpha: 1.0
         mass_supg: true
-        mass_supg_factor: 0.2
+        mass_supg_factor: 1.0
     max_iter: 2
     R_norm_tol: 1e-9
     scaling: True

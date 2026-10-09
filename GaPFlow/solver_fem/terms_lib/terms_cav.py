@@ -50,12 +50,11 @@ R11x_cav = Term(
     name='R11x_cav',
     description='flux divergence x Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=[],
-    fun=lambda ctx: lambda jx, theta: - (1 - theta) * jx,
+    fun=lambda ctx: lambda jx: - jx,
     der_funs=[
-        lambda ctx: lambda jx, theta: - (1 - theta),
-        lambda ctx: lambda jx, theta:  jx,
+        lambda ctx: lambda jx: np.full_like(jx, -1.0),
     ],
     test_deriv='x')
 
@@ -63,12 +62,11 @@ R11y_cav = Term(
     name='R11y_cav',
     description='flux divergence y Elrod-Adams (IBP)',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=[],
-    fun=lambda ctx: lambda jy, theta: - (1 - theta) * jy,
+    fun=lambda ctx: lambda jy: - jy,
     der_funs=[
-        lambda ctx: lambda jy, theta: - (1 - theta),
-        lambda ctx: lambda jy, theta:  jy,
+        lambda ctx: lambda jy: np.full_like(jy, -1.0),
     ],
     test_deriv='y')
 
@@ -76,27 +74,25 @@ R11Sx_cav = Term(
     name='R11Sx_cav',
     description='flux divergence height source x Elrod-Adams',
     res='mass',
-    dep_vars=['jx', 'theta'],
+    dep_vars=['jx'],
     dep_vals=['h', 'dh_dx'],
-    fun=lambda ctx: lambda jx, theta: -1 / ctx['h']() * ctx['dh_dx']() * (1 - theta) * jx,
+    fun=lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx']() * jx,
     der_funs=[
-        lambda ctx: lambda jx, theta: -1 / ctx['h']() * ctx['dh_dx']() * (1 - theta),
-        lambda ctx: lambda jx, theta:  1 / ctx['h']() * ctx['dh_dx']() * jx,
+        lambda ctx: lambda jx: -1 / ctx['h']() * ctx['dh_dx'](),
     ],
-    der_h=lambda ctx: lambda jx, theta: 1 / ctx['h']() ** 2 * ctx['dh_dx']() * (1 - theta) * jx)
+    der_h=lambda ctx: lambda jx: 1 / ctx['h']() ** 2 * ctx['dh_dx']() * jx)
 
 R11Sy_cav = Term(
     name='R11Sy_cav',
     description='flux divergence height source y Elrod-Adams',
     res='mass',
-    dep_vars=['jy', 'theta'],
+    dep_vars=['jy'],
     dep_vals=['h', 'dh_dy'],
-    fun=lambda ctx: lambda jy, theta: - 1 / ctx['h']() * ctx['dh_dy']() * (1 - theta) * jy,
+    fun=lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy']() * jy,
     der_funs=[
-        lambda ctx: lambda jy, theta: - 1 / ctx['h']() * ctx['dh_dy']() * (1 - theta),
-        lambda ctx: lambda jy, theta:  1 / ctx['h']() * ctx['dh_dy']() * jy,
+        lambda ctx: lambda jy: - 1 / ctx['h']() * ctx['dh_dy'](),
     ],
-    der_h=lambda ctx: lambda jy, theta: 1 / ctx['h']() ** 2 * ctx['dh_dy']() * (1 - theta) * jy)
+    der_h=lambda ctx: lambda jy: 1 / ctx['h']() ** 2 * ctx['dh_dy']() * jy)
 
 # -----------------------------------------------------------------------------
 # mass conservation: time-dependent terms

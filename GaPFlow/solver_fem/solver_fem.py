@@ -45,6 +45,7 @@ from .scipy_system import ScipySystem
 
 from ..bc import (GhostUpdater, BoundarySpec, BND_IDX, sample_bc_spec,
                   translate_bc_rho_to_p, resolve_pressure_bcs)
+from ..models.pressure import eos_rho
 from .solution_guards import clamp_solution
 from .terms import get_active_terms
 from .scaling import build_scaling, build_scaling_from_blocks
@@ -80,6 +81,9 @@ class FEMSolver:
 
         self._build_variable_and_residual_lists()
 
+        if self.cavitation and 'rho_l' not in problem.prop:
+            problem.prop['rho_l'] = float(eos_rho(problem.prop['p_cav'], problem.prop))
+
         self.elements = TaylorHoodQ2Q1(problem.grid['dx'], problem.grid['dy'])
         self.grid_idx = GridIndexManager(problem.decomp, self)
 
@@ -92,9 +96,15 @@ class FEMSolver:
         self.energy = p.fem_solver['equations']['energy']
         self.cavitation = p.fem_solver['equations']['cavitation']
         self.oss = p.fem_solver['stabilization']['oss']
+        self.reynolds = p.fem_solver['equations']['reynolds']
 
-        self.variables = ['jx', 'jy', 'p']
-        self.residuals = ['momentum_x', 'momentum_y', 'mass']
+        if self.reynolds:
+            self.variables = ['p']
+            self.residuals = ['mass']
+        else:
+            self.variables = ['jx', 'jy', 'p']
+            self.residuals = ['momentum_x', 'momentum_y', 'mass']
+
         self.add_fields = []
 
         if self.energy:
@@ -105,7 +115,7 @@ class FEMSolver:
             self.variables.append('theta')
             self.residuals.append('fb')
             self.add_fields.append('theta')
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             self.variables.append('xi')
             self.residuals.append('R_oss')
             self.add_fields.append('xi')
@@ -145,17 +155,19 @@ class FEMSolver:
         specs = []
         no_fun = [None] * 4
 
-        field = self.quad_mgr.nodal_fields['jx']
-        jx_bc_type, jx_bc_vals = sample_bc_spec(self.problem.grid, 1)
-        jx_bc_type, jx_bc_fun = self._apply_bc_callbacks('jx', jx_bc_type)
-        specs.append(BoundarySpec(field, 'P2', jx_bc_type,
-                                  jx_bc_vals, jx_bc_fun, self.problem.decomp))
+        if 'jx' in self.variables:
+            field = self.quad_mgr.nodal_fields['jx']
+            jx_bc_type, jx_bc_vals = sample_bc_spec(self.problem.grid, 1)
+            jx_bc_type, jx_bc_fun = self._apply_bc_callbacks('jx', jx_bc_type)
+            specs.append(BoundarySpec(field, 'P2', jx_bc_type,
+                                      jx_bc_vals, jx_bc_fun, self.problem.decomp))
 
-        field = self.quad_mgr.nodal_fields['jy']
-        jy_bc_type, jy_bc_vals = sample_bc_spec(self.problem.grid, 2)
-        jy_bc_type, jy_bc_fun = self._apply_bc_callbacks('jy', jy_bc_type)
-        specs.append(BoundarySpec(field, 'P2', jy_bc_type,
-                                  jy_bc_vals, jy_bc_fun, self.problem.decomp))
+        if 'jy' in self.variables:
+            field = self.quad_mgr.nodal_fields['jy']
+            jy_bc_type, jy_bc_vals = sample_bc_spec(self.problem.grid, 2)
+            jy_bc_type, jy_bc_fun = self._apply_bc_callbacks('jy', jy_bc_type)
+            specs.append(BoundarySpec(field, 'P2', jy_bc_type,
+                                      jy_bc_vals, jy_bc_fun, self.problem.decomp))
 
         field = self.quad_mgr.nodal_fields['p']
         rho_bc_type, rho_bc_vals = sample_bc_spec(self.problem.grid, 0)
@@ -169,7 +181,7 @@ class FEMSolver:
             specs.append(BoundarySpec(field, 'P1', rho_bc_type,
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
 
-        if self.cavitation and self.oss:
+        if self.cavitation and self.oss and not self.reynolds:
             field = self.quad_mgr.nodal_fields['xi']
             specs.append(BoundarySpec(field, 'P1', ['D', 'D', 'D', 'D'],
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
@@ -199,7 +211,7 @@ class FEMSolver:
 
     @property
     def nb_sol(self):
-        return 3 + len(self.add_fields)
+        return len(self.variables)
 
     def _get_active_terms(self) -> None:
         self.terms = get_active_terms(self.fem_spec)
@@ -399,9 +411,11 @@ class FEMSolver:
         p = self.problem
         self.quad_mgr.sync_to_problem_q()
         p.pressure.update(residuals=p.residual_buffer)
-        p.wall_stress_xz.update(residuals=p.residual_buffer)
-        p.wall_stress_yz.update(residuals=p.residual_buffer)
-        if hasattr(p, 'bulk_stress'):
+        if 'jx' in self.variables:
+            p.wall_stress_xz.update(residuals=p.residual_buffer)
+        if 'jy' in self.variables:
+            p.wall_stress_yz.update(residuals=p.residual_buffer)
+        if hasattr(p, 'bulk_stress') and 'jx' in self.variables and 'jy' in self.variables:
             p.bulk_stress.update()
 
     # =========================================================================

@@ -216,8 +216,9 @@ class GaussianProcessSurrogate:
 
     @property
     def solution(self):
-        """Return full solution field."""
-        return self.__solution.pg
+        """Return the core (jx, jy, rho) solution field, excluding any
+        solver-internal extra state (e.g. cavitation theta, energy E)."""
+        return self.__solution.pg[:3]
 
     @property
     def height_and_slopes(self) -> JAXArray:

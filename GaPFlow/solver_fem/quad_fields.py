@@ -107,7 +107,8 @@ class QuadFieldManager:
         # ---- P2 nodal fields ----
         fc_P2 = self.decomp.fc_P2
         for name in NODAL_P2:
-            self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
+            if name in self.variables:
+                self.nodal_fields[name] = fc_P2.real_field(f'{name}_nodal', 1, 'pixel')
 
         # ---- Quadrature fields ----
         nb_quad_sq = self.elements.Quadrature.nb_points
@@ -210,10 +211,13 @@ class QuadFieldManager:
         """Sync FEM-owned nodal fields back to problem.q."""
         p = self.problem
         p.q[0] = self.nf('rho')
-        p.q[1] = self.nf('jx')[::2, ::2]
-        p.q[2] = self.nf('jy')[::2, ::2]
+        base_slots = len(self.variables) - len(self.add_fields)
+        if 'jx' in self.variables:
+            p.q[1] = self.nf('jx')[::2, ::2]
+        if 'jy' in self.variables:
+            p.q[2] = self.nf('jy')[::2, ::2]
         for i, name in enumerate(self.add_fields):
-            p.q[3 + i] = self.nf(name)
+            p.q[base_slots + i] = self.nf(name)
 
     def sync_from_problem_q(self) -> None:
         """Initial state copy of problem.q to FEM-owned nodal fields."""
@@ -227,15 +231,19 @@ class QuadFieldManager:
         self.nf('p')[:] = self._call_computed('p_from_rho', self.nf)
         self.problem.pressure.pressure[:] = self.nf('p')
 
+        base_slots = len(self.variables) - len(self.add_fields)
         for i, name in enumerate(self.add_fields):
-            self.nf(name)[:] = p.q[3 + i]
+            self.nf(name)[:] = p.q[base_slots + i]
 
         # P2 fields
-        Nx_p, Ny_p = self.decomp.local_shape_padded
-        Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
-        zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
-        self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
-        self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
+        if 'jx' in self.variables or 'jy' in self.variables:
+            Nx_p, Ny_p = self.decomp.local_shape_padded
+            Nx_P2, Ny_P2 = self.decomp.local_shape_padded_P2
+            zoom_factors = (Nx_P2 / Nx_p, Ny_P2 / Ny_p)
+            if 'jx' in self.variables:
+                self.nf('jx')[:] = zoom(p.q[1], zoom_factors, order=1)
+            if 'jy' in self.variables:
+                self.nf('jy')[:] = zoom(p.q[2], zoom_factors, order=1)
 
     # =========================================================================
     # Field updates  (called once per Newton step)
@@ -300,9 +308,11 @@ class QuadFieldManager:
         for name in self.nodal_field_keys | set(self.variables):
             self.interpolate_nodal_to_quad(name)
 
-        # Compute 'dh_dx'/'dh_dy' quad values directly from nodal 'h'
-        self.quad_fields['dh_dx'].pg[s] = self._deriv_pg('h', 'x')
-        self.quad_fields['dh_dy'].pg[s] = self._deriv_pg('h', 'y')
+        # Compute 'dh_dx'/'dh_dy' quad values directly from nodal 'h', if needed
+        if 'dh_dx' in self.quad_fields:
+            self.quad_fields['dh_dx'].pg[s] = self._deriv_pg('h', 'x')
+        if 'dh_dy' in self.quad_fields:
+            self.quad_fields['dh_dy'].pg[s] = self._deriv_pg('h', 'y')
 
         # Special case for: rho_quad <- p_quad: we need an initial guess for rho_quad
         self.interpolate_nodal_to_quad('rho')
@@ -335,11 +345,15 @@ class QuadFieldManager:
         # Hardcoded quad fields
         if 'dh_dt' in self.quad_field_keys:
             self._update_squeeze_quad_fields(q)
-        if 'xi' in self.variables:
+        if 'xi' in self.variables and not self.problem.fem_solver['equations']['reynolds']:
             self._update_oss_quad_fields(q)
         if self.problem.fem_solver['stabilization']['fc']:
             self._update_fc_quad_fields(q)
-        if self.problem.fem_solver['stabilization']['mass_supg']:
+        if self.problem.fem_solver['equations']['reynolds']:
+            self._update_reynolds_quad_fields(q)
+            if self.problem.fem_solver['stabilization']['mass_supg']:
+                self._update_reynolds_supg_quad_fields(q)
+        elif self.problem.fem_solver['stabilization']['mass_supg']:
             self._update_mass_supg_quad_fields(q)
 
     def _update_squeeze_quad_fields(self, q) -> None:
@@ -349,8 +363,13 @@ class QuadFieldManager:
 
     def _update_oss_quad_fields(self, q) -> None:
         """Compute OSS stabilisation fields (a_vec, tau, one_minus_theta) at quad points."""
-        a_vec_x = q('jx')
-        a_vec_y = q('jy')
+        rho_l = self.problem.prop['rho_l']
+        geo = self.problem.geo
+        U_m = 0.5 * (geo['U_bot'] + geo['U_top'])
+        V_m = 0.5 * (geo['V_bot'] + geo['V_top'])
+
+        a_vec_x = rho_l * U_m
+        a_vec_y = rho_l * V_m
         q('a_vec_x')[:] = a_vec_x
         q('a_vec_y')[:] = a_vec_y
 
@@ -382,14 +401,26 @@ class QuadFieldManager:
 
         q('fc_tau')[:] = (h_elem**2 / 2.0) * beta * np.abs(R_mass) * 1e05
 
+    def _update_reynolds_quad_fields(self, q) -> None:
+        """Compute mean surface velocity U_m at quad points."""
+        geo = self.problem.geo
+        q('U_m')[:] = 0.5 * (geo['U_bot'] + geo['U_top'])
+
+    def _update_reynolds_supg_quad_fields(self, q) -> None:
+        """Compute UPG stabilization coefficient tau_supg at quad points."""
+        geo = self.problem.geo
+        U = 0.5 * (geo['U_bot'] + geo['U_top'])
+        alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
+        q('tau_supg')[:] = 0.5 * alpha * self.dx * np.sign(U)
+
     def _update_mass_supg_quad_fields(self, q) -> None:
         """Compute SUPG stabilization coefficients f_x, f_y at quad points."""
         alpha = self.problem.fem_solver['stabilization']['mass_supg_factor']
         supg_type = self.problem.fem_solver['stabilization']['mass_supg_type']
 
         if supg_type == 'flux':
-            q('f_x')[:] = 0.5 * alpha * self.dx * q('jx') / q('rho')
-            q('f_y')[:] = 0.5 * alpha * self.dy * q('jy') / q('rho')
+            q('f_x')[:] = 0.5 * alpha * self.dx * np.sign(q('jx'))
+            q('f_y')[:] = 0.5 * alpha * self.dy * np.sign(q('jy'))
         else:
             geo = self.problem.geo
             U = 0.5 * (geo['U_bot'] + geo['U_top'])
