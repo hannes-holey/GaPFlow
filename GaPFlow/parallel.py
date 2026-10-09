@@ -350,9 +350,9 @@ class DomainDecomposition:
         grid = self.grid
         dx, Lx = grid['dx'], grid['Lx']
         xx = self.icoordsg[0] * dx + dx / 2.0
-        if self.bc_at_W:
+        if self.is_at_xW:
             xx[0, :] = -dx / 2.0
-        if self.bc_at_E:
+        if self.is_at_xE:
             xx[-1, :] = Lx + dx / 2.0
         return xx
 
@@ -362,9 +362,9 @@ class DomainDecomposition:
         grid = self.grid
         dy, Ly = grid['dy'], grid['Ly']
         yy = self.icoordsg[1] * dy + dy / 2.0
-        if self.bc_at_S:
+        if self.is_at_yS:
             yy[:, 0] = -dy / 2.0
-        if self.bc_at_N:
+        if self.is_at_yN:
             yy[:, -1] = Ly + dy / 2.0
         return yy
 
