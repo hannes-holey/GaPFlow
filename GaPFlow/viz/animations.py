@@ -183,6 +183,9 @@ def _create_animation_1d(filename_sol: str,
 
     data_topo = netCDF4.Dataset(filename_topo)
     topo_nc = np.asarray(data_topo.variables['topography'])
+    # Problem.__init__ writes an extra initial topography frame; drop it to align with sol frames
+    if topo_nc.shape[0] == q_nc.shape[0] + 1:
+        topo_nc = topo_nc[1:]
 
     nt, nc, _, nx, ny = q_nc.shape
     # NetCDF stores interior-only data (no ghost cells), so use nx directly

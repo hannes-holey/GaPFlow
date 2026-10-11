@@ -1,7 +1,8 @@
 options:
     output: /tmp/twin_parabolic_slider
-    write_freq: 10
+    write_freq: 1
     save_output: False
+    print_config: False
     output_plots: False
     residual_analysis: False
 
@@ -26,9 +27,9 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
-    dt: 0.08
-    tol: 0.0
+    solver: implicit
+    dt: 0.01
+    tol: 1e-10
     max_it: 100
 
 properties:
@@ -41,18 +42,14 @@ properties:
     shear: 0.039
     bulk: 0.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
-    newton_relax: 0.1
+    newton_relax: 0.8
     equations:
         cavitation: True
     physics:
         gap_shear: true
     stabilization:
         oss: true
-        oss_alpha: 1.0
-        mass_supg: false
-        mass_supg_factor: 1.0
-    max_iter: 1
-    R_norm_tol: 1e-9
-    scaling: False
+    max_it: 5
+    scaling: True

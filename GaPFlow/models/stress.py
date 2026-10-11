@@ -457,7 +457,7 @@ class WallStress(GaussianProcessSurrogate):
                 # eta_in is the (possibly underrelaxed) viscosity field from Viscosity.eta.
                 if freeze_gradient:
                     return eta_in
-                p = eos_pressure(rho, self.prop)
+                p = eos_pressure(rho, self.prop, h)
                 eta_live = get_shear_viscosity(self, p, dp_dx, dp_dy, h)
                 if underrelax_gradient_value:
                     # Value = underrelaxed eta_in (matches the residual used elsewhere),
@@ -695,7 +695,7 @@ class Pressure(GaussianProcessSurrogate):
             vsound = jnp.sqrt(vsound_squared)
             return vsound
         else:
-            return eos_sound_velocity(self.solution[0], self.prop).max()
+            return eos_sound_velocity(self.solution[0], self.prop, self.height).max()
 
     @property
     def Xtest(self) -> JAXArray:
@@ -784,7 +784,45 @@ class Pressure(GaussianProcessSurrogate):
             self.__field.pg[:] = mean
             self.__field_variance.pg[:] = var
         else:
-            self.__field.pg[:] = eos_pressure(self.solution[0], self.prop)
+            self.__field.pg[:] = eos_pressure(self.solution[0], self.prop, self.height)
+
+    @property
+    def takes_h(self) -> bool:
+        """True if the EoS functions take the gap height as additional argument."""
+        return self.is_gp_model or self.prop['EOS'] == 'user'
+
+    def _build_eos_functions(self, f0) -> None:
+        f1 = grad(f0, argnums=0)
+        f2 = grad(f1, argnums=0)
+
+        def _newton_invert(p_target, h, rho_init, n_steps=10):
+            def step(rho, _):
+                return rho - (f0(rho, h) - p_target) / f1(rho, h), None
+            rho, _ = lax.scan(step, rho_init, None, length=n_steps)
+            return rho
+
+        vmap2 = lambda f: jit(vmap(vmap(f, in_axes=(0, 0)), in_axes=(0, 0)))
+        vmap2_inv = lambda f: jit(vmap(vmap(f, in_axes=(0, 0, 0)), in_axes=(0, 0, 0)))
+
+        self.p_from_rho = vmap2(f0)
+        self.dp_drho = vmap2(f1)
+        self.d2p_drho2 = vmap2(f2)
+        self.drho_dp = vmap2(lambda rho, h: 1.0 / f1(rho, h))
+        self.rho_from_p = vmap2_inv(_newton_invert)
+
+    def _check_user_eos(self, rtol: float = 1e-6) -> None:
+        """Check monotonicity and the numerical inverse of a user EoS around rho0."""
+        rho = self.prop['rho0'] * np.linspace(0.9, 1.1, 21)[None, :]
+        h_inner = self.height[1:-1, 1:-1]
+        for h in (np.min(h_inner), np.max(h_inner)):
+            h_arr = np.full_like(rho, h)
+            p = np.asarray(self.p_from_rho(rho, h_arr))
+            dp = np.asarray(self.dp_drho(rho, h_arr))
+            rho_back = np.asarray(self.rho_from_p(p, h_arr, np.full_like(rho, self.prop['rho0'])))
+            if not np.all(dp > 0.0):
+                raise ValueError(f"Custom EOS is not strictly increasing in rho (h={h:.3e}).")
+            if not np.allclose(rho_back, rho, rtol=rtol, atol=0.0):
+                raise ValueError(f"Custom EOS: numerical inverse rho(p) failed (h={h:.3e}).")
 
     def build_grad(self) -> None:
 
@@ -797,23 +835,11 @@ class Pressure(GaussianProcessSurrogate):
                                     (h - X_shift[1]) / X_scale[1]])
                 return self.gp.predict(self.Ytrain, x_norm[None, :]).squeeze() * self.Yscale + self.Yshift
 
-            f1 = grad(f0, argnums=0)
-            f2 = grad(f1, argnums=0)
+            self._build_eos_functions(f0)
 
-            def _newton_invert(p_target, h, rho_init, n_steps=10):
-                def step(rho, _):
-                    return rho - (f0(rho, h) - p_target) / f1(rho, h), None
-                rho, _ = lax.scan(step, rho_init, None, length=n_steps)
-                return rho
-
-            vmap2 = lambda f: jit(vmap(vmap(f, in_axes=(0, 0)), in_axes=(0, 0)))
-            vmap2_inv = lambda f: jit(vmap(vmap(f, in_axes=(0, 0, 0)), in_axes=(0, 0, 0)))
-
-            self.p_from_rho = vmap2(f0)
-            self.dp_drho = vmap2(f1)
-            self.d2p_drho2 = vmap2(f2)
-            self.drho_dp = vmap2(lambda rho, h: 1.0 / f1(rho, h))
-            self.rho_from_p = vmap2_inv(_newton_invert)
+        elif self.prop['EOS'] == 'user':
+            self._build_eos_functions(lambda rho, h: eos_pressure(rho, self.prop, h))
+            self._check_user_eos()
 
         else:
 

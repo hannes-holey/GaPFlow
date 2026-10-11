@@ -1,12 +1,14 @@
-# 2D Couette Flow Validation
-# Shear-driven flow with stationary bottom wall and moving top wall
-# Tests in-plane viscous diffusion (R23xy, R23yx) with wall velocity BC
+options:
+    output: /tmp/couette_2d_test
+    write_freq: 1
+    save_output: False
+    print_config: False
 
 grid:
     Lx: 0.5
     Ly: 0.25
-    Nx: 10
-    Ny: 200
+    Nx: 4
+    Ny: 100
     xW: ['P', 'P', 'P']
     xE: ['P', 'P', 'P']
     yS: ['N', 'D', 'D']
@@ -22,7 +24,7 @@ geometry:
     V: 0.0
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 1.
     tol: 1e-10
     max_it: 1000
@@ -37,18 +39,11 @@ properties:
     force_x: 0.0
     force_y: 0.0
 
-fem_solver:
-    alpha: 1.0
-    R_norm_tol: 1e-8
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-8
     linear_solver: direct
-    max_iter: 5
+    max_it: 2
     physics:
         gap_shear: False
         plane_shear: True
-        pspg: False
-        gls: False
-
-options:
-    output: /tmp/couette_2d_test
-    write_freq: 1
-    save_output: False

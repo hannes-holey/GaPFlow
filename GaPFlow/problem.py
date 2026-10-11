@@ -25,6 +25,7 @@
 #
 import os
 import io
+import inspect
 import numpy as np
 from copy import deepcopy
 from collections import deque
@@ -156,6 +157,7 @@ class Problem:
 
         # Solution field
         self.step = None
+        self.simtime = 0.
         self.__field = self.fc.real_field('solution', (self.solver.nb_sol,))
         self._initialize(rho0=prop['rho0'],
                          U_bot=geo['U_bot'], V_bot=geo['V_bot'],
@@ -479,11 +481,11 @@ class Problem:
 
         self.history = {}
 
-        self.solver.print_status_header()
-
         # Call callbacks once before the main loop to capture initial state (t=0)
         for callback in self._callbacks:
             callback()
+
+        self.solver.print_status_header()
 
         # Run
         self._tic = datetime.now()
@@ -643,17 +645,33 @@ class Problem:
             raise ValueError(f"boundary must be 'W', 'E', 'S', or 'N', got '{boundary}'")
         self._bc_callbacks.setdefault(var_name, {})[boundary] = callback
 
-    def set_eos_function(self, fn: callable) -> None:
-        """Set a custom equation of state function.
+    def set_custom_eos(self, p_of_rho: callable) -> None:
+        """Set a custom equation of state for the FEM solver.
+
+        Must be called before :meth:`run`. The inverse rho(p) is computed numerically,
+        so p(rho) has to be strictly increasing.
 
         Parameters
         ----------
-        fn : callable
-            Scalar JAX-differentiable function fn(rho) -> p.
+        p_of_rho : callable
+            Scalar, twice JAX-differentiable function ``p_of_rho(rho) -> p`` or
+            ``p_of_rho(rho, h) -> p`` (SI units).
         """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_eos is only implemented for the FEM solver.")
+        if self.pressure.is_gp_model:
+            raise ValueError("set_custom_eos cannot be combined with a GP pressure model.")
+
+        n_args = len(inspect.signature(p_of_rho).parameters)
+        if n_args == 1:
+            fn = lambda rho, h: p_of_rho(rho)
+        elif n_args == 2:
+            fn = p_of_rho
+        else:
+            raise ValueError("p_of_rho must take (rho) or (rho, h).")
+
         self.prop['EOS'] = 'user'
         self.prop['EOS_user'] = fn
-        self.pressure.build_grad()
 
     # ---------------------------
     # Single time step (update)

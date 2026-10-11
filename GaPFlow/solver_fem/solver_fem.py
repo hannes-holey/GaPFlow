@@ -428,17 +428,15 @@ class FEMSolver:
 
         p = self.problem
 
+        patch_registry_for_gp(pressure=False)
         self._init_quad_fields()
         self._build_assembly()
         self._build_jit_functions()
-        if (p.pressure.is_gp_model
-                or p.wall_stress_xz.is_gp_model
-                or p.wall_stress_yz.is_gp_model):
-            patch_registry_for_gp(
-                pressure=p.pressure.is_gp_model,
-                wall_stress_xz=p.wall_stress_xz.is_gp_model,
-                wall_stress_yz=p.wall_stress_yz.is_gp_model,
-            )
+        patch_registry_for_gp(
+            pressure=p.pressure.takes_h,
+            wall_stress_xz=p.wall_stress_xz.is_gp_model,
+            wall_stress_yz=p.wall_stress_yz.is_gp_model,
+        )
 
         self.build_boundary_conditions()
         self._build_terms()

@@ -1,5 +1,5 @@
 #
-# Copyright 2025 Christoph Huber
+# Copyright 2026 Christoph Huber
 #
 # ### MIT License
 #
@@ -23,10 +23,13 @@
 #
 """Plotting utilities for FEM tutorials."""
 
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib import animation
+from matplotlib.lines import Line2D
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401 (required for 3d projection)
 from IPython.display import HTML
 
@@ -111,7 +114,23 @@ def animate_comparison(x_vec, t_vec, T_numeric, T_analytic, L, save_path=None):
     return HTML(ani.to_jshtml())
 
 
-def plot_solver_comparison_rho_jx(results, title):
+PAPER_RC = {
+    'font.family': 'serif',
+    'font.size': 11,
+    'mathtext.fontset': 'cm',
+    'axes.linewidth': 1.0,
+    'xtick.direction': 'in',
+    'ytick.direction': 'in',
+    'xtick.top': True,
+    'ytick.right': True,
+    'axes.grid': False,
+    'legend.frameon': False,
+    'figure.facecolor': 'white',
+    'savefig.facecolor': 'white',
+}
+
+
+def plot_solver_comparison_rho_jx(results):
     """Plot density and momentum profiles comparing different solvers.
 
     Creates a side-by-side comparison of density (rho) and x-momentum (jx)
@@ -122,146 +141,37 @@ def plot_solver_comparison_rho_jx(results, title):
     results : dict
         Dictionary with solver names as keys and result dicts as values.
         Each result dict must contain 'rho' and 'jx' arrays.
-        Expected keys: 'explicit', 'fem_1d', 'solver_fem'
-    title : str
-        Title for the figure
-
-    Example
-    -------
-    >>> results = {
-    ...     'explicit': {'rho': rho_exp, 'jx': jx_exp, 'time': t_exp},
-    ...     'fem_1d': {'rho': rho_1d, 'jx': jx_1d, 'time': t_1d},
-    ...     'solver_fem': {'rho': rho_2d, 'jx': jx_2d, 'time': t_2d},
-    ... }
-    >>> plot_solver_comparison_rho_jx(results, 'Inclined Slider')
+        Expected keys: 'explicit', 'implicit'
     """
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    colors = {'explicit': 'C0', 'fem_1d': 'C1', 'solver_fem': 'C2'}
-    labels = {'explicit': 'Explicit', 'fem_1d': 'FEM 1D', 'solver_fem': 'FEM 2D'}
+    colors = {'explicit': '#0072B2', 'implicit': '#D55E00'}
+    linestyles = {'explicit': '-', 'implicit': '--'}
+    labels = {'explicit': 'Explicit', 'implicit': 'Implicit'}
 
     Nx = len(list(results.values())[0]['rho'])
     x = np.linspace(0, 1, Nx)
 
-    for name, res in results.items():
-        axes[0].plot(x, res['rho'], color=colors[name], label=labels[name], lw=1.5)
-        axes[1].plot(x, res['jx'], color=colors[name], label=labels[name], lw=1.5)
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(7.5, 3.2), constrained_layout=False)
 
-    axes[0].set_xlabel('x / L')
-    axes[0].set_ylabel(r'$\rho$ [kg/m³]')
-    axes[0].legend()
-    axes[0].grid(True, alpha=0.3)
+        for name, res in results.items():
+            kw = dict(color=colors[name], ls=linestyles[name], lw=1.5, label=labels[name])
+            axes[0].plot(x, res['rho'], **kw)
+            axes[1].plot(x, res['jx'], **kw)
 
-    axes[1].set_xlabel('x / L')
-    axes[1].set_ylabel(r'$j_x$ [kg/(m²s)]')
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
+        axes[0].set_ylabel(r'$\rho$ [kg/m$^3$]')
+        axes[1].set_ylabel(r'$j_x$ [kg/(m$^2$s)]')
+        for ax in axes:
+            ax.set_xlabel('$X$')
+            ax.set_xlim(0, 1)
+            for spine in ax.spines.values():
+                spine.set_visible(True)
+            ax.tick_params(direction='in', top=True, right=True)
 
-    fig.suptitle(title, fontsize=12)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_reynolds_comparison_rho(results, title):
-    """Plot density profiles comparing FEM NS vs FEM Reynolds.
-
-    Parameters
-    ----------
-    results : dict
-        Dictionary with solver names as keys and result dicts as values.
-        Each result dict must contain a 'rho' array.
-        Expected keys: 'fem_ns', 'fem_reynolds'
-    title : str
-        Title for the figure
-
-    Example
-    -------
-    >>> results = {
-    ...     'fem_ns': {'rho': rho_ns, 'time': t_ns},
-    ...     'fem_reynolds': {'rho': rho_rey, 'time': t_rey},
-    ... }
-    >>> plot_reynolds_comparison_rho(results, 'Inclined Slider')
-    """
-    fig, ax = plt.subplots(figsize=(6, 4))
-    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
-    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
-
-    Nx = len(list(results.values())[0]['rho'])
-    x = np.linspace(0, 1, Nx)
-
-    for name, res in results.items():
-        ax.plot(x, res['rho'], color=colors[name], label=labels[name], lw=1.5)
-
-    ax.set_xlabel('x / L')
-    ax.set_ylabel(r'$\rho$ [kg/m³]')
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-
-    fig.suptitle(title, fontsize=12)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_reynolds_cav_comparison(results, title, p_divisor=1e5, p_unit='bar',
-                                 ref_csv=None, ref_label=None,
-                                 ref_x_scale=1.0, ref_p_scale=1.0):
-    """Plot pressure and cavitation fraction (theta) profiles comparing
-    FEM NS vs FEM Reynolds, both with Fischer-Burmeister cavitation.
-
-    Parameters
-    ----------
-    results : dict
-        Dictionary with solver names as keys and result dicts as values.
-        Each result dict must contain 'p' and 'theta' arrays.
-        Expected keys: 'fem_ns', 'fem_reynolds'
-    title : str
-        Title for the figure
-    ref_csv : str or Path, optional
-        Path to a CSV with columns 'x' and 'y' for reference pressure data.
-    ref_label : str, optional
-        Legend label for the reference data.
-    ref_x_scale : float
-        Multiplier applied to the reference x-column (to map onto x/L in [0, 1]).
-    ref_p_scale : float
-        Multiplier applied to the reference y-column to convert to Pa.
-
-    Example
-    -------
-    >>> results = {
-    ...     'fem_ns': {'p': p_ns, 'theta': theta_ns, 'time': t_ns},
-    ...     'fem_reynolds': {'p': p_rey, 'theta': theta_rey, 'time': t_rey},
-    ... }
-    >>> plot_reynolds_cav_comparison(results, 'Parabolic Slider (Cavitation)')
-    """
-    fig, (ax_p, ax_theta) = plt.subplots(1, 2, figsize=(11, 4))
-    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
-    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
-
-    Nx = len(list(results.values())[0]['p'])
-    x = np.linspace(0, 1, Nx)
-
-    for name, res in results.items():
-        ax_p.plot(x, res['p'] / p_divisor, color=colors[name], label=labels[name], lw=1.5)
-        ax_theta.plot(x, res['theta'], color=colors[name], label=labels[name], lw=1.5)
-
-    if ref_csv is not None:
-        ref = pd.read_csv(ref_csv, skipinitialspace=True)
-        ax_p.scatter(ref['x'].values * ref_x_scale,
-                     ref['y'].values * ref_p_scale / p_divisor,
-                     color='#1f77b4', s=14, zorder=5, label=ref_label)
-
-    ax_p.set_xlabel('x / L')
-    ax_p.set_ylabel(f'p [{p_unit}]')
-    ax_p.legend()
-    ax_p.grid(True, alpha=0.3)
-
-    ax_theta.set_xlabel('x / L')
-    ax_theta.set_ylabel(r'$\theta$ [-]')
-    ax_theta.legend()
-    ax_theta.grid(True, alpha=0.3)
-
-    fig.suptitle(title, fontsize=12)
-    plt.tight_layout()
-    plt.show()
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
 
 
 def plot_stab_comparison(results, title, p_divisor=1e5, p_unit='bar',
@@ -327,62 +237,6 @@ def plot_stab_comparison(results, title, p_divisor=1e5, p_unit='bar',
 
     fig.suptitle(title, fontsize=12)
     plt.tight_layout()
-    plt.show()
-
-
-def plot_reynolds_comparison_rho_2d(results, title):
-    """Plot 2D density fields (FEM NS, FEM Reynolds) plus their mid-section
-    (y = Ly/2) profiles, for genuinely 2D (non-periodic-in-y) geometries.
-
-    Parameters
-    ----------
-    results : dict
-        Dictionary with solver names as keys and result dicts as values.
-        Each result dict must contain a 2D 'rho' array, shape (Nx, Ny), and
-        'Lx'/'Ly' (domain size in m).
-        Expected keys: 'fem_ns', 'fem_reynolds'
-    title : str
-        Title for the figure
-
-    Example
-    -------
-    >>> results = {
-    ...     'fem_ns': {'rho': rho_ns, 'time': t_ns, 'Lx': Lx, 'Ly': Ly},
-    ...     'fem_reynolds': {'rho': rho_rey, 'time': t_rey, 'Lx': Lx, 'Ly': Ly},
-    ... }
-    >>> plot_reynolds_comparison_rho_2d(results, 'Parabolic Slider 2D')
-    """
-    colors = {'fem_ns': 'C2', 'fem_reynolds': 'C3'}
-    labels = {'fem_ns': 'FEM NS', 'fem_reynolds': 'FEM Reynolds'}
-    solvers = ['fem_ns', 'fem_reynolds']
-
-    Nx, Ny = results[solvers[0]]['rho'].shape
-    Lx, Ly = results[solvers[0]]['Lx'], results[solvers[0]]['Ly']
-    dx, dy = Lx / Nx, Ly / Ny
-    x = np.linspace(dx / 2, Lx - dx / 2, Nx)
-    y = np.linspace(dy / 2, Ly - dy / 2, Ny)
-    X, Y = np.meshgrid(x, y, indexing='ij')
-    mid = Ny // 2
-
-    fig, axes = plt.subplots(1, 3, figsize=(15, 4), facecolor='white',
-                             constrained_layout=True)
-    fig.suptitle(title, fontweight='bold')
-
-    for ax, name in zip(axes[:2], solvers):
-        im = ax.pcolormesh(X * 1e3, Y * 1e3, results[name]['rho'],
-                           cmap='RdBu_r', shading='auto')
-        plt.colorbar(im, ax=ax, label=r'$\rho$ [kg/m³]')
-        ax.set(xlabel='x [mm]', ylabel='y [mm]', title=labels[name])
-
-    for name in solvers:
-        axes[2].plot(x / Lx, results[name]['rho'][:, mid],
-                     color=colors[name], label=labels[name], lw=1.5)
-    axes[2].set_xlabel('x / L')
-    axes[2].set_ylabel(r'$\rho$ [kg/m³]')
-    axes[2].set_title('Mid-section (y = Ly/2)', fontsize=10)
-    axes[2].legend()
-    axes[2].grid(True, alpha=0.3)
-
     plt.show()
 
 
@@ -722,21 +576,22 @@ def plot_3d_snapshot(x_vec, y_vec, T_field, Lx=1.0, Ly=1.0,
     return fig, ax
 
 
-def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
+def plot_overview_1d(problem, ref_csv=None, ref_label=None, ref_rho_csv=None,
                      ref_x_scale=1.0, ref_p_scale=1.0,
                      p_unit='bar', p_divisor=1e5):
-    """Plot pressure, theta, and effective density for a 1D (y-periodic) cavitation result.
+    """Plot pressure and effective density for a 1D (y-periodic) cavitation result.
 
     Parameters
     ----------
     problem : Problem
         GaPFlow Problem instance after simulation.
-    title : str
-        Figure title.
     ref_csv : str or Path, optional
-        Path to a CSV with columns 'x' and 'y' for reference data.
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
     ref_label : str, optional
         Legend label for the reference data.
+    ref_rho_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference effective density,
+        given relative to the effective density at the inlet.
     ref_x_scale : float
         Multiplier applied to the reference x-column to convert to metres.
     ref_p_scale : float
@@ -750,68 +605,226 @@ def plot_overview_1d(problem, title, ref_csv=None, ref_label=None,
 
     Nx = problem.grid['Nx']
     Lx = problem.grid['Lx']
-    x = np.linspace(0, Lx, Nx)
+    X = np.linspace(0, 1, Nx)
 
     rho = problem.q[0][1:-1, 1:-1]
-    p_arr = np.asarray(eos_pressure(rho, problem.prop))
+    p_x = np.asarray(eos_pressure(rho, problem.prop)).mean(axis=1)
 
     if problem.prop.get('EOS') == 'Bayada':
         rho_l = problem.prop['rho_l']
         rho_v = problem.prop['rho_v']
         theta = np.clip((rho_l - rho) / (rho_l - rho_v), 0, 1)
-        rho_eff = rho
+        rho_eff_x = rho.mean(axis=1)
     else:
         theta = problem.q[3][1:-1, 1:-1]
-        rho_eff = rho * (1 - theta)
+        rho_eff_x = (rho * (1 - theta)).mean(axis=1)
 
-    j_x = problem.q[1][1:-1, 1:-1]
-    p_x = p_arr.mean(axis=1)
-    theta_x = theta.mean(axis=1)
-    rho_eff_x = rho_eff.mean(axis=1)
+    ref_style = dict(facecolors='none', edgecolors='0.15', marker='o', s=22, linewidths=0.8, zorder=5)
 
-    u = j_x / rho_eff
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
 
-    fig, axes = plt.subplots(1, 5, figsize=(12, 3), facecolor='white',
-                             constrained_layout=True)
-    fig.suptitle(title, fontweight='bold')
+        axes[0].plot(X, p_x / p_divisor, color='#0072B2', lw=1.5, label='FEM')
+        if ref_csv is not None:
+            ref = pd.read_csv(ref_csv, skipinitialspace=True)
+            axes[0].scatter(ref['x'].values * ref_x_scale / Lx,
+                            ref['y'].values * ref_p_scale / p_divisor,
+                            label=ref_label, **ref_style)
+        axes[0].set_ylabel(f'$p$ [{p_unit}]')
 
-    ax = axes[0]
-    ax.plot(x * 1e3, p_x / p_divisor, color='0.3', lw=1.5, label='FEM')
-    if ref_csv is not None:
-        ref = pd.read_csv(ref_csv, skipinitialspace=True)
-        ax.scatter(ref['x'].values * ref_x_scale * 1e3,
-                   ref['y'].values * ref_p_scale / p_divisor,
-                   color='#1f77b4', s=14, zorder=5, label=ref_label)
-        ax.legend(fontsize=8)
-    ax.set(xlabel='x [mm]', ylabel=f'p [{p_unit}]', title='Pressure')
-    ax.grid(True, alpha=0.3)
+        axes[1].plot(X, rho_eff_x, color='#0072B2', lw=1.5)
+        if ref_rho_csv is not None:
+            ref = pd.read_csv(ref_rho_csv, skipinitialspace=True)
+            axes[1].scatter(ref['x'].values * ref_x_scale / Lx,
+                            ref['y'].values * rho_eff_x[0], **ref_style)
+        axes[1].set_ylabel(r'$\rho_\mathrm{eff}$ [kg/m$^3$]')
 
-    ax = axes[1]
-    ax.fill_between(x * 1e3, 0, theta_x, alpha=0.3, color='#d62728')
-    ax.plot(x * 1e3, theta_x, color='#d62728', lw=1.5)
-    ax.set(xlabel='x [mm]', ylabel=r'$\theta$ [-]', title='Fill fraction',
-           ylim=(-0.05, 1.1))
-    ax.grid(True, alpha=0.3)
+        for ax in axes:
+            ax.set_xlabel('$X$')
+            ax.set_xlim(0, 1)
+        _style_axes(axes)
 
-    ax = axes[2]
-    ax.fill_between(x * 1e3, 0, rho_eff_x, alpha=0.25, color='#2ca02c')
-    ax.plot(x * 1e3, rho_eff_x, color='#2ca02c', lw=1.5)
-    ax.set(xlabel='x [mm]', ylabel=r'$\rho_{\rm eff}$ [kg/m³]', title='Effective density')
-    ax.grid(True, alpha=0.3)
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
 
-    ax = axes[3]
-    ax.fill_between(x * 1e3, 0, j_x.mean(axis=1), alpha=0.25, color='#9467bd')
-    ax.plot(x * 1e3, j_x.mean(axis=1), color='#9467bd', lw=1.5)
-    ax.set(xlabel='x [mm]', ylabel=r'$j_x$ [kg/(m²s)]', title='x-momentum')
-    ax.grid(True, alpha=0.3)
 
-    ax = axes[4]
-    ax.fill_between(x * 1e3, 0, u.mean(axis=1), alpha=0.25, color='#ff7f0e')
-    ax.plot(x * 1e3, u.mean(axis=1), color='#ff7f0e', lw=1.5)
-    ax.set(xlabel='x [mm]', ylabel=r'$u$ [m/s]', title='x-velocity')
-    ax.grid(True, alpha=0.3)
+def plot_almqvist_validation(results, ref_dir=Path('../../tests/ref_data')):
+    """Plot pressure profiles of the inclined slider against Almqvist reference data.
 
-    plt.show()
+    Parameters
+    ----------
+    results : dict
+        Keys (U, kind) with U in m/s and kind in {'comp', 'incomp'}; values (X, p)
+        with normalized position X and pressure p in Pa.
+    ref_dir : Path
+        Directory holding the digitized Almqvist_<U>_<kind>.csv files
+        (x in % of Lx, p in kPa).
+    """
+    colors = {5.: '#0072B2', 50.: '#D55E00', 125.: '#009E73'}
+    linestyles = {5.: '-', 50.: '--', 125.: '-.'}
+    markers = {5.: 'o', 50.: 's', 125.: '^'}
+    panels = {'comp': 'compressible', 'incomp': 'incompressible-like'}
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        for ax, (kind, name) in zip(axes, panels.items()):
+            for U in colors:
+                X, p = results[(U, kind)]
+                ax.plot(X, p / 1e5, color=colors[U], ls=linestyles[U], lw=1.0)
+
+                ref = pd.read_csv(Path(ref_dir) / f'Almqvist_{U:g}_{kind}.csv', skipinitialspace=True)
+                ref = ref.sort_values('x')
+                ax.scatter(ref['x'] / 100, ref['y'] * 1e3 / 1e5, facecolors='none',
+                           edgecolors=colors[U], marker=markers[U], s=22, linewidths=0.8, zorder=5)
+
+            ax.text(0.05, 0.95, name, transform=ax.transAxes, ha='left', va='top')
+            ax.set_xlabel('$X$')
+            ax.set_ylabel('$p$ [bar]')
+            ax.set_xlim(0, 1)
+        _style_axes(axes)
+
+        handles = [Line2D([0], [0], color=colors[U], ls=linestyles[U], marker=markers[U], lw=1.0,
+                          markersize=5, markerfacecolor='none', markeredgewidth=0.8,
+                          label=f'$U={U:g}$ m/s') for U in colors]
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles=handles, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
+def plot_custom_eos_comparison(results):
+    """Plot pressure and density profiles for different equations of state.
+
+    Parameters
+    ----------
+    results : dict
+        Label -> (X, p, rho) with normalized position X, pressure p in Pa and density rho.
+        The first entry is drawn as line, the second as markers, the third dashed.
+    """
+    colors = ['#0072B2', '#D55E00', '#009E73']
+    styles = [dict(ls='-'),
+              dict(ls='none', marker='o', markersize=4, markerfacecolor='none', markevery=8),
+              dict(ls='--')]
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        for (label, (X, p, rho)), color, style in zip(results.items(), colors, styles):
+            axes[0].plot(X, p / 1e5, color=color, lw=1.0, label=label, **style)
+            axes[1].plot(X, rho, color=color, lw=1.0, **style)
+
+        axes[0].set_ylabel('$p$ [bar]')
+        axes[1].set_ylabel(r'$\rho$ [kg/m$^3$]')
+        for ax in axes:
+            ax.set_xlabel('$X$')
+            ax.set_xlim(0, 1)
+        _style_axes(axes)
+
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
+def plot_reynolds_comparison_1d(results, ref_csv=None, ref_label=None,
+                                ref_x_scale=1.0, ref_p_scale=1.0,
+                                p_unit='bar', p_divisor=1e5):
+    """Plot pressure and effective density of the Navier-Stokes and Reynolds
+    solutions for a 1D (y-periodic) case.
+
+    Parameters
+    ----------
+    results : dict
+        Output of run_reynolds_comparison, keys 'ns' and 'reynolds'.
+    ref_csv : str or Path, optional
+        Path to a CSV with columns 'x' and 'y' for reference pressure data.
+    ref_label : str, optional
+        Legend label for the reference data.
+    ref_x_scale : float
+        Multiplier applied to the reference x-column to obtain the normalized position X.
+    ref_p_scale : float
+        Multiplier applied to the reference y-column to convert to Pa.
+    p_unit, p_divisor : str, float
+        Pressure unit used on the y-axis label and divisor applied to the pressure.
+    """
+    styles = {'ns': dict(color='#0072B2', ls='-', label='Navier-Stokes'),
+              'reynolds': dict(color='#D55E00', ls='--', label='Reynolds')}
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        for name, res in results.items():
+            axes[0].plot(res['X'], res['p'][:, 1:-1].mean(axis=1) / p_divisor, lw=1.5, **styles[name])
+            axes[1].plot(res['X'], res['rho_eff'][:, 1:-1].mean(axis=1), lw=1.5, **styles[name])
+
+        if ref_csv is not None:
+            ref = pd.read_csv(ref_csv, skipinitialspace=True)
+            axes[0].scatter(ref['x'].values * ref_x_scale, ref['y'].values * ref_p_scale / p_divisor,
+                            facecolors='none', edgecolors='0.15', marker='o', s=22, linewidths=0.8,
+                            zorder=5, label=ref_label)
+
+        axes[0].set_ylabel(f'$p$ [{p_unit}]')
+        axes[1].set_ylabel(r'$\rho_\mathrm{eff}$ [kg/m$^3$]')
+        for ax in axes:
+            ax.set_xlabel('$X$')
+            ax.set_xlim(0, 1)
+        _style_axes(axes)
+
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
+def plot_reynolds_comparison_2d(results, p_unit='bar', p_divisor=1e5):
+    """Plot the pressure fields of the Navier-Stokes and Reynolds solutions
+    and their mid-sections (y = Ly/2) for a genuinely 2D case.
+
+    Parameters
+    ----------
+    results : dict
+        Output of run_reynolds_comparison, keys 'ns' and 'reynolds'.
+    p_unit, p_divisor : str, float
+        Pressure unit used on the labels and divisor applied to the pressure.
+    """
+    styles = {'ns': dict(color='#0072B2', ls='-', label='Navier-Stokes'),
+              'reynolds': dict(color='#D55E00', ls='--', label='Reynolds')}
+    p_fields = {name: res['p'][1:-1, 1:-1] / p_divisor for name, res in results.items()}
+    Nx, Ny = p_fields['ns'].shape
+    Lx, Ly = results['ns']['Lx'], results['ns']['Ly']
+    x = (np.arange(Nx) + 0.5) / Nx
+    y = (np.arange(Ny) + 0.5) / Ny * Ly * 1e3
+    vmin = min(f.min() for f in p_fields.values())
+    vmax = max(f.max() for f in p_fields.values())
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 3, figsize=(9.75, 3.2), constrained_layout=True)
+
+        for ax, name in zip(axes[:2], ['ns', 'reynolds']):
+            im = ax.pcolormesh(x * Lx * 1e3, y, p_fields[name].T, cmap='viridis',
+                               vmin=vmin, vmax=vmax, shading='auto')
+            ax.text(0.05, 0.95, styles[name]['label'], transform=ax.transAxes, ha='left', va='top',
+                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.8, pad=2))
+            ax.set_xlabel('$x$ [mm]')
+            ax.set_ylabel('$y$ [mm]')
+        fig.colorbar(im, ax=axes[:2], label=f'$p$ [{p_unit}]')
+
+        for name, f in p_fields.items():
+            axes[2].plot(x, f[:, Ny // 2], lw=1.5, **styles[name])
+        axes[2].set_xlabel('$X$')
+        axes[2].set_ylabel(f'$p$ [{p_unit}]')
+        axes[2].set_xlim(0, 1)
+        _style_axes(axes)
+
+        handles, names = axes[2].get_legend_handles_labels()
+        fig.legend(handles, names, loc='outside upper center', ncol=len(handles), frameon=False)
+        plt.show()
 
 
 def plot_overview_2d(problem, title):
@@ -1026,56 +1039,68 @@ def plot_lid_driven_cavity(problem, title=None):
     return fig
 
 
+def _style_axes(axes):
+    for ax in np.ravel(axes):
+        for spine in ax.spines.values():
+            spine.set_visible(True)
+        ax.tick_params(direction='in', top=True, right=True)
+
+
+def _plot_channel_validation(problem, y, u_analytical):
+    """Shared 2-panel figure for the in-plane shear cases (Poiseuille, Couette):
+    velocity profile and 2D velocity field."""
+    rho = problem.q[0][1:-1, 1:-1]
+    jx = problem.q[1][1:-1, 1:-1]
+    vx = (jx / rho).mean(axis=0)
+
+    Lx, Nx = problem.grid['Lx'], problem.grid['Nx']
+    dx = Lx / Nx
+
+    l2_error = np.sqrt(((vx - u_analytical) ** 2).mean()) / u_analytical.max()
+    print(f"L2 relative error between simulation and analytic: {l2_error:.2e}")
+
+    x = np.linspace(dx / 2, Lx - dx / 2, Nx)
+    X, Y = np.meshgrid(x, y, indexing='ij')
+    me = max(1, len(vx) // 40)
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        axes[0].plot(u_analytical, y, color='black', lw=1.5, label='Analytical')
+        axes[0].plot(vx, y, color='#0072B2', ls='none', marker='o', ms=4, mew=0.8,
+                     mfc='none', markevery=me, label='Simulated')
+        axes[0].set(xlabel='$v_x(y)$ [m/s]', ylabel='$y$ [m]')
+
+        im = axes[1].pcolormesh(X, Y, jx / rho, cmap='viridis', shading='auto')
+        axes[1].set(xlabel='$x$ [m]', ylabel='$y$ [m]')
+        fig.colorbar(im, ax=axes[1], label='$v_x(x,y)$ [m/s]')
+
+        _style_axes(axes)
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
 def plot_poiseuille_validation(problem):
     """Compare Poiseuille simulation against the analytical parabolic profile.
 
     Analytical solution: u(y) = (rho * f_x) / (2*mu) * y * (Ly - y),
     with Dirichlet BCs enforced at cell faces via the ghost-cell mirror formula.
 
-    Prints the L2 relative error and shows a 3-panel figure:
-    velocity profile, error profile, and 2D velocity field.
+    Prints the L2 relative error and shows a 2-panel figure:
+    velocity profile and 2D velocity field.
     """
-    rho = problem.q[0][1:-1, 1:-1]
-    jx = problem.q[1][1:-1, 1:-1]
-    vx = (jx / rho).mean(axis=0)
-
-    Lx = problem.grid['Lx']
     Ly, Ny = problem.grid['Ly'], problem.grid['Ny']
-    Nx = problem.grid['Nx']
     dy = Ly / Ny
     mu = problem.prop['shear']
     f_x = problem.prop['force_x']
-    rho_m = float(rho.mean())
+    rho_m = float(problem.q[0][1:-1, 1:-1].mean())
 
     y = np.linspace(dy / 2, Ly - dy / 2, Ny)
     u_analytical = (rho_m * f_x) / (2 * mu) * y * (Ly - y)
-
-    l2_error = np.sqrt(((vx - u_analytical) ** 2).mean()) / u_analytical.max()
-    print(f"L2 relative error: {l2_error:.2e}")
-
-    x = np.linspace(dy / 2, Lx - dy / 2, Nx)
-    X, Y = np.meshgrid(x, y, indexing='ij')
-
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
-
-    me = max(1, len(vx) // 80)
-
-    axes[0].plot(u_analytical, y, color='#2F83B4', lw=2, label='Analytical')
-    axes[0].plot(vx, y, color='#B5121B', ls='none', marker='x', ms=5, markevery=me, label='Simulated')
-    axes[0].set(xlabel='Velocity u [m/s]', ylabel='y [m]', title='Velocity Profile')
-    axes[0].legend()
-
-    rel_error = np.abs(vx - u_analytical) / u_analytical.max() * 100
-    axes[1].plot(rel_error, y, color='#B5121B', lw=2)
-    axes[1].set(xlabel='Relative Error [%]', ylabel='y [m]', title='Error Profile')
-    axes[1].ticklabel_format(axis='x', style='scientific', scilimits=(-2, 2))
-
-    im = axes[2].pcolormesh(X, Y, jx / rho, cmap='viridis', shading='auto')
-    axes[2].set(xlabel='x [m]', ylabel='y [m]', title='$v_x$ field')
-    plt.colorbar(im, ax=axes[2], label='[m/s]')
-
-    fig.suptitle('2D Poiseuille Flow Validation', fontweight='bold')
-    plt.show()
+    _plot_channel_validation(problem, y, u_analytical)
 
 
 def plot_couette_validation(problem):
@@ -1084,50 +1109,17 @@ def plot_couette_validation(problem):
     Analytical solution: u(y) = U_wall * y / Ly, where U_wall is inferred
     from the north Dirichlet BC value divided by mean density.
 
-    Prints the L2 relative error and shows a 3-panel figure:
-    velocity profile, error profile, and 2D velocity field.
+    Prints the L2 relative error and shows a 2-panel figure:
+    velocity profile and 2D velocity field.
     """
-    rho = problem.q[0][1:-1, 1:-1]
-    jx = problem.q[1][1:-1, 1:-1]
-    vx = (jx / rho).mean(axis=0)
-
-    Lx = problem.grid['Lx']
     Ly, Ny = problem.grid['Ly'], problem.grid['Ny']
-    Nx = problem.grid['Nx']
     dy = Ly / Ny
-
-    jx_bc_N = problem.grid['bc_yN_D_val'][1]
-    U_wall = jx_bc_N / float(rho.mean())
+    rho_m = float(problem.q[0][1:-1, 1:-1].mean())
+    U_wall = problem.grid['bc_yN_D_val'][1] / rho_m
 
     y = np.linspace(dy / 2, Ly - dy / 2, Ny)
     u_analytical = U_wall * y / Ly
-
-    l2_error = np.sqrt(((vx - u_analytical) ** 2).mean()) / u_analytical.max()
-    print(f"L2 relative error: {l2_error:.2e}")
-
-    x = np.linspace(dy / 2, Lx - dy / 2, Nx)
-    X, Y = np.meshgrid(x, y, indexing='ij')
-
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4), constrained_layout=True)
-
-    me = max(1, len(vx) // 80)
-
-    axes[0].plot(u_analytical, y, color='#2F83B4', lw=2, label='Analytical')
-    axes[0].plot(vx, y, color='#B5121B', ls='none', marker='x', ms=5, markevery=me, label='Simulated')
-    axes[0].set(xlabel='Velocity u [m/s]', ylabel='y [m]', title='Velocity Profile')
-    axes[0].legend()
-
-    rel_error = np.abs(vx - u_analytical) / u_analytical.max() * 100
-    axes[1].plot(rel_error, y, color='#B5121B', lw=2)
-    axes[1].set(xlabel='Relative Error [%]', ylabel='y [m]', title='Error Profile')
-    axes[1].ticklabel_format(axis='x', style='scientific', scilimits=(-2, 2))
-
-    im = axes[2].pcolormesh(X, Y, jx / rho, cmap='viridis', shading='auto')
-    axes[2].set(xlabel='x [m]', ylabel='y [m]', title='$v_x$ field')
-    plt.colorbar(im, ax=axes[2], label='[m/s]')
-
-    fig.suptitle('2D Couette Flow Validation', fontweight='bold')
-    plt.show()
+    _plot_channel_validation(problem, y, u_analytical)
 
 
 def plot_bernoulli_validation(problem,
@@ -1191,31 +1183,30 @@ def plot_bernoulli_validation(problem,
     x_mm = x_b * 1000
     x_rs, x_re = x_ramp_start * 1000, x_ramp_end * 1000
 
-    def _vlines(ax):
-        ax.axvline(x_rs, color='gray', ls='--', alpha=0.5)
-        ax.axvline(x_re, color='gray', ls='--', alpha=0.5)
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(2, 2, figsize=(6.5, 5.0), constrained_layout=False)
 
-    fig, axes = plt.subplots(2, 2, figsize=(7, 5), facecolor='white', constrained_layout=True)
+        axes[0, 0].plot(x_mm, h_b[:, j_center] * 1000, color='0.2', lw=1.5)
+        axes[0, 0].set(xlabel='$x$ [mm]', ylabel='$h$ [mm]')
 
-    axes[0, 0].plot(x_mm, h_b[:, j_center] * 1000, 'b-', lw=2)
-    _vlines(axes[0, 0])
-    axes[0, 0].set(xlabel='x [mm]', ylabel='h [mm]', title='Gap Height')
+        axes[0, 1].plot(x_mm, vx_b, color='#D55E00', lw=1.5, label='Simulation')
+        axes[0, 1].plot(x_mm, v_theory, color='#0072B2', ls='--', lw=1.5, label='Theory')
+        axes[0, 1].set(xlabel='$x$ [mm]', ylabel='$v$ [m/s]')
 
-    axes[0, 1].plot(x_mm, vx_b, 'b-', lw=2, label='Simulation')
-    axes[0, 1].plot(x_mm, v_theory, 'r--', lw=1.5, label='Theory')
-    _vlines(axes[0, 1])
-    axes[0, 1].set(xlabel='x [mm]', ylabel='v [m/s]', title='Velocity')
-    axes[0, 1].legend()
+        axes[1, 0].plot(x_mm, p_b / 1000, color='#D55E00', lw=1.5)
+        axes[1, 0].plot(x_mm, p_theory / 1000, color='#0072B2', ls='--', lw=1.5)
+        axes[1, 0].set(xlabel='$x$ [mm]', ylabel='$p$ [kPa]')
 
-    axes[1, 0].plot(x_mm, p_b / 1000, 'b-', lw=2, label='Simulation')
-    axes[1, 0].plot(x_mm, p_theory / 1000, 'r--', lw=1.5, label='Theory')
-    _vlines(axes[1, 0])
-    axes[1, 0].set(xlabel='x [mm]', ylabel='p [kPa]', title='Pressure')
-    axes[1, 0].legend()
+        axes[1, 1].plot(x_mm, jx_b[:, j_center], color='#D55E00', lw=1.5)
+        axes[1, 1].set(xlabel='$x$ [mm]', ylabel='$j_x$ [kg/(m$^2$s)]')
 
-    axes[1, 1].plot(x_mm, jx_b[:, j_center], 'b-', lw=2)
-    _vlines(axes[1, 1])
-    axes[1, 1].set(xlabel='x [mm]', ylabel='$j_x$ [kg/(m$^2$s)]', title='Momentum Flux')
+        for ax in axes.ravel():
+            ax.axvline(x_rs, color='0.6', ls=':', lw=0.8)
+            ax.axvline(x_re, color='0.6', ls=':', lw=0.8)
 
-    fig.suptitle('Bernoulli Venturi Validation', fontweight='bold')
-    plt.show()
+        _style_axes(axes)
+        handles, names = axes[0, 1].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.93))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()

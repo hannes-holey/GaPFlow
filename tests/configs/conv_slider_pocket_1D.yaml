@@ -2,6 +2,7 @@ options:
     output: /tmp/conv_slider_pocket_1D
     write_freq: 2
     save_output: False
+    print_config: False
     output_plots: False
     residual_analysis: False
 
@@ -26,9 +27,9 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 0.1
-    tol: 0.0
+    tol: 1e-12
     max_it: 50
 
 properties:
@@ -44,7 +45,7 @@ properties:
     shear: 0.01
     bulk: 0.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.1
     equations:
@@ -52,10 +53,8 @@ fem_solver:
     physics:
         gap_shear: true
     stabilization:
-        oss: false
-        oss_alpha: 1.0
-        mass_supg: true
-        mass_supg_factor: 1.0
-    max_iter: 3
-    R_norm_tol: 1e-9
+        upg: true
+        upg_factor: 1.0
+    max_it: 3
+    tol_abs_resnorm: 1e-9
     scaling: True

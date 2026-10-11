@@ -1,5 +1,5 @@
 options:
-    output: /tmp/inclined_slider_{solver}
+    output: /tmp/inclined_slider
     write_freq: 1
     save_output: False
     print_config: False
@@ -24,9 +24,10 @@ geometry:
     V: 0.
 
 numerics:
-    solver: {solver}
+    solver: implicit
     dt: 1.0
     tol: 1e-08
+    max_it: 10000
 
 properties:
     EOS: PL
@@ -36,9 +37,8 @@ properties:
     rho0: 1.1853
     alpha: 0.
 
-fem_solver:
-    alpha: 1.0
-    stabilization:
-        mass_supg: False
-    equations:
-        cavitation: True
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-10
+    max_it: 10
+    linear_solver: direct

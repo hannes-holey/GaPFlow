@@ -3,14 +3,10 @@ from pathlib import Path
 
 import yaml
 
+from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.problem import Problem
 
 CONFIG_DIR = Path('../../tests/configs')
-
-SOLVER_DEFAULTS = {
-    'explicit': {'Ny': 1, 'solver': 'explicit', 'max_it': 50000, 'output_plots': False},
-    'solver_fem': {'Ny': 4, 'solver': 'fem', 'dt': 1e-02, 'max_it': 100, 'output_plots': True},
-}
 
 
 def load_template(name):
@@ -18,11 +14,24 @@ def load_template(name):
         return f.read()
 
 
+def apply_overrides(config, overrides):
+    """Set keys in a nested config dict by full dotted path, e.g.
+    'numerics.dt' or 'fem_solver.stabilization.oss'. Missing sections
+    and keys along the path are created.
+    """
+    for key, value in overrides.items():
+        *parents, leaf = key.split('.')
+        node = config
+        for k in parents:
+            node = node.setdefault(k, {})
+        node[leaf] = value
+    return config
+
+
 def build_config(template, solver, **overrides):
-    params = {'adaptive': 0, 'CFL': 0.5, 'rho_bc': 1.0}
-    params.update(SOLVER_DEFAULTS[solver])
-    params.update(overrides)
-    return template.format(**params)
+    config = yaml.safe_load(template)
+    apply_overrides(config, {'numerics.solver': solver, **overrides})
+    return yaml.safe_dump(config)
 
 
 def run_solver(template, solver, **overrides):
@@ -31,15 +40,31 @@ def run_solver(template, solver, **overrides):
     t0 = time.perf_counter()
     problem.run()
     elapsed = time.perf_counter() - t0
-    rho = problem.q[0][1:-1, 0].copy()
-    jx = problem.q[1][1:-1, 0].copy()
+    rho = problem.q[0][:, 0].copy()
+    jx = problem.q[1][:, 0].copy()
     return rho, jx, elapsed
 
 
-def run_all_solvers(template, explicit_overrides=None, **common_overrides):
+def run_pressure_profile(template, **overrides):
+    yaml_str = build_config(template, 'implicit', **overrides)
+    problem = Problem.from_string(yaml_str)
+    problem.run()
+    p = eos_pressure(problem.q[0][:, 1:-1], problem.prop).mean(axis=1)
+    return problem.topo.xx[:, 0] / problem.grid['Lx'], p
+
+
+def get_profile_1d(problem):
+    """Normalized position, pressure [Pa] and density of a finished 1D run."""
+    X = problem.topo.xx[1:-1, 1] / problem.grid['Lx']
+    return X, problem.pressure.pressure[1:-1, 1].copy(), problem.q[0][1:-1, 1].copy()
+
+
+def run_all_solvers(template, explicit_overrides=None, skip=None, **common_overrides):
     explicit_overrides = explicit_overrides or {}
     results = {}
-    for solver in ['explicit', 'solver_fem']:
+    for solver in ['explicit', 'implicit']:
+        if skip and solver in skip:
+            continue
         overrides = {**common_overrides, **(explicit_overrides if solver == 'explicit' else {})}
         rho, jx, elapsed = run_solver(template, solver, **overrides)
         results[solver] = {'rho': rho, 'jx': jx, 'time': elapsed}
@@ -48,114 +73,34 @@ def run_all_solvers(template, explicit_overrides=None, **common_overrides):
 
 def print_timing(results):
     print("Timing:")
-    for solver in ['explicit', 'solver_fem']:
-        print(f"  {solver:<10} {results[solver]['time']:>6.2f} s")
+    for name, res in results.items():
+        print(f"  {name:<10} {res['time']:>6.2f} s")
 
 
 # =============================================================================
-# FEM NS (full momentum) vs FEM Reynolds (scalar p-only) comparison
+# Navier-Stokes (full momentum) vs Reynolds (scalar p-only) comparison
 # =============================================================================
 
-REYNOLDS_SOLVER_DEFAULTS = {
-    'fem_ns': {'solver': 'fem'},
-    'fem_reynolds': {'solver': 'fem'},
-}
-
-
-def build_reynolds_config(template, solver, **overrides):
-    """Build a fem_solver config for `solver` in {'fem_ns', 'fem_reynolds'}.
-
-    Fills the template's {solver}/{rho_bc}/... placeholders as usual, then
-    parses the result and extends fem_solver.equations.reynolds in the parsed
-    dict (rather than depending on a {reynolds} placeholder in the YAML text)
-    so the shared config templates in tests/configs/ stay untouched.
-    """
-    params = {'rho_bc': 1.0}
-    params.update(REYNOLDS_SOLVER_DEFAULTS[solver])
-    params.update(overrides)
-    yaml_str = template.format(**params)
-
-    config = yaml.safe_load(yaml_str)
-    config.setdefault('fem_solver', {}).setdefault('equations', {})['reynolds'] = (
-        solver == 'fem_reynolds')
-    return yaml.safe_dump(config)
-
-
-def run_reynolds_solver(template, solver, **overrides):
-    print(f"Running solver: {solver}")
-    yaml_str = build_reynolds_config(template, solver, **overrides)
-    problem = Problem.from_string(yaml_str)
-    t0 = time.perf_counter()
-    problem.run()
-    elapsed = time.perf_counter() - t0
-    rho = problem.q[0][1:-1, 0].copy()
-    return rho, elapsed
-
-
-def run_reynolds_comparison(template, **common_overrides):
-    results = {}
-    for solver in ['fem_ns', 'fem_reynolds']:
-        rho, elapsed = run_reynolds_solver(template, solver, **common_overrides)
-        results[solver] = {'rho': rho, 'time': elapsed}
-    return results
-
-
-def print_reynolds_timing(results):
-    print("Timing:")
-    for solver in ['fem_ns', 'fem_reynolds']:
-        print(f"  {solver:<20} {results[solver]['time']:>6.2f} s")
-
-
-def run_reynolds_cav_solver(template, solver, topo_fn=None, **overrides):
-    """Like run_reynolds_solver, but also extracts theta (cavitation
-    fraction). p and theta are looked up by name via
-    problem.solver.quad_mgr.nf, which indexes nodal fields by name rather
-    than DOF position (position differs between fem_ns and fem_reynolds).
-
-    topo_fn, if given, is called as topo_fn(problem) after Problem.from_string
-    and before problem.run(), to inject a height field that isn't expressible
-    via geometry.type (e.g. regen_twin_parabolic_slider_id)."""
-    print(f"Running solver: {solver}")
-    yaml_str = build_reynolds_config(template, solver, **overrides)
-    problem = Problem.from_string(yaml_str)
+def run_reynolds_solver(template, reynolds, topo_fn=None, **overrides):
+    overrides = {'implicit_solver.equations.reynolds': reynolds, **overrides}
+    problem = Problem.from_string(build_config(template, 'implicit', **overrides))
     if topo_fn is not None:
         topo_fn(problem)
     t0 = time.perf_counter()
     problem.run()
     elapsed = time.perf_counter() - t0
+
     nf = problem.solver.quad_mgr.nf
-    p = nf('p')[1:-1, 0].copy()
-    theta = nf('theta')[1:-1, 0].copy()
-    return p, theta, elapsed
+    rho_eff = problem.q[0].copy()
+    if problem.fem_solver['equations']['cavitation']:
+        rho_eff *= 1 - nf('theta')
+    return {'X': problem.topo.xx[:, 0] / problem.grid['Lx'], 'p': nf('p').copy(), 'rho_eff': rho_eff,
+            'Lx': problem.grid['Lx'], 'Ly': problem.grid['Ly'], 'time': elapsed}
 
 
-def run_reynolds_cav_comparison(template, topo_fn=None, **common_overrides):
-    results = {}
-    for solver in ['fem_ns', 'fem_reynolds']:
-        p, theta, elapsed = run_reynolds_cav_solver(template, solver, topo_fn=topo_fn, **common_overrides)
-        results[solver] = {'p': p, 'theta': theta, 'time': elapsed}
-    return results
-
-
-def run_reynolds_solver_2d(template, solver, **overrides):
-    """Like run_reynolds_solver, but keeps the full 2D rho field (no y=0 slice)
-    for genuinely 2D (non-periodic-in-y) geometries."""
-    print(f"Running solver: {solver}")
-    yaml_str = build_reynolds_config(template, solver, **overrides)
-    problem = Problem.from_string(yaml_str)
-    t0 = time.perf_counter()
-    problem.run()
-    elapsed = time.perf_counter() - t0
-    rho = problem.q[0][1:-1, 1:-1].copy()
-    return rho, elapsed, problem.grid['Lx'], problem.grid['Ly']
-
-
-def run_reynolds_comparison_2d(template, **common_overrides):
-    results = {}
-    for solver in ['fem_ns', 'fem_reynolds']:
-        rho, elapsed, Lx, Ly = run_reynolds_solver_2d(template, solver, **common_overrides)
-        results[solver] = {'rho': rho, 'time': elapsed, 'Lx': Lx, 'Ly': Ly}
-    return results
+def run_reynolds_comparison(template, topo_fn=None, **common_overrides):
+    return {name: run_reynolds_solver(template, name == 'reynolds', topo_fn=topo_fn, **common_overrides)
+            for name in ['ns', 'reynolds']}
 
 
 # =============================================================================

@@ -350,7 +350,8 @@ class QuadFieldManager:
         if self.problem.fem_solver['stabilization']['fc']:
             self._update_fc_quad_fields(q)
         if self.problem.fem_solver['equations']['reynolds']:
-            self._update_reynolds_quad_fields(q)
+            if self.problem.fem_solver['equations']['cavitation']:
+                self._update_reynolds_quad_fields(q)
             if self.problem.fem_solver['stabilization']['mass_supg']:
                 self._update_reynolds_supg_quad_fields(q)
         elif self.problem.fem_solver['stabilization']['mass_supg']:

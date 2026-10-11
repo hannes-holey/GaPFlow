@@ -35,7 +35,7 @@ import jax.numpy as jnp
 from scipy.constants import gas_constant
 
 
-def eos_pressure(density, prop):
+def eos_pressure(density, prop, h=None):
     """Wrapper around all implemented equation of state models.
 
     Parameters
@@ -73,7 +73,7 @@ def eos_pressure(density, prop):
         func = bayada_chupin
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
     elif prop['EOS'] == 'user':
-        return prop['EOS_user'](density)
+        return prop['EOS_user'](density, h)
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -425,8 +425,6 @@ def eos_rho(pressure, prop):
     elif prop['EOS'] == 'Bayada':
         func = rho_of_p_bayada
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
-    elif prop['EOS'] == 'user':
-        return prop['EOS_user_inv'](pressure)
     else:
         raise NotImplementedError(
             f"Pressure-based solver requires an inverse EoS; "

@@ -150,10 +150,15 @@ def read_yaml_input(file):
 
     sanitized_dict = {}
 
+    if 'fem_solver' in raw_dict and 'implicit_solver' in raw_dict:
+        raise IOError("Specify only one of 'fem_solver' and 'implicit_solver'.")
+
     for key, func in sanitizing_functions.items():
         if rank == 0 and _print_config:
             print(f'- {key}:')
         val = raw_dict.get(key)
+        if key == 'fem_solver' and val is None:
+            val = raw_dict.get('implicit_solver')
         sanitized_dict[key] = func(val) if val is not None else None
 
     if rank == 0 and _print_config:
@@ -235,8 +240,6 @@ def sanitize_grid(d):
     # - scalar: applies uniformly to all variables
     # - list: sets value per variable [rho, rho*u, rho*v]
     # Pressure BCs (xW_P etc.) are an alternative to density BCs (xW_D etc.).
-    # They are stored as-is here and converted to density in Problem._resolve_pressure_bcs()
-    # once the EoS is known. Specifying both _D and _P for the same boundary is an error.
     if any(b == 'D' for b in out['bc_xW']):
         has_D = 'xW_D' in d
         has_P = 'xW_P' in d
@@ -515,7 +518,8 @@ def sanitize_numerics(d):
 
     out = {}
 
-    out['solver'] = str(d.get('solver', 'explicit'))
+    solver = str(d.get('solver', 'explicit'))
+    out['solver'] = 'fem' if solver == 'implicit' else solver
     out['tol'] = float(d.get('tol', 1e-6))
     out['max_it'] = int(d.get('max_it', 1000))
     out['dt'] = float(d.get('dt', 3e-10))
@@ -613,8 +617,8 @@ def sanitize_fem_solver(d):
 
     d = d or {}
     out = {}
-    out['max_iter'] = int(d.get('max_iter', 100))
-    out['R_norm_tol'] = float(d.get('R_norm_tol', 1e-6))
+    out['max_iter'] = int(d.get('max_it', d.get('max_iter', 100)))
+    out['R_norm_tol'] = float(d.get('tol_abs_resnorm', d.get('R_norm_tol', 1e-6)))
     # newton_relax: support both new name and legacy 'alpha'
     out['newton_relax'] = float(d.get('newton_relax', d.get('alpha', 1.0)))
     out['scaling'] = bool(d.get('scaling', True))
@@ -644,12 +648,12 @@ def sanitize_fem_solver(d):
         'ad': bool(stab.get('ad', False)),
         'ad_alpha': float(stab.get('ad_alpha', 0.0)),
         'oss': bool(stab.get('oss', False)),
-        'oss_alpha': float(stab.get('oss_alpha', 1.0)),
+        'oss_alpha': float(stab.get('oss_factor', stab.get('oss_alpha', 1.0))),
         'fc': bool(stab.get('fc', False)),
         'fc_beta': float(stab.get('fc_beta', 0.7)),
-        'mass_supg': bool(stab.get('mass_supg', False)),
-        'mass_supg_factor': float(stab.get('mass_supg_factor', 1.0)),
-        'mass_supg_type': str(stab.get('mass_supg_type', 'Couette')),
+        'mass_supg': bool(stab.get('upg', stab.get('mass_supg', False))),
+        'mass_supg_factor': float(stab.get('upg_factor', stab.get('mass_supg_factor', 1.0))),
+        'mass_supg_type': str(stab.get('mass_supg_type', 'flux')),
     }
 
     if 'p_init' in d:

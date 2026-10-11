@@ -1,14 +1,5 @@
-# Parabolic slider bearing — genuinely 2D solver comparison template
-#
-# Geometry: parabolic gap (both x and y), hmin=2.54e-5 m, hmax=5.08e-5 m, U=0.7 m/s
-# Dirichlet pressure BC on all four sides.
-#
-# Fluid: Dowson-Higginson EOS
-#   rho0 = 877.7 kg/m³  at  P0 = 101325 Pa
-#   shear = 0.039 Pa·s
-
 options:
-    output: /tmp/parabolic_slider_2d_{solver}
+    output: /tmp/parabolic_slider_2d
     write_freq: 1
     save_output: False
     output_plots: False
@@ -36,7 +27,7 @@ geometry:
     V: 0.0
 
 numerics:
-    solver: {solver}
+    solver: implicit
     dt: 1.0
     tol: 1e-14
 
@@ -49,7 +40,7 @@ properties:
     shear: 0.039
     bulk: 0.0
 
-fem_solver:
-    alpha: 1.0
-    max_iter: 1
+implicit_solver:
+    newton_relax: 1.0
+    max_it: 1
     linear_solver: direct

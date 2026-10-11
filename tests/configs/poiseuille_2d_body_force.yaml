@@ -1,12 +1,15 @@
-# 2D Poiseuille Flow Validation
-# Body force driven flow with periodic x, no-slip y walls
-# Tests in-plane viscous diffusion (R23xy, R23yx) without wall stress terms
+options:
+    output: /tmp/poiseuille_2d_test
+    write_freq: 1
+    save_output: False
+    output_plots: False
+    print_config: False
 
 grid:
     Lx: 0.5
     Ly: 0.25
-    Nx: 10
-    Ny: 200
+    Nx: 4
+    Ny: 100
     xW: ['P', 'P', 'P']
     xE: ['P', 'P', 'P']
     yS: ['N', 'D', 'D']
@@ -22,8 +25,8 @@ geometry:
     V: 0.0
 
 numerics:
-    solver: fem
-    dt: 1.0
+    solver: implicit
+    dt: 10.0
     tol: 1e-10
     max_it: 30
 
@@ -37,18 +40,12 @@ properties:
     force_x: 1
     force_y: 0.0
 
-fem_solver:
-    alpha: 0.8
-    R_norm_tol: 1e-8
-    max_iter: 1
-    solver: direct
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-8
+    max_it: 2
+    linear_solver: direct
     physics:
         gap_shear: False
         plane_shear: True
         body_force: True
-
-options:
-    output: /tmp/poiseuille_2d_test
-    write_freq: 1
-    save_output: False
-    output_plots: False

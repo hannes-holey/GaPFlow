@@ -1,20 +1,14 @@
-# Bernoulli Quasi-1D Flow Test Configuration
-#
-# Tests incompressible Bernoulli flow through a converging channel.
-# With h_inlet = 2 * h_outlet, Bernoulli predicts:
-#   - Velocity doubles: v_outlet = 2 * v_inlet
-#   - Pressure drop: Δp = 0.5 * ρ * (v_outlet² - v_inlet²) = 1500 Pa
-#
-# Boundary conditions:
-#   - Inlet: Fixed mass flux (Dirichlet jx), free density (Neumann ρ)
-#   - Outlet: Fixed density/pressure (Dirichlet ρ), free flux (Neumann jx)
-#   - Y-direction: Periodic (quasi-1D)
+options:
+    output: /tmp/bernoulli_quasi1d
+    write_freq: 1
+    save_output: False
+    print_config: False
 
 grid:
     Lx: 0.1
     Ly: 0.005
     Nx: 200
-    Ny: 4
+    Ny: 1
     xW: ['D', 'N', 'N']
     xW_D: [1000.0, 0.0, 0.0]
     xE: ['N', 'D', 'D']
@@ -30,8 +24,8 @@ geometry:
     V: 0.0
 
 numerics:
-    solver: fem
-    dt: 0.1
+    solver: implicit
+    dt: 1.0
     tol: 1.0e-10
     max_it: 100
 
@@ -45,17 +39,12 @@ properties:
     C1: 3.5e08
     C2: 1.23
 
-fem_solver:
-    alpha: 0.1
-    R_norm_tol: 1.0e-10
+implicit_solver:
+    newton_relax: 0.5
+    tol_abs_resnorm: 1.0e-10
     linear_solver: direct
-    max_iter: 10
+    max_it: 5
     physics:
         gap_shear: False
         plane_shear: False
         inertia: True
-
-options:
-    output: /tmp/bernoulli_quasi1d
-    write_freq: 1
-    save_output: False
