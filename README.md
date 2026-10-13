@@ -40,26 +40,38 @@ You can check your installation by running `gpf_info` from the command line.
 ==========
 GaPFlow
 ==========
-Version:  ...
+Version: ...
 
 ==========
 LAMMPS
 ==========
 Version: ...
 Shared lib: <path-to-your-python-env>/lib/pythonX.Y/site-packages/GaPFlow/_vendor/lammps/liblammps_mpi[.so, .dylib]
-MPI:  True
-mpi4py:  True
-packages:  ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+MPI: True
+mpi4py: True
+Packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
 
 ==========
 muGrid
 ==========
-Version:  ...
+Version: ...
 NetCDF4: True
 MPI: False
+
+==========
+PETSc
+==========
+Version: ...
+petsc4py: ...
+MUMPS: True
+Linear backend (auto): PETSc
 ```
 We currently do not use parallel functionalities of µGrid, so MPI support is not
-required.
+required. PETSc is optional (see below). Without it, the PETSc section reads
+```
+Installed: False (install with install_petsc.sh)
+Linear backend (auto): SciPy (serial only)
+```
 
 For installations from source, do not forget to initialize the LAMMPS submodule after cloning the repository
 ```
@@ -84,7 +96,10 @@ export PETSC_DIR="$HOME/.local/petsc-3.22.2"
 export PETSC_ARCH="arch-linux-c-opt"
 ```
 
-Verify the installation with:
+Verify the installation with `gpf_info` (PETSc section, see above). If PETSc is installed, the implicit solver uses it by default.
+To use the SciPy solvers anyway, set `linear_backend: scipy` in the `implicit_solver` section of the input file.
+
+For more details on the PETSc installation (e.g. MPI setup and available linear solvers), run
 ```bash
 python3 .check_petsc.py
 ```

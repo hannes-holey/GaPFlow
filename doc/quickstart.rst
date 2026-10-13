@@ -37,16 +37,30 @@ You can check your installation by running ``gpf_info`` from the command line.
     Shared lib: <path-to-your-python-env>/lib/python3.X/site-packages/GaPFlow/_vendor/lammps/liblammps_mpi.[so,dylib]
     MPI: True
     mpi4py: True
-    packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+    Packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
     
     ==========
     muGrid
     ==========
-    Version:  ...
+    Version: ...
     NetCDF4: True
     MPI: False
 
+    ==========
+    PETSc
+    ==========
+    Version: ...
+    petsc4py: ...
+    MUMPS: True
+    Linear backend (auto): PETSc
+
 We currently do not use parallel functionalities of µGrid, so MPI support is not required.
+PETSc is optional. Without it, the PETSc section reads
+
+::
+
+    Installed: False (install with install_petsc.sh)
+    Linear backend (auto): SciPy (serial only)
 
 Minimal example
 ---------------

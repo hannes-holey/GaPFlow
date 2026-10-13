@@ -55,6 +55,22 @@ def show_info():
     print('NetCDF4:', muGrid.has_netcdf)
     print('MPI:', muGrid.has_mpi)
 
+    print()
+    print(10 * "=")
+    print('PETSc')
+    print(10 * "=")
+
+    if GaPFlow.HAS_PETSC:
+        import petsc4py
+        from petsc4py import PETSc
+        print('Version:', '.'.join(str(v) for v in PETSc.Sys.getVersion()))
+        print('petsc4py:', petsc4py.__version__)
+        print('MUMPS:', PETSc.Sys.hasExternalPackage('mumps'))
+        print('Linear backend (auto): PETSc')
+    else:
+        print('Installed: False (install with install_petsc.sh)')
+        print('Linear backend (auto): SciPy (serial only)')
+
 
 def main():
     show_info()
