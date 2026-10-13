@@ -192,7 +192,7 @@ def sanitize_options(d):
 
     out['output_plots'] = bool(d.get('output_plots', False))
 
-    # Residual analysis option (only applies to solver_fem solver)
+    # Residual analysis option (only applies to the implicit solver)
     out['residual_analysis'] = bool(d.get('residual_analysis', False))
 
     print_dict(out)
@@ -623,6 +623,10 @@ def sanitize_fem_solver(d):
     out['newton_relax'] = float(d.get('newton_relax', d.get('alpha', 1.0)))
     out['scaling'] = bool(d.get('scaling', True))
     out['linear_solver'] = str(d.get('linear_solver', 'direct'))
+    # Linear algebra backend: 'auto' uses PETSc if installed, otherwise SciPy
+    out['linear_backend'] = str(d.get('linear_backend', 'auto')).lower()
+    if out['linear_backend'] not in ('auto', 'petsc', 'scipy'):
+        raise IOError("linear_backend must be one of 'auto', 'petsc', 'scipy'.")
     out['print_mumps_diagnostics'] = bool(d.get('print_mumps_diagnostics', False))
 
     physics = d.get('physics', {})

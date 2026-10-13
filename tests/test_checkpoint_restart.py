@@ -41,7 +41,7 @@ import numpy as np
 import pytest
 
 from GaPFlow import Problem
-from GaPFlow.solver_fem.checkpoint import CHECKPOINT_FIELD_REGISTRY, _resolve, _try_resolve
+from GaPFlow.solver_implicit.checkpoint import CHECKPOINT_FIELD_REGISTRY, _resolve, _try_resolve
 
 CONFIG = """
 options:
@@ -70,7 +70,7 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 1.
     tol: 0.
     max_it: 1
@@ -105,7 +105,7 @@ force_balance:
         force_tol: 0.01
         h_min_step_divisor: 50.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.2
     physics:
@@ -165,7 +165,7 @@ def _randomize_registry_state(solver, rng):
 
 
 def _set_scalar(solver, source, value):
-    from GaPFlow.solver_fem.checkpoint import _resolve_parent
+    from GaPFlow.solver_implicit.checkpoint import _resolve_parent
     obj, attr = _resolve_parent(solver, source)
     setattr(obj, attr, value)
 

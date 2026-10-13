@@ -862,7 +862,7 @@ class BisectionForceController:
     Each proposed h0 change is only trusted/applied once at least 5
     effective-relaxation-equivalent Newton iterations (`sum(alpha)`) have
     accumulated since the last change, via `accumulate()` registered as a
-    callback on `FEMSolver.cb_list`. This approximates "the Newton solve
+    callback on `ImplicitSolver.cb_list`. This approximates "the Newton solve
     has settled enough to trust the force reading" for this
     pseudo-timestepping / quasi-steady-state setup.
     """
@@ -1115,7 +1115,7 @@ class ElasticDeformation:
             Pressure field.
         h : ndarray of shape (M, N) or None
             Gap height field (with ghost cells). If provided, the deformation
-            discrepancy metric max(|u_relaxed - u_computed| / h) is computed
+            discrepancy metric ``max(|u_relaxed - u_computed| / h)`` is computed
             over inner cells and returned as the second element of the tuple.
 
         Returns
@@ -1124,7 +1124,7 @@ class ElasticDeformation:
             Updated, underrelaxed deformation field.
         disc : float
             Maximum deformation discrepancy relative to gap height
-            (max over inner cells of |u_relaxed - u_computed| / h).
+            (max over inner cells of ``|u_relaxed - u_computed| / h``).
             Zero if h is None.
         """
         u_computed = self.get_deformation(p)

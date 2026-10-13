@@ -152,8 +152,8 @@ class Problem:
             from .solver_explicit.solver_explicit import ExplicitSolver
             self.solver = ExplicitSolver(self)
         elif self.numerics['solver'] == 'fem':
-            from .solver_fem.solver_fem import FEMSolver
-            self.solver = FEMSolver(self.fem_solver, self)
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            self.solver = ImplicitSolver(self.fem_solver, self)
 
         # Solution field
         self.step = None
@@ -554,8 +554,8 @@ class Problem:
 
         # Residual analysis for FEM 2D solver
         if self.options.get('residual_analysis', False):
-            from .solver_fem.solver_fem import FEMSolver
-            if isinstance(self.solver, FEMSolver) and hasattr(self.solver, 'run_residual_analysis'):
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            if isinstance(self.solver, ImplicitSolver) and hasattr(self.solver, 'run_residual_analysis'):
                 self.solver.run_residual_analysis()
 
         walltime = datetime.now() - self._tic
