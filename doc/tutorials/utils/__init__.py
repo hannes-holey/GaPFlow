@@ -17,6 +17,9 @@ from .topography import (
 from .plotting import (
     animate_comparison,
     plot_solver_comparison_rho_jx,
+    plot_reynolds_comparison_1d,
+    plot_reynolds_comparison_2d,
+    plot_stab_comparison,
     animate_advection,
     animate_3d_surface,
     animate_3d_advection,
@@ -31,8 +34,16 @@ from .solver_comparison import (  # noqa: F401
     load_template,
     build_config,
     run_solver,
+    run_pressure_profile,
     run_all_solvers,
     print_timing,
+    run_reynolds_solver,
+    run_reynolds_comparison,
+    STAB_VARIANTS,
+    build_stab_config,
+    run_stab_solver,
+    run_stab_comparison,
+    print_stab_timing,
 )
 
 from .analytics import heat_equation_1d
@@ -47,6 +58,9 @@ __all__ = [
     'regen_twin_parabolic_slider_id',
     'animate_comparison',
     'plot_solver_comparison_rho_jx',
+    'plot_reynolds_comparison_1d',
+    'plot_reynolds_comparison_2d',
+    'plot_stab_comparison',
     'animate_advection',
     'animate_3d_surface',
     'animate_3d_advection',
@@ -56,4 +70,9 @@ __all__ = [
     'plot_overview_2d',
     'plot_midsection_2d',
     'heat_equation_1d',
+    'STAB_VARIANTS',
+    'build_stab_config',
+    'run_stab_solver',
+    'run_stab_comparison',
+    'print_stab_timing',
 ]

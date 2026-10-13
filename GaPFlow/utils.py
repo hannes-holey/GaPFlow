@@ -25,6 +25,8 @@ import sys
 import signal
 import numpy as np
 import jax.numpy as jnp
+from typing import Deque
+from itertools import islice
 from jax import jit, vmap
 
 
@@ -102,3 +104,10 @@ def handle_signals(func) -> None:
     """
     for s in get_termination_signals():
         signal.signal(s, func)
+
+
+def above_tolerance(buf: Deque, tol: float, num: int | None = None) -> bool:
+    """Return True if any of the last `num` values in `buf` are above `tol` (all if `num` is None)."""
+    if num is None:
+        return any(v > tol for v in buf)
+    return any(v > tol for v in islice(reversed(buf), num))

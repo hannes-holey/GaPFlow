@@ -92,6 +92,12 @@ def resolve_pressure_bcs(grid: dict, prop: dict, problem: "Problem" = None) -> N
                 import warnings
                 warnings.warn(
                     f"bc_{side}_P_val with GP pressure: rho inversion not yet supported, skipping.")
+            elif problem is not None and problem.pressure.takes_h:
+                h_bnd = float(problem.topo.h[offset_to_slice(side[1], 1)].mean())
+                rho = problem.pressure.rho_from_p(np.array([[float(p_val)]]),
+                                                  np.array([[h_bnd]]),
+                                                  np.array([[prop['rho0']]]))
+                grid[f'bc_{side}_D_val'] = float(rho.squeeze())
             else:
                 grid[f'bc_{side}_D_val'] = float(
                     problem.pressure.rho_from_p(np.array([[float(p_val)]])).squeeze())
@@ -100,7 +106,7 @@ def resolve_pressure_bcs(grid: dict, prop: dict, problem: "Problem" = None) -> N
 def translate_bc_rho_to_p(bc_type: List[str], bc_vals: List[float | None],
                           problem: "Problem") -> List[float | None]:
     """Translate Dirichlet rho BC values to pressure using the EoS."""
-    if problem.pressure.is_gp_model:
+    if problem.pressure.takes_h:
         result = []
         for (bnd, _), type, rho in zip(BND_IDX.items(), bc_type, bc_vals):
             if type == 'D':
@@ -316,7 +322,7 @@ class GhostUpdater:
                 d_cell = self._get_d_cell(bnd)
                 bc_type = bc_spec.get_bc_type(bnd)
 
-                if bc_type == 'D':
+                if bc_type == 'D' or bc_type == 'F':
                     if grid_type == 'P1':
                         field[ghost_outer] = bc_arr
                     else:

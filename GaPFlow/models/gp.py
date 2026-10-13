@@ -25,7 +25,7 @@ import abc
 import warnings
 from copy import deepcopy
 from datetime import datetime
-from typing import Tuple
+from typing import Tuple, Deque
 
 import jax
 import jax.numpy as jnp
@@ -38,7 +38,9 @@ with warnings.catch_warnings():
 
 from tinygp import GaussianProcess, kernels, transforms
 
+from ..db import _eval_derived_expr
 from ..logging import get_logger
+from ..utils import above_tolerance
 
 logger = get_logger("gapflow.gp")
 
@@ -63,19 +65,22 @@ class GaussianProcessSurrogate:
     active_dims: list[int]
     use_active_learning: bool
     fix_noise: bool
+    tolerance_protocol: str
     rtol: float
     atol: float
-    tol: str
+    atol_reduction_factor: float
+    tol_rmid: float
+    tol_alpha: float
     max_steps: int
     pause_steps: int
     similarity_check: bool
     allowed_skips: int
-    perturb_target: bool
     pause_on_high_residual: bool
     params_init: dict
     noise: Tuple[float, float]
     prop: dict
     geo: dict
+    derived_expressions: list[str]
 
     def __init__(self, fc, database):
         """Constructor.
@@ -101,13 +106,18 @@ class GaussianProcessSurrogate:
             self._tol_ratio = 0.
             self._objective = jnp.inf
 
+            first_derived_idx = 8 + database.num_extra_features
+            if self.use_active_learning and any(d >= first_derived_idx for d in self.active_dims):
+                raise ValueError(
+                    f"Active learning cannot be used when derived features appear in "
+                    f"active_dims (derived feature indices start at {first_derived_idx}). "
+                    f"Set active_learning: false or remove derived feature indices from active_dims."
+                )
+
             # Initialize timers
             ref = datetime.now()
             self._cumtime_train = datetime.now() - ref
             self._cumtime_infer = datetime.now() - ref
-
-            # Initialize PRNG key
-            self._key = jax.random.key(0)
 
             # History of hyperparameters
             self.history = {
@@ -206,8 +216,9 @@ class GaussianProcessSurrogate:
 
     @property
     def solution(self):
-        """Return full solution field."""
-        return self.__solution.pg
+        """Return the core (jx, jy, rho) solution field, excluding any
+        solver-internal extra state (e.g. cavitation theta, energy E)."""
+        return self.__solution.pg[:3]
 
     @property
     def height_and_slopes(self) -> JAXArray:
@@ -223,6 +234,21 @@ class GaussianProcessSurrogate:
     def extra(self):
         """Return constant extra field, which can be used as additional input."""
         return self.__extra.pg
+
+    @property
+    def _derived(self) -> JAXArray:
+        """Compute derived features from base feature expressions defined in config."""
+        base = jnp.vstack([
+            self.solution,
+            self.height_and_slopes,
+            jnp.full((1, *self.height.shape), self.geo['U_bot']),  # TODO: also add top wall velocities
+            jnp.full((1, *self.height.shape), self.geo['V_bot']),
+            self.extra
+        ])
+        return jnp.vstack([
+            _eval_derived_expr(expr, base)[jnp.newaxis]
+            for expr in self.derived_expressions
+        ])
 
     @property
     def trusted(self) -> bool:
@@ -246,14 +272,17 @@ class GaussianProcessSurrogate:
 
     @property
     def _Xtest(self) -> JAXArray:
-        """
-        Flattened test input array from physical fields.
-        """
-        return jnp.vstack([
+        """Flattened test input array from physical fields."""
+        parts = [
             self.solution,
             self.height_and_slopes,
-            self.extra
-        ]).reshape(self._database.num_features, -1).T
+            jnp.full((1, *self.height.shape), self.geo['U_bot']),  # TODO: top wall
+            jnp.full((1, *self.height.shape), self.geo['V_bot']),
+            self.extra,
+        ]
+        if self.derived_expressions:
+            parts.append(self._derived)
+        return jnp.vstack(parts).reshape(self._database.num_features, -1).T
 
     @property
     def Xtrain(self) -> JAXArray:
@@ -281,8 +310,8 @@ class GaussianProcessSurrogate:
             self.history['variance'].append(self.kernel_variance)
             self.history['obs_stddev'].append(self.obs_stddev)
             self.history['maximum_variance'].append(self.maximum_variance)
-            self.history['variance_tol'].append(self.variance_tol)
             self.history['objective'].append(self.objective)
+            self.history['variance_tol'].append(self.variance_tol)
 
             for i, l in enumerate(self.active_dims):
                 self.history[f'lengthscale_{l}'].append(self.kernel_lengthscale[i])
@@ -447,7 +476,9 @@ class GaussianProcessSurrogate:
         if compute_var:
             predictive_mean, self._predictive_var = self._infer_mean_var()
             self.maximum_variance = jnp.max(self._predictive_var)
-            self.variance_tol = self._get_tolerance(predictive_mean)
+
+            # Dummy value overwritten by active learning
+            self.variance_tol = self.maximum_variance
         else:
             predictive_mean = self._infer_mean()
 
@@ -456,36 +487,47 @@ class GaussianProcessSurrogate:
     # ------------------------------------------------------------------
     # Active Learning
     # ------------------------------------------------------------------
-    def _get_tolerance(self, Y):
+    def _get_tolerance(self, m, residuals):
         """Compute the variance tolerance based on the current prediction.
 
         Parameters
         ----------
-        Y : jax.Array
+        m : jax.Array
             Predictive mean
+        residual : jax.Array
+            Current residual, used by the sigmoid and linear tolerance protocols.
 
         Returns
         -------
-        float
-            Maximum allowed tolerance
+        jax.Array
+            Maximum allowed variance tolerance
         """
 
-        noise = self.Yerr * self.Yscale
+        if residuals is not None:
+            residual_mean = jnp.mean(jnp.array(residuals))
 
-        if self.tol == 'delta':
-            Ys = jnp.max(Y) - jnp.min(Y)
-        elif self.tol == 'absmax':
-            Ys = jnp.max(jnp.abs(Y))
-        elif self.tol == 'snr':
-            Ys = jnp.mean(Y) / noise
+        noise = self.Yerr * self.Yscale
+        atol = self.atol * noise  # "lower bound", multiple of observation noise
+
+        if self.tolerance_protocol == 'rtol_delta':
+            delta = jnp.max(m) - jnp.min(m)
+            rtol = self.rtol * delta
+            std_tol = jnp.maximum(atol, rtol)
+
+        elif self.tolerance_protocol == 'sigmoid':
+            atol_init = atol
+            atol_final = self.atol_reduction_factor * atol
+            x = self.tol_alpha * jnp.log(residual_mean / self.tol_rmid)
+            std_tol = atol_final + (atol_init - atol_final) / (1. + jnp.exp(-x))
+
+        elif self.tolerance_protocol == 'linear':
+            atol_init = atol
+            atol_final = self.atol_reduction_factor * atol
+            x = jnp.clip(self.tol_alpha * jnp.log(residual_mean / self.tol_rmid), -1., 1.)
+            std_tol = atol_final + (atol_init - atol_final) * (x + 1.) / 2.
+
         else:
             raise RuntimeError('No tolerance calculation configured.')
-
-        atol = self.atol * noise  # "lower bound", multiple of observation noise
-        rtol = self.rtol * Ys  # grows with Ys,
-        self._tol_ratio = rtol / atol
-
-        std_tol = jnp.maximum(atol, rtol)
 
         variance_tol = std_tol**2
 
@@ -511,9 +553,7 @@ class GaussianProcessSurrogate:
         Select new training point using maximum variance criterion.
         If `similarity_check=True`, we try to avoid points that are
         too similar to the existing database. If all candidate points
-        are too close, we select the one with largest variance and perturb
-        it slightly with random noise.
-
+        are too close, we fall back to the point with largest variance.
 
         Parameters
         ----------
@@ -543,7 +583,6 @@ class GaussianProcessSurrogate:
 
         # start with largest variance (currently only implemented strategy)
         selected = sorted_indices[0]
-        perturb = self.perturb_target  # default False
 
         if similarity_check:
             skipped = 0
@@ -567,75 +606,34 @@ class GaussianProcessSurrogate:
                     selected = i
                     break
 
-            # Apply perturbation only if similarity check fails
-            if skipped <= self.allowed_skips:
-                perturb = False
-            else:
-                logger.info('No suitable test point found. Apply random perturbation to max. variance point.')
-                perturb = True
+            if skipped > self.allowed_skips:
+                logger.info('No suitable test point found. Using max. variance point.')
 
         # Test point from index
         _Xnew = _Xtest[selected, :][None, :]
 
-        if perturb:
-            _Xnew = self._perturb_training_point(_Xnew)
-
         return _Xnew
-
-    def _perturb_training_point(self, X, scale=0.05):
-        """Apply random additive perturbation to a training point.
-
-        Parameters
-        ----------
-        X : jax.Array
-            Training point, not normalized, shape (1, Nfeat)
-        scale: float
-            Scaling parameter, controls the magnitude of the parturbation.
-            Default 0.05
-
-
-        Returns
-        -------
-        jax.Array
-            The perturbed training point.
-        """
-
-        # normalize
-        _X = (X - self._database.X_shift) / self._database.X_scale
-
-        # perturb
-        Xrange = (self._Xtest.max(axis=0) - self._Xtest.min(axis=0)) / self._database.X_scale
-        for d in self.active_dims:
-            if d not in [4, 5]:
-                new_key, subkey = jax.random.split(self._key)
-                _X = _X.at[d].add(scale * Xrange[d] * jax.random.normal(subkey))
-                self._key = new_key  # overwrite PRNG key
-
-        # scale back
-        X = _X * self._database.X_scale + self._database.X_shift
-
-        return X
 
     # ------------------------------------------------------------------
     # Main Predict/Active Loop
     # ------------------------------------------------------------------
 
     def predict(self,
+                residuals: Deque | None = None,
                 predictor: bool = True,
-                compute_var: bool = True,
-                cooldown: bool = False) -> Tuple[JAXArray, JAXArray]:
+                compute_var: bool = True) -> Tuple[JAXArray, JAXArray]:
         """
         Perform GP prediction, optionally updating the model via active learning
         (only in predictor step of the predictor-corrector time integration scheme)
 
         Parameters
         ----------
+        residuals : Deque
+            Residual buffer of the main simulation loop.
         predictor : bool, optional
             Whether to perform active learning updates (only in predictor step, default is True).
         compute_var : bool, optional
             If true (default), preditive variance is re-computed.
-        cooldown : bool, optional
-            If true, active learning is blocked to let the system cool down (default is False).
         Returns
         -------
         m : jax.Array
@@ -657,20 +655,29 @@ class GaussianProcessSurrogate:
         tic = datetime.now()
         m, v = self._infer(compute_var=compute_var and predictor)
         toc = datetime.now()
+
         self._cumtime_infer += toc - tic
 
         after_failed_attempt = self._pause >= 0
-        in_cooldown = cooldown and self.pause_on_high_residual
-        pause_acquisition = after_failed_attempt or in_cooldown
+
+        if residuals is None:
+            cooldown = False
+        else:
+            cooldown = above_tolerance(residuals, tol=1e-3) and self.pause_on_high_residual
+        pause_acquisition = after_failed_attempt or cooldown
+
+        # Compute variance tolerance (also while acquisition is paused, for the history output)
+        if self.use_active_learning and predictor:
+            self.variance_tol = self._get_tolerance(m, residuals)
 
         if self.use_active_learning \
                 and predictor \
                 and not pause_acquisition:
 
-            counter = 0
             before = deepcopy(self.maximum_variance / self.variance_tol)
 
             # Active learning loop
+            counter = 0
             while not self.trusted and counter < self.max_steps:
                 counter += 1
                 self._active_learning(v)
@@ -685,13 +692,14 @@ class GaussianProcessSurrogate:
                 tic = datetime.now()
                 m, v = self._infer(compute_var=True)
                 toc = datetime.now()
-                self._cumtime_infer += tic - toc
+                self._cumtime_infer += toc - tic
+
+                # Re-compute variance tolerance
+                self.variance_tol = self._get_tolerance(m, residuals)
 
                 # AL step output summary
                 after = self.maximum_variance / self.variance_tol
-                key = 'R' if self._tol_ratio > 1. else 'A'
                 msg = f"# AL {counter:2d}/{self.max_steps:2d}     : {before:.3f} --> {after:.3f}"
-                msg += f" | {key} ({self._tol_ratio:.3f})"
                 logger.info(msg)
                 logger.info('#' + 50 * '-')
 

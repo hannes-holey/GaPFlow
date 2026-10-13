@@ -144,7 +144,7 @@ def set_axes_limits(ax,
 def autoscale_ylim(ax, margin=0.05):
     """Autoscale y-limits with a given margin."""
     y_min, y_max = ax.get_ylim()
-    y_range = max(y_max - y_min, 0.2)
+    y_range = max(y_max - y_min, 1e-12)
     ax.set_ylim(y_min - margin * y_range, y_max + margin * y_range)
 
 

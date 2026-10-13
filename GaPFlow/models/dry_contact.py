@@ -23,10 +23,11 @@
 #
 
 from datetime import datetime
-from mpi4py import MPI
 import numpy as np
 import copy
 import os
+
+from ..parallel import MPI
 
 from ContactMechanics.Systems import NonSmoothContactSystem
 from ContactMechanics import FreeFFTElasticHalfSpace
@@ -106,13 +107,7 @@ class DryContact:
         geo['dry_contact_p_mean'] = float(p[contact_mask].mean())
         geo['dry_contact_p_max'] = float(p.max())
 
-        # Update grid size and spacing
-        xmin, xmax, ymin, ymax = domain_bounds
-        grid['Lx'] = xmax - xmin
-        grid['Ly'] = ymax - ymin
-        grid['dx'] = grid['Lx'] / grid['Nx']
-        grid['dy'] = grid['Ly'] / grid['Ny']
-
+        xmin, xmax, ymin, ymax, xmid, ymid = domain_bounds
         use_deformed_height = self.input_dict['force_balance']['init_dry_contact']['use_deformed_height']
 
         # Get new height field
@@ -125,26 +120,39 @@ class DryContact:
             h_new = h[ix_min:ix_max, iy_min:iy_max]
 
             grid['Nx'], grid['Ny'] = h_new.shape
+            grid['Lx'] = grid['Nx'] * dx
+            grid['Ly'] = grid['Ny'] * dy
+            grid['dx'] = dx
+            grid['dy'] = dy
+
+            geo['x_contact_center'] = xmid - xmin
+            geo['y_contact_center'] = ymid - ymin
+
+            # Save new height field to file and change input dict config
+            folder = 'topography'
+            timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"h_{timestamp_str}.npy"
+            os.makedirs(os.path.join(self.dir, folder), exist_ok=True)
+            np.save(os.path.join(self.dir, folder, filename), h_new)
+
+            geo['type'] = 'from_file'
+            geo['basepath'] = self.dir
+            geo['height_filepath'] = os.path.join(folder, filename)
+
+        else:
+            grid['Lx'] = xmax - xmin
+            grid['Ly'] = ymax - ymin
             grid['dx'] = grid['Lx'] / grid['Nx']
             grid['dy'] = grid['Ly'] / grid['Ny']
 
-        else:
-            x = np.linspace(xmin + grid['dx'] / 2, xmax - grid['dx'] / 2, grid['Nx'])
-            y = np.linspace(ymin + grid['dy'] / 2, ymax - grid['dy'] / 2, grid['Ny'])
+            geo['x_contact_center'] = xmid - xmin
+            geo['y_contact_center'] = ymid - ymin
+
+            x = np.linspace(grid['dx'] / 2, grid['Lx'] - grid['dx'] / 2, grid['Nx'])
+            y = np.linspace(grid['dy'] / 2, grid['Ly'] - grid['dy'] / 2, grid['Ny'])
             xx, yy = np.meshgrid(x, y, indexing='ij')
-            # We need to use the original grid and geo here
-            h_new, _, _ = GaPFlowTopography.compute_topography(xx, self.grid, self.geo, yy)
 
-        # Save new height field to file and change input dict config
-        folder = 'topography'
-        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"h_{timestamp_str}.npy"
-        os.makedirs(os.path.join(self.dir, folder), exist_ok=True)
-        np.save(os.path.join(self.dir, folder, filename), h_new)
-
-        geo['type'] = 'from_file'
-        geo['basepath'] = self.dir
-        geo['height_filepath'] = os.path.join(folder, filename)
+            h_new, _, _ = GaPFlowTopography.compute_topography(xx, grid, geo, yy)
 
         if use_deformed_height:
             dx, dy = self.grid['dx'], self.grid['dy']
@@ -161,6 +169,14 @@ class DryContact:
             np.save(os.path.join(self.dir, folder, defo_filename), u_new)
             geo['deformation_filepath'] = os.path.join(folder, defo_filename)
 
+            p_new = p[ix_min:ix_max, iy_min:iy_max]
+            assert p_new.shape == h_new.shape, \
+                "Cropped pressure field shape does not match cropped height field shape."
+
+            pressure_filename = f"p_{timestamp_str}.npy"
+            np.save(os.path.join(self.dir, folder, pressure_filename), p_new)
+            geo['pressure_filepath'] = os.path.join(folder, pressure_filename)
+
         return dict_new, h_new
 
     def get_domain_bounds(self, contact_bounds):
@@ -168,14 +184,14 @@ class DryContact:
         xmin_, xmax_, ymin_, ymax_ = contact_bounds
 
         xspan, yspan = xmax_ - xmin_, ymax_ - ymin_
-        xmid, ymid = (xmin_ + xmax_) / 2, (ymin_ + ymax_) / 2
+        xmid, ymid = (xmax_ + xmin_) / 2, (ymax_ + ymin_) / 2
 
         xmin = xmid - self.domain_inlet * xspan
         xmax = xmid + self.domain_outlet * xspan
         ymin = ymid - self.domain_sides * yspan
         ymax = ymid + self.domain_sides * yspan
 
-        return xmin, xmax, ymin, ymax
+        return xmin, xmax, ymin, ymax, xmid, ymid
 
     def get_bounding_box(self, p, xx, yy):
         """Returns bounding box of contact area based on pressure field.
@@ -188,9 +204,6 @@ class DryContact:
         xmax = xx[contact_mask].max()
         ymin = yy[contact_mask].min()
         ymax = yy[contact_mask].max()
-
-        print(f"Contact area detected: {contact_mask.sum()} points")
-        print(f"Contact area bounding box: x=[{xmin:.5f}, {xmax:.5f}], y=[{ymin:.5f}, {ymax:.5f}]")
 
         return xmin, xmax, ymin, ymax
 
@@ -208,26 +221,20 @@ class DryContact:
         # Invert height field for CM
         topography = Topography(-h, physical_sizes=(Lx, Ly))
         system = NonSmoothContactSystem(substrate, topography)
-        print(self.force)
         result = system.minimize_proxy(external_force=self.force)
-
-        print("Result success:", result.success)
 
         f, u = result.jac[:Nx, :Ny], result.x[:Nx, :Ny]
         p = f / (self.grid['dx'] * self.grid['dy'])
-        print(f"Max contact pressure: {p.max():.5f}")
-
-        print("h min/max:", h.min(), h.max())
-        print("Force:", self.force)
-        print("Total force from solution:", f.sum())
-        print("Mean pressure:", f.sum() / (Lx * Ly))
-        print("Contact fraction:", (p > 0).mean())
+        print(f"Max contact pressure: {p.max() / 1e6:.3f} MPa")
 
         return p, u
 
     def get_force(self, input_dict):
 
-        if 'force' in input_dict['force_balance']:
+        idc = input_dict['force_balance'].get('init_dry_contact', {})
+        if isinstance(idc, dict) and 'force' in idc:
+            force = float(idc['force'])
+        elif 'force' in input_dict['force_balance']:
             force = float(input_dict['force_balance']['force'])
         elif 'pressure' in input_dict['force_balance']:
             pressure = float(input_dict['force_balance']['pressure'])
@@ -284,6 +291,9 @@ def init_dry_contact(input_dict, dir):
 
 
 def debug_plot(p, u, contact_bounds, domain_bounds, grid, h, h_new):
+
+    import matplotlib
+    matplotlib.use("TkAgg")
     import matplotlib.pyplot as plt
 
     plt.figure(figsize=(8, 5))
@@ -304,8 +314,8 @@ def debug_plot(p, u, contact_bounds, domain_bounds, grid, h, h_new):
     plt.plot([xmin, xmax, xmax, xmin, xmin], [ymin, ymin, ymax, ymax, ymin], 'r--', label='Contact Area')
     plt.legend()
 
-    # Domain bounds
-    xmin, xmax, ymin, ymax = domain_bounds
+    # Domain bounds (already absolute)
+    xmin, xmax, ymin, ymax, xmid, ymid = domain_bounds
     plt.subplot(2, 2, 1)
     plt.plot([xmin, xmax, xmax, xmin, xmin], [ymin, ymin, ymax, ymax, ymin], 'g--', label='Domain Area')
     plt.legend()
@@ -324,4 +334,4 @@ def debug_plot(p, u, contact_bounds, domain_bounds, grid, h, h_new):
     plt.colorbar(label='Updated Height Field')
     plt.title('Updated Topography')
 
-    plt.show()
+    plt.savefig('dry_contact_debug.png', dpi=150, facecolor='white')
