@@ -94,7 +94,7 @@ Simulation inputs are commonly provided in YAML files. A typical input file
 might look like this:
 
 ```yaml
-# examples/journal.yaml
+# journal.yaml
 options:
     output: data/journal
     write_freq: 10
@@ -131,8 +131,8 @@ properties:
 ```
 
 Note that this example uses fixed-form constitutive laws without GP surrogate
-models or MD data. More example input files can be found in the [examples]
-(examples/) directory.
+models or MD data. More example input files can be found in the [config_lib](config_lib/)
+directory.
 
 The input files can be used to start a simulation from the command line
 ```bash

@@ -52,8 +52,8 @@ db:
 md:
     system: lj
     ncpu: 6
-    infile: lmp/lj/in.lmp
-    wallfile: lmp/lj/wall.lmp
+    infile: lammps_templates/lj/in.lmp
+    wallfile: lammps_templates/lj/wall.lmp
     vWall: 0.12
     cutoff: 2.5
     temp: 1.0

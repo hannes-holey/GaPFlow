@@ -6,7 +6,7 @@ import yaml
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.problem import Problem
 
-CONFIG_DIR = Path('../../tests/configs')
+CONFIG_DIR = Path('../../config_lib/validation')
 
 
 def load_template(name):

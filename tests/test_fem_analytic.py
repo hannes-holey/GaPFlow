@@ -30,7 +30,7 @@ from pathlib import Path
 from GaPFlow.problem import Problem
 from GaPFlow.models.pressure import eos_pressure
 
-CONFIG_DIR = Path(__file__).parent / "configs"
+CONFIG_DIR = Path(__file__).parents[1] / "config_lib" / "validation"
 DATA_DIR = Path(__file__).parent / "ref_data"
 
 

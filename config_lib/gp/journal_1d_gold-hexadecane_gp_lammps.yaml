@@ -56,9 +56,9 @@ md:
     ncpu: 6 
     wall: eam
     molecule: hexadecane
-    fftemplate: lmp/mol/moltemplate_files/trappe1998.lt
-    topo: lmp/mol/moltemplate_files/hexadecane.lt
-    staticFiles: lmp/mol/static
+    fftemplate: lammps_templates/mol/moltemplate_files/trappe1998.lt
+    topo: lammps_templates/mol/moltemplate_files/hexadecane.lt
+    staticFiles: lammps_templates/mol/static
     nx: 30
     nz: 3
     vWall: 20.  # in m/s
