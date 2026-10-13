@@ -146,7 +146,7 @@ def compare_solutions(sol1, sol2, bc_type="periodic", rtol=0.05, field_name="fie
 
 
 # =============================================================================
-# Solver comparison: solver_fem vs saved explicit reference
+# Solver comparison: implicit solver vs saved explicit reference
 # =============================================================================
 
 FEM2D_DEFAULTS = {

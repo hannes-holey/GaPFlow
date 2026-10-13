@@ -24,7 +24,7 @@ geometry:
     V: 0.
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 0.002
     tol: 0
     max_it: 100
@@ -36,7 +36,7 @@ properties:
     P0: 101325
     rho0: 1.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     R_norm_tol: 1e-8
     equations:

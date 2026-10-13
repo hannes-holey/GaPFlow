@@ -49,7 +49,7 @@ properties:
     shear: 0.039
     bulk: 0.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.5
     p_init: 103338.25

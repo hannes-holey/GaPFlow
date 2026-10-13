@@ -45,7 +45,7 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 2.0
     tol: 0.0
     max_it: 8
@@ -63,7 +63,7 @@ properties:
         name: Barus
         aB: 1.2e-8
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.15
     equations:

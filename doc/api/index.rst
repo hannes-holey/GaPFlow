@@ -18,12 +18,12 @@ Solvers
 Implicit solver (FEM)
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. currentmodule:: GaPFlow.solver_fem
+.. currentmodule:: GaPFlow.solver_implicit
 
 .. autosummary::
    :toctree: summary
 
-   solver_fem.FEMSolver
+   solver_implicit.ImplicitSolver
 
 Explicit solver (FVM)
 ~~~~~~~~~~~~~~~~~~~~~

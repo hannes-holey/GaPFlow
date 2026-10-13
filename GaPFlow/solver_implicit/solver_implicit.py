@@ -60,7 +60,7 @@ if TYPE_CHECKING:
 NDArray = npt.NDArray[np.floating]
 
 
-class FEMSolver:
+class ImplicitSolver:
     """FEM Solver for 2D Taylor-Hood Q2Q1 problems.
 
     Parameters
@@ -77,7 +77,7 @@ class FEMSolver:
         self.problem = problem
         self.R_norm_history: List[List[float]] = []
         self.rank = problem.decomp.rank
-        self.cb_list: List[Callable[["FEMSolver"], None]] = []
+        self.cb_list: List[Callable[["ImplicitSolver"], None]] = []
 
         self._build_variable_and_residual_lists()
 

@@ -27,7 +27,7 @@ geometry:
     V: 0.0
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 0.1
     tol: 1e-14
     max_it: 40
@@ -42,7 +42,7 @@ properties:
     shear: 0.039
     bulk: 0.0
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.2
     equations:

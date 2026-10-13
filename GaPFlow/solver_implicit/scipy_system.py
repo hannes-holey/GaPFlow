@@ -41,7 +41,7 @@ class ScipySystem:
 
     Provides the same .assemble() / .solve() interface as PETScSystem.
     Unlike the old version, solve() returns a flat 1-D solution vector so
-    that the caller (FEMSolver) can unpack per-variable slices
+    that the caller (ImplicitSolver) can unpack per-variable slices
     of unequal length.
 
     Parameters

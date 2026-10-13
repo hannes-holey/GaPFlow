@@ -862,7 +862,7 @@ class BisectionForceController:
     Each proposed h0 change is only trusted/applied once at least 5
     effective-relaxation-equivalent Newton iterations (`sum(alpha)`) have
     accumulated since the last change, via `accumulate()` registered as a
-    callback on `FEMSolver.cb_list`. This approximates "the Newton solve
+    callback on `ImplicitSolver.cb_list`. This approximates "the Newton solve
     has settled enough to trust the force reading" for this
     pseudo-timestepping / quasi-steady-state setup.
     """

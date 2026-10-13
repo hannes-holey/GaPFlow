@@ -27,19 +27,19 @@ import numpy as np
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .solver_fem import FEMSolver
+    from .solver_implicit import ImplicitSolver
 
 THETA_MAX = 0.90
 
 
-def _clamp_pressure(q: np.ndarray, solver: "FEMSolver") -> np.ndarray:
+def _clamp_pressure(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
     p = solver._sol_slices['p']
     p_cav = float(solver.problem.prop['p_cav'])
     q[p] = np.maximum(q[p], p_cav)
     return q
 
 
-def _clamp_theta(q: np.ndarray, solver: "FEMSolver") -> np.ndarray:
+def _clamp_theta(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
     p = solver._sol_slices['p']
     theta = solver._sol_slices['theta']
     p_cav = float(solver.problem.prop['p_cav'])
@@ -51,7 +51,7 @@ def _clamp_theta(q: np.ndarray, solver: "FEMSolver") -> np.ndarray:
     return q
 
 
-def clamp_solution(q: np.ndarray, solver: "FEMSolver") -> np.ndarray:
+def clamp_solution(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
     """Enforce p >= p_cav and 0 <= theta <= THETA_MAX, with a singularity
     guard at (p - p_cav, theta) = (0, 0)."""
     if solver.cavitation:

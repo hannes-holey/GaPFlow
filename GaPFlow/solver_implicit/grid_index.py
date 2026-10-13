@@ -30,7 +30,7 @@ import numpy.typing as npt
 
 if TYPE_CHECKING:
     from ..parallel import DomainDecomposition
-    from .solver_fem import FEMSolver
+    from .solver_implicit import ImplicitSolver
 
 NDArray = npt.NDArray[np.floating]
 IntArray = npt.NDArray[np.signedinteger]
@@ -50,7 +50,7 @@ class GridIndexManager:
 
     def __init__(self,
                  decomp: "DomainDecomposition",
-                 fem_solver: "FEMSolver"):
+                 fem_solver: "ImplicitSolver"):
 
         self.decomp = decomp
         self.fem_solver = fem_solver

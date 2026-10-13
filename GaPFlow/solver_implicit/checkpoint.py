@@ -54,7 +54,7 @@ import numpy as np
 import numpy.typing as npt
 
 if TYPE_CHECKING:
-    from .solver_fem import FEMSolver
+    from .solver_implicit import ImplicitSolver
 
 NDArray = npt.NDArray[np.floating]
 
@@ -109,7 +109,7 @@ def _walk(obj, part: str):
     return getattr(obj, part)
 
 
-def _resolve(solver: "FEMSolver", source: str):
+def _resolve(solver: "ImplicitSolver", source: str):
     """Resolve a dotted path off `solver`, e.g. 'problem.topo.h0' or
     'quad_mgr.nodal_fields["jx"].pg'."""
     obj = solver
@@ -118,7 +118,7 @@ def _resolve(solver: "FEMSolver", source: str):
     return obj
 
 
-def _resolve_parent(solver: "FEMSolver", source: str):
+def _resolve_parent(solver: "ImplicitSolver", source: str):
     """Split a dotted path into (parent object, final attribute name), or
     (None, None) if any segment along the path is missing -- e.g. a rank
     that owns no ForceBalance controller. The final segment must be a plain
@@ -133,7 +133,7 @@ def _resolve_parent(solver: "FEMSolver", source: str):
     return obj, attr
 
 
-def _try_resolve(solver: "FEMSolver", source: str):
+def _try_resolve(solver: "ImplicitSolver", source: str):
     """Resolve `source`, returning None if any segment along the path is missing."""
     try:
         return _resolve(solver, source)
@@ -145,7 +145,7 @@ def _try_resolve(solver: "FEMSolver", source: str):
 # Save
 # =========================================================================
 
-def save_state(solver: "FEMSolver", path: str) -> None:
+def save_state(solver: "ImplicitSolver", path: str) -> None:
     """Gather all checkpoint state to rank 0 and write a single `.npz`."""
 
     decomp = solver.problem.decomp
@@ -190,7 +190,7 @@ def save_state(solver: "FEMSolver", path: str) -> None:
 # Load
 # =========================================================================
 
-def load_state(solver: "FEMSolver", path: str) -> None:
+def load_state(solver: "ImplicitSolver", path: str) -> None:
     """Restore a checkpoint written by `save_state` onto a freshly constructed Problem."""
 
     p = solver.problem

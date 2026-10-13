@@ -20,7 +20,7 @@ geometry:
     U: 50.
     V: 0.
 numerics:
-    solver: fem
+    solver: implicit
     CFL: 0.4
     adaptive: True
     tol: 1e-6
@@ -33,4 +33,4 @@ properties:
     P0: 101325
     rho0: 1.1853
     alpha: 0.
-fem_solver:
+implicit_solver:

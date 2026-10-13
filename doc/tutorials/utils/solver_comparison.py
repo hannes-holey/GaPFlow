@@ -16,7 +16,7 @@ def load_template(name):
 
 def apply_overrides(config, overrides):
     """Set keys in a nested config dict by full dotted path, e.g.
-    'numerics.dt' or 'fem_solver.stabilization.oss'. Missing sections
+    'numerics.dt' or 'implicit_solver.stabilization.oss'. Missing sections
     and keys along the path are created.
     """
     for key, value in overrides.items():
@@ -116,20 +116,20 @@ STAB_VARIANTS = {
 
 
 def build_stab_config(template, variant, Nx, **overrides):
-    """Build a fem_solver config for `variant` in STAB_VARIANTS, at a given Nx.
+    """Build an implicit solver config for `variant` in STAB_VARIANTS, at a given Nx.
 
     Fills the template's {solver}/{Nx}/{oss}/{mass_supg}/... placeholders,
-    then extends fem_solver.equations.reynolds in the parsed dict (as in
+    then extends implicit_solver.equations.reynolds in the parsed dict (as in
     build_reynolds_config) so the reynolds flag doesn't need its own
     placeholder in the shared YAML template.
     """
     flags = STAB_VARIANTS[variant]
-    params = {'solver': 'fem', 'Nx': Nx, 'oss': flags['oss'], 'mass_supg': flags['mass_supg']}
+    params = {'solver': 'implicit', 'Nx': Nx, 'oss': flags['oss'], 'mass_supg': flags['mass_supg']}
     params.update(overrides)
     yaml_str = template.format(**params)
 
     config = yaml.safe_load(yaml_str)
-    config.setdefault('fem_solver', {}).setdefault('equations', {})['reynolds'] = flags['reynolds']
+    config.setdefault('implicit_solver', {}).setdefault('equations', {})['reynolds'] = flags['reynolds']
     return yaml.safe_dump(config)
 
 

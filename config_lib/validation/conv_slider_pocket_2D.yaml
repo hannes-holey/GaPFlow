@@ -47,7 +47,7 @@ geometry:
     flip: false
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 0.2
     tol: 0.0
     max_it: 6
@@ -68,7 +68,7 @@ properties:
         name: Eyring
         tauE: 5.0e6
 
-fem_solver:
+implicit_solver:
     linear_solver: direct
     newton_relax: 0.3
     equations:
