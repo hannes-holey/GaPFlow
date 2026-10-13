@@ -49,13 +49,11 @@ Models
    BulkStress
    WallStress
    Viscosity
-   Energy
    pressure
    sound
    viscosity
    viscous
    profiles
-   heatflux
 
 Molecular dynamics
 ------------------
