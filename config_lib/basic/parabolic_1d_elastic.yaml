@@ -27,7 +27,7 @@ numerics:
     max_it: 100_000
 properties:
     EOS: Bayada
-    rho0: 850.
+    rho_init: 850.
     shear: 0.039
     bulk: 0.
     cl: 1600.

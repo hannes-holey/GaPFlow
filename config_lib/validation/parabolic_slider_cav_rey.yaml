@@ -4,7 +4,7 @@
 # Dirichlet p=0 at inlet/outlet, periodic in y (effectively 1D).
 #
 # Fluid: Dowson-Higginson EOS
-#   rho0 = 877.7 kg/m³  at  P0 = 101325 Pa
+#   rho_ref = 877.7 kg/m³  at  P0 = 101325 Pa
 #   p_cav = 0 Pa
 #   shear = 0.039 Pa·s
 
@@ -41,7 +41,7 @@ numerics:
 
 properties:
     EOS: DH
-    rho0: 877.7007
+    rho_ref: 877.7007
     P0: 101325
     C1: 2.22e9
     C2: 1.66
