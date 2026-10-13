@@ -69,7 +69,7 @@ git submodule update --init
 
 ### Optional: PETSc for 2D FEM solver
 
-The 2D finite element solver requires [PETSc](https://petsc.org/) for distributed linear algebra with MPI. This is **optional** and only needed if you want to run 2D FEM simulations.
+The implicit solver requires [PETSc](https://petsc.org/) for MPI-parallel distributed linear algebra. This dependency is **optional**; a [SciPy](https://scipy.org/)-based implementation is provided as an alternative for serial-only execution.
 
 We provide an installation script similar to the LAMMPS installation:
 ```bash

@@ -224,6 +224,13 @@ _GP_ARGS_WALL_STRESS_YZ = {
 }
 
 
+_CUSTOM_ARGS_WALL_STRESS_XZ = {name: ['rho', 'theta', 'jx', 'h', 'U_bot', 'U_top']
+                               for name in _GP_ARGS_WALL_STRESS_XZ}
+
+_CUSTOM_ARGS_WALL_STRESS_YZ = {name: ['rho', 'theta', 'jy', 'h', 'V_bot', 'V_top']
+                               for name in _GP_ARGS_WALL_STRESS_YZ}
+
+
 _DEFAULT_REGISTRY_ARGS = {
     name: list(QUAD_FIELD_REGISTRY[name]['args'])
     for block in (_GP_ARGS_PRESSURE, _GP_ARGS_WALL_STRESS_XZ, _GP_ARGS_WALL_STRESS_YZ)
@@ -233,13 +240,17 @@ _DEFAULT_REGISTRY_ARGS = {
 
 def patch_registry_for_gp(pressure: bool = True,
                           wall_stress_xz: bool = False,
-                          wall_stress_yz: bool = False) -> None:
+                          wall_stress_yz: bool = False,
+                          custom_xz: bool = False,
+                          custom_yz: bool = False) -> None:
     for name, args in _DEFAULT_REGISTRY_ARGS.items():
         QUAD_FIELD_REGISTRY[name]['args'] = list(args)
     for active, block in [
         (pressure, _GP_ARGS_PRESSURE),
         (wall_stress_xz, _GP_ARGS_WALL_STRESS_XZ),
         (wall_stress_yz, _GP_ARGS_WALL_STRESS_YZ),
+        (custom_xz, _CUSTOM_ARGS_WALL_STRESS_XZ),
+        (custom_yz, _CUSTOM_ARGS_WALL_STRESS_YZ),
     ]:
         if active:
             for name, args in block.items():

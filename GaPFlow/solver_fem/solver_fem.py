@@ -436,6 +436,8 @@ class FEMSolver:
             pressure=p.pressure.takes_h,
             wall_stress_xz=p.wall_stress_xz.is_gp_model,
             wall_stress_yz=p.wall_stress_yz.is_gp_model,
+            custom_xz=p.wall_stress_xz.is_custom,
+            custom_yz=p.wall_stress_yz.is_custom,
         )
 
         self.build_boundary_conditions()

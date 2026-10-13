@@ -86,9 +86,12 @@ class WallStress(GaussianProcessSurrogate):
         self.__pressure = Field(fc.get_real_field('pressure'))
         self.__x = Field(fc.get_real_field('x'))
         self.__y = Field(fc.get_real_field('y'))
+        self.__solution_full = Field(fc.get_real_field('solution'))
 
         self.geo = geo
         self.prop = prop
+        self.custom_fn = None
+        self.theta_index = None
         self.direction = direction
         self.name = f'{direction}z'
 
@@ -126,6 +129,11 @@ class WallStress(GaussianProcessSurrogate):
     # -------------------------
     # Properties
     # -------------------------
+    @property
+    def is_custom(self) -> bool:
+        """True if a user-defined wall stress function is set."""
+        return self.custom_fn is not None
+
     @property
     def full(self) -> NDArray:
         """
@@ -396,6 +404,19 @@ class WallStress(GaussianProcessSurrogate):
             self.__field.pg[self._out_index + 6] = mean[1, :, :]
             self.__field_variance.pg[:] = var
 
+        elif self.is_custom:
+            sol = self.solution
+            j = sol[1] if self.direction == 'x' else sol[2]
+            theta = (self.__solution_full.pg[self.theta_index]
+                     if self.theta_index is not None else np.zeros_like(j))
+            U_bot, U_top = ((self.geo['U_bot'], self.geo['U_top']) if self.direction == 'x'
+                            else (self.geo['V_bot'], self.geo['V_top']))
+            args = (sol[0], theta, j, self.height,
+                    np.full_like(j, U_bot), np.full_like(j, U_top))
+            tau_bot = np.asarray(self.tau_bot(*args))
+            self.__field.pg[self._out_index] = tau_bot
+            self.__field.pg[self._out_index + 6] = tau_bot + np.asarray(self.tau(*args))
+
         else:
             self.__field.pg[self._out_index] = s_bot[self._out_index]
             self.__field.pg[self._out_index + 6] = s_top[self._out_index]
@@ -444,6 +465,21 @@ class WallStress(GaussianProcessSurrogate):
             setattr(self, f'dtau_d{jmom_name}', vmap2(f_gap_djmom))
             setattr(self, f'dtau_bot_d{jmom_name}', vmap2(f_bot_djmom))
 
+        elif self.is_custom:
+            fn = self.custom_fn
+            f_bot = lambda rho, theta, j, h, U_bot, U_top: fn(rho, theta, j, h, U_bot, U_top)[0]
+            f_top = lambda rho, theta, j, h, U_bot, U_top: fn(rho, theta, j, h, U_bot, U_top)[1]
+            f_gap = lambda *args: f_top(*args) - f_bot(*args)
+
+            vmap2 = lambda f: jit(vmap(vmap(f)))
+            jmom_name = 'j' + self.direction
+
+            self.tau = vmap2(f_gap)
+            self.tau_bot = vmap2(f_bot)
+            for argnum, var in enumerate(['rho', 'theta', jmom_name, 'h']):
+                setattr(self, f'dtau_d{var}', vmap2(grad(f_gap, argnums=argnum)))
+                setattr(self, f'dtau_bot_d{var}', vmap2(grad(f_bot, argnums=argnum)))
+
         else:
             stress_top_fn = globals()[f'stress_top_{self.direction}z']
             stress_bot_fn = globals()[f'stress_bottom_{self.direction}z']
@@ -460,16 +496,6 @@ class WallStress(GaussianProcessSurrogate):
                 p = eos_pressure(rho, self.prop, h)
                 eta_live = get_shear_viscosity(self, p, dp_dx, dp_dy, h)
                 if underrelax_gradient_value:
-                    # Value = underrelaxed eta_in (matches the residual used elsewhere),
-                    # but gradient = alpha_underrelax * d(eta_live)/d(rho), i.e. the analytic
-                    # deta/dp from the live pressure, SCALED by the same alpha_underrelax
-                    # factor Viscosity.update() uses to blend eta_prev/eta_live into eta_in.
-                    # Without this scaling the Jacobian saw the full, unscaled live gradient
-                    # while the value it multiplies lagged ~1/alpha_underrelax behind it --
-                    # an inconsistent linearization that blew up Newton for small alpha
-                    # (e.g. alpha_underrelax=0.001 in relax_eta). eta_scaled -
-                    # stop_gradient(eta_scaled) is exactly zero in value, so this adds no
-                    # bias to eta_in; it only injects the scaled gradient into the tangent.
                     eta_scaled = eta_live * alpha_underrelax
                     return eta_in + (eta_scaled - lax.stop_gradient(eta_scaled))
                 return eta_live

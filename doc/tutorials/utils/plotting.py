@@ -731,6 +731,40 @@ def plot_custom_eos_comparison(results):
         plt.show()
 
 
+def plot_custom_wall_stress(problem):
+    """Plot pressure and wall shear stresses of a finished 1D run.
+
+    Parameters
+    ----------
+    problem : Problem
+        Finished 1D problem, pressure in Pa and tau_xz of the bottom and top wall in Pa.
+    """
+    X = problem.topo.xx[1:-1, 1] / problem.grid['Lx']
+    p = problem.pressure.pressure[1:-1, 1]
+    tau_bot = problem.wall_stress_xz.lower[4, 1:-1, 1]
+    tau_top = problem.wall_stress_xz.upper[4, 1:-1, 1]
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        axes[0].plot(X, p / 1e6, color='#0072B2', lw=1.0)
+        axes[1].plot(X, tau_bot / 1e3, color='#D55E00', lw=1.0, label='bottom')
+        axes[1].plot(X, tau_top / 1e3, color='#009E73', lw=1.0, ls='--', label='top')
+
+        axes[0].set_ylabel('$p$ [MPa]')
+        axes[1].set_ylabel(r'$\tau_{xz}$ [kPa]')
+        for ax in axes:
+            ax.set_xlabel('$X$')
+            ax.set_xlim(0, 1)
+        _style_axes(axes)
+
+        handles, names = axes[1].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
 def plot_reynolds_comparison_1d(results, ref_csv=None, ref_label=None,
                                 ref_x_scale=1.0, ref_p_scale=1.0,
                                 p_unit='bar', p_divisor=1e5):

@@ -673,6 +673,37 @@ class Problem:
         self.prop['EOS'] = 'user'
         self.prop['EOS_user'] = fn
 
+    def set_custom_wall_stress(self, tau_of_q: callable) -> None:
+        """Set a custom wall stress model for the FEM solver.
+
+        Must be called before :meth:`run`. The same function is used for both directions:
+        for xz it is called with ``j = jx`` and the x wall velocities, for yz with ``j = jy``
+        and the y wall velocities.
+
+        Parameters
+        ----------
+        tau_of_q : callable
+            Scalar, JAX-differentiable function
+            ``tau_of_q(rho, theta, j, h, U_bot, U_top) -> (tau_bot, tau_top)`` (SI units).
+            ``theta`` is the cavity fraction (zero without cavitation).
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_wall_stress is only implemented for the FEM solver.")
+        if self.wall_stress_xz.is_gp_model or self.wall_stress_yz.is_gp_model:
+            raise ValueError("set_custom_wall_stress cannot be combined with a GP wall stress model.")
+        if self.fem_solver['equations']['reynolds']:
+            raise ValueError("set_custom_wall_stress cannot be combined with the Reynolds equation.")
+        if not self.fem_solver['physics']['gap_shear']:
+            raise ValueError("set_custom_wall_stress requires physics.gap_shear: True.")
+        if len(inspect.signature(tau_of_q).parameters) != 6:
+            raise ValueError("tau_of_q must take (rho, theta, j, h, U_bot, U_top).")
+
+        add_fields = self.solver.add_fields
+        theta_index = 3 + add_fields.index('theta') if 'theta' in add_fields else None
+        for ws in (self.wall_stress_xz, self.wall_stress_yz):
+            ws.custom_fn = tau_of_q
+            ws.theta_index = theta_index
+
     # ---------------------------
     # Single time step (update)
     # ---------------------------
