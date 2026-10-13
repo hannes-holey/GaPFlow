@@ -46,6 +46,7 @@ enabled, `nodal_fields['E']` only exists once the energy equation is active --
 no separate `elastic`/`force_balance` flags need to be tracked.
 """
 
+import os
 from collections import deque
 from typing import TYPE_CHECKING
 
@@ -181,6 +182,7 @@ def save_state(solver: "FEMSolver", path: str) -> None:
         data['Ny'] = solver.problem.grid['Ny']
         data['Lx'] = solver.problem.grid['Lx']
         data['Ly'] = solver.problem.grid['Ly']
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         np.savez(path, **data)
 
 

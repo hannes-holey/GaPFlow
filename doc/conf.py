@@ -6,6 +6,8 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+import nbclient
+
 import GaPFlow
 
 project = 'GaPFlow'
@@ -28,7 +30,7 @@ source_suffix = {'.rst': 'restructuredtext'}
 
 todo_include_todos = False
 
-exclude_patterns = ['conf.py']
+exclude_patterns = ['conf.py', '_build', 'build', 'tutorials/old', 'tutorials/data', 'tutorials/utils']
 
 
 # -- Options for HTML output -------------------------------------------------
@@ -41,14 +43,19 @@ html_theme = 'sphinx_book_theme'
 # Raise Error (not default Warning) when a notebook execution fails
 # (due to code error, timeout, etc.)
 # nb_execution_mode = "off"
-nb_execution_raise_on_error = False
+nb_execution_raise_on_error = True
 nb_execution_show_tb = True
 nb_execution_timeout = 3600
 nb_merge_streams = True
 
+# Silence the kernel's "running over TCP without encryption" warning.
+# myst-nb does not expose kernel arguments, so set the nbclient default.
+nbclient.NotebookClient.extra_arguments.default_value = ["--IPKernelApp.log_level=ERROR"]
+
 myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
+    "html_image",
 ]
 
 autodoc_default_options = {
