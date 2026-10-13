@@ -397,11 +397,11 @@ def sanitize_properties(d):
         raise IOError("Specify a valid equation of state")
 
     if out['EOS'] == 'DH':
-        keys = ['rho0', 'P0', 'C1', 'C2']
+        keys = ['rho_ref', 'P0', 'C1', 'C2']
         defaults = [877.7007, 101325, 3.5e10, 1.23]
 
     elif out['EOS'] == 'PL':
-        keys = ['rho0', 'P0', 'alpha']
+        keys = ['rho_ref', 'P0', 'alpha']
         defaults = [1.1853, 101325, 0.]
 
     elif out["EOS"] == "vdW":
@@ -409,7 +409,7 @@ def sanitize_properties(d):
         defaults = [39.948, 100., 1.355, 0.03201]
 
     elif out["EOS"] == "MT":
-        keys = ['rho0', 'P0', 'K', 'n']
+        keys = ['rho_ref', 'P0', 'K', 'n']
         defaults = [700., 0.101e6, .557e9, 7.33]
 
     elif out["EOS"] == "cubic":
@@ -424,15 +424,31 @@ def sanitize_properties(d):
         keys = ['rho_l', 'rho_v', 'c_l', 'c_v', 'smooth_width']
         defaults = [850., 0.019, 1600., 352., 0.0]
     elif out["EOS"] == "MD":
-        keys = ['rho0']
-        defaults = [1.]
+        keys = []
+        defaults = []
+
+    # Legacy key 'rho0': reference density of the EoS (DH, PL, MT) and initial density
+    if 'rho0' in d:
+        warnings.warn("'properties.rho0' is deprecated. Use 'rho_ref' for the reference density "
+                      "of the EoS (DH, PL, MT) and 'rho_init' for the initial density.",
+                      FutureWarning)
+        d = dict(d)
+        if 'rho_ref' in keys:
+            d.setdefault('rho_ref', d['rho0'])
+        d.setdefault('rho_init', d['rho0'])
 
     for k, de in zip(keys, defaults):
         out[k] = float(d.get(k, de))
 
-    # TODO: default rho0s for vdW, cubic, BWR, Bayada
-    if 'rho0' not in out.keys():
-        out['rho0'] = float(d.get('rho0', 1.))
+    # Initial density, defaults to the reference density of the EoS
+    if 'rho_init' in d:
+        out['rho_init'] = float(d['rho_init'])
+    elif 'rho_ref' in out:
+        out['rho_init'] = out['rho_ref']
+    elif out['EOS'] == 'Bayada':
+        out['rho_init'] = out['rho_l']
+    else:
+        raise IOError(f"Specify the initial density 'rho_init' for EOS '{out['EOS']}'")
 
     # Cavitation threshold (penalty solver); falls back to P0 if not specified
     out['p_cav'] = float(d.get('p_cav', out.get('P0', 0.0)))

@@ -54,7 +54,7 @@ numerics:
 
 properties:
     EOS: DH
-    rho0: 850.
+    rho_ref: 850.
     P0: 1e5
     C1: 2.22e9
     C2: 1.66
