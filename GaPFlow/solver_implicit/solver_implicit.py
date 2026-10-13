@@ -273,13 +273,18 @@ class ImplicitSolver:
     def _init_linear_solver(self) -> None:
         petsc_info = self.assembly.get_petsc_info(res_size=self.res_size)
         solver_type = self.problem.fem_solver['linear_solver']
+        backend = self.problem.fem_solver['linear_backend']
 
         try:
             from .. import HAS_PETSC
         except ImportError:
             HAS_PETSC = False
 
-        if HAS_PETSC:
+        if backend == 'petsc' and not HAS_PETSC:
+            raise RuntimeError("linear_backend 'petsc' requested, but petsc4py is not installed.")
+        use_petsc = HAS_PETSC if backend == 'auto' else backend == 'petsc'
+
+        if use_petsc:
             from .petsc_system import PETScSystem
             self.linear_solver = PETScSystem(petsc_info,
                                              solver_type=solver_type,
@@ -288,7 +293,7 @@ class ImplicitSolver:
         else:
             if MPI.COMM_WORLD.size > 1:
                 raise RuntimeError(
-                    "PETSc required for parallel execution.")
+                    "PETSc required for parallel execution (the SciPy linear_backend is serial only).")
             self.linear_solver = ScipySystem(petsc_info,
                                              solver_type=solver_type,
                                              assembly=self.assembly)
