@@ -99,6 +99,9 @@ except ImportError:
         def bcast(self, value, root=0):
             return value
 
+        def Bcast(self, buf, root=0):
+            pass
+
         def Isend(self, data, dest=0, tag=0):
             self._pending[tag] = np.array(data, copy=True)
             return _SerialRequest()
