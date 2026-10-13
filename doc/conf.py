@@ -66,6 +66,10 @@ autodoc_default_options = {
     'private-members': False,
 }
 
+# Render "Attributes" docstring sections as fields, so that they do not
+# clash with the attributes documented by autodoc (undoc-members).
+napoleon_use_ivar = True
+
 # The following makes mystnb convert notebooks with jupytext
 # before execution and documentation rendering. This allows
 # storing notebooks in properly versionable text formats, e.g.

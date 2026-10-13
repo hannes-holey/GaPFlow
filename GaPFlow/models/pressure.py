@@ -381,10 +381,12 @@ def rho_of_p_pl(pressure, rho0=1.1853, P0=101325., alpha=0.):
 def rho_of_p_bayada(pressure, rho_l, rho_v, c_l, c_v):
     """Inverse of Bayada-Chupin EoS (three-region piecewise).
 
-    Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
-    Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
-                                  q = exp((p - Pcav)/N) / (rho_v*c_v^2)
-    Vapor   (p < P_vt):           rho = p / c_v^2
+    ::
+
+        Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
+        Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
+                                      q = exp((p - Pcav)/N) / (rho_v*c_v^2)
+        Vapor   (p < P_vt):           rho = p / c_v^2
 
     P_vt = rho_v*c_v^2 is the mixture-vapor boundary pressure; Pcav is the
     cavitation (mixture-liquid) boundary pressure.
