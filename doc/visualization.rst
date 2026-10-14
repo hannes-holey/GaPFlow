@@ -6,7 +6,7 @@ These tools operate on the output files produced by a simulation run:
 
 - ``sol.nc``: Solution fields (density, momentum, pressure, shear stress)
 - ``topo.nc``: Gap height and gradients
-- ``history.csv``: Time series of scalar quantities (kinetic energy, residual, etc.)
+- ``history.csv``: Time series of domain integrals (mass, kinetic energy, load, friction) and solver diagnostics (residual, time step, etc.)
 - ``gp_zz.csv``, ``gp_xz.csv`` (optional): GP hyperparameter history
 
 .. figure:: assets/journal.gif
@@ -66,7 +66,19 @@ Plot the gap height profile from simulation results.
 gpf_plot_history
 ^^^^^^^^^^^^^^^^
 
-Plot the time evolution of scalar quantities from ``history.csv``.
+Plot the time evolution of scalar quantities from ``history.csv`` and of the GP model parameters.
+The figure contains one column per kind of data; panels and columns without data are skipped.
+
+- Physical: mass, kinetic energy, load, friction force at the bottom and top wall, maximum sound
+  velocity, recorded by both solvers.
+- Numerical: solver diagnostics (residuals, time step, Newton iterations), which differ between solvers.
+- GP models (if ``gp_zz.csv``, ``gp_xz.csv``, or ``gp_yz.csv`` are present): database size, ratio of
+  maximum variance to tolerance, normalised observation noise, and objective, with line styles
+  distinguishing the models. Active learning is triggered when the variance ratio exceeds one.
+
+By default, all columns use the simulation time as x-axis, such that runs of different
+solvers can be compared. When plotting a single run, the step number is shown on a secondary
+x-axis at the top (or the time with ``--step``).
 
 .. code:: bash
 
@@ -80,15 +92,17 @@ Plot the time evolution of scalar quantities from ``history.csv``.
      - Type
      - Default
      - Description
-   * - ``-g``, ``--gp``
+   * - ``-s``, ``--step``
      - flag
      - off
-     - Include Gaussian Process history data (``gp_zz.csv`` and ``gp_xz.csv``).
+     - Use the step number instead of time as x-axis (for a single run, time is then shown on
+       the secondary x-axis).
 
 gpf_plot_frame
 ^^^^^^^^^^^^^^
 
 Plot a single time step of the solution fields (density, momentum, pressure, shear stress).
+In 1D, multiple selected runs are overlaid in different colors, with a legend showing the run directories.
 
 .. code:: bash
 

@@ -33,6 +33,8 @@ from stored NetCDF files.
 
 import os
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.ticker import ScalarFormatter
 import netCDF4
 import numpy as np
 import polars as pl
@@ -67,8 +69,19 @@ def plot_frame(file_list, dim=1, frame=-1, show=True):
     if dim == 1:
         fig, ax = plt.subplots(2, 3, figsize=(12, 6))
 
-        for file in file_list:
-            _plot_single_frame_1d(ax, file, frame)
+        # one color per run, labeled by the run directory
+        for i, file in enumerate(file_list):
+            label = os.path.basename(os.path.dirname(os.path.abspath(file)))
+            _plot_single_frame_1d(ax, file, frame, color=f'C{i}', label=label)
+
+        # autoscale_ylim fixes the limits of the first run, rescale to all runs
+        for a in ax.flat:
+            a.relim()
+            a.autoscale(axis='y')
+            autoscale_ylim(a)
+
+        if len(file_list) > 1:
+            ax[0, 0].legend()
 
     elif dim == 2:
         fig, ax = plt.subplots(3, 3, figsize=(9, 9))
@@ -82,38 +95,89 @@ def plot_frame(file_list, dim=1, frame=-1, show=True):
 
 @mpl_style_context
 def plot_history(file_list,
-                 gp_files,
+                 gp_files=None,
+                 over_step=False,
                  show=True):
-    """Plot the time evolution of scalar quantities,
-    e.g. kinetic energy, mass, GP variance etc.
+    """Plot the time evolution of scalar quantities recorded in history.csv and
+    of the GP model parameters, one column per kind of data (physical, numerical,
+    GP models). Panels and columns without data are skipped.
+
+    By default, all columns share time as x-axis, such that runs of different solvers
+    can be compared. When plotting a single run, the other quantity (step or time) is
+    shown on a secondary x-axis.
 
     Parameters
     ----------
     file_list : list
-        List of CSV files
-    gp_files : dict
-        Dicitonary with list of CSV files for each GP model (zz, xz, yz)
+        List of history.csv files
+    gp_files : dict, optional
+        Dictionary with list of CSV files for each GP model (zz, xz, yz). Adds a
+        column with database size, ratio of maximum variance to tolerance, normalised
+        observation noise, and objective (line styles distinguish the models).
+    over_step : bool, optional
+        Use the step number instead of time as x-axis (the default is False).
     show : bool, optional
         Flag for plt.show() (the default is True)
     """
 
-    ncol = 1
+    dfs = [pl.read_csv(file) for file in file_list]
+    run_dirs = [os.path.dirname(os.path.abspath(file)) for file in file_list]
+    labels = [os.path.basename(d) for d in run_dirs]
+    xcol, xcol_other = ('step', 'time') if over_step else ('time', 'step')
 
-    for v in gp_files.values():
-        if len(v) > 0:
-            ncol += 1
+    # skip panels without data, e.g. friction in y for 1D problems
+    columns = {}
+    for kind in _HISTORY_PANELS:
+        panels = [(label, cols, log) for label, cols, log in _HISTORY_PANELS[kind]
+                  if any(c in df.columns and (df[c] != 0.).any() for df in dfs for c in cols)]
+        if panels:
+            columns[kind] = panels
 
-    fig, ax = plt.subplots(3, ncol, figsize=(ncol * 4, 9), sharex='col')
+    gp_data = {key: [_read_gp_history(f, dfs, run_dirs, xcol) for f in flist]
+               for key, flist in (gp_files or {}).items() if len(flist) > 0}
+    gp_panels = _gp_panels(gp_data) if gp_data else []
 
-    for file in file_list:
-        _plot_history(ax[:, 0] if ncol > 1 else ax, file)
+    if not columns and not gp_data:
+        raise ValueError(f"No history data found in {file_list}")
 
-    col = 1
-    for key, flist in gp_files.items():
-        for i, f in enumerate(flist):
-            ax[0, col].set_title(key)
-            _plot_gp_history(ax[:, col], f, i)
-        col += 1
+    ncol = len(columns) + (1 if gp_data else 0)
+    nrow = max([len(panels) for panels in columns.values()] + [len(gp_panels)])
+    fig, ax = plt.subplots(nrow, ncol, figsize=(4 * ncol, 2. * nrow), sharex='col', squeeze=False)
+
+    for col, (kind, panels) in enumerate(columns.items()):
+        n = len(panels)
+        ax[0, col].set_title(_HISTORY_TITLES[kind])
+        for i, (df, label) in enumerate(zip(dfs, labels)):
+            _plot_history(ax[:n, col], df, panels, xcol, index=i, label=label)
+
+        for i, (axis, (_, cols, _)) in enumerate(zip(ax[:n, col], panels)):
+            if len(cols) > 1:
+                # line styles distinguish bottom/top, colors (see first panel) the runs
+                handles = [Line2D([], [], color='k', ls=ls, label=_WALL_LABELS[c.rsplit('_', 1)[-1]])
+                           for c, ls in zip(cols, _WALL_LINESTYLES)]
+                axis.legend(handles=handles)
+            elif i == 0 and col == 0 and len(file_list) > 1:
+                axis.legend()
+
+        _hide_unused(ax[:, col], n)
+
+    if gp_data:
+        col = len(columns)
+        ax[0, col].set_title('GP models')
+        _plot_gp_history(ax[:len(gp_panels), col], gp_data, gp_panels, xcol)
+        _hide_unused(ax[:, col], len(gp_panels))
+
+    # secondary x-axis with step or time (mapping between both is unique only for a single run)
+    if len(file_list) == 1 and dfs[0].height > 1:
+        x = dfs[0][xcol].to_numpy()
+        x_other = dfs[0][xcol_other].to_numpy()
+        for col in range(ncol):
+            sec = ax[0, col].secondary_xaxis('top', functions=(lambda v: np.interp(v, x, x_other),
+                                                               lambda v: np.interp(v, x_other, x)))
+            sec.set_xlabel(_XLABELS[xcol_other])
+            # the y offset text would overlap with the secondary tick labels
+            if isinstance(ax[0, col].yaxis.get_major_formatter(), ScalarFormatter):
+                ax[0, col].yaxis.get_major_formatter().set_useOffset(False)
 
     if show:
         plt.show()
@@ -319,7 +383,7 @@ def _plot_height_2d_from_field(topo):
     return fig, ax
 
 
-def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
+def _plot_single_frame_1d(ax, filename, frame=-1, disc=None, color=None, label=None):
 
     data = netCDF4.Dataset(filename)
 
@@ -342,7 +406,8 @@ def _plot_single_frame_1d(ax, filename, frame=-1, disc=None):
     else:
         var_shear = None
 
-    _plot_sol_from_field_1d(sol, press, lower, upper, var_press, var_shear, ax=ax)
+    _plot_sol_from_field_1d(sol, press, lower, upper, var_press, var_shear, ax=ax,
+                            color=color, label=label)
 
 
 @mpl_style_context
@@ -356,6 +421,8 @@ def _plot_sol_from_field_1d(q,
                             var_tol_shear=None,
                             energy=None,
                             ax=None,
+                            color=None,
+                            label=None,
                             ):
 
     col = 3 if energy is None else 4
@@ -376,12 +443,13 @@ def _plot_sol_from_field_1d(q,
         s = [slice(1, -1), ci]
         x = np.linspace(0., 1., nx - 2)
 
-    color_q = 'C0'
-    color_p = 'C1'
-    color_t = 'C2'
-    color_e = 'C3'
+    # a single color for all quantities, e.g. to distinguish runs, or one per quantity
+    if color is None:
+        color_q, color_p, color_t, color_e = 'C0', 'C1', 'C2', 'C3'
+    else:
+        color_q = color_p = color_t = color_e = color
 
-    ax[0, 0].plot(x, q[(0, *s)], color=color_q)
+    ax[0, 0].plot(x, q[(0, *s)], color=color_q, label=label)
     ax[0, 1].plot(x, q[(1, *s)], color=color_q)
     ax[0, 2].plot(x, q[(2, *s)], color=color_q)
 
@@ -538,48 +606,132 @@ def _plot_multiple_frames_1d(filename, every=1):
     return fig, ax
 
 
-# (column, label, log scale) candidates for history panels, in order of preference.
-# The explicit solver records ekin/residual/vsound, the FEM solver residual/R_newton/inner_iterations.
-_HISTORY_PANELS = [
-    ('ekin', 'Kinetic energy', False),
-    ('residual', 'Residual', True),
-    ('vsound', 'Max. sound velocity', False),
-    ('R_newton', 'Newton residual', True),
-    ('inner_iterations', 'Inner iterations', False),
-    ('dt', 'Time step', True),
-]
+_HISTORY_TITLES = {'phys': 'Physical', 'num': 'Numerical'}
+_XLABELS = {'time': 'Time', 'step': 'Step'}
+_WALL_LABELS = {'bot': 'bottom', 'top': 'top'}
+_WALL_LINESTYLES = ['-', '--']
+
+# (label, columns, log scale) of the history panels for each kind of history.csv data.
+# Not all columns are recorded by both solvers; panels without data are skipped.
+_HISTORY_PANELS = {
+    'phys': [
+        ('Mass', ['mass'], False),
+        ('Kinetic energy', ['ekin'], False),
+        ('Load', ['load'], False),
+        ('Friction force x', ['friction_x_bot', 'friction_x_top'], False),
+        ('Friction force y', ['friction_y_bot', 'friction_y_top'], False),
+        ('Max. sound velocity', ['vsound'], False),
+    ],
+    'num': [
+        ('Residual', ['residual'], True),
+        ('Time step', ['dt'], True),
+        ('Newton residual', ['R_newton'], True),
+        ('Newton iterations', ['inner_iterations'], False),
+    ],
+}
 
 
-def _plot_history(ax, filename='history.csv'):
+def _plot_history(ax, df, panels, xcol='time', index=0, label=None):
 
-    df = pl.read_csv(filename)
-
-    panels = [p for p in _HISTORY_PANELS if p[0] in df.columns][:len(ax)]
-
-    for axis, (col, label, log) in zip(ax, panels):
-        axis.plot(df['time'], df[col])
-        axis.set_ylabel(label)
+    for axis, (ylabel, cols, log) in zip(ax, panels):
+        for col, ls in zip(cols, _WALL_LINESTYLES):
+            if col in df.columns:
+                # bot/top variants of a quantity share a panel, distinguished by line style
+                axis.plot(df[xcol], df[col], ls, color=f'C{index}', label=label if len(cols) == 1 else None)
+        axis.set_ylabel(ylabel)
         if log:
             axis.set_yscale('log')
 
-    ax[-1].set_xlabel('Time')
+    ax[-1].set_xlabel(_XLABELS[xcol])
 
 
-def _plot_gp_history(ax,
-                     filename,
-                     index=0):
+def _hide_unused(ax, n):
+    """Hide the axes below the first n of a column and restore the x tick labels
+    of the last visible one (removed by sharex)."""
+    for axis in ax[n:]:
+        axis.set_visible(False)
+    ax[n - 1].xaxis.set_tick_params(labelbottom=True)
+
+
+# line styles distinguish the GP models, colors the runs
+_GP_LINESTYLES = {'zz': '-', 'xz': '--', 'yz': ':'}
+
+
+def _read_gp_history(filename, dfs, run_dirs, xcol='time'):
+    """Read a GP history file and return (run index, data, x-values)."""
 
     df = pl.read_csv(filename)
 
-    ax[0].plot(df['step'], df['database_size'], color=f'C{index}')
-    ax[0].set_ylabel('DB size')
+    run_dir = os.path.dirname(os.path.abspath(filename))
+    index = run_dirs.index(run_dir) if run_dir in run_dirs else 0
+    df_hist = dfs[index] if run_dir in run_dirs else None
 
-    ax[1].plot(df['step'], df['maximum_variance'], color=f'C{index}')
-    ax[1].plot(df['step'], df['variance_tol'], '--', color=f'C{index}')
-    ax[1].set_ylabel('Variance')
+    if xcol == 'step':
+        x = df['step'].to_numpy()
+    elif 'time' in df.columns:
+        x = df['time'].to_numpy()
+    elif df_hist is not None:
+        # older output without time column: interpolate from history.csv of the same run
+        x = np.interp(df['step'].to_numpy(), df_hist['step'].to_numpy(), df_hist['time'].to_numpy())
+    else:
+        raise ValueError(f"Cannot determine time for {filename}")
 
-    if 'objective' in df.columns:
-        ax[2].plot(df['step'], df['objective'], color=f'C{index}')
-        ax[2].set_ylabel('Objective')
+    return index, df, x
 
-    ax[-1].set_xlabel('Step')
+
+def _gp_panels(gp_data):
+    """Panels of the GP column that have data."""
+
+    panels = ['db', 'var', 'noise']
+    if any('objective' in df.columns for runs in gp_data.values() for _, df, _ in runs):
+        panels.append('obj')
+
+    return panels
+
+
+def _plot_gp_history(ax, gp_data, panels, xcol='time'):
+    """Plot all GP models into a single column of axes.
+
+    Parameters
+    ----------
+    ax : array of matplotlib.axes.Axes
+        Axes of the column, one per panel.
+    gp_data : dict
+        For each GP model (zz, xz, yz), a list of (run index, data, x-values).
+    panels : list
+        Panels to plot, see :func:`_gp_panels`.
+    xcol : str, optional
+        Quantity on the x-axis, 'time' or 'step' (the default is 'time').
+    """
+
+    axes = dict(zip(panels, ax))
+
+    # the database is shared between all GP models, plot its size once per run
+    db_runs = set()
+    for runs in gp_data.values():
+        for index, df, x in runs:
+            if index not in db_runs:
+                db_runs.add(index)
+                axes['db'].plot(x, df['database_size'], color=f'C{index}')
+    axes['db'].set_ylabel('DB size')
+
+    for key, runs in gp_data.items():
+        ls = _GP_LINESTYLES[key]
+        for index, df, x in runs:
+            # active learning is triggered when the ratio exceeds one
+            axes['var'].plot(x, df['maximum_variance'] / df['variance_tol'], ls, color=f'C{index}')
+            axes['noise'].plot(x, df['obs_stddev'], ls, color=f'C{index}')
+            if 'obj' in axes and 'objective' in df.columns:
+                axes['obj'].plot(x, df['objective'], ls, color=f'C{index}')
+
+    axes['var'].axhline(1., color='k', lw=0.8)
+    axes['var'].set_yscale('log')
+    axes['var'].set_ylabel('Max. variance / tol.')
+    axes['var'].legend(handles=[Line2D([], [], color='k', ls=_GP_LINESTYLES[key], label=key)
+                                for key in gp_data])
+
+    axes['noise'].set_ylabel('Noise (normalised)')
+    if 'obj' in axes:
+        axes['obj'].set_ylabel('Objective')
+
+    ax[len(panels) - 1].set_xlabel(_XLABELS[xcol])
