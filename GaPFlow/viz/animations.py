@@ -288,6 +288,12 @@ def _create_animation_1d(filename_sol: str,
     return ani
 
 
+def _variance_or_zeros(data, name, shape):
+    if name in data.variables:
+        return np.asarray(data.variables[name])
+    return np.zeros(shape)
+
+
 def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
 
     if tol_p is not None:
@@ -335,9 +341,10 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
 
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
-    pvar_nc = np.asarray(data.variables['pressure_var'])
+    # variance fields are only written for GP models
+    pvar_nc = _variance_or_zeros(data, 'pressure_var', p_nc.shape)
     tau_nc = np.asarray(data.variables['wall_stress_xz'])
-    tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
+    tauvar_nc = _variance_or_zeros(data, 'wall_stress_xz_var', p_nc.shape)
 
     nt, nc, _, nx, ny = q_nc.shape
     # NetCDF stores interior-only data (no ghost cells), so use nx directly

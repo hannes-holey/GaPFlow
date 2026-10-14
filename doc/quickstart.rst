@@ -129,7 +129,8 @@ file. After successful completion, you should find the following files.
 - ``config.yml``: A sanitized version of your simulation input. 
 - ``topo.nc``: NetCDF file containing the gap height and gradients. 
 - ``sol.nc``: NetCDF file containing the solution and stress fields. 
-- ``history.csv``: Contains the time series of scalar quantities (step, Ekin, residual, …) 
+- ``history.csv``: Contains the time series of scalar quantities: domain integrals 
+(mass, kinetic energy, load, friction) and solver diagnostics (residual, time step, …) 
 - ``gp_[xz,yz,zz].csv`` (Optional): Contains the time series of GP hyperparameters, database size, etc. 
 - ``Xtrain.npy`` (Optional): Training data inputs
 - ``Ytrain.npy`` (Optional): Training data observations

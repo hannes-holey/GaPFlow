@@ -21,8 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import numpy as np
+
 from .integrate import predictor_corrector, source
 from typing import TYPE_CHECKING
+from ..parallel import MPI
 from ..bc import BoundarySpec, GhostUpdater, sample_bc_spec
 from ..logging import get_logger
 
@@ -178,8 +181,36 @@ class ExplicitSolver:
         p = self.problem
         return {
             "step": p.step,
+            "dt": p.dt,
             "time": p.simtime,
-            "ekin": p.kinetic_energy,
             "residual": p.residual,
-            "vsound": p.pressure.v_sound,
         }
+
+    def physical_record(self) -> dict:
+        """
+        Physical quantities recorded to history.csv for the current step: domain integrals
+        (midpoint rule over the inner cells, globally reduced across MPI ranks) and the
+        maximum sound velocity.
+        """
+        p = self.problem
+        s = np.s_[1:-1, 1:-1]
+        rho, jx, jy = p.q[0][s], p.q[1][s], p.q[2][s]
+        h = p.topo.h[s]
+
+        integrands = {
+            "mass": rho * h,
+            "ekin": h * (jx**2 + jy**2) / rho / 2.,
+            "load": p.pressure.pressure[s],
+            "friction_x_bot": p.wall_stress_xz.lower[4][s],
+            "friction_x_top": p.wall_stress_xz.upper[4][s],
+        }
+
+        if p.grid['Ny'] > 1:
+            integrands["friction_y_bot"] = p.wall_stress_yz.lower[3][s]
+            integrands["friction_y_top"] = p.wall_stress_yz.upper[3][s]
+
+        dA = p.grid['dx'] * p.grid['dy']
+        comm = p.decomp._mpi_comm
+        record = {k: comm.allreduce(float(np.sum(v)) * dA, op=MPI.SUM) for k, v in integrands.items()}
+        record["vsound"] = comm.allreduce(float(p.pressure.v_sound), op=MPI.MAX)
+        return record
