@@ -37,16 +37,30 @@ You can check your installation by running ``gpf_info`` from the command line.
     Shared lib: <path-to-your-python-env>/lib/python3.X/site-packages/GaPFlow/_vendor/lammps/liblammps_mpi.[so,dylib]
     MPI: True
     mpi4py: True
-    packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+    Packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
     
     ==========
     muGrid
     ==========
-    Version:  ...
+    Version: ...
     NetCDF4: True
     MPI: False
 
+    ==========
+    PETSc
+    ==========
+    Version: ...
+    petsc4py: ...
+    MUMPS: True
+    Linear backend (auto): PETSc
+
 We currently do not use parallel functionalities of µGrid, so MPI support is not required.
+PETSc is optional. Without it, the PETSc section reads
+
+::
+
+    Installed: False (install with install_petsc.sh)
+    Linear backend (auto): SciPy (serial only)
 
 Minimal example
 ---------------
@@ -56,7 +70,7 @@ file might look like this:
 
 .. code:: yaml
 
-   # examples/journal.yaml
+   # journal.yaml
    options:
        output: data/journal
        write_freq: 10
@@ -93,7 +107,7 @@ file might look like this:
 
 Note that this example uses fixed-form constitutive laws without GP
 surrogate models or MD data. More example input files can be found in
-the examples directory.
+the ``config_lib`` directory of the repository.
 
 The input files can be used to start a simulation from the command line
 

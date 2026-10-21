@@ -25,6 +25,7 @@
 #
 import os
 import io
+import inspect
 import numpy as np
 from copy import deepcopy
 from collections import deque
@@ -151,11 +152,12 @@ class Problem:
             from .solver_explicit.solver_explicit import ExplicitSolver
             self.solver = ExplicitSolver(self)
         elif self.numerics['solver'] == 'fem':
-            from .solver_fem.solver_fem import FEMSolver
-            self.solver = FEMSolver(self.fem_solver, self)
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            self.solver = ImplicitSolver(self.fem_solver, self)
 
         # Solution field
         self.step = None
+        self.simtime = 0.
         self.__field = self.fc.real_field('solution', (self.solver.nb_sol,))
         self._initialize(rho0=prop['rho0'],
                          U_bot=geo['U_bot'], V_bot=geo['V_bot'],
@@ -425,13 +427,19 @@ class Problem:
 
     @property
     def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar), globally reduced across MPI ranks."""
+        """Total kinetic energy (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_ekin = np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
         return self.decomp._mpi_comm.allreduce(local_ekin, op=MPI.SUM)
 
     @property
     def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar), globally reduced across MPI ranks."""
+        """Maximum speed in the domain (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_vmax = np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
         return self.decomp._mpi_comm.allreduce(local_vmax, op=MPI.MAX)
 
@@ -473,11 +481,11 @@ class Problem:
 
         self.history = {}
 
-        self.solver.print_status_header()
-
         # Call callbacks once before the main loop to capture initial state (t=0)
         for callback in self._callbacks:
             callback()
+
+        self.solver.print_status_header()
 
         # Run
         self._tic = datetime.now()
@@ -546,8 +554,8 @@ class Problem:
 
         # Residual analysis for FEM 2D solver
         if self.options.get('residual_analysis', False):
-            from .solver_fem.solver_fem import FEMSolver
-            if isinstance(self.solver, FEMSolver) and hasattr(self.solver, 'run_residual_analysis'):
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            if isinstance(self.solver, ImplicitSolver) and hasattr(self.solver, 'run_residual_analysis'):
                 self.solver.run_residual_analysis()
 
         walltime = datetime.now() - self._tic
@@ -637,17 +645,64 @@ class Problem:
             raise ValueError(f"boundary must be 'W', 'E', 'S', or 'N', got '{boundary}'")
         self._bc_callbacks.setdefault(var_name, {})[boundary] = callback
 
-    def set_eos_function(self, fn: callable) -> None:
-        """Set a custom equation of state function.
+    def set_custom_eos(self, p_of_rho: callable) -> None:
+        """Set a custom equation of state for the FEM solver.
+
+        Must be called before :meth:`run`. The inverse rho(p) is computed numerically,
+        so p(rho) has to be strictly increasing.
 
         Parameters
         ----------
-        fn : callable
-            Scalar JAX-differentiable function fn(rho) -> p.
+        p_of_rho : callable
+            Scalar, twice JAX-differentiable function ``p_of_rho(rho) -> p`` or
+            ``p_of_rho(rho, h) -> p`` (SI units).
         """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_eos is only implemented for the FEM solver.")
+        if self.pressure.is_gp_model:
+            raise ValueError("set_custom_eos cannot be combined with a GP pressure model.")
+
+        n_args = len(inspect.signature(p_of_rho).parameters)
+        if n_args == 1:
+            fn = lambda rho, h: p_of_rho(rho)
+        elif n_args == 2:
+            fn = p_of_rho
+        else:
+            raise ValueError("p_of_rho must take (rho) or (rho, h).")
+
         self.prop['EOS'] = 'user'
         self.prop['EOS_user'] = fn
-        self.pressure.build_grad()
+
+    def set_custom_wall_stress(self, tau_of_q: callable) -> None:
+        """Set a custom wall stress model for the FEM solver.
+
+        Must be called before :meth:`run`. The same function is used for both directions:
+        for xz it is called with ``j = jx`` and the x wall velocities, for yz with ``j = jy``
+        and the y wall velocities.
+
+        Parameters
+        ----------
+        tau_of_q : callable
+            Scalar, JAX-differentiable function
+            ``tau_of_q(rho, theta, j, h, U_bot, U_top) -> (tau_bot, tau_top)`` (SI units).
+            ``theta`` is the cavity fraction (zero without cavitation).
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_wall_stress is only implemented for the FEM solver.")
+        if self.wall_stress_xz.is_gp_model or self.wall_stress_yz.is_gp_model:
+            raise ValueError("set_custom_wall_stress cannot be combined with a GP wall stress model.")
+        if self.fem_solver['equations']['reynolds']:
+            raise ValueError("set_custom_wall_stress cannot be combined with the Reynolds equation.")
+        if not self.fem_solver['physics']['gap_shear']:
+            raise ValueError("set_custom_wall_stress requires physics.gap_shear: True.")
+        if len(inspect.signature(tau_of_q).parameters) != 6:
+            raise ValueError("tau_of_q must take (rho, theta, j, h, U_bot, U_top).")
+
+        add_fields = self.solver.add_fields
+        theta_index = 3 + add_fields.index('theta') if 'theta' in add_fields else None
+        for ws in (self.wall_stress_xz, self.wall_stress_yz):
+            ws.custom_fn = tau_of_q
+            ws.theta_index = theta_index
 
     # ---------------------------
     # Single time step (update)
@@ -803,10 +858,12 @@ class Problem:
                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
+        No jx/jy rows if the solution field has no jx/jy DOFs (e.g. Reynolds mode).
         """
         self.__field.pg[0] = rho0
-        self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
-        self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
+        if self.solver.nb_sol >= 3:
+            self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
+            self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
 
         self.kinetic_energy_old = self.kinetic_energy
 

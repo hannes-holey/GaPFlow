@@ -24,7 +24,7 @@
 import numpy as np
 import pytest
 
-from GaPFlow.solver_fem.elements import TaylorHoodQ2Q1
+from GaPFlow.solver_implicit.elements import TaylorHoodQ2Q1
 
 
 @pytest.fixture(scope='module')

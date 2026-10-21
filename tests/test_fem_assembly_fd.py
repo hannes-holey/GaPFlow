@@ -40,8 +40,8 @@ import numpy as np
 import pytest
 
 from GaPFlow.problem import Problem
-from GaPFlow.solver_fem.solver_fem import FEMSolver
-from GaPFlow.solver_fem.terms import (
+from GaPFlow.solver_implicit.solver_implicit import ImplicitSolver
+from GaPFlow.solver_implicit.terms import (
     R11x_cav, R11y_cav, R11Sx_cav, R11Sy_cav, R1T_cav, R1Th_cav, R_cav,
     R21x, R21y, R2Tx, R2Ty, R2Thx, R2Thy,
     R22xx, R22Sxx, R22yx, R22Syx, R22xy, R22Sxy, R22yy, R22Syy,
@@ -85,12 +85,12 @@ geometry:
     V: 2.0
 
 numerics:
-    solver: fem
+    solver: implicit
     dt: 1e-8
     tol: 1e-6
     max_it: 100
 
-fem_solver:
+implicit_solver:
     type: newton_alpha
     equations:
         energy: False
@@ -144,18 +144,18 @@ TERMS = [
 # Helpers
 # =============================================================================
 
-def _make_solver() -> FEMSolver:
+def _make_solver() -> ImplicitSolver:
     problem = Problem.from_string(CONFIG)
     problem._pre_run()
     return problem.solver
 
 
-def _set_and_sync(solver: FEMSolver, q: np.ndarray) -> None:
+def _set_and_sync(solver: ImplicitSolver, q: np.ndarray) -> None:
     solver.update_q_nodal(q)
     solver.update_quad()
 
 
-def _init_state(solver: FEMSolver) -> None:
+def _init_state(solver: ImplicitSolver) -> None:
     """Set up a solution state that exercises every term group at once."""
     p_cav = float(solver.problem.prop['p_cav'])
     theta_eps = np.finfo(float).eps
@@ -196,14 +196,14 @@ def _init_state(solver: FEMSolver) -> None:
 _REF_SCALE = {'p': 1e5, 'jx': 1e3, 'jy': 1e3, 'theta': 1.0}
 
 
-def _ref_scale_per_dof(solver: FEMSolver) -> np.ndarray:
+def _ref_scale_per_dof(solver: ImplicitSolver) -> np.ndarray:
     ref = np.empty(solver.res_size)
     for var in solver.variables:
         ref[solver._sol_slices[var]] = _REF_SCALE[var]
     return ref
 
 
-def compute_fd_jacobian(solver: FEMSolver, eps: float = 1e-4) -> np.ndarray:
+def compute_fd_jacobian(solver: ImplicitSolver, eps: float = 1e-4) -> np.ndarray:
     """Central finite difference Jacobian of get_R_ w.r.t. nodal DOFs."""
     q0 = solver.get_q_nodal().copy()
     n = len(q0)
@@ -233,7 +233,7 @@ def rel_err(M_anal: np.ndarray, M_fd: np.ndarray) -> float:
     return np.linalg.norm(M_anal - M_fd) / (np.linalg.norm(M_fd) + 1e-15)
 
 
-def _check_term(solver: FEMSolver, term) -> None:
+def _check_term(solver: ImplicitSolver, term) -> None:
     all_terms = solver.assembly.assembly_terms
     try:
         solver.assembly.assembly_terms = [term]
@@ -270,7 +270,7 @@ def test_jacobian(solver, term):
 # Dev utility (not run by pytest)
 # =============================================================================
 
-def compare_matrices(solver: FEMSolver, term, block: str,
+def compare_matrices(solver: ImplicitSolver, term, block: str,
                      eps: float = 1e-4, fmt: str = '11.2e') -> None:
     """Print analytic and FD Jacobian side-by-side for one term, one dep-var block."""
     all_terms = solver.assembly.assembly_terms

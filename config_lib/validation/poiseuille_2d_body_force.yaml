@@ -1,0 +1,51 @@
+options:
+    output: /tmp/poiseuille_2d_test
+    write_freq: 1
+    save_output: False
+    output_plots: False
+    print_config: False
+
+grid:
+    Lx: 0.5
+    Ly: 0.25
+    Nx: 4
+    Ny: 100
+    xW: ['P', 'P', 'P']
+    xE: ['P', 'P', 'P']
+    yS: ['N', 'D', 'D']
+    yN: ['N', 'D', 'D']
+    yS_D: 0.0
+    yN_D: 0.0
+
+geometry:
+    type: inclined
+    hmin: 1.0
+    hmax: 1.0
+    U: 0.0
+    V: 0.0
+
+numerics:
+    solver: implicit
+    dt: 10.0
+    tol: 1e-10
+    max_it: 30
+
+properties:
+    EOS: PL
+    rho0: 1.0
+    P0: 1.0
+    shear: 0.1
+    bulk: 0.
+    alpha: 1e-8
+    force_x: 1
+    force_y: 0.0
+
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-8
+    max_it: 2
+    linear_solver: direct
+    physics:
+        gap_shear: False
+        plane_shear: True
+        body_force: True

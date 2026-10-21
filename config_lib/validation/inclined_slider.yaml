@@ -1,0 +1,44 @@
+options:
+    output: /tmp/inclined_slider
+    write_freq: 1
+    save_output: False
+    print_config: False
+
+grid:
+    Lx: 0.1
+    Ly: 0.1
+    Nx: 100
+    Ny: 1
+    xE: ['D', 'N', 'N']
+    xW: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xE_D: 1.1853
+    xW_D: 1.1853
+
+geometry:
+    type: inclined
+    hmax: 6.6e-5
+    hmin: 1.0e-5
+    U: 50.
+    V: 0.
+
+numerics:
+    solver: implicit
+    dt: 1.0
+    tol: 1e-08
+    max_it: 10000
+
+properties:
+    EOS: PL
+    shear: 1.846e-5
+    bulk: 0.
+    P0: 101325
+    rho0: 1.1853
+    alpha: 0.
+
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-10
+    max_it: 10
+    linear_solver: direct

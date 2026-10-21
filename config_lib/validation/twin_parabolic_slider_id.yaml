@@ -1,0 +1,57 @@
+options:
+    output: /tmp/twin_parabolic_slider_id
+    write_freq: 1
+    save_output: False
+    print_config: False
+    output_plots: False
+    residual_analysis: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.004
+    Nx: 200
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 3.36e5
+    xE_P: 0
+
+geometry:
+    type: inclined
+    hmax: 50.2e-6
+    hmin: 25.4e-6
+    U: 4.57
+    V: 0.0
+    flip: false
+
+numerics:
+    solver: implicit
+    dt: 1.0
+    tol: 1e-11
+    max_it: 80
+
+properties:
+    EOS: DH
+    rho0: 400.
+    P0: 1e5
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 0.039
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.1
+    equations:
+        cavitation: true
+    physics:
+        gap_shear: true
+    stabilization:
+        upg: true
+        upg_factor: 1.0
+    max_it: 10
+    tol_abs_resnorm: 1e-9
+    scaling: True

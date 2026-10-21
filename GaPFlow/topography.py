@@ -88,8 +88,12 @@ def parabolic_slider(xx, grid, geo):
 
     prefac = 4. / Lx**2 * (h1 - h0)
 
-    h = prefac * (xx - cx)**2 + h0
-    dh_dx = 2 * prefac * (xx - cx)
+    dx = grid['dx']
+    xx_ = (xx - 1.5 * dx) * Lx / (Lx - 3 * dx)
+    xx_ = np.clip(xx_, 0.0, Lx)
+
+    h = prefac * (xx_ - cx)**2 + h0
+    dh_dx = 2 * prefac * (xx_ - cx)
     dh_dy = np.zeros_like(h)
 
     return h, dh_dx, dh_dy
@@ -632,13 +636,17 @@ class Topography:
 
         # 2. At domain boundaries: linear extrapolation of h
         if d.is_at_xW and not d.periodic_x:
-            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
         if d.is_at_xE and not d.periodic_x:
-            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
         if d.is_at_yS and not d.periodic_y:
-            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
         if d.is_at_yN and not d.periodic_y:
-            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
 
         # 3. Compute gradients on inner points (ghost h is now correct)
         self.dh_dx[1:-1, 1:-1] = (self.h[2:, 1:-1] - self.h[:-2, 1:-1]) / (2 * self.dx)
@@ -650,13 +658,17 @@ class Topography:
         # 5. At domain boundaries: override periodic wrap again: linear extrapolation of h
         # and copy gradient from first inner line
         if d.is_at_xW and not d.periodic_x:
-            self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            # self.h[0, :] = 2 * self.h[1, :] - self.h[2, :]
+            self.h[0, :] = self.h[1, :]
         if d.is_at_xE and not d.periodic_x:
-            self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            # self.h[-1, :] = 2 * self.h[-2, :] - self.h[-3, :]
+            self.h[-1, :] = self.h[-2, :]
         if d.is_at_yS and not d.periodic_y:
-            self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            # self.h[:, 0] = 2 * self.h[:, 1] - self.h[:, 2]
+            self.h[:, 0] = self.h[:, 1]
         if d.is_at_yN and not d.periodic_y:
-            self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            # self.h[:, -1] = 2 * self.h[:, -2] - self.h[:, -3]
+            self.h[:, -1] = self.h[:, -2]
 
         if d.is_at_xW and not d.periodic_x:
             self.dh_dx[0, :] = self.dh_dx[1, :]
@@ -850,7 +862,7 @@ class BisectionForceController:
     Each proposed h0 change is only trusted/applied once at least 5
     effective-relaxation-equivalent Newton iterations (`sum(alpha)`) have
     accumulated since the last change, via `accumulate()` registered as a
-    callback on `FEMSolver.cb_list`. This approximates "the Newton solve
+    callback on `ImplicitSolver.cb_list`. This approximates "the Newton solve
     has settled enough to trust the force reading" for this
     pseudo-timestepping / quasi-steady-state setup.
     """
@@ -1103,7 +1115,7 @@ class ElasticDeformation:
             Pressure field.
         h : ndarray of shape (M, N) or None
             Gap height field (with ghost cells). If provided, the deformation
-            discrepancy metric max(|u_relaxed - u_computed| / h) is computed
+            discrepancy metric ``max(|u_relaxed - u_computed| / h)`` is computed
             over inner cells and returned as the second element of the tuple.
 
         Returns
@@ -1112,7 +1124,7 @@ class ElasticDeformation:
             Updated, underrelaxed deformation field.
         disc : float
             Maximum deformation discrepancy relative to gap height
-            (max over inner cells of |u_relaxed - u_computed| / h).
+            (max over inner cells of ``|u_relaxed - u_computed| / h``).
             Zero if h is None.
         """
         u_computed = self.get_deformation(p)

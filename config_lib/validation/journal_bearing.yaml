@@ -1,0 +1,44 @@
+options:
+    output: /tmp/journal_bearing
+    write_freq: 1
+    save_output: False
+    print_config: False
+
+grid:
+    dx: 1.e-5
+    dy: 1.e-5
+    Nx: 100
+    Ny: 1
+    xE: ['P', 'P', 'P']
+    xW: ['P', 'P', 'P']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+
+geometry:
+    type: journal
+    CR: 1.e-2
+    eps: 0.7
+    U: 0.1
+    V: 0.
+
+numerics:
+    solver: implicit
+    dt: 1.0
+    tol: 1e-12
+    max_it: 50000
+
+properties:
+    EOS: DH
+    shear: 0.0794
+    bulk: 0.
+    P0: 101325
+    rho0: 877.7007
+    T0: 323.15
+    C1: 3.5e10
+    C2: 1.23
+
+implicit_solver:
+    newton_relax: 1.0
+    tol_abs_resnorm: 1e-06
+    max_it: 10
+    linear_solver: direct
