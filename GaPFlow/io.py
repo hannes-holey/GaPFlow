@@ -157,8 +157,11 @@ def read_yaml_input(file):
         if rank == 0 and _print_config:
             print(f'- {key}:')
         val = raw_dict.get(key)
-        if key == 'fem_solver' and val is None:
-            val = raw_dict.get('implicit_solver')
+        if key == 'fem_solver':
+            val = raw_dict.get('fem_solver', raw_dict.get('implicit_solver'))
+            # Implicit solver runs with defaults if the section is empty or missing
+            if val is None and sanitized_dict['numerics']['solver'] == 'fem':
+                val = {}
         sanitized_dict[key] = func(val) if val is not None else None
 
     if rank == 0 and _print_config:
