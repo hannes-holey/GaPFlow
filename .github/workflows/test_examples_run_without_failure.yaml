@@ -1,0 +1,44 @@
+name: Test examples run without failure
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - '**'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.14']
+    steps:
+    - name: Checkout source
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - name: Install MPI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+    - name: Set up Python
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install GaPFlow
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install -v .[test,parallel]
+
+    - name: run examples
+      run:
+        cd examples 
+        pytest test_config_files_run.py
+
