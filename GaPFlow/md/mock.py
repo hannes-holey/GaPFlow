@@ -87,13 +87,14 @@ class Mock(MolecularDynamics):
         key, subkey = jr.split(subkey)
         noise_s1 = jr.normal(key) * self.noise[1]
 
-        U, V = self.geo["U_bot"], self.geo["V_bot"]
         eta, zeta = self.prop["shear"], self.prop["bulk"]
 
         X = self._X
-        # top wall stationary (U_top=V_top=0), slip only at bottom wall (Ls_top=0)
-        tau_bot = stress_bottom(X[:3], X[3:6], U, V, 0., 0., eta, zeta, X[6], 0.) + noise_s0
-        tau_top = stress_top(X[:3], X[3:6], U, V, 0., 0., eta, zeta, X[6], 0.) + noise_s1
+        U, V = X[6], X[7]
+        # Slip length is the first extra feature (index 8); absent when len(X) == 8.
+        Ls_top = float(X[8]) if len(X) > 8 else 0.0
+        tau_bot = stress_bottom(X[:3], X[3:6], U, V, 0., 0., eta, zeta, 0., Ls_top) + noise_s0
+        tau_top = stress_top(X[:3], X[3:6], U, V, 0., 0., eta, zeta, 0., Ls_top) + noise_s1
         press = eos_pressure(X[0:1], self.prop) + noise_p
 
         Y = jnp.hstack([press, tau_bot, tau_top]).T

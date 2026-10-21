@@ -32,7 +32,7 @@ import numpy as np
 from scipy.constants import gas_constant
 
 
-def eos_sound_velocity(density, prop):
+def eos_sound_velocity(density, prop, h=None):
     """Wrapper around all implemented equation of state models.
 
     Computes the local speed of sound for a given density field.
@@ -77,7 +77,7 @@ def eos_sound_velocity(density, prop):
     elif prop['EOS'] == 'user':
         import jax
         dp_drho = jax.vmap(jax.grad(prop['EOS_user']))
-        return np.sqrt(np.abs(np.array(dp_drho(density.ravel()).reshape(density.shape))))
+        return np.sqrt(np.abs(np.array(dp_drho(density.ravel(), h.ravel()).reshape(density.shape))))
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}

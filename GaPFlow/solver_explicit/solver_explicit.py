@@ -21,12 +21,15 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 #
+import numpy as np
+
 from .integrate import predictor_corrector, source
 from typing import TYPE_CHECKING
+from ..parallel import MPI
 from ..bc import BoundarySpec, GhostUpdater, sample_bc_spec
 from ..logging import get_logger
 
-logger = get_logger("gapflow.problem")
+logger = get_logger("gapflow.run")
 if TYPE_CHECKING:
     from ..problem import Problem
 
@@ -101,21 +104,22 @@ class ExplicitSolver:
 
         # Without active learning, compute variance only before writing
         one_step_before_output = (p.step + 1) % p.options['write_freq'] == 0
-        # Suppress active learning for rapidly changing fields
-        cooldown = p._residuals_above_tolerance(1e-3)
 
         for i, d in enumerate(directions):
 
             # update surrogates / constitutive models (predictor on first pass)
-            p.pressure.update(predictor=i == 0,
+            p.pressure.update(residuals=p.residual_buffer,
+                              predictor=i == 0,
                               compute_var=one_step_before_output,
-                              cooldown=cooldown)
-            p.wall_stress_xz.update(predictor=i == 0,
-                                    compute_var=one_step_before_output,
-                                    cooldown=cooldown)
-            p.wall_stress_yz.update(predictor=i == 0,
-                                    compute_var=one_step_before_output,
-                                    cooldown=cooldown)
+                              )
+            p.wall_stress_xz.update(residuals=p.residual_buffer,
+                                    predictor=i == 0,
+                                    compute_var=one_step_before_output
+                                    )
+            p.wall_stress_yz.update(residuals=p.residual_buffer,
+                                    predictor=i == 0,
+                                    compute_var=one_step_before_output
+                                    )
             p.bulk_stress.update()
 
             # fluxes and source terms
@@ -157,19 +161,56 @@ class ExplicitSolver:
             logger.info(61 * '-')
             logger.info(f"{'Step':6s} {'Timestep':10s} {'Time':10s} {'CFL':10s} {'Residual':10s}")
             logger.info(61 * '-')
+        self.print_status()
         if p.options['save_output']:
-            p.write(params=False)
+            p.write()
 
-    def print_status(self, scalars) -> None:
+    def print_status(self) -> None:
         """
-        Write scalars, fields and hyperparameters to disk as configured.
+        Log the current status line, if enabled.
         """
         p = self.problem
 
-        if scalars:
-            print(f"{p.step:<6d} {p.dt:.4e} {p.simtime:.4e} {p.cfl:.4e} {p.residual:.4e}")
-            p.history["step"].append(p.step)
-            p.history["time"].append(p.simtime)
-            p.history["ekin"].append(p.kinetic_energy)
-            p.history["residual"].append(p.residual)
-            p.history["vsound"].append(p.pressure.v_sound)
+        if p.options['print_progress']:
+            logger.info(f"{p.step:<6d} {p.dt:.4e} {p.simtime:.4e} {p.cfl:.4e} {p.residual:.4e}")
+
+    def status_record(self) -> dict:
+        """
+        Scalar values recorded to history.csv for the current step.
+        """
+        p = self.problem
+        return {
+            "step": p.step,
+            "dt": p.dt,
+            "time": p.simtime,
+            "residual": p.residual,
+        }
+
+    def physical_record(self) -> dict:
+        """
+        Physical quantities recorded to history.csv for the current step: domain integrals
+        (midpoint rule over the inner cells, globally reduced across MPI ranks) and the
+        maximum sound velocity.
+        """
+        p = self.problem
+        s = np.s_[1:-1, 1:-1]
+        rho, jx, jy = p.q[0][s], p.q[1][s], p.q[2][s]
+        h = p.topo.h[s]
+
+        integrands = {
+            "mass": rho * h,
+            "ekin": h * (jx**2 + jy**2) / rho / 2.,
+            "load": p.pressure.pressure[s],
+            "friction_x_bot": p.wall_stress_xz.lower[4][s],
+            "friction_x_top": p.wall_stress_xz.upper[4][s],
+        }
+
+        if p.grid['Ny'] > 1:
+            integrands["friction_y_bot"] = p.wall_stress_yz.lower[3][s]
+            integrands["friction_y_top"] = p.wall_stress_yz.upper[3][s]
+
+        dA = p.grid['dx'] * p.grid['dy']
+        comm = p.decomp._mpi_comm
+        record = {k: comm.allreduce(float(np.sum(v)) * dA, op=MPI.SUM) for k, v in integrands.items()}
+        record["vsound"] = comm.allreduce(float(p.pressure.v_sound), op=MPI.MAX)
+        return record

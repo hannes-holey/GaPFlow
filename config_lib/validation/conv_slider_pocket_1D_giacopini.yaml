@@ -1,0 +1,77 @@
+# 1D Convergent slider with pocket — Fischer-Burmeister cavitation
+#
+# Reference geometry from:
+#   Giacopini, M. et al. "A Mass-Conserving Complementarity Formulation to
+#   Study Lubricant Films in the Presence of Cavitation."
+#   J. Tribology 132 (2010), 041702. Table 3.
+#
+# Domain: Lx = 10 mm (b=2mm inlet, c=3mm pocket, d=5mm outlet), periodic in y.
+# Gap: linear convergent wedge (hmax=h_min/(1-K)≈1.0101 µm, hmin=1.0 µm, K=0.01)
+#      plus a rectangular pocket (depth=h_p=5*hmin=5 µm, x=[2 mm, 5 mm]).
+#
+# Fluid: Dowson-Higginson EOS
+#   p_cav = 0 Pa  (vacuum cavitation)
+#   shear = 0.01 Pa·s
+#
+# Wall velocity: U = 1.0 m/s (upper wall), lower wall stationary
+# BCs: p_in = p_out = 0.1 MPa
+
+options:
+    output: /tmp/conv_slider_pocket_1D_giacopini
+    write_freq: 10
+    save_output: False
+    output_plots: False
+    residual_analysis: False
+
+grid:
+    Lx: 0.010
+    Ly: 0.004
+    Nx: 300
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 1e5
+    xE_P: 1e5
+
+geometry:
+    type: inclined
+    hmax: 1.0101e-6
+    hmin: 1.0e-6
+    U: 1.0
+    V: 0.0
+    flip: false
+
+numerics:
+    solver: implicit
+    dt: 0.1
+    tol: 0.0
+    max_it: 40
+
+properties:
+    EOS: DH
+    rho0: 850.
+    P0: 0.1e5
+    C1: 20e9
+    C2: 1.2
+    p_cav: 0.0
+    shear: 0.0001
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.1
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+        inertia: false
+    stabilization:
+        oss: true
+        oss_alpha: 1.0
+        mass_supg: false
+        mass_supg_factor: 1.0
+    max_iter: 5
+    R_norm_tol: 1e-9
+    scaling: False

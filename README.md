@@ -40,26 +40,38 @@ You can check your installation by running `gpf_info` from the command line.
 ==========
 GaPFlow
 ==========
-Version:  ...
+Version: ...
 
 ==========
 LAMMPS
 ==========
 Version: ...
 Shared lib: <path-to-your-python-env>/lib/pythonX.Y/site-packages/GaPFlow/_vendor/lammps/liblammps_mpi[.so, .dylib]
-MPI:  True
-mpi4py:  True
-packages:  ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
+MPI: True
+mpi4py: True
+Packages: ['EXTRA-FIX', 'MANYBODY', 'MOLECULE']
 
 ==========
 muGrid
 ==========
-Version:  ...
+Version: ...
 NetCDF4: True
 MPI: False
+
+==========
+PETSc
+==========
+Version: ...
+petsc4py: ...
+MUMPS: True
+Linear backend (auto): PETSc
 ```
 We currently do not use parallel functionalities of µGrid, so MPI support is not
-required.
+required. PETSc is optional (see below). Without it, the PETSc section reads
+```
+Installed: False (install with install_petsc.sh)
+Linear backend (auto): SciPy (serial only)
+```
 
 For installations from source, do not forget to initialize the LAMMPS submodule after cloning the repository
 ```
@@ -69,7 +81,7 @@ git submodule update --init
 
 ### Optional: PETSc for 2D FEM solver
 
-The 2D finite element solver requires [PETSc](https://petsc.org/) for distributed linear algebra with MPI. This is **optional** and only needed if you want to run 2D FEM simulations.
+The implicit solver requires [PETSc](https://petsc.org/) for MPI-parallel distributed linear algebra. This dependency is **optional**; a [SciPy](https://scipy.org/)-based implementation is provided as an alternative for serial-only execution.
 
 We provide an installation script similar to the LAMMPS installation:
 ```bash
@@ -84,7 +96,10 @@ export PETSC_DIR="$HOME/.local/petsc-3.22.2"
 export PETSC_ARCH="arch-linux-c-opt"
 ```
 
-Verify the installation with:
+Verify the installation with `gpf_info` (PETSc section, see above). If PETSc is installed, the implicit solver uses it by default.
+To use the SciPy solvers anyway, set `linear_backend: scipy` in the `implicit_solver` section of the input file.
+
+For more details on the PETSc installation (e.g. MPI setup and available linear solvers), run
 ```bash
 python3 .check_petsc.py
 ```
@@ -94,7 +109,7 @@ Simulation inputs are commonly provided in YAML files. A typical input file
 might look like this:
 
 ```yaml
-# examples/journal.yaml
+# journal.yaml
 options:
     output: data/journal
     write_freq: 10
@@ -131,8 +146,8 @@ properties:
 ```
 
 Note that this example uses fixed-form constitutive laws without GP surrogate
-models or MD data. More example input files can be found in the [examples]
-(examples/) directory.
+models or MD data. More example input files can be found in the [config_lib](config_lib/)
+directory.
 
 The input files can be used to start a simulation from the command line
 ```bash
@@ -150,13 +165,15 @@ After successful completion, you should find the following files.
 - `config.yml`: A sanitized version of your simulation input.
 - `topo.nc`: NetCDF file containing the gap height and gradients.
 - `sol.nc`: NetCDF file containing the solution and stress fields.
-- `history.csv`: Contains the time series of scalar quantities (step, Ekin,
-  residual, ...)
+- `history.csv`: Contains the time series of scalar quantities: domain integrals
+  (mass, kinetic energy, load, friction) and solver diagnostics (residual, time step, ...)
 - `gp_[xz,yz,zz].csv` (Optional): Contains the time series of GP hyperparameters,
   database size, etc.
 - `Xtrain.npy` (Optional): Training data inputs
 - `Ytrain.npy` (Optional): Training data observations
 - `Ytrain_err.npy` (Optional): Training data observation error
+- `log.run`: Log file with the solver's per-step status output (also printed to stdout).
+- `log.gp` / `log.md` (Optional): Log files for the GP surrogate and MD components, when active.
 
 The code comes with a few handy [command line tools](GaPFlow/cli/) for
 visualizations like this one

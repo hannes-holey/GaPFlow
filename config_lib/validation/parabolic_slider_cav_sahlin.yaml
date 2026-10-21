@@ -1,0 +1,52 @@
+options:
+    output: /tmp/parabolic_slider_cav_sahlin
+    write_freq: 1
+    save_output: False
+    print_config: False
+
+grid:
+    Lx: 0.1
+    Ly: 0.004
+    Nx: 100
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 101325
+    xE_P: 101325
+
+geometry:
+    type: parabolic
+    hmin: 2e-06
+    hmax: 4e-06
+    U: 0.25
+    V: 0.0
+
+numerics:
+    solver: implicit
+    dt: 1.0
+    tol: 1e-10
+    max_it: 200
+
+properties:
+    EOS: DH
+    rho0: 877.7007
+    P0: 101325
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 0.04
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.8
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        upg: true
+    max_it: 5
+    tol_abs_resnorm: 1e-9

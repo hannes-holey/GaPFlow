@@ -1,0 +1,60 @@
+options:
+    output: /tmp/conv_slider_pocket_1D
+    write_freq: 2
+    save_output: False
+    print_config: False
+    output_plots: False
+    residual_analysis: False
+
+grid:
+    Lx: 0.020
+    Ly: 0.004
+    Nx: 200
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 1e5
+    xE_P: 1e5
+
+geometry:
+    type: inclined  # placeholder — overwritten by _regen_topography in notebook
+    hmax: 1.1e-6
+    hmin: 1.0e-6
+    U: 1.0
+    V: 0.0
+    flip: false
+
+numerics:
+    solver: implicit
+    dt: 0.1
+    tol: 1e-12
+    max_it: 50
+
+properties:
+    EOS: DH
+    piezo:
+        name: Barus
+        aB: 1.2e-8
+    rho0: 850.
+    P0: 1e5
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 0.01
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.1
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        upg: true
+        upg_factor: 1.0
+    max_it: 3
+    tol_abs_resnorm: 1e-9
+    scaling: True

@@ -31,10 +31,13 @@
 
 set -e
 
-PETSC_VERSION=3.24.2
-PETSC_INSTALL_DIR="${PETSC_INSTALL_DIR:-$HOME/.local/petsc-$PETSC_VERSION}"
-PETSC_ARCH=arch-linux-c-opt
+PETSC_VERSION=3.25.3
+BUILDDIR=${BUILDDIR:-$HOME/opt/}
 NPROC="${NPROC:-$(nproc 2>/dev/null || echo 4)}"
+GAPFLOW_DIR=$(pwd)
+
+PETSC_INSTALL_DIR=$BUILDDIR/petsc-$PETSC_VERSION
+PETSC_ARCH=arch-linux-c-opt
 
 echo "=============================================="
 echo "PETSc Installation Script for GaPFlow"
@@ -123,7 +126,7 @@ echo "Downloading and building dependencies as needed..."
 
 # Build PETSc
 echo ""
-echo "Building PETSc (this will take 10-20 minutes)..."
+echo "Building PETSc (this will take a few minutes)..."
 make PETSC_DIR="$PETSC_INSTALL_DIR" PETSC_ARCH="$PETSC_ARCH" all -j"$NPROC"
 
 # Install petsc4py
@@ -132,7 +135,7 @@ echo "Installing petsc4py..."
 export PETSC_DIR="$PETSC_INSTALL_DIR"
 export PETSC_ARCH="$PETSC_ARCH"
 
-python3 -m pip install --no-cache-dir "petsc4py==$PETSC_VERSION"
+python3 -m pip install $PETSC_DIR/src/binding/petsc4py
 
 # Create environment setup script
 ENV_SCRIPT="$PETSC_INSTALL_DIR/petsc_env.sh"
@@ -162,5 +165,5 @@ echo ""
 
 # Verify installation
 echo "Verifying installation..."
-cd "$(dirname "$0")"
+cd $GAPFLOW_DIR
 python3 .check_petsc.py
