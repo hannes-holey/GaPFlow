@@ -53,6 +53,7 @@ from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
 from .viz.animations import animate_1d, animate_1d_gp, animate_2d
+from .viz.utils import tolerance_per_frame
 from .logging import get_logger
 
 # Configure module logger writing to log.run via centralized helper
@@ -191,6 +192,8 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
+        for model in (self.pressure, self.wall_stress_xz, self.wall_stress_yz):
+            model.clock = lambda: self.simtime
         self.viscosity = Viscosity(self.fc, prop)
         self.topo = Topography(self.fc, self.grid, geo, prop, decomp=self.decomp,
                                force_balance=force_balance, problem=self)
@@ -507,6 +510,14 @@ class Problem:
 
         Has to be called before the first call to :meth:`update`.
         """
+        self.step = 0
+        self.dt = self.numerics['dt']
+        self.simtime = 0.
+        self.residual = 1.
+        self.residual_buffer = deque([self.residual, ], maxlen=100)
+        self.tol = self.numerics['tol']
+        self.max_it = self.numerics['max_it']
+
         self.pressure.init_database(self.grid['dim'])
         self.wall_stress_xz.init_database(self.grid['dim'])
         self.wall_stress_yz.init_database(self.grid['dim'])
@@ -519,14 +530,6 @@ class Problem:
             self.pressure.save_state()
             self.wall_stress_xz.save_state()
             self.wall_stress_yz.save_state()
-
-        self.step = 0
-        self.dt = self.numerics['dt']
-        self.simtime = 0.
-        self.residual = 1.
-        self.residual_buffer = deque([self.residual, ], maxlen=100)
-        self.tol = self.numerics['tol']
-        self.max_it = self.numerics['max_it']
 
         self.solver.pre_run(**kwargs)
 
@@ -764,7 +767,8 @@ class Problem:
         """
         Record history and write fields to disk as configured.
         """
-        for key, value in self.solver.status_record().items():
+        record = {**self.solver.status_record(), **self.solver.physical_record()}
+        for key, value in record.items():
             self.history.setdefault(key, []).append(value)
         history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
 
@@ -969,9 +973,16 @@ class Problem:
 
         if self.grid['Ny'] == 1:
             if self.has_gp_model:
+                tol_p, tol_s = [tolerance_per_frame(model.history['step'],
+                                                    model.history['variance_tol'],
+                                                    self.history['step'])
+                                if model.is_gp_model else None
+                                for model in (self.pressure, self.wall_stress_xz)]
                 return animate_1d_gp(filename_sol,
                                      seconds=seconds,
-                                     save=save)
+                                     save=save,
+                                     tol_p=tol_p,
+                                     tol_s=tol_s)
             else:
                 return animate_1d(filename_sol,
                                   filename_topo,
