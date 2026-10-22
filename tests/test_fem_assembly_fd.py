@@ -104,7 +104,7 @@ implicit_solver:
 
 properties:
     EOS: DH
-    rho0: 877.7007
+    rho_ref: 877.7007
     P0: 101325
     C1: 3.5e7
     C2: 1.23

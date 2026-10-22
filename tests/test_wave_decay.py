@@ -58,7 +58,7 @@ properties:
     EOS: cubic
     shear: 3.92293e-05    # N s/m^2
     bulk: 0.              # N s/m^2
-    rho0: 762.8617        # kg/m^3
+    rho_init: 762.8617        # kg/m^3
     a: 1.33030e-1
     b: -1.41778e2
     c: 8.35134e4
@@ -90,7 +90,7 @@ def test_shear_wave_decay(setup, n):
     problem._pre_run()
 
     h = problem.geo['hmin']
-    kin_visc = problem.prop['shear'] / problem.prop['rho0']
+    kin_visc = problem.prop['shear'] / problem.prop['rho_init']
     Lx = problem.grid['Lx']
 
     kn = n * 2. * np.pi / Lx
@@ -117,7 +117,7 @@ def test_sound_wave_decay(setup, n):
     problem._pre_run()
 
     h = problem.geo['hmin']
-    kin_visc = problem.prop['shear'] / problem.prop['rho0']
+    kin_visc = problem.prop['shear'] / problem.prop['rho_init']
     Lx = problem.grid['Lx']
 
     kn = n * 2. * np.pi / Lx

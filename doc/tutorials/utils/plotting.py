@@ -972,11 +972,11 @@ def plot_lid_driven_cavity(problem, title=None):
     vy = jy / rho
     v_mag = np.sqrt(vx**2 + vy**2)
 
-    # Pressure from EOS: P = P0 + (rho - rho0) / alpha
+    # Pressure from EOS: P = P0 + (rho - rho_ref) / alpha
     P0 = problem.prop['P0']
-    rho0 = problem.prop['rho0']
+    rho_ref = problem.prop['rho_ref']
     alpha = problem.prop['alpha']
-    pressure = P0 + (rho - rho0) / alpha
+    pressure = P0 + (rho - rho_ref) / alpha
 
     # Grid
     Lx, Ly = problem.grid['Lx'], problem.grid['Ly']
@@ -1185,7 +1185,7 @@ def plot_bernoulli_validation(problem,
     x_b = np.arange(rho_b.shape[0]) * dx + dx / 2
     vx_b = jx_b[:, j_center] / rho_b[:, j_center]
     p_b = np.asarray(eos_pressure(rho_b[:, j_center], problem.prop))
-    rho0 = problem.prop['rho0']
+    rho_ref = problem.prop['rho_ref']
 
     v_inlet = float(vx_b[x_b < x_ramp_start].mean())
 
@@ -1193,7 +1193,7 @@ def plot_bernoulli_validation(problem,
     v_theory = v_inlet * h_inlet / h_b[:, j_center]
     p_ref = float(p_b[-1])
     v_ref = v_inlet * h_inlet / float(h_b[-1, j_center])
-    p_theory = p_ref + 0.5 * rho0 * (v_ref ** 2 - v_theory ** 2)
+    p_theory = p_ref + 0.5 * rho_ref * (v_ref ** 2 - v_theory ** 2)
 
     # Error metrics over flat inlet and throat regions
     x_throat = (x_ramp_start + x_ramp_end) / 2
@@ -1206,7 +1206,7 @@ def plot_bernoulli_validation(problem,
     p_throat_sim = float(p_b[throat_mask].mean())
 
     v_throat_theory = v_inlet * h_inlet / h_throat
-    dp_theory = 0.5 * rho0 * (v_throat_theory ** 2 - v_inlet ** 2)
+    dp_theory = 0.5 * rho_ref * (v_throat_theory ** 2 - v_inlet ** 2)
     dp_sim = p_in_sim - p_throat_sim
 
     print(f"Velocity at throat: {v_throat_sim:.2f} m/s (theory: {v_throat_theory:.2f} m/s)")
