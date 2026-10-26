@@ -94,6 +94,8 @@ class GaussianProcessSurrogate:
         """
 
         self._step = 0
+        # Simulation time getter for the history output, set by the Problem
+        self.clock = lambda: float('nan')
         self.__solution = wrap_field(fc.get_real_field('solution'))
         self.__topo = wrap_field(fc.get_real_field('topography'))
         self.__extra = wrap_field(fc.get_real_field('extra'))
@@ -122,6 +124,7 @@ class GaussianProcessSurrogate:
             # History of hyperparameters
             self.history = {
                 'step': [],
+                'time': [],
                 'database_size': [],
                 'variance': [],
                 'obs_stddev': [],
@@ -306,6 +309,7 @@ class GaussianProcessSurrogate:
         """Log current GP hyperparameters and diagnostics."""
         if self.is_gp_model:
             self.history['step'].append(self._step)
+            self.history['time'].append(self.clock())
             self.history['database_size'].append(self._database.size)
             self.history['variance'].append(self.kernel_variance)
             self.history['obs_stddev'].append(self.obs_stddev)

@@ -39,6 +39,6 @@ jobs:
 
     - name: run examples
       run: |
-        cd examples
+        cd config_lib 
         pytest test_config_files_run.py
 

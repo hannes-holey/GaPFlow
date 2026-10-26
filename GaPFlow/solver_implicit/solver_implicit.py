@@ -30,6 +30,7 @@ Newton iteration loop.
 """
 
 import time
+from functools import cached_property
 from typing import Callable, List, Tuple, TYPE_CHECKING
 
 import numpy as np
@@ -608,3 +609,46 @@ class ImplicitSolver:
             "residual": p.residual,
             "R_newton": R_newton,
         }
+
+    def physical_record(self) -> dict:
+        """
+        Physical quantities recorded to history.csv for the current step: the maximum sound
+        velocity and domain integrals, globally reduced across MPI ranks. Integrated at the quadrature points with weights
+        w_q * sum_i N_i(x_q) * dx * dy, where the sum runs over the inner P1 corner nodes
+        of each square (partition of unity). Every node is inner on exactly one rank, so
+        squares shared with neighbouring ranks or with periodic images are counted once.
+        """
+        p = self.problem
+        qm = self.quad_mgr
+        qm.update_quad_fields()
+        q = qm.get_quad_sq
+
+        rho, jx, jy, h = q('rho'), q('jx'), q('jy'), q('h')
+        one_minus_theta = 1. - q('theta') if 'theta' in qm.quad_fields else 1.
+
+        integrands = {
+            "mass": rho * one_minus_theta * h,
+            "ekin": h * one_minus_theta * (jx**2 + jy**2) / rho / 2.,
+            "load": q('p'),
+        }
+
+        # tau_* = (1 - theta) * (tau_top - tau_bot), tau_*_bot = (1 - theta) * tau_bot
+        for d in ('x', 'y') if p.grid['Ny'] > 1 else ('x',):
+            if f'tau_{d}z' in qm.quad_fields:
+                tau_bot = qm._call_computed(f'tau_{d}z_bot', q)
+                integrands[f'friction_{d}_bot'] = tau_bot
+                integrands[f'friction_{d}_top'] = q(f'tau_{d}z') + tau_bot
+
+        w = self._integration_weights
+        comm = p.decomp._mpi_comm
+        record = {k: comm.allreduce(float(np.sum(v * w)), op=MPI.SUM) for k, v in integrands.items()}
+        record["vsound"] = comm.allreduce(float(p.pressure.v_sound), op=MPI.MAX)
+        return record
+
+    @cached_property
+    def _integration_weights(self) -> NDArray:
+        """Quadrature weights for domain integrals, shape (nb_sq, nb_quad_sq)."""
+        inner = (self.grid_idx.sq_TO_inner_P1 >= 0).astype(float)
+        weights = self.elements.Quadrature.weights
+        dA = self.problem.grid['dx'] * self.problem.grid['dy']
+        return inner @ self.elements.Q1.N.T * weights[None, :] * dA
