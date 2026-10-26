@@ -35,7 +35,7 @@ import jax.numpy as jnp
 from scipy.constants import gas_constant
 
 
-def eos_pressure(density, prop):
+def eos_pressure(density, prop, h=None):
     """Wrapper around all implemented equation of state models.
 
     Parameters
@@ -73,7 +73,7 @@ def eos_pressure(density, prop):
         func = bayada_chupin
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
     elif prop['EOS'] == 'user':
-        return prop['EOS_user'](density)
+        return prop['EOS_user'](density, h)
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -258,10 +258,10 @@ def bwr(dens, T, gamma=3.):
     """
 
     config = os.path.join(os.path.dirname(__file__), "bwr_coeffs.txt")
-    x = np.loadtxt(config)
+    x = jnp.array(np.loadtxt(config))
 
     p = dens * T +\
-        dens**2 * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
+        dens**2 * (x[0] * T + x[1] * jnp.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
         dens**3 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
         dens**4 * (x[9] * T + x[10] + x[11] / T) +\
         dens**5 * x[12] +\
@@ -269,7 +269,7 @@ def bwr(dens, T, gamma=3.):
         dens**7 * (x[15] / T) +\
         dens**8 * (x[16] / T + x[17] / T**2) + \
         dens**9 * (x[18] / T**2) +\
-        np.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
+        jnp.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
                                     dens**5 * (x[21] / T**2 + x[22] / T**4) +  # noqa: W504
                                     dens**7 * (x[23] / T**2 + x[24] / T**3) +  # noqa: W504
                                     dens**9 * (x[25] / T**2 + x[26] / T**4) +  # noqa: W504
@@ -381,10 +381,12 @@ def rho_of_p_pl(pressure, rho0=1.1853, P0=101325., alpha=0.):
 def rho_of_p_bayada(pressure, rho_l, rho_v, c_l, c_v):
     """Inverse of Bayada-Chupin EoS (three-region piecewise).
 
-    Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
-    Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
-                                  q = exp((p - Pcav)/N) / (rho_v*c_v^2)
-    Vapor   (p < P_vt):           rho = p / c_v^2
+    ::
+
+        Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
+        Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
+                                      q = exp((p - Pcav)/N) / (rho_v*c_v^2)
+        Vapor   (p < P_vt):           rho = p / c_v^2
 
     P_vt = rho_v*c_v^2 is the mixture-vapor boundary pressure; Pcav is the
     cavitation (mixture-liquid) boundary pressure.
@@ -425,8 +427,6 @@ def eos_rho(pressure, prop):
     elif prop['EOS'] == 'Bayada':
         func = rho_of_p_bayada
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
-    elif prop['EOS'] == 'user':
-        return prop['EOS_user_inv'](pressure)
     else:
         raise NotImplementedError(
             f"Pressure-based solver requires an inverse EoS; "

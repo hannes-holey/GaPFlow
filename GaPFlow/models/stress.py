@@ -28,7 +28,7 @@ import numpy.typing as npt
 import jax.numpy as jnp
 from jax import vmap, grad, jit, lax
 from jax import Array
-from typing import Optional, Any
+from typing import Optional, Any, Deque
 from muGrid import Field
 
 from .gp import GaussianProcessSurrogate
@@ -86,9 +86,13 @@ class WallStress(GaussianProcessSurrogate):
         self.__pressure = Field(fc.get_real_field('pressure'))
         self.__x = Field(fc.get_real_field('x'))
         self.__y = Field(fc.get_real_field('y'))
+        self.__solution_full = Field(fc.get_real_field('solution'))
 
         self.geo = geo
         self.prop = prop
+        self.custom_fn = None
+        self.theta_index = None
+        self.direction = direction
         self.name = f'{direction}z'
 
         self._out_index = {'x': 4, 'y': 3}[direction]
@@ -97,30 +101,39 @@ class WallStress(GaussianProcessSurrogate):
             self.is_gp_model = True
             self.active_dims = {'x': gp.get('active_dims_x', [0, 1, 3]),
                                 'y': gp.get('active_dims_y', [0, 2, 3])}[direction]
+            self.derived_expressions = gp.get('derived_features', [])
 
             self.__field_variance = fc.real_field(f'wall_stress_{direction}z_var')
 
             # Active learning parameters
-            self.tol = gp['tol']
+            self.tolerance_protocol = gp['tolerance_protocol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
+            self.atol_reduction_factor = gp['atol_reduction_factor']
+            self.tol_rmid = gp['tol_rmid']
+            self.tol_alpha = gp['tol_alpha']
             self.max_steps = gp['max_steps']
             self.pause_steps = gp['pause_steps']
             self.use_active_learning = gp['active_learning']
             self.similarity_check = gp['similarity_check']
             self.allowed_skips = gp['allowed_skips']
-            self.perturb_target = gp['perturb_target']
             self.fix_noise = gp['fix_noise']
             self.pause_on_high_residual = gp['pause_on_high_residual']
         else:
             self.is_gp_model = False
             self.use_active_learning = False
+            self.derived_expressions = []
 
         super().__init__(fc, data)
 
     # -------------------------
     # Properties
     # -------------------------
+    @property
+    def is_custom(self) -> bool:
+        """True if a user-defined wall stress function is set."""
+        return self.custom_fn is not None
+
     @property
     def full(self) -> NDArray:
         """
@@ -308,9 +321,10 @@ class WallStress(GaussianProcessSurrogate):
             self._infer()
 
     def update(self,
+               residuals: Deque,
                predictor: bool = False,
                compute_var: bool = False,
-               cooldown: bool = False) -> None:
+               ) -> None:
         """
         Update wall stress: compute deterministic stresses and, if enabled,
         perform GP prediction and place predicted mean and variance into the
@@ -318,13 +332,13 @@ class WallStress(GaussianProcessSurrogate):
 
         Parameters
         ----------
+        residuals : Deque
+            Residual buffer of the main simulation loop
         predictor : bool, optional
             Whether this update is part of the predictor stage.
         compute_var : bool, optional
             Flag for re-computing the variance (the default is False which uses
             the stored variance from previous steps).
-        cooldown : bool, optional
-            If true, active learning is blocked to let the system cool down (default is False).
         """
 
         # piezoviscosity
@@ -357,7 +371,8 @@ class WallStress(GaussianProcessSurrogate):
                               self.geo['V_top'],
                               shear_viscosity,
                               self.prop['bulk'],
-                              0.0, self.extra  # Ls_bot=0, Ls_top=extra
+                              Ls_bot=0.0,
+                              Ls_top=self.extra if self.extra.shape == 1 else 0.
                               )
 
         s_top = stress_top(self.solution,
@@ -368,7 +383,8 @@ class WallStress(GaussianProcessSurrogate):
                            self.geo['V_top'],
                            shear_viscosity,
                            self.prop['bulk'],
-                           0.0, self.extra  # Ls_bot=0, Ls_top=extra
+                           Ls_bot=0.0,
+                           Ls_top=self.extra if self.extra.shape == 1 else 0.
                            )
 
         self.__field.pg[:3] = s_bot[:3] / 2.
@@ -378,13 +394,28 @@ class WallStress(GaussianProcessSurrogate):
         self.__field.pg[11] = s_top[-1] / 2.
 
         if self.is_gp_model:
-            mean, var = self.predict(predictor=predictor,
-                                     compute_var=self.use_active_learning or compute_var,
-                                     cooldown=cooldown)
+            mean, var = self.predict(
+                residuals=residuals,
+                predictor=predictor,
+                compute_var=self.use_active_learning or compute_var,
+            )
 
             self.__field.pg[self._out_index] = mean[0, :, :]
             self.__field.pg[self._out_index + 6] = mean[1, :, :]
             self.__field_variance.pg[:] = var
+
+        elif self.is_custom:
+            sol = self.solution
+            j = sol[1] if self.direction == 'x' else sol[2]
+            theta = (self.__solution_full.pg[self.theta_index]
+                     if self.theta_index is not None else np.zeros_like(j))
+            U_bot, U_top = ((self.geo['U_bot'], self.geo['U_top']) if self.direction == 'x'
+                            else (self.geo['V_bot'], self.geo['V_top']))
+            args = (sol[0], theta, j, self.height,
+                    np.full_like(j, U_bot), np.full_like(j, U_top))
+            tau_bot = np.asarray(self.tau_bot(*args))
+            self.__field.pg[self._out_index] = tau_bot
+            self.__field.pg[self._out_index + 6] = tau_bot + np.asarray(self.tau(*args))
 
         else:
             self.__field.pg[self._out_index] = s_bot[self._out_index]
@@ -393,10 +424,8 @@ class WallStress(GaussianProcessSurrogate):
     def build_grad(self) -> None:
         """Build JIT-compiled gradient functions for wall stress."""
 
-        dir = self.name[0]  # 'x' or 'y'
-
         if self.is_gp_model:
-            jmom_name = 'j' + dir
+            jmom_name = 'j' + self.direction
             X_shift = self.database.X_shift[jnp.array(self.active_dims)]
             X_scale = self.database.X_scale[jnp.array(self.active_dims)]
 
@@ -417,8 +446,10 @@ class WallStress(GaussianProcessSurrogate):
 
             f_gap_drho = grad(f_gap, argnums=0)
             f_gap_djmom = grad(f_gap, argnums=1)
+            f_gap_dh = grad(f_gap, argnums=2)
             f_bot_drho = grad(f_bot, argnums=0)
             f_bot_djmom = grad(f_bot, argnums=1)
+            f_bot_dh = grad(f_bot, argnums=2)
             zero = lambda rho, jmom, h: jnp.zeros(())
 
             vmap2 = lambda f: jit(vmap(vmap(f, in_axes=(0, 0, 0)), in_axes=(0, 0, 0)))
@@ -427,35 +458,64 @@ class WallStress(GaussianProcessSurrogate):
             self.tau_bot = vmap2(f_bot)
             self.dtau_drho = vmap2(f_gap_drho)
             self.dtau_dtheta = vmap2(zero)
+            self.dtau_dh = vmap2(f_gap_dh)
             self.dtau_bot_drho = vmap2(f_bot_drho)
             self.dtau_bot_dtheta = vmap2(zero)
+            self.dtau_bot_dh = vmap2(f_bot_dh)
             setattr(self, f'dtau_d{jmom_name}', vmap2(f_gap_djmom))
             setattr(self, f'dtau_bot_d{jmom_name}', vmap2(f_bot_djmom))
 
+        elif self.is_custom:
+            fn = self.custom_fn
+            f_bot = lambda rho, theta, j, h, U_bot, U_top: fn(rho, theta, j, h, U_bot, U_top)[0]
+            f_top = lambda rho, theta, j, h, U_bot, U_top: fn(rho, theta, j, h, U_bot, U_top)[1]
+            f_gap = lambda *args: f_top(*args) - f_bot(*args)
+
+            vmap2 = lambda f: jit(vmap(vmap(f)))
+            jmom_name = 'j' + self.direction
+
+            self.tau = vmap2(f_gap)
+            self.tau_bot = vmap2(f_bot)
+            for argnum, var in enumerate(['rho', 'theta', jmom_name, 'h']):
+                setattr(self, f'dtau_d{var}', vmap2(grad(f_gap, argnums=argnum)))
+                setattr(self, f'dtau_bot_d{var}', vmap2(grad(f_bot, argnums=argnum)))
+
         else:
-            stress_top_fn = globals()[f'stress_top_{dir}z']
-            stress_bot_fn = globals()[f'stress_bottom_{dir}z']
-            der_vars = ['rho', 'j' + dir, 'theta']
-            der_arg_idx = [0, 1 if dir == 'x' else 2, 10]
+            stress_top_fn = globals()[f'stress_top_{self.direction}z']
+            stress_bot_fn = globals()[f'stress_bottom_{self.direction}z']
+            der_vars = ['rho', 'j' + self.direction, 'theta', 'h']
+            der_arg_idx = [0, 1 if self.direction == 'x' else 2, 10, 3]
+            freeze_gradient = self.prop['viscosity']['freeze_gradient']
+            underrelax_gradient_value = self.prop['viscosity']['underrelax_gradient_value']
+            alpha_underrelax = self.prop['viscosity']['alpha_underrelax']
+
+            def _eta(rho, dp_dx, dp_dy, h, eta_in):
+                # eta_in is the (possibly underrelaxed) viscosity field from Viscosity.eta.
+                if freeze_gradient:
+                    return eta_in
+                p = eos_pressure(rho, self.prop, h)
+                eta_live = get_shear_viscosity(self, p, dp_dx, dp_dy, h)
+                if underrelax_gradient_value:
+                    eta_scaled = eta_live * alpha_underrelax
+                    return eta_in + (eta_scaled - lax.stop_gradient(eta_scaled))
+                return eta_live
 
             # central functions: only argument difference for x/y is dh
-            def _tau(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy):
-                p = eos_pressure(rho, self.prop)
-                eta = get_shear_viscosity(self, p, dp_dx, dp_dy, h)
-                q = jnp.array([rho, jx / (1.0 - theta), jy / (1.0 - theta)])
+            def _tau(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy, eta_in):
+                eta = _eta(rho, dp_dx, dp_dy, h, eta_in) * (1.0 - theta)
+                q = jnp.array([rho * (1.0 - theta), jx, jy])
                 h_arr = jnp.array([h, dh])
                 tau_top = stress_top_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
                 tau_bot = stress_bot_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
-                return (1.0 - theta) * (tau_top - tau_bot)
+                return (tau_top - tau_bot)
 
             # required for energy
-            def _tau_bot(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy):
-                p = eos_pressure(rho, self.prop)
-                eta = get_shear_viscosity(self, p, dp_dx, dp_dy, h)
-                q = jnp.array([rho, jx / (1.0 - theta), jy / (1.0 - theta)])
+            def _tau_bot(rho, jx, jy, h, dh, U_bot, V_bot, U_top, V_top, Ls, theta, dp_dx, dp_dy, eta_in):
+                eta = _eta(rho, dp_dx, dp_dy, h, eta_in) * (1.0 - theta)
+                q = jnp.array([rho * (1.0 - theta), jx, jy])
                 h_arr = jnp.array([h, dh])
                 tau_bot = stress_bot_fn(q, h_arr, U_bot, V_bot, U_top, V_top, eta, self.prop['bulk'], 0.0, Ls)
-                return (1.0 - theta) * tau_bot
+                return tau_bot
 
             vmap2 = lambda f: vmap(vmap(f))  # no map_axes required since we broadcast all args to quad fields
 
@@ -567,7 +627,9 @@ class BulkStress(GaussianProcessSurrogate):
                                         self.geo['V_top'],
                                         shear_viscosity,
                                         self.prop['bulk'],
-                                        0.0, self.extra)
+                                        Ls_bot=0.0,
+                                        Ls_top=self.extra if self.extra.shape == 1 else 0.
+                                        )
 
 
 class Pressure(GaussianProcessSurrogate):
@@ -608,23 +670,27 @@ class Pressure(GaussianProcessSurrogate):
         if gp is not None:
             self.is_gp_model = True
             self.active_dims = gp.get('active_dims', [0, 3])
+            self.derived_expressions = gp.get('derived_features', [])
             self.__field_variance = fc.real_field('pressure_var')
 
             # Active learning parameters
-            self.tol = gp['tol']
+            self.tolerance_protocol = gp['tolerance_protocol']
             self.atol = gp['atol']
             self.rtol = gp['rtol']
+            self.atol_reduction_factor = gp['atol_reduction_factor']
+            self.tol_rmid = gp['tol_rmid']
+            self.tol_alpha = gp['tol_alpha']
             self.max_steps = gp['max_steps']
             self.pause_steps = gp['pause_steps']
             self.use_active_learning = gp['active_learning']
             self.similarity_check = gp['similarity_check']
             self.allowed_skips = gp['allowed_skips']
-            self.perturb_target = gp['perturb_target']
             self.fix_noise = gp['fix_noise']
             self.pause_on_high_residual = gp['pause_on_high_residual']
         else:
             self.is_gp_model = False
             self.use_active_learning = False
+            self.derived_expressions = []
 
         super().__init__(fc, data)
 
@@ -655,7 +721,7 @@ class Pressure(GaussianProcessSurrogate):
             vsound = jnp.sqrt(vsound_squared)
             return vsound
         else:
-            return eos_sound_velocity(self.solution[0], self.prop).max()
+            return eos_sound_velocity(self.solution[0], self.prop, self.height).max()
 
     @property
     def Xtest(self) -> JAXArray:
@@ -718,9 +784,9 @@ class Pressure(GaussianProcessSurrogate):
             self._infer()
 
     def update(self,
+               residuals: Deque,
                predictor: bool = False,
-               compute_var: bool = False,
-               cooldown: bool = False) -> None:
+               compute_var: bool = False) -> None:
         """
         Update pressure: compute deterministic stresses and, if enabled,
         perform GP prediction and place predicted mean and variance into the
@@ -728,22 +794,61 @@ class Pressure(GaussianProcessSurrogate):
 
         Parameters
         ----------
+        residuals : Deque
+            Residual buffer of the main simulation loop
         predictor : bool, optional
             Whether this update is part of the predictor stage.
         compute_var : bool, optional
             Flag for re-computing the variance (the default is False which uses
             the stored variance from previous steps).
-        cooldown : bool, optional
-            If true, active learning is blocked to let the system cool down (default is False).
         """
         if self.is_gp_model:
-            mean, var = self.predict(predictor=predictor,
-                                     compute_var=self.use_active_learning or compute_var,
-                                     cooldown=cooldown)
+            mean, var = self.predict(residuals=residuals,
+                                     predictor=predictor,
+                                     compute_var=self.use_active_learning or compute_var)
+
             self.__field.pg[:] = mean
             self.__field_variance.pg[:] = var
         else:
-            self.__field.pg[:] = eos_pressure(self.solution[0], self.prop)
+            self.__field.pg[:] = eos_pressure(self.solution[0], self.prop, self.height)
+
+    @property
+    def takes_h(self) -> bool:
+        """True if the EoS functions take the gap height as additional argument."""
+        return self.is_gp_model or self.prop['EOS'] == 'user'
+
+    def _build_eos_functions(self, f0) -> None:
+        f1 = grad(f0, argnums=0)
+        f2 = grad(f1, argnums=0)
+
+        def _newton_invert(p_target, h, rho_init, n_steps=10):
+            def step(rho, _):
+                return rho - (f0(rho, h) - p_target) / f1(rho, h), None
+            rho, _ = lax.scan(step, rho_init, None, length=n_steps)
+            return rho
+
+        vmap2 = lambda f: jit(vmap(vmap(f, in_axes=(0, 0)), in_axes=(0, 0)))
+        vmap2_inv = lambda f: jit(vmap(vmap(f, in_axes=(0, 0, 0)), in_axes=(0, 0, 0)))
+
+        self.p_from_rho = vmap2(f0)
+        self.dp_drho = vmap2(f1)
+        self.d2p_drho2 = vmap2(f2)
+        self.drho_dp = vmap2(lambda rho, h: 1.0 / f1(rho, h))
+        self.rho_from_p = vmap2_inv(_newton_invert)
+
+    def _check_user_eos(self, rtol: float = 1e-6) -> None:
+        """Check monotonicity and the numerical inverse of a user EoS around rho0."""
+        rho = self.prop['rho0'] * np.linspace(0.9, 1.1, 21)[None, :]
+        h_inner = self.height[1:-1, 1:-1]
+        for h in (np.min(h_inner), np.max(h_inner)):
+            h_arr = np.full_like(rho, h)
+            p = np.asarray(self.p_from_rho(rho, h_arr))
+            dp = np.asarray(self.dp_drho(rho, h_arr))
+            rho_back = np.asarray(self.rho_from_p(p, h_arr, np.full_like(rho, self.prop['rho0'])))
+            if not np.all(dp > 0.0):
+                raise ValueError(f"Custom EOS is not strictly increasing in rho (h={h:.3e}).")
+            if not np.allclose(rho_back, rho, rtol=rtol, atol=0.0):
+                raise ValueError(f"Custom EOS: numerical inverse rho(p) failed (h={h:.3e}).")
 
     def build_grad(self) -> None:
 
@@ -756,23 +861,11 @@ class Pressure(GaussianProcessSurrogate):
                                     (h - X_shift[1]) / X_scale[1]])
                 return self.gp.predict(self.Ytrain, x_norm[None, :]).squeeze() * self.Yscale + self.Yshift
 
-            f1 = grad(f0, argnums=0)
-            f2 = grad(f1, argnums=0)
+            self._build_eos_functions(f0)
 
-            def _newton_invert(p_target, h, rho_init, n_steps=10):
-                def step(rho, _):
-                    return rho - (f0(rho, h) - p_target) / f1(rho, h), None
-                rho, _ = lax.scan(step, rho_init, None, length=n_steps)
-                return rho
-
-            vmap2 = lambda f: jit(vmap(vmap(f, in_axes=(0, 0)), in_axes=(0, 0)))
-            vmap2_inv = lambda f: jit(vmap(vmap(f, in_axes=(0, 0, 0)), in_axes=(0, 0, 0)))
-
-            self.p_from_rho = vmap2(f0)
-            self.dp_drho = vmap2(f1)
-            self.d2p_drho2 = vmap2(f2)
-            self.drho_dp = vmap2(lambda rho, h: 1.0 / f1(rho, h))
-            self.rho_from_p = vmap2_inv(_newton_invert)
+        elif self.prop['EOS'] == 'user':
+            self._build_eos_functions(lambda rho, h: eos_pressure(rho, self.prop, h))
+            self._check_user_eos()
 
         else:
 
@@ -796,6 +889,12 @@ class Viscosity():
                  prop: dict) -> None:
         self.__field = fc.real_field('shear_viscosity')
         self.prop = prop
+        self.eta_prev = None
+        # Fixed relaxation target (e.g. piezoviscosity at a frozen, converged
+        # pressure). None (default): relax towards the live piezoviscosity
+        # computed below, as before. Set externally to relax towards this
+        # instead, ignoring the freshly computed shear_viscosity.
+        self.eta_target = None
 
     @property
     def shear_viscosity(self) -> NDArray:
@@ -833,6 +932,18 @@ class Viscosity():
                                                           self.prop['thinning'])
         else:
             shear_viscosity = mu0
+
+        shear_viscosity = np.broadcast_to(shear_viscosity, pressure.shape)
+
+        if self.eta_target is not None:
+            shear_viscosity = self.eta_target
+
+        # underrelaxation
+        alpha = self.prop['viscosity']['alpha_underrelax']
+        if self.eta_prev is None:
+            self.eta_prev = shear_viscosity
+        shear_viscosity = (1 - alpha) * self.eta_prev + alpha * shear_viscosity
+        self.eta_prev = np.copy(shear_viscosity)
 
         self.__field.pg[:] = shear_viscosity
 

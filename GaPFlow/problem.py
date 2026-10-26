@@ -25,14 +25,13 @@
 #
 import os
 import io
+import inspect
 import numpy as np
 from copy import deepcopy
 from collections import deque
 from datetime import datetime
-from itertools import islice
 from muGrid import FileIONetCDF
-from mpi4py import MPI
-from .parallel import DomainDecomposition
+from .parallel import DomainDecomposition, MPI
 
 from typing import Type
 import numpy.typing as npt
@@ -48,16 +47,17 @@ from .db import Database
 from .topography import Topography
 from .io import read_yaml_input, write_yaml, create_output_directory, history_to_csv
 from .analysis import compute_metrics, print_metrics, create_overview_plot
-from .utils import handle_signals, get_termination_signals
+from .utils import handle_signals, get_termination_signals, above_tolerance
 from .models import WallStress, BulkStress, Pressure, Energy, Viscosity
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
 from .viz.animations import animate_1d, animate_1d_gp, animate_2d
+from .viz.utils import tolerance_per_frame
 from .logging import get_logger
 
-# Configure module logger writing to gapflow_problem.log via centralized helper
-logger = get_logger("gapflow.problem")
+# Configure module logger writing to log.run via centralized helper
+logger = get_logger("gapflow.run")
 
 
 class Problem:
@@ -153,18 +153,25 @@ class Problem:
             from .solver_explicit.solver_explicit import ExplicitSolver
             self.solver = ExplicitSolver(self)
         elif self.numerics['solver'] == 'fem':
-            from .solver_fem.solver_fem import FEMSolver
-            self.solver = FEMSolver(self.fem_solver, self)
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            self.solver = ImplicitSolver(self.fem_solver, self)
 
         # Solution field
         self.step = None
+        self.simtime = 0.
         self.__field = self.fc.real_field('solution', (self.solver.nb_sol,))
         self._initialize(rho0=prop['rho0'],
                          U_bot=geo['U_bot'], V_bot=geo['V_bot'],
                          U_top=geo['U_top'], V_top=geo['V_top'])
 
-        # Initialize extra field
-        num_extra_features = 1 if database is None else database.num_features - 6
+        # Initialize extra field (only allocate if extra data is actually present).
+        if database is not None:
+            num_extra_features = database.num_extra_features
+        elif extra_field is not None:
+            num_extra_features = extra_field.shape[0]
+        else:
+            num_extra_features = 0
+
         extra = self.fc.real_field('extra', (num_extra_features,))
         if extra_field is not None:
             extra.pg[:] = extra_field
@@ -185,11 +192,11 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
+        for model in (self.pressure, self.wall_stress_xz, self.wall_stress_yz):
+            model.clock = lambda: self.simtime
         self.viscosity = Viscosity(self.fc, prop)
         self.topo = Topography(self.fc, self.grid, geo, prop, decomp=self.decomp,
-                               force_balance=force_balance)
-        if self.topo.force_balance:
-            self.topo._fb_controller.set_problem(self)
+                               force_balance=force_balance, problem=self)
 
         self.bEnergy = (self.numerics['solver'] == 'fem' and self.fem_solver['equations']['energy'])
         if self.bEnergy:
@@ -207,7 +214,7 @@ class Problem:
 
             # Reconfigure module loggers to write into the simulation output directory
             # so all components write into the same outdir logfile(s).
-            get_logger("gapflow.problem", outdir=self.outdir, force=True)
+            get_logger("gapflow.run", outdir=self.outdir, force=True)
 
             if database is not None:
                 # Set training path inside output path
@@ -300,7 +307,10 @@ class Problem:
                 elif md['system'] == 'mol':
                     MD = GoldAlkane(md)
 
-            database = Database(MD, db)
+            derived_exprs = gp.get('derived_features', []) if gp else []
+            database = Database(MD, db,
+                                num_derived_features=len(derived_exprs),
+                                derived_expressions=derived_exprs)
         else:
             database = None
 
@@ -325,7 +335,7 @@ class Problem:
             Instantiated `Problem` object.
         """
         logger.info(f"Reading input file: {fname}")
-        with open(fname, "r") as ymlfile:
+        with open(fname, "r", encoding="utf-8") as ymlfile:
             yaml_dir = os.path.dirname(os.path.abspath(fname))
             input_dict = read_yaml_input(ymlfile)
 
@@ -420,13 +430,19 @@ class Problem:
 
     @property
     def kinetic_energy(self) -> np.floating:
-        """Total kinetic energy (scalar), globally reduced across MPI ranks."""
+        """Total kinetic energy (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_ekin = np.sum((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0] / 2.)
         return self.decomp._mpi_comm.allreduce(local_ekin, op=MPI.SUM)
 
     @property
     def v_max(self) -> np.floating:
-        """Maximum speed in the domain (scalar), globally reduced across MPI ranks."""
+        """Maximum speed in the domain (scalar), globally reduced across MPI ranks.
+        0 if the solution field has no jx/jy rows (e.g. Reynolds mode)."""
+        if self.solver.nb_sol < 3:
+            return np.float64(0.)
         local_vmax = np.sqrt((self.__field.pg[1]**2 + self.__field.pg[2]**2) / self.__field.pg[0]).max()
         return self.decomp._mpi_comm.allreduce(local_vmax, op=MPI.MAX)
 
@@ -443,14 +459,7 @@ class Problem:
     @property
     def converged(self) -> bool:
         """Return True if residuals in the buffer are below tolerance."""
-        return not self._residuals_above_tolerance(self.tol, num=5)
-
-    def _residuals_above_tolerance(self, tol: float, num: int | None = None) -> bool:
-        """Return True if any of the last `num` residuals are above `tol` (all if `num` is None)."""
-        buf = self.residual_buffer
-        if num is None:
-            return any(v > tol for v in buf)
-        return any(v > tol for v in islice(reversed(buf), num))
+        return not above_tolerance(self.residual_buffer, self.tol, num=5)
 
     # ---------------------------
     # Simulation run utilities
@@ -473,19 +482,13 @@ class Problem:
 
         self._stop = False
 
-        self.history = {
-            "step": [],
-            "time": [],
-            "ekin": [],
-            "residual": [],
-            "vsound": []
-        }
-
-        self.solver.print_status_header()
+        self.history = {}
 
         # Call callbacks once before the main loop to capture initial state (t=0)
         for callback in self._callbacks:
             callback()
+
+        self.solver.print_status_header()
 
         # Run
         self._tic = datetime.now()
@@ -493,10 +496,9 @@ class Problem:
             self.update()
 
             if self.step % self.options['write_freq'] == 0:
-                if self.options['print_progress']:
-                    self.solver.print_status(True)
+                self.solver.print_status()
                 if self.options['save_output']:
-                    self.write(scalars=False)
+                    self.write()
 
             handle_signals(self._receive_signal)
 
@@ -508,6 +510,14 @@ class Problem:
 
         Has to be called before the first call to :meth:`update`.
         """
+        self.step = 0
+        self.dt = self.numerics['dt']
+        self.simtime = 0.
+        self.residual = 1.
+        self.residual_buffer = deque([self.residual, ], maxlen=100)
+        self.tol = self.numerics['tol']
+        self.max_it = self.numerics['max_it']
+
         self.pressure.init_database(self.grid['dim'])
         self.wall_stress_xz.init_database(self.grid['dim'])
         self.wall_stress_yz.init_database(self.grid['dim'])
@@ -521,14 +531,6 @@ class Problem:
             self.wall_stress_xz.save_state()
             self.wall_stress_yz.save_state()
 
-        self.step = 0
-        self.dt = self.numerics['dt']
-        self.simtime = 0.
-        self.residual = 1.
-        self.residual_buffer = deque([self.residual, ], maxlen=100)
-        self.tol = self.numerics['tol']
-        self.max_it = self.numerics['max_it']
-
         self.solver.pre_run(**kwargs)
 
     def _receive_signal(self, signum, frame) -> None:
@@ -541,11 +543,10 @@ class Problem:
 
     def _post_run(self) -> None:
         """
-        Finalize run: write history, print timing and GP timing info.
+        Finalize run: print timing and GP timing info.
         """
         # Print metrics if requested
         if self.options.get('print_metrics', False):
-            from mpi4py import MPI
             metrics = compute_metrics(self)
             print_metrics(metrics, MPI.COMM_WORLD)
 
@@ -556,14 +557,15 @@ class Problem:
 
         # Residual analysis for FEM 2D solver
         if self.options.get('residual_analysis', False):
-            from .solver_fem.solver_fem import FEMSolver
-            if isinstance(self.solver, FEMSolver) and hasattr(self.solver, 'run_residual_analysis'):
+            from .solver_implicit.solver_implicit import ImplicitSolver
+            if isinstance(self.solver, ImplicitSolver) and hasattr(self.solver, 'run_residual_analysis'):
                 self.solver.run_residual_analysis()
 
         walltime = datetime.now() - self._tic
 
         if self.step % self.options['write_freq'] != 0 and self.options['save_output']:
-            self.write(scalars=False)
+            self.solver.print_status()
+            self.write()
 
         speed = self.step / walltime.total_seconds()
 
@@ -586,8 +588,6 @@ class Problem:
         logger.info(33 * '=')
 
         if self.options['save_output']:
-            history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
-
             if self.pressure.is_gp_model:
                 with open(os.path.join(self.outdir, 'gp_zz.txt'), 'w') as f:
                     print(self.pressure.gp, file=f)
@@ -629,15 +629,15 @@ class Problem:
             Boundary: 'W', 'E', 'S', or 'N'
         callback : callable
             Function: callback(ctx: BCContext) -> np.ndarray
-            The BCContext contains: problem, required_shape, ghost_slice,
-            interior_slice, x_norm, y_norm.
+            The BCContext contains: problem, required_shape, slice_ghost,
+            slice_interior, x_norm, y_norm.
             Returns array with shape matching ctx.required_shape.
 
         Example
         -------
         def jx_lid(ctx):
             u_wall = 1.0
-            rho_ghost = ctx.problem.q[0][ctx.ghost_slice]
+            rho_ghost = ctx.problem.q[0][ctx.slice_ghost]
             return rho_ghost * u_wall
 
         problem.set_bc_function('jx', 'N', jx_lid)
@@ -648,17 +648,64 @@ class Problem:
             raise ValueError(f"boundary must be 'W', 'E', 'S', or 'N', got '{boundary}'")
         self._bc_callbacks.setdefault(var_name, {})[boundary] = callback
 
-    def set_eos_function(self, fn: callable) -> None:
-        """Set a custom equation of state function.
+    def set_custom_eos(self, p_of_rho: callable) -> None:
+        """Set a custom equation of state for the FEM solver.
+
+        Must be called before :meth:`run`. The inverse rho(p) is computed numerically,
+        so p(rho) has to be strictly increasing.
 
         Parameters
         ----------
-        fn : callable
-            Scalar JAX-differentiable function fn(rho) -> p.
+        p_of_rho : callable
+            Scalar, twice JAX-differentiable function ``p_of_rho(rho) -> p`` or
+            ``p_of_rho(rho, h) -> p`` (SI units).
         """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_eos is only implemented for the FEM solver.")
+        if self.pressure.is_gp_model:
+            raise ValueError("set_custom_eos cannot be combined with a GP pressure model.")
+
+        n_args = len(inspect.signature(p_of_rho).parameters)
+        if n_args == 1:
+            fn = lambda rho, h: p_of_rho(rho)
+        elif n_args == 2:
+            fn = p_of_rho
+        else:
+            raise ValueError("p_of_rho must take (rho) or (rho, h).")
+
         self.prop['EOS'] = 'user'
         self.prop['EOS_user'] = fn
-        self.pressure.build_grad()
+
+    def set_custom_wall_stress(self, tau_of_q: callable) -> None:
+        """Set a custom wall stress model for the FEM solver.
+
+        Must be called before :meth:`run`. The same function is used for both directions:
+        for xz it is called with ``j = jx`` and the x wall velocities, for yz with ``j = jy``
+        and the y wall velocities.
+
+        Parameters
+        ----------
+        tau_of_q : callable
+            Scalar, JAX-differentiable function
+            ``tau_of_q(rho, theta, j, h, U_bot, U_top) -> (tau_bot, tau_top)`` (SI units).
+            ``theta`` is the cavity fraction (zero without cavitation).
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("set_custom_wall_stress is only implemented for the FEM solver.")
+        if self.wall_stress_xz.is_gp_model or self.wall_stress_yz.is_gp_model:
+            raise ValueError("set_custom_wall_stress cannot be combined with a GP wall stress model.")
+        if self.fem_solver['equations']['reynolds']:
+            raise ValueError("set_custom_wall_stress cannot be combined with the Reynolds equation.")
+        if not self.fem_solver['physics']['gap_shear']:
+            raise ValueError("set_custom_wall_stress requires physics.gap_shear: True.")
+        if len(inspect.signature(tau_of_q).parameters) != 6:
+            raise ValueError("tau_of_q must take (rho, theta, j, h, U_bot, U_top).")
+
+        add_fields = self.solver.add_fields
+        theta_index = 3 + add_fields.index('theta') if 'theta' in add_fields else None
+        for ws in (self.wall_stress_xz, self.wall_stress_yz):
+            ws.custom_fn = tau_of_q
+            ws.theta_index = theta_index
 
     # ---------------------------
     # Single time step (update)
@@ -704,9 +751,9 @@ class Problem:
             logger.warning('Negative density detected.')
 
         self.q = q0
-        self.pressure.update(predictor=False, compute_var=True)
-        self.wall_stress_xz.update(predictor=False, compute_var=True)
-        self.wall_stress_yz.update(predictor=False, compute_var=True)
+        self.pressure.update(self.residual_buffer, predictor=False, compute_var=True)
+        self.wall_stress_xz.update(self.residual_buffer, predictor=False, compute_var=True)
+        self.wall_stress_yz.update(self.residual_buffer, predictor=False, compute_var=True)
         self.bulk_stress.update()
 
         logger.info('Writing previous step and aborting simulation.')
@@ -716,11 +763,14 @@ class Problem:
     # I/O and state writing
     # ---------------------------
 
-    def write(self, scalars: bool = True, fields: bool = True, params: bool = True) -> None:
+    def write(self, fields: bool = True) -> None:
         """
-        Write scalars, fields and hyperparameters to disk as configured.
+        Record history and write fields to disk as configured.
         """
-        self.solver.print_status(scalars)
+        record = {**self.solver.status_record(), **self.solver.physical_record()}
+        for key, value in record.items():
+            self.history.setdefault(key, []).append(value)
+        history_to_csv(os.path.join(self.outdir, 'history.csv'), self.history)
 
         if fields:
             self.file = FileIONetCDF(self.filename, open_mode='append')
@@ -746,6 +796,39 @@ class Problem:
             self.topofile.append_frame().write()
             self.topofile.close()
 
+    def save_state(self, path: str) -> None:
+        """
+        Save a full simulation checkpoint for a later warm restart via :meth:`load_state`.
+
+        Independent of the regular trajectory output (:meth:`write`); captures everything
+        needed to continue the simulation seamlessly, including solver-internal state not
+        otherwise written to disk. Currently only supported for the FEM solver.
+
+        Parameters
+        ----------
+        path : str
+            Destination file path (``.npz``).
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("save_state is only implemented for the FEM solver.")
+        self.solver.save_state(path)
+
+    def load_state(self, path: str) -> None:
+        """
+        Restore a simulation checkpoint written by :meth:`save_state`.
+
+        Must be called on a freshly constructed `Problem` (same grid/geometry/config as the
+        checkpointed run), before :meth:`run`. Currently only supported for the FEM solver.
+
+        Parameters
+        ----------
+        path : str
+            Path to a checkpoint file written by :meth:`save_state`.
+        """
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError("load_state is only implemented for the FEM solver.")
+        self.solver.load_state(path)
+
     # ---------------------------
     # Initialization and update helpers
     # ---------------------------
@@ -755,6 +838,8 @@ class Problem:
         Select active GP models
         """
         if gp is not None:
+            derived = gp.get('derived_features', [])
+
             if self.grid['dim'] == 1:
                 gpz = gp.get('press')
                 gpx = gp.get('shear')
@@ -764,6 +849,10 @@ class Problem:
                 gpx = gp.get('shear')
                 gpy = gp.get('shear')
 
+            # Inject top-level derived_features into each model sub-dict.
+            for sub in [gpx, gpy, gpz]:
+                if sub is not None:
+                    sub['derived_features'] = derived
         else:
             gpx, gpy, gpz = None, None, None
 
@@ -773,10 +862,12 @@ class Problem:
                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
+        No jx/jy rows if the solution field has no jx/jy DOFs (e.g. Reynolds mode).
         """
         self.__field.pg[0] = rho0
-        self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
-        self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
+        if self.solver.nb_sol >= 3:
+            self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
+            self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
 
         self.kinetic_energy_old = self.kinetic_energy
 
@@ -882,9 +973,16 @@ class Problem:
 
         if self.grid['Ny'] == 1:
             if self.has_gp_model:
+                tol_p, tol_s = [tolerance_per_frame(model.history['step'],
+                                                    model.history['variance_tol'],
+                                                    self.history['step'])
+                                if model.is_gp_model else None
+                                for model in (self.pressure, self.wall_stress_xz)]
                 return animate_1d_gp(filename_sol,
                                      seconds=seconds,
-                                     save=save)
+                                     save=save,
+                                     tol_p=tol_p,
+                                     tol_s=tol_s)
             else:
                 return animate_1d(filename_sol,
                                   filename_topo,

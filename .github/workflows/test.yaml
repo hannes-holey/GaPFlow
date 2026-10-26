@@ -14,10 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        parallel: ['yes', 'no']
         python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
     - name: Checkout source
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
       with:
         fetch-depth: 0
         submodules: recursive
@@ -25,17 +26,23 @@ jobs:
     - name: Install MPI
       run: |
         sudo apt-get update
-        sudo apt-get install -y openmpi-bin libopenmpi-dev
+         if [ "${{ matrix.parallel }}" == "yes" ]; then
+            sudo apt-get install -y openmpi-bin libopenmpi-dev
+         fi
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install GaPFlow
       run: |
         python3 -m pip install --upgrade pip
-        python3 -m pip install -v .[test,parallel]
+         if [ "${{ matrix.parallel }}" == "yes" ]; then
+           python3 -m pip install -v .[test,parallel]
+         else
+           python3 -m pip install -v .[test]
+         fi
 
     - name: Test with pytest (!=3.13)
       if: matrix.python-version != '3.13'

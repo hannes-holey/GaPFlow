@@ -1,36 +1,15 @@
 Tutorials
 =========
 
-This section contains a series of tutorials that guide users through features and applications of the GaPFlow framework. 
-Each tutorial is designed to provide hands-on experience with different aspects, going from basic concepts to 
+This section contains a series of tutorials that guide users through features and applications of the GaPFlow framework.
+Each tutorial is designed to provide hands-on experience with different aspects, going from basic concepts to
 simulations that integrate all previously covered parts.
 
-The first tutorial introduces the mathematical foundation for the multiscale approach, splitting the problem into a micro- and 
-macro-problem. Subsequent tutorials build upon this foundation, covering the constitutive equations for stress, equations of state,
-and viscosity. The pieces are brought together in tutorials 4, 5 and 6, which focus on confined fluids and lubrication problems.
-Tutorial 7 introduces Gaussian Processes for surrogate modeling of the micro-problem, using actual MD simulation data in tutorial 8.
-The final tutorial illustrates the coupling between fluid pressure and the elastic deformation of the solid surfaces.
+The tutorials are split into two parts: the first part covers the explicit finite volume (FVM) solver,
+the second part the implicit finite element (FEM) solver.
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
-    01_macro_equations.ipynb
-    02_stress_sympy.ipynb
-    03_constitutive_laws.ipynb
-    04_confined_fluids.ipynb
-    05_lubrication_1d.ipynb
-    06_lubrication_2d.ipynb
-    07_gp_mock.ipynb
-    08_gp_md.ipynb
-    09_elastic_deformation.ipynb
-	08_fem_1d_theory.ipynb
-	09_fem_1d_examples.ipynb
-	10_wall_fluid_heatflow.ipynb
-	11_fem_2d_theory.ipynb
-	12_fem_2d_examples.ipynb
-	13_solver_comparison.ipynb
-	14_fem_2d_analytic.ipynb
-	15_fem_cavitation_examples.ipynb
-	A_config.ipynb
-	B_scripting.ipynb
-	C_P2P1_assembly_doc.md
+    fvm
+    fem

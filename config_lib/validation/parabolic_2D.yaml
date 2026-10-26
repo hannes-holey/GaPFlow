@@ -1,0 +1,59 @@
+options:
+    output: /tmp/parabolic_2D
+    write_freq: 10
+    save_output: False
+    output_plots: False
+    residual_analysis: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.0762
+    Nx: 100
+    Ny: 100
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['D', 'N', 'N']
+    yN: ['D', 'N', 'N']
+    xW_P: 101325
+    xE_P: 101325
+    yS_P: 101325
+    yN_P: 101325
+
+geometry:
+    type: parabolic_2d
+    hmin: 2.54e-5
+    hmax: 5.08e-5
+    U: 0.7
+    V: 0.0
+
+numerics:
+    solver: implicit
+    dt: 0.1
+    tol: 1e-14
+    max_it: 40
+
+properties:
+    EOS: DH
+    rho0: 877.7007
+    P0: 101325
+    C1: 3.5e10
+    C2: 1.23
+    p_cav: 0
+    shear: 0.039
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.2
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        oss: true
+        oss_alpha: 1.0
+        mass_supg: true
+        mass_supg_factor: 0.1
+    max_iter: 1
+    R_norm_tol: 1e-9
+    scaling: False

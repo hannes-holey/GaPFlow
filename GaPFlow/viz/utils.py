@@ -144,8 +144,33 @@ def set_axes_limits(ax,
 def autoscale_ylim(ax, margin=0.05):
     """Autoscale y-limits with a given margin."""
     y_min, y_max = ax.get_ylim()
-    y_range = max(y_max - y_min, 0.2)
+    y_range = max(y_max - y_min, 1e-12)
     ax.set_ylim(y_min - margin * y_range, y_max + margin * y_range)
+
+
+def tolerance_per_frame(gp_step, gp_tol, frame_step):
+    """Variance tolerance for each output frame.
+
+    The GP history has rows at every output step and at every (re-)training, so its
+    rows do not correspond to the output frames. For each frame, take the last GP row
+    recorded at or before the frame's step.
+
+    Parameters
+    ----------
+    gp_step : array-like
+        Step column of the GP history (non-decreasing).
+    gp_tol : array-like
+        Variance tolerance column of the GP history.
+    frame_step : array-like
+        Step of each output frame (step column of history.csv).
+
+    Returns
+    -------
+    numpy.ndarray
+        Variance tolerance for each frame.
+    """
+    idx = np.searchsorted(np.asarray(gp_step), np.asarray(frame_step), side='right') - 1
+    return np.asarray(gp_tol)[np.clip(idx, 0, None)]
 
 
 def _plot_gp(ax, x, mean, var, tol=None, color='C0'):

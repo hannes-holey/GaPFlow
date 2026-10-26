@@ -121,5 +121,23 @@ if not _lib_loaded:
 # ---------------------------------------------------------------------
 
 from GaPFlow._vendor import lammps  # noqa: E402
+from GaPFlow._vendor.lammps import core as _core  # noqa: E402
+
+# The bindings look for the shared library next to their own source file and
+# otherwise fall back to a system-wide search by file name. In development
+# (editable) installs, the bindings are imported from the source tree, while the
+# library only exists in the installed package. Redirect the file-name lookup to
+# the vendored library, so that no other LAMMPS installation is picked up.
+if os.path.dirname(os.path.abspath(_core.__file__)) != os.path.abspath(_lammps_pkg_dir):
+    _CDLL = _core.CDLL
+
+    def _vendored_cdll(name, *args, **kwargs):
+        if isinstance(name, str) and os.path.basename(name) == name:
+            candidate = os.path.join(_lammps_pkg_dir, name)
+            if os.path.exists(candidate):
+                name = candidate
+        return _CDLL(name, *args, **kwargs)
+
+    _core.CDLL = _vendored_cdll
 
 __all__ = ["lammps"]

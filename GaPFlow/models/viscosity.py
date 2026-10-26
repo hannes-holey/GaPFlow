@@ -44,7 +44,12 @@ def piezoviscosity(p: float | npt.NDArray,
     mu0 : float
         Newtonian viscosity
     piezo_dict : dict
-        Parameters
+        Parameters. If `piezo_dict['eta_max']` is set (not None), the model's
+        result is soft-saturated at `eta_max` -- see `saturate()` -- applying
+        generically regardless of which model produced it. If
+        `piezo_dict['eta_blend_cut']` is additionally set, the result is left
+        untouched below `eta_blend_cut` and only saturated above it -- see
+        `saturate_above()`. `eta_blend_cut` has no effect if `eta_max` is None.
 
     Returns
     -------
@@ -64,7 +69,74 @@ def piezoviscosity(p: float | npt.NDArray,
     else:
         func = lambda p, mu, **kwargs: np.ones_like(p) * mu
 
-    return func(p, mu0, **piezo_dict)
+    eta_max = piezo_dict.get('eta_max', None)
+    eta_blend_cut = piezo_dict.get('eta_blend_cut', None)
+    piezo_kwargs = {k: v for k, v in piezo_dict.items() if k not in ('eta_max', 'eta_blend_cut')}
+    eta = func(p, mu0, **piezo_kwargs)
+
+    if eta_max is None:
+        return eta
+    if eta_blend_cut is not None:
+        return saturate_above(eta, eta_blend_cut, eta_max)
+    return saturate(eta, eta_max)
+
+
+def saturate(eta: float | npt.NDArray, eta_max: float) -> float | npt.NDArray:
+    """Soft-saturate a viscosity field at `eta_max`, via a soft-min of `eta`
+    and `eta_max`:
+
+    .. math::
+        \\eta_{reg} = \\frac{\\eta_{max} \\, \\eta}{\\eta_{max} + \\eta}
+
+    which matches `eta` for eta << eta_max and saturates to `eta_max` as
+    eta -> infinity, instead of growing unboundedly. Applies generically to
+    the result of any piezoviscosity (or shear-thinning) model.
+
+    Parameters
+    ----------
+    eta : float or Array
+        Unregularized viscosity.
+    eta_max : float
+        Maximum viscosity the regularized result saturates to.
+
+    Returns
+    -------
+    float or Array
+        Regularized viscosity, same shape as `eta`.
+    """
+    return eta_max * eta / (eta_max + eta)
+
+
+def saturate_above(eta: float | npt.NDArray, eta_cut: float, eta_max: float) -> float | npt.NDArray:
+    """Soft-saturate `eta` at `eta_max`, leaving it untouched below `eta_cut`.
+
+    Only the excess above `eta_cut` is soft-saturated (via `saturate()`) up
+    to `eta_max - eta_cut`, then shifted back up by `eta_cut`:
+
+    .. math::
+        \\eta_{reg} = \\eta_{cut} + \\frac{(\\eta_{max} - \\eta_{cut})(\\eta - \\eta_{cut})}
+        {(\\eta_{max} - \\eta_{cut}) + (\\eta - \\eta_{cut})} \\quad \\text{for } \\eta > \\eta_{cut}
+
+    which matches `eta` exactly for eta <= eta_cut (no manipulation) and
+    saturates to `eta_max` as eta -> infinity. C1-continuous at eta_cut,
+    since `saturate(x, m)` has value 0 and slope 1 at x=0.
+
+    Parameters
+    ----------
+    eta : float or Array
+        Unregularized viscosity.
+    eta_cut : float
+        Threshold below which `eta` is left unmodified.
+    eta_max : float
+        Maximum viscosity the regularized result saturates to.
+
+    Returns
+    -------
+    float or Array
+        Regularized viscosity, same shape as `eta`.
+    """
+    excess = eta - eta_cut
+    return jnp.where(excess <= 0, eta, eta_cut + saturate(jnp.maximum(excess, 0.), eta_max - eta_cut))
 
 
 def shear_thinning_factor(shear_rate: float | npt.NDArray,

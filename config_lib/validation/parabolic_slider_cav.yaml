@@ -1,0 +1,56 @@
+options:
+    output: /tmp/parabolic_slider
+    write_freq: 1
+    save_output: False
+    print_config: False
+    output_plots: False
+    residual_analysis: False
+
+grid:
+    Lx: 0.0762
+    Ly: 0.004
+    Nx: 200
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 1e05
+    xE_P: 0
+
+geometry:
+    type: parabolic
+    hmin: 2.54e-5
+    hmax: 5.08e-5
+    U: 4.57
+    V: 0.
+
+numerics:
+    solver: implicit
+    dt: 0.1
+    tol: 1e-10
+    max_it: 50
+
+properties:
+    EOS: DH
+    rho0: 877.7007
+    P0: 101325
+    C1: 3.5e10
+    C2: 1.23
+    p_cav: 0
+    shear: 0.039
+    bulk: 0.0
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.5
+    p_init: 103338.25
+    equations:
+        cavitation: True
+    physics:
+        gap_shear: true
+    stabilization:
+        upg: true
+        upg_factor: 1.0
+    max_it: 5
+    tol_abs_resnorm: 1e-9

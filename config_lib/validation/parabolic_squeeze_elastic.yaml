@@ -1,0 +1,63 @@
+options:
+    output: /tmp/parabolic_squeeze_elastic
+    write_freq: 2
+    save_output: True
+    output_plots: False
+    print_config: False
+    residual_analysis: False
+
+grid:
+    Lx: 46.02e-3
+    Ly: 1.0e-4
+    Nx: 100
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['D', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_P: 1.0e5
+    xE_P: 1.0e5
+
+geometry:
+    type: inclined  # placeholder — time-dependent gap is set from Python in the notebook
+    hmin: 100.0e-6
+    hmax: 100.0e-6
+    U: 0.0
+    V: 0.0
+
+numerics:
+    solver: implicit
+    dt: 2.8e-4
+    tol: 0.0
+    max_it: 100
+
+properties:
+    EOS: DH
+    rho0: 850.0
+    P0: 1.0e6
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 5.0e-2
+    bulk: 0.0
+    elastic:
+        E: 1.0e6
+        v: 0.4
+        alpha_underrelax: 0.9
+        n_images: 10
+        turn_off_reference: false
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.3
+    equations:
+        cavitation: true
+    physics:
+        gap_shear: true
+        squeeze: true
+        einm: true
+    stabilization:
+        upg: true
+    max_it: 15
+    tol_abs_resnorm: 1.0e-9
+    scaling: true

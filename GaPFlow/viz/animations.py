@@ -183,6 +183,9 @@ def _create_animation_1d(filename_sol: str,
 
     data_topo = netCDF4.Dataset(filename_topo)
     topo_nc = np.asarray(data_topo.variables['topography'])
+    # Problem.__init__ writes an extra initial topography frame; drop it to align with sol frames
+    if topo_nc.shape[0] == q_nc.shape[0] + 1:
+        topo_nc = topo_nc[1:]
 
     nt, nc, _, nx, ny = q_nc.shape
     # NetCDF stores interior-only data (no ghost cells), so use nx directly
@@ -285,6 +288,12 @@ def _create_animation_1d(filename_sol: str,
     return ani
 
 
+def _variance_or_zeros(data, name, shape):
+    if name in data.variables:
+        return np.asarray(data.variables[name])
+    return np.zeros(shape)
+
+
 def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
 
     if tol_p is not None:
@@ -309,17 +318,22 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
         ax[1, 1].cla()
         ax[1, 2].cla()
 
+        _tol_t = tol_t[i] if tol_t is not None else None
+        _tol_p = tol_p[i] if tol_p is not None else None
+        _tol_t_max = tol_t_max if tol_t_max is not None else np.sqrt(vt[i, :, ci]).max()
+        _tol_p_max = tol_p_max if tol_p_max is not None else np.sqrt(vp[i, :, ci]).max()
+
         # Pressure
-        _plot_gp(ax[1, 0], x, p[i, :, ci], vp[i, :, ci], tol=tol_p[i], color=color_p)
+        _plot_gp(ax[1, 0], x, p[i, :, ci], vp[i, :, ci], tol=_tol_p, color=color_p)
 
         # Shear stress
-        _plot_gp(ax[1, 1], x, tau[i, 4, 0, :, ci], vt[i, :, ci], tol=tol_t[i], color=color_t)
-        _plot_gp(ax[1, 2], x, tau[i, 10, 0, :, ci], vt[i, :, ci], tol=tol_t[i], color=color_t)
+        _plot_gp(ax[1, 1], x, tau[i, 4, 0, :, ci], vt[i, :, ci], tol=_tol_t, color=color_t)
+        _plot_gp(ax[1, 2], x, tau[i, 10, 0, :, ci], vt[i, :, ci], tol=_tol_t, color=color_t)
 
         set_axes_labels(ax)
-        set_axes_limits(ax[1, 0], p[1:, :, ci], tol=1.96 * tol_p_max)
-        set_axes_limits(ax[1, 1], tau[1:, 4, 0, :, ci], tol=1.96 * tol_t_max)
-        set_axes_limits(ax[1, 2], tau[1:, 10, 0, :, ci], tol=1.96 * tol_t_max)
+        set_axes_limits(ax[1, 0], p[1:, :, ci], tol=1.96 * _tol_p_max)
+        set_axes_limits(ax[1, 1], tau[1:, 4, 0, :, ci], tol=1.96 * _tol_t_max)
+        set_axes_limits(ax[1, 2], tau[1:, 10, 0, :, ci], tol=1.96 * _tol_t_max)
 
     # adaptive_ylim(ax)
 
@@ -327,9 +341,10 @@ def _create_animation_1d_gp(filename, tol_p=None, tol_t=None):
 
     q_nc = np.asarray(data.variables['solution'])
     p_nc = np.asarray(data.variables['pressure'])
-    pvar_nc = np.asarray(data.variables['pressure_var'])
+    # variance fields are only written for GP models
+    pvar_nc = _variance_or_zeros(data, 'pressure_var', p_nc.shape)
     tau_nc = np.asarray(data.variables['wall_stress_xz'])
-    tauvar_nc = np.asarray(data.variables['wall_stress_xz_var'])
+    tauvar_nc = _variance_or_zeros(data, 'wall_stress_xz_var', p_nc.shape)
 
     nt, nc, _, nx, ny = q_nc.shape
     # NetCDF stores interior-only data (no ghost cells), so use nx directly
