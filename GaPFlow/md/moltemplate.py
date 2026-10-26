@@ -211,10 +211,19 @@ def _create_fcc_wall_ase(symbol='Au',
     lz0 = np.sqrt(3) * a
 
     if rotation is not None:
-        nx = int(np.floor(lz0 / lx0 / np.tan(abs(rotation) / 180. * np.pi)))
+        # The rotated wall rises by nsteps lattice repeats (lz0) across the box,
+        # nx is rounded to the nearest multiple of the single-step length nx_min.
+        nx_min = int(np.floor(lz0 / lx0 / np.tan(abs(rotation) / 180. * np.pi)))
+        nsteps = max(1, round(nx / nx_min))
+        nx = nsteps * nx_min
+        # default width from the single-step box, i.e., independent of nsteps
+        nx_ref = nx_min
+    else:
+        nsteps = 1
+        nx_ref = nx
 
     if ny is None:
-        ny = int((lx0 * nx) / ly0)
+        ny = int((lx0 * nx_ref) / ly0)
     if nz is None:
         nz = 7
 
@@ -233,7 +242,7 @@ def _create_fcc_wall_ase(symbol='Au',
         print('Cell size: ', lx, ly, lz)
 
         # Rotate particle coordinates
-        alpha_rad = np.sign(rotation) * np.arctan(lz0 / nx / lx0)
+        alpha_rad = np.sign(rotation) * np.arctan(nsteps * lz0 / nx / lx0)
         alpha = alpha_rad * 180 / np.pi
         print("Rotation angle (y):", alpha)
         fcc.rotate(alpha, 'y',
@@ -697,6 +706,10 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
                                         ny=ny,
                                         nz=nz,
                                         rotation=target_rotation)
+
+    # same lateral size for both walls
+    if ny is None:
+        ny = int(round(slab_top.cell.cellpar()[1] / (np.sqrt(6) / 2 * 4.08)))
 
     slab_bot, _ = _create_fcc_wall_ase(nx=nx,
                                        ny=ny,
