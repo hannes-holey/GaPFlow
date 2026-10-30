@@ -31,7 +31,7 @@ numerics:
 
 properties:
     EOS: PL
-    rho0: 1.0
+    rho_ref: 1.0
     P0: 1.0
     shear: 0.1
     bulk: 0.

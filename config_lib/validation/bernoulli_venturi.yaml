@@ -34,7 +34,7 @@ properties:
     bulk: 0.
     EOS: DH
     P0: 101325.
-    rho0: 1000.
+    rho_ref: 1000.
     T0: 323.15
     C1: 3.5e08
     C2: 1.23

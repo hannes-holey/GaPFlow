@@ -160,7 +160,7 @@ class Problem:
         self.step = None
         self.simtime = 0.
         self.__field = self.fc.real_field('solution', (self.solver.nb_sol,))
-        self._initialize(rho0=prop['rho0'],
+        self._initialize(rho_init=prop['rho_init'],
                          U_bot=geo['U_bot'], V_bot=geo['V_bot'],
                          U_top=geo['U_top'], V_top=geo['V_top'])
 
@@ -858,16 +858,16 @@ class Problem:
 
         return gpx, gpy, gpz
 
-    def _initialize(self, rho0: float, U_bot: float, V_bot: float,
+    def _initialize(self, rho_init: float, U_bot: float, V_bot: float,
                     U_top: float = 0.0, V_top: float = 0.0) -> None:
         """
         Initialize solution field with given base density and mean velocities.
         No jx/jy rows if the solution field has no jx/jy DOFs (e.g. Reynolds mode).
         """
-        self.__field.pg[0] = rho0
+        self.__field.pg[0] = rho_init
         if self.solver.nb_sol >= 3:
-            self.__field.pg[1] = rho0 * (U_bot + U_top) / 2.1
-            self.__field.pg[2] = rho0 * (V_bot + V_top) / 2.1
+            self.__field.pg[1] = rho_init * (U_bot + U_top) / 2.1
+            self.__field.pg[2] = rho_init * (V_bot + V_top) / 2.1
 
         self.kinetic_energy_old = self.kinetic_energy
 

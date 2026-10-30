@@ -61,7 +61,7 @@ properties:
     bulk: 0.
     EOS: DH
     P0: 101325.
-    rho0: 877.7007
+    rho_ref: 877.7007
     T0: 323.15
     C1: 3.5e10
     C2: 1.23
@@ -138,7 +138,7 @@ properties:
     bulk: 0.
     EOS: BWR
     T: 1.0
-    rho0: 0.8
+    rho_init: 0.8
 """
     myProblem = Problem.from_string(sim)
     myProblem.run()

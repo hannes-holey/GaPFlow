@@ -77,7 +77,7 @@ numerics:
 
 properties:
     EOS: Bayada
-    rho0: 850.
+    rho_init: 850.
     rho_l: 850.0
     rho_v: 0.019
     c_l: 1600.0

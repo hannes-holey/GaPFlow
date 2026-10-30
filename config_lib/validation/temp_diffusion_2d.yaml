@@ -34,7 +34,7 @@ properties:
     shear: 1.846e-5
     bulk: 0.
     P0: 101325
-    rho0: 1.0
+    rho_ref: 1.0
 
 implicit_solver:
     linear_solver: direct
