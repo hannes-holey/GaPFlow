@@ -675,6 +675,10 @@ def sanitize_fem_solver(d):
     out['equations']['term_list'] = d.get('equations', {}).get('term_list', None)
     out['equations']['cavitation'] = bool(d.get('equations', {}).get('cavitation', False))
     out['equations']['reynolds'] = bool(d.get('equations', {}).get('reynolds', False))
+    out['equations']['generalized_reynolds'] = bool(d.get('equations', {}).get('generalized_reynolds', False))
+    if out['equations']['generalized_reynolds']:
+        if not (out['equations']['reynolds'] and out['equations']['cavitation']):
+            print("generalized_reynolds requires equations.reynolds and equations.cavitation.")
 
     out['scaling_update_interval'] = int(d.get('scaling_update_interval', 100))
     out['scaling_ruiz_iter'] = int(d.get('scaling_ruiz_iter', 10))

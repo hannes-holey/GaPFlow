@@ -335,8 +335,8 @@ class QuadFieldManager:
             q('rho_avg')[:] = 0.5 * (q('rho') + q('rho_prev'))
 
         # Computed fields
-        for name in self.quad_field_keys:
-            if name in self._reg_computed:
+        for name in self._reg_computed:
+            if name in self.quad_field_keys:
                 entry = QUAD_FIELD_REGISTRY[name]
                 func = resolve_source(p, entry['source'])
                 args = tuple(q(a) for a in entry['args'])
@@ -350,7 +350,7 @@ class QuadFieldManager:
         if self.problem.fem_solver['stabilization']['fc']:
             self._update_fc_quad_fields(q)
         if self.problem.fem_solver['equations']['reynolds']:
-            if self.problem.fem_solver['equations']['cavitation']:
+            if 'U_m' in self.quad_fields:
                 self._update_reynolds_quad_fields(q)
             if self.problem.fem_solver['stabilization']['mass_supg']:
                 self._update_reynolds_supg_quad_fields(q)
@@ -442,6 +442,8 @@ class QuadFieldManager:
             self.qf('h_prev')[:] = self.qf('h').copy()
         if 'rho_prev' in self.quad_fields:
             self.qf('rho_prev')[:] = self.qf('rho').copy()
+        if 'rho_eff_prev' in self.quad_fields:
+            self.qf('rho_eff_prev')[:] = self.qf('rho_eff').copy()
         if 'dp_drho_prev' in self.quad_fields:
             self.qf('dp_drho_prev')[:] = self.qf('dp_drho').copy()
         if 'p_prev' in self.quad_fields:

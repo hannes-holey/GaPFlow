@@ -88,6 +88,8 @@ _ARGS_YZ = ['rho', 'jx', 'jy', 'h', 'dh_dy', 'U_bot', 'V_bot', 'U_top',
             'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p', 'eta']
 _ARGS_T = ['rho', 'jx', 'jy', 'E']
 _ARGS_S = ['h', 'eta', 'rho', 'E', 'jx', 'jy', 'U_bot', 'V_bot', 'Tb_top', 'Tb_bot']
+_ARGS_EPS = ['rho', 'h', 'eta', 'drho_dp', 'p']
+_ARGS_RHO_EFF = ['rho', 'drho_dp']
 
 QUAD_FIELD_REGISTRY = {
     # ------------------------------------------------------------------
@@ -119,6 +121,14 @@ QUAD_FIELD_REGISTRY = {
     'drho_dp': {'type': 'computed', 'source': 'pressure.drho_dp', 'args': ['rho']},
     'dp_drho': {'type': 'computed', 'source': 'pressure.dp_drho', 'args': ['rho']},
     'd2p_drho2': {'type': 'computed', 'source': 'pressure.d2p_drho2', 'args': ['rho_avg']},
+
+    # generalized Reynolds (after drho_dp: computed fields are evaluated in registry order)
+    'epsilon': {'type': 'computed', 'source': 'reynolds_eps.epsilon', 'args': _ARGS_EPS},
+    'depsilon_dp': {'type': 'computed', 'source': 'reynolds_eps.depsilon_dp', 'args': _ARGS_EPS},
+    'depsilon_dh': {'type': 'computed', 'source': 'reynolds_eps.depsilon_dh', 'args': _ARGS_EPS},
+    'rho_eff': {'type': 'computed', 'source': 'reynolds_rho_eff.rho_eff', 'args': _ARGS_RHO_EFF},
+    'drho_eff_dp': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dp', 'args': _ARGS_RHO_EFF},
+    'drho_eff_dh': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dh', 'args': _ARGS_RHO_EFF},
 
     # wall stress xz
     'tau_xz': {'type': 'computed', 'source': 'wall_stress_xz.tau', 'args': _ARGS_XZ},
@@ -161,6 +171,7 @@ QUAD_FIELD_REGISTRY = {
     # Squeeze (computed inline in _update_squeeze_quad_fields / store_prev_values)
     'h_prev': {'type': 'computed', 'source': None, 'args': []},
     'rho_prev': {'type': 'computed', 'source': None, 'args': []},
+    'rho_eff_prev': {'type': 'computed', 'source': None, 'args': []},
     'dp_drho_prev': {'type': 'computed', 'source': None, 'args': []},
     'p_prev': {'type': 'computed', 'source': None, 'args': []},
     'rho_avg': {'type': 'computed', 'source': None, 'args': ['rho_prev']},
@@ -231,9 +242,15 @@ _CUSTOM_ARGS_WALL_STRESS_YZ = {name: ['rho', 'theta', 'jy', 'h', 'V_bot', 'V_top
                                for name in _GP_ARGS_WALL_STRESS_YZ}
 
 
+_CUSTOM_ARGS_EPS = {name: ['p', 'h'] for name in ('epsilon', 'depsilon_dp', 'depsilon_dh')}
+
+_CUSTOM_ARGS_RHO_EFF = {name: ['p', 'h'] for name in ('rho_eff', 'drho_eff_dp', 'drho_eff_dh')}
+
+
 _DEFAULT_REGISTRY_ARGS = {
     name: list(QUAD_FIELD_REGISTRY[name]['args'])
-    for block in (_GP_ARGS_PRESSURE, _GP_ARGS_WALL_STRESS_XZ, _GP_ARGS_WALL_STRESS_YZ)
+    for block in (_GP_ARGS_PRESSURE, _GP_ARGS_WALL_STRESS_XZ, _GP_ARGS_WALL_STRESS_YZ,
+                  _CUSTOM_ARGS_EPS, _CUSTOM_ARGS_RHO_EFF)
     for name in block
 }
 
@@ -242,7 +259,9 @@ def patch_registry_for_gp(pressure: bool = True,
                           wall_stress_xz: bool = False,
                           wall_stress_yz: bool = False,
                           custom_xz: bool = False,
-                          custom_yz: bool = False) -> None:
+                          custom_yz: bool = False,
+                          custom_eps: bool = False,
+                          custom_rho_eff: bool = False) -> None:
     for name, args in _DEFAULT_REGISTRY_ARGS.items():
         QUAD_FIELD_REGISTRY[name]['args'] = list(args)
     for active, block in [
@@ -251,6 +270,8 @@ def patch_registry_for_gp(pressure: bool = True,
         (wall_stress_yz, _GP_ARGS_WALL_STRESS_YZ),
         (custom_xz, _CUSTOM_ARGS_WALL_STRESS_XZ),
         (custom_yz, _CUSTOM_ARGS_WALL_STRESS_YZ),
+        (custom_eps, _CUSTOM_ARGS_EPS),
+        (custom_rho_eff, _CUSTOM_ARGS_RHO_EFF),
     ]:
         if active:
             for name, args in block.items():

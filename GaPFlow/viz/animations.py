@@ -188,6 +188,9 @@ def _create_animation_1d(filename_sol: str,
         topo_nc = topo_nc[1:]
 
     nt, nc, _, nx, ny = q_nc.shape
+    if nc < 3:
+        return _create_animation_1d_reynolds(q_nc, p_nc, topo_nc)
+
     # NetCDF stores interior-only data (no ghost cells), so use nx directly
     x = np.linspace(0, 1, nx)
     # For 1D problems (ny=1), use index 0; otherwise compute centerline
@@ -286,6 +289,49 @@ def _create_animation_1d(filename_sol: str,
     )
 
     return ani
+
+
+def _create_animation_1d_reynolds(q_nc, p_nc, topo_nc) -> animation:
+    """1D animation for Reynolds mode, where the solution only holds [rho, (theta)]."""
+    nt, nc, _, nx, ny = q_nc.shape
+    x = np.linspace(0, 1, nx)
+    ci = 0 if ny == 1 else ny // 2
+
+    # filled column-wise: (p, rho), (h, u), theta
+    panels = [(r"Pressure $p$", p_nc[:, :, ci], 'C1'),
+              (r"Density $\rho$", q_nc[:, 0, 0, :, ci], 'C0')]
+    if topo_nc.shape[0] > 1:
+        panels += [(r"Height $h$ in m", topo_nc[:, 0, 0, :, ci], 'C3'),
+                   (r"Deformation $u$ in m", topo_nc[:, 3, 0, :, ci], 'C3')]
+    if nc > 1:
+        panels.append((r"Cavity fraction $\theta$", q_nc[:, 1, 0, :, ci], 'C0'))
+
+    ncols = (len(panels) + 1) // 2
+    fig, ax = plt.subplots(2, ncols, figsize=(3.3 * ncols, 4))
+    ax = ax.T.ravel()
+    for a in ax[len(panels):]:
+        a.axis('off')
+
+    lines = []
+    for a, (label, data, color) in zip(ax, panels):
+        (line,) = a.plot([], [], color=color)
+        set_axes_limits(a, data, x=(0, 1), rel_tol=0.05)
+        a.set_xlabel(r"$x$")
+        a.set_ylabel(label)
+        lines.append(line)
+
+    def init():
+        for line in lines:
+            line.set_data([], [])
+        return lines
+
+    def update(i):
+        for line, (_, data, _) in zip(lines, panels):
+            line.set_data(x, data[i])
+        return lines
+
+    return animation.FuncAnimation(fig, update, frames=nt, init_func=init,
+                                   blit=True, interval=100, repeat=True)
 
 
 def _variance_or_zeros(data, name, shape):

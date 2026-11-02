@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from .solver_implicit import ImplicitSolver
 
 THETA_MAX = 0.90
+P_REFORM_BUMP = 1.0e-3
 
 
 def _clamp_pressure(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
@@ -45,15 +46,19 @@ def _clamp_theta(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
     p_cav = float(solver.problem.prop['p_cav'])
     theta_min = np.finfo(float).eps
 
-    th = np.clip(q[theta], 0.0, THETA_MAX)
-    a = q[p] - p_cav
-    q[theta] = np.where((np.abs(a) < theta_min) & (th < theta_min), theta_min, th)
+    th_raw = q[theta]
+    th = np.clip(th_raw, 0.0, THETA_MAX)
+    corner = (np.abs(q[p] - p_cav) < theta_min) & (th < theta_min)
+    reform = corner & (th_raw < 0.0)
+    q[theta] = np.where(corner & ~reform, theta_min, th)
+    q[p] = np.where(reform, p_cav + P_REFORM_BUMP, q[p])
     return q
 
 
 def clamp_solution(q: np.ndarray, solver: "ImplicitSolver") -> np.ndarray:
     """Enforce p >= p_cav and 0 <= theta <= THETA_MAX, with a singularity
-    guard at (p - p_cav, theta) = (0, 0)."""
+    guard at (p - p_cav, theta) = (0, 0): theta is bumped (cavitated branch),
+    or p if the update drove theta negative (reformation, full-film branch)."""
     if solver.cavitation:
         q = _clamp_pressure(q, solver)
         q = _clamp_theta(q, solver)

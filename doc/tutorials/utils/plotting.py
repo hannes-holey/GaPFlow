@@ -703,12 +703,12 @@ def plot_custom_eos_comparison(results):
     ----------
     results : dict
         Label -> (X, p, rho) with normalized position X, pressure p in Pa and density rho.
-        The first entry is drawn as line, the second as markers, the third dashed.
+        The first entry is drawn as line, the second as circles, the third as offset crosses.
     """
     colors = ['#0072B2', '#D55E00', '#009E73']
     styles = [dict(ls='-'),
               dict(ls='none', marker='o', markersize=4, markerfacecolor='none', markevery=8),
-              dict(ls='--')]
+              dict(ls='none', marker='x', markersize=4, markevery=(4, 8))]
 
     with plt.rc_context(PAPER_RC):
         fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
@@ -1241,6 +1241,85 @@ def plot_bernoulli_validation(problem,
         _style_axes(axes)
         handles, names = axes[0, 1].get_legend_handles_labels()
         fig.tight_layout(rect=(0, 0, 1, 0.93))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
+def plot_einm_convergence(hist_einm, hist_picard, n_iter=10):
+    """Plot the inner Newton history of mean pressure and mean gap height, EINM vs Picard.
+
+    Parameters
+    ----------
+    hist_einm : dict
+        {'p': array, 'h': array} per Newton iteration, pressure in Pa and gap height in m.
+    hist_picard : dict
+        alpha_underrelax -> {'p': array, 'h': array}.
+    n_iter : int
+        Number of Newton iterations shown.
+    """
+    picard_colors = ['#D55E00', '#009E73', '#CC79A7']
+    picard_ls = ['--', ':', '-.']
+    style = dict(marker='o', markersize=3.5, markerfacecolor='none', markeredgewidth=0.8, lw=1.2)
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        for key, scale, ylabel, ax in [('p', 1e-8, r'mean $p$ [$10^{8}$ Pa]', axes[0]),
+                                       ('h', 1e6, r'mean $h$ [$\mu$m]', axes[1])]:
+            ax.plot(hist_einm[key][:n_iter] * scale, color='#0072B2', ls='-', zorder=3,
+                    label=r'EINM, $\alpha=1.0$', **style)
+            for color, ls, (alpha, hist) in zip(picard_colors, picard_ls, hist_picard.items()):
+                ax.plot(hist[key][:n_iter] * scale, color=color, ls=ls,
+                        label=rf'Picard, $\alpha={alpha}$', **style)
+            ax.set_xlim(-0.5, n_iter - 0.5)
+            ax.set_xlabel('Newton iteration')
+            ax.set_ylabel(ylabel)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+        _style_axes(axes)
+
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
+        fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
+                   ncol=len(handles), frameon=False)
+        plt.show()
+
+
+def plot_line_contact(problem, ref_dir=Path('../../tests/ref_data')):
+    """Plot dimensionless pressure P = p/p_h and film thickness H = h Rx/a^2 of a finished
+    line contact run over X = (x - x_c)/a, compared with reference data.
+
+    a and p_h are the Hertz half-width and maximum pressure of the dry line contact.
+    """
+    E_star = problem.prop['elastic']['E'] / (1 - problem.prop['elastic']['v'] ** 2)
+    Rx = problem.geo['Rx']
+    F = problem.force_balance['force']
+    a = np.sqrt(4 * F * Rx / (np.pi * E_star))
+    p_h = 2 * F / (np.pi * a)
+
+    X = (problem.topo.xx[1:-1, 1] - problem.geo['x_contact_center']) / a
+    P = problem.solver.quad_mgr.nf('p')[1:-1, 1] / p_h
+    H = problem.topo.h[1:-1, 1] * Rx / a ** 2
+
+    ref_p = np.loadtxt(ref_dir / 'ref_line_contact_p.csv', delimiter=',', skiprows=1)
+    ref_h = np.loadtxt(ref_dir / 'ref_line_contact_h.csv', delimiter=',', skiprows=1)
+
+    with plt.rc_context(PAPER_RC):
+        fig, axes = plt.subplots(1, 2, figsize=(6.5, 3.2), constrained_layout=False)
+
+        for ax, y, ref, ylabel in [(axes[0], P, ref_p, '$P = p/p_h$'),
+                                   (axes[1], H, ref_h, '$H = h R_x/a^2$')]:
+            ax.plot(X, y, color='#0072B2', lw=1.2, label='GaPFlow')
+            ax.plot(ref[:, 0], ref[:, 1], ls='none', marker='o', markersize=4,
+                    markerfacecolor='none', color='k', label='Reference (Habchi)')
+            ax.set_xlabel('$X$')
+            ax.set_ylabel(ylabel)
+            ax.set_xlim(-2.5, 1.5)
+        axes[1].set_ylim(0, 0.5)
+        _style_axes(axes)
+
+        handles, names = axes[0].get_legend_handles_labels()
+        fig.tight_layout(rect=(0, 0, 1, 0.90))
         fig.legend(handles, names, loc='upper center', bbox_to_anchor=(0.5, 1.0),
                    ncol=len(handles), frameon=False)
         plt.show()

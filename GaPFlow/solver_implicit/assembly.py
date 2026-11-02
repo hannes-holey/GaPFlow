@@ -127,9 +127,9 @@ class Assembly:
         self._rhs_buf = np.zeros(self.res_size + 1, dtype=np.float64)
 
         # Weighting templates for the effective influence Newton method
-        self.elastic_templates: Dict[str, AssemblyTemplate] = {}
-        self.elastic_templates_dhdx: Dict[str, AssemblyTemplate] = {}
-        self.elastic_templates_dhdy: Dict[str, AssemblyTemplate] = {}
+        self.elastic_templates: Dict[tuple, AssemblyTemplate] = {}
+        self.elastic_templates_dhdx: Dict[tuple, AssemblyTemplate] = {}
+        self.elastic_templates_dhdy: Dict[tuple, AssemblyTemplate] = {}
         self._nnz_cache: Dict[Tuple[str, str], IntArray] = {}
 
     # ======================================================================
@@ -451,21 +451,24 @@ class Assembly:
         for res in ('mass', 'momentum_x', 'momentum_y'):
             if res not in self.residuals:
                 continue
-            w, entries_per_quad = self._build_weighting_elastic(res, G3)
-            self.elastic_templates[res] = AssemblyTemplate(
-                w=w,
-                entries_per_quad=entries_per_quad,
-                nnz=self._get_nnz(res, 'p'),
-            )
+            test_derivs = (None, 'x', 'y') if res == 'mass' else (None,)
+            for td in test_derivs:
+                w, entries_per_quad = self._build_weighting_elastic(res, G3, test_deriv=td)
+                self.elastic_templates[(res, td)] = AssemblyTemplate(
+                    w=w,
+                    entries_per_quad=entries_per_quad,
+                    nnz=self._get_nnz(res, 'p'),
+                )
 
         for deriv, templates in (('x', self.elastic_templates_dhdx),
                                     ('y', self.elastic_templates_dhdy)):
-            w, entries_per_quad = self._build_weighting_elastic('mass', G3, deriv=deriv)
-            templates['mass'] = AssemblyTemplate(
-                w=w,
-                entries_per_quad=entries_per_quad,
-                nnz=self._get_nnz('mass', 'p'),
-            )
+            for td in (None, 'x', 'y'):
+                w, entries_per_quad = self._build_weighting_elastic('mass', G3, deriv=deriv, test_deriv=td)
+                templates[('mass', td)] = AssemblyTemplate(
+                    w=w,
+                    entries_per_quad=entries_per_quad,
+                    nnz=self._get_nnz('mass', 'p'),
+                )
 
     def _build_greens_function(self, elastic_deformation) -> NDArray:
         """Return the 3x3 P1 elastic Green's function block; dx, dy in {-1, 0, 1}."""
@@ -511,7 +514,7 @@ class Assembly:
         (slice(0, 2), slice(0, 2)),  # tr
     ]
 
-    def _build_weighting_elastic(self, res: str, G3: NDArray, deriv: str = None):
+    def _build_weighting_elastic(self, res: str, G3: NDArray, deriv: str = None, test_deriv: str = None):
         """Build the elastic-influence shape_weighting for a P1-grid."""
         Q1 = self.element.Q1
         n_var = Q1.nodes_per_element
@@ -521,7 +524,12 @@ class Assembly:
 
         n_res = elem_res.nodes_per_element
         n_entries_per_quad = n_res * n_var
-        res_N = elem_res.N  # shape (n_quad, n_res)
+        test_scale = 1.0
+        if not test_deriv:
+            res_N = elem_res.N  # shape (n_quad, n_res)
+        else:
+            res_N = elem_res.dN_dx if test_deriv == 'x' else elem_res.dN_dy
+            test_scale = -1.0 / (self.element.dx if test_deriv == 'x' else self.element.dy)
 
         quad_coords = self.element.Quadrature.coordinates  # shape (n_quad, 2)
         weights = self.element.Quadrature.weights  # shape (n_quad,)
@@ -544,7 +552,7 @@ class Assembly:
 
         # Assemble weighting and residual shape function vectors
         area = self.element.sq_area
-        weights_vec = np.repeat(weights * area, n_entries_per_quad)
+        weights_vec = np.repeat(weights * area * test_scale, n_entries_per_quad)
         res_N_vec = np.tile(res_N, (1, n_var)).ravel()  # shape (n_quad * n_res * n_var,)
 
         return dh_dp_quad_.ravel() * res_N_vec * weights_vec, n_entries_per_quad
@@ -679,17 +687,17 @@ class Assembly:
                 res_quad_field = term.evaluate_deriv(var, *dep_vars)
                 self._scatter_quad_contribution(res_quad_field, tmpl)
 
-            if term.der_h is not None and res in self.elastic_templates:
+            if term.der_h is not None and (res, td) in self.elastic_templates:
                 dRdh = term.der_h(*dep_vars)
-                self._scatter_quad_contribution(dRdh, self.elastic_templates[res])
+                self._scatter_quad_contribution(dRdh, self.elastic_templates[(res, td)])
 
-            if term.der_h_dx is not None and res in self.elastic_templates_dhdx:
+            if term.der_h_dx is not None and (res, td) in self.elastic_templates_dhdx:
                 dRdhdx = term.der_h_dx(*dep_vars)
-                self._scatter_quad_contribution(dRdhdx, self.elastic_templates_dhdx[res])
+                self._scatter_quad_contribution(dRdhdx, self.elastic_templates_dhdx[(res, td)])
 
-            if term.der_h_dy is not None and res in self.elastic_templates_dhdy:
+            if term.der_h_dy is not None and (res, td) in self.elastic_templates_dhdy:
                 dRdhdy = term.der_h_dy(*dep_vars)
-                self._scatter_quad_contribution(dRdhdy, self.elastic_templates_dhdy[res])
+                self._scatter_quad_contribution(dRdhdy, self.elastic_templates_dhdy[(res, td)])
 
         return self._nnz_buf[:-1]
 

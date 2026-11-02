@@ -24,7 +24,6 @@
 #
 import copy
 import os
-import warnings
 from typing import Tuple, Any
 import numpy as np
 import numpy.typing as npt
@@ -781,6 +780,7 @@ class ForceBalance:
         self._p_ambient = fb_dict['rigid_height_variation']['ambient_pressure']
         self._force_imposed = self._get_force_imposed(grid)
         self._h0_prev = 0.
+        self._n_updates = 0
         self._pid_hold_tol = float(fb_dict.get('pid_hold_tol', 0.0))
 
         self._method = fb_dict['rigid_height_variation']['method']
@@ -833,12 +833,16 @@ class ForceBalance:
         if self._decomp.rank == 0:
             p_reduced = p_global - self._p_ambient
             force_measured = float(np.sum(p_reduced * self._dA))
-            p_max = float(np.max(p_global))
             residual = force_measured / self._force_imposed - 1.
+            was_converged = self.controller.converged
             h0 = self.controller.update(residual, self._h0_prev, h_min)
-            print(f"\033[36m  [FB] h_min={h_min:.3e}  p_max={p_max:.4g}  "
-                  f"F_film={force_measured:.4g}  F_imposed={self._force_imposed:.4g} h0={h0:.4e} "
-                  f"\033[0m")
+            if self._n_updates % 100 == 0:
+                print(f"[ForceBalance] Step {self._problem.step:6d}: Target: {self._force_imposed:8.2e} N/m, "
+                      f"Current: {force_measured:8.2e} N/m, min. gap height: {h_min:8.2e} m")
+            if self.controller.converged and not was_converged:
+                print(f"[ForceBalance] Step {self._problem.step:6d}: load reached, "
+                      f"Current: {force_measured:8.2e} N/m, min. gap height: {h_min:8.2e} m")
+            self._n_updates += 1
         else:
             h0 = None
 
@@ -917,38 +921,29 @@ class BisectionForceController:
             self.step = (abs(self.last_dh0) / 2. if self.last_dh0 is not None
                          else h_min / self.h_min_step_divisor / 2.)
             self.last_residual_sign = np.sign(residual)
-            print(f"  [FB-bisect] overshoot detected, switching to bisect phase "
-                  f"(step={self.step:.3e})")
             return h0_prev
 
         dh0 = -h_min / self.h_min_step_divisor
         self.last_dh0 = dh0
         self.reset()
-        print(f"  [FB-bisect] descent step dh0={dh0:.3e}")
         return h0_prev + dh0
 
     def _update_bisect(self, residual: float, h0_prev: float) -> float:
         if not self.is_trustworthy():
-            print(f"  [FB-bisect] held: not settled yet (sum_alpha={self.sum_alpha:.3e} "
-                  f"<= {self.SETTLE_THRESHOLD:.1f})")
             return h0_prev
 
         if abs(residual) <= self.force_tol:
-            if not self.converged:
-                print(f"  [FB-bisect] converged: |residual|={abs(residual):.3e} <= tol={self.force_tol:.3e}")
             self.converged = True
             return h0_prev
 
         residual_sign = np.sign(residual)
         if self.last_residual_sign is not None and residual_sign != self.last_residual_sign:
             self.step /= 2.
-            print(f"  [FB-bisect] sign flip, halving step to {self.step:.3e}")
         self.last_residual_sign = residual_sign
 
         # residual > 0 -> force too high -> increase h0 (larger gap)
         dh0 = self.step if residual > 0. else -self.step
         self.reset()
-        print(f"  [FB-bisect] bisect step dh0={dh0:.3e}")
         return h0_prev + dh0
 
 
@@ -1009,15 +1004,6 @@ class ElasticDeformation:
 
         # check for semi-periodic 1D cases where direction with N=1 is marked as periodic
         if (perX != perY) and ((perY and grid['Ny'] == 1) or (perX and grid['Nx'] == 1)):
-            warnings.warn(
-                "You specified a semi-periodic 1D problem.\n"
-                "For the calculation of elastic deformation, we assume a line contact, "
-                "approximated via periodic images (n_images={}) along the {} == 1 "
-                "direction; internally this solver's own copy of {} is set to 1 "
-                "(force per cell F=p*A is computed from the grid's own physical "
-                "{}, unaffected by this internal override)."
-                .format(n_images, "Ny" if perY else "Nx",
-                        "Ly" if perY else "Lx", "Ly" if perY else "Lx"))
             grid = copy.deepcopy(grid)  # do not modify original grid
             if perY:
                 grid['Ly'] = 1.0
@@ -1033,7 +1019,7 @@ class ElasticDeformation:
             if thickness is not None:
                 self.ElDef = PeriodicFFTElasticHalfSpace(
                     nb_grid_pts=(Nx, Ny),
-                    young=young_effective,
+                    young=E,
                     physical_sizes=(grid['Lx'], grid['Ly']),
                     thickness=thickness,
                     poisson=v,

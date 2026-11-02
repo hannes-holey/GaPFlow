@@ -136,6 +136,8 @@ from .terms_lib.terms_cav_supg import *
 from .terms_lib.terms_reynolds import *
 from .terms_lib.terms_reynolds_cav import *
 from .terms_lib.terms_reynolds_cav_supg import *
+from .terms_lib.terms_gen_reynolds import *
+from .terms_lib.terms_gen_reynolds_upg import *
 
 
 def get_active_terms(fem_solver: dict) -> List[Term]:
@@ -171,6 +173,11 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
     cavitation = fem_solver['equations']['cavitation']
 
     if fem_solver['equations']['reynolds']:
+        if fem_solver['equations']['generalized_reynolds']:
+            terms = [*GEN_REYNOLDS_CAV_TERMS, R_cav]
+            if stab['mass_supg']:
+                terms += GEN_REYNOLDS_UPG_TERMS
+            return terms
         if not cavitation:
             return list(REYNOLDS_TERMS)
         terms = [*REYNOLDS_CAV_TERMS, R_cav]

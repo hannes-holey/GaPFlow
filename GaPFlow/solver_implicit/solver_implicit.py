@@ -245,6 +245,9 @@ class ImplicitSolver:
         p.wall_stress_yz.build_grad()
         if self.energy:
             p.energy.build_grad()
+        if p.fem_solver['equations']['generalized_reynolds']:
+            p.reynolds_eps.build_grad()
+            p.reynolds_rho_eff.build_grad()
 
     def _build_terms(self) -> None:
         p = self.problem
@@ -444,6 +447,8 @@ class ImplicitSolver:
             wall_stress_yz=p.wall_stress_yz.is_gp_model,
             custom_xz=p.wall_stress_xz.is_custom,
             custom_yz=p.wall_stress_yz.is_custom,
+            custom_eps=p.reynolds_eps.is_custom,
+            custom_rho_eff=p.reynolds_rho_eff.is_custom,
         )
 
         self.build_boundary_conditions()
@@ -623,14 +628,17 @@ class ImplicitSolver:
         qm.update_quad_fields()
         q = qm.get_quad_sq
 
-        rho, jx, jy, h = q('rho'), q('jx'), q('jy'), q('h')
+        rho, h = q('rho'), q('h')
         one_minus_theta = 1. - q('theta') if 'theta' in qm.quad_fields else 1.
+        rho_mass = q('rho_eff') if 'rho_eff' in qm.quad_fields else rho
 
         integrands = {
-            "mass": rho * one_minus_theta * h,
-            "ekin": h * one_minus_theta * (jx**2 + jy**2) / rho / 2.,
+            "mass": rho_mass * one_minus_theta * h,
             "load": q('p'),
         }
+        if 'jx' in qm.quad_fields:
+            jx, jy = q('jx'), q('jy')
+            integrands["ekin"] = h * one_minus_theta * (jx**2 + jy**2) / rho / 2.
 
         # tau_* = (1 - theta) * (tau_top - tau_bot), tau_*_bot = (1 - theta) * tau_bot
         for d in ('x', 'y') if p.grid['Ny'] > 1 else ('x',):

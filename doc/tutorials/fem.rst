@@ -18,3 +18,4 @@ and the Reynolds equation. The final tutorial collects further simulation exampl
     fem_06_validation_shear_inertia.ipynb
     fem_07_validation_reynolds.ipynb
     fem_08_examples.ipynb
+    fem_09_generalized_reynolds.ipynb

@@ -49,6 +49,7 @@ from .io import read_yaml_input, write_yaml, create_output_directory, history_to
 from .analysis import compute_metrics, print_metrics, create_overview_plot
 from .utils import handle_signals, get_termination_signals, above_tolerance
 from .models import WallStress, BulkStress, Pressure, Energy, Viscosity
+from .models import ReynoldsEpsilon, ReynoldsRhoEff
 from .md import Mock, LennardJones, GoldAlkane
 from .viz.plotting import _plot_height_1d_from_field, _plot_height_2d_from_field
 from .viz.plotting import _plot_sol_from_field_1d, _plot_sol_from_field_2d
@@ -195,6 +196,8 @@ class Problem:
         for model in (self.pressure, self.wall_stress_xz, self.wall_stress_yz):
             model.clock = lambda: self.simtime
         self.viscosity = Viscosity(self.fc, prop)
+        self.reynolds_eps = ReynoldsEpsilon(prop)
+        self.reynolds_rho_eff = ReynoldsRhoEff()
         self.topo = Topography(self.fc, self.grid, geo, prop, decomp=self.decomp,
                                force_balance=force_balance, problem=self)
 
@@ -706,6 +709,44 @@ class Problem:
         for ws in (self.wall_stress_xz, self.wall_stress_yz):
             ws.custom_fn = tau_of_q
             ws.theta_index = theta_index
+
+    def _check_generalized_reynolds(self, name: str, fn: callable) -> None:
+        if self.numerics['solver'] != 'fem':
+            raise NotImplementedError(f"{name} is only implemented for the FEM solver.")
+        if not self.fem_solver['equations']['generalized_reynolds']:
+            raise ValueError(f"{name} requires equations.generalized_reynolds: True.")
+        if len(inspect.signature(fn).parameters) != 2:
+            raise ValueError(f"{name}: function must take (p, h).")
+
+    def set_custom_epsilon(self, epsilon_of_p: callable) -> None:
+        """Set a custom Poiseuille coefficient for the generalized Reynolds equation.
+
+        Must be called before :meth:`run`. Replaces the default
+        ``epsilon = rho h^3 / (12 eta)`` in ``div(epsilon grad p)``.
+
+        Parameters
+        ----------
+        epsilon_of_p : callable
+            Scalar, JAX-differentiable function ``epsilon_of_p(p, h) -> epsilon`` (SI units).
+            It has to include the EoS and viscosity law itself (closed form in p).
+        """
+        self._check_generalized_reynolds('set_custom_epsilon', epsilon_of_p)
+        self.reynolds_eps.custom_fn = epsilon_of_p
+
+    def set_custom_rho_eff(self, rho_eff_of_p: callable) -> None:
+        """Set a custom effective, height-averaged density for the generalized Reynolds equation.
+
+        Must be called before :meth:`run`. Replaces the default ``rho_eff = rho`` in the
+        storage term ``d/dt(rho_eff h (1 - theta))`` and the Couette flux
+        ``div(rho_eff h (1 - theta) U_m)``.
+
+        Parameters
+        ----------
+        rho_eff_of_p : callable
+            Scalar, JAX-differentiable function ``rho_eff_of_p(p, h) -> rho_eff`` (SI units).
+        """
+        self._check_generalized_reynolds('set_custom_rho_eff', rho_eff_of_p)
+        self.reynolds_rho_eff.custom_fn = rho_eff_of_p
 
     # ---------------------------
     # Single time step (update)
