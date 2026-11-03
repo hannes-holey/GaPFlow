@@ -30,7 +30,7 @@ properties:
     bulk: 0.
     EOS: DH
     T: 1.0
-    rho0: 0.8
+    rho_ref: 0.8
 gp:
     press:
         fix_noise: True

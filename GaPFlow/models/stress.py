@@ -837,14 +837,14 @@ class Pressure(GaussianProcessSurrogate):
         self.rho_from_p = vmap2_inv(_newton_invert)
 
     def _check_user_eos(self, rtol: float = 1e-6) -> None:
-        """Check monotonicity and the numerical inverse of a user EoS around rho0."""
-        rho = self.prop['rho0'] * np.linspace(0.9, 1.1, 21)[None, :]
+        """Check monotonicity and the numerical inverse of a user EoS around rho_init."""
+        rho = self.prop['rho_init'] * np.linspace(0.9, 1.1, 21)[None, :]
         h_inner = self.height[1:-1, 1:-1]
         for h in (np.min(h_inner), np.max(h_inner)):
             h_arr = np.full_like(rho, h)
             p = np.asarray(self.p_from_rho(rho, h_arr))
             dp = np.asarray(self.dp_drho(rho, h_arr))
-            rho_back = np.asarray(self.rho_from_p(p, h_arr, np.full_like(rho, self.prop['rho0'])))
+            rho_back = np.asarray(self.rho_from_p(p, h_arr, np.full_like(rho, self.prop['rho_init'])))
             if not np.all(dp > 0.0):
                 raise ValueError(f"Custom EOS is not strictly increasing in rho (h={h:.3e}).")
             if not np.allclose(rho_back, rho, rtol=rtol, atol=0.0):

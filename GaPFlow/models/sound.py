@@ -55,16 +55,16 @@ def eos_sound_velocity(density, prop, h=None):
 
     if prop['EOS'] == 'DH':
         func = dowson_higginson
-        args = ['rho0', 'P0', 'C1', 'C2']
+        args = ['rho_ref', 'P0', 'C1', 'C2']
     elif prop['EOS'] == 'PL':
         func = power_law
-        args = ['rho0', 'P0', 'alpha']
+        args = ['rho_ref', 'P0', 'alpha']
     elif prop['EOS'] == 'vdW':
         func = van_der_waals
         args = ['M', 'T', 'a', 'b']
     elif prop['EOS'] == "MT":
         func = murnaghan_tait
-        args = ['rho0', 'P0', 'K', 'n']
+        args = ['rho_ref', 'P0', 'K', 'n']
     elif prop['EOS'] == "cubic":
         func = cubic
         args = ['a', 'b', 'c', 'd']
@@ -85,7 +85,7 @@ def eos_sound_velocity(density, prop, h=None):
     return func(density, **kwargs)
 
 
-def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
+def dowson_higginson(dens, rho_ref=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     """
     Computes the isothermal speed of sound using the Dowson-Higginson equation of state.
 
@@ -96,7 +96,7 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     ----------
     dens : float or np.ndarray
         Current density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Reference pressure.
@@ -110,12 +110,12 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     float or np.ndarray
         Speed of sound.
     """
-    dp_drho = C1 * rho0 * (C2 - 1.0) * (1 / dens) ** 2 / ((C2 * rho0 / dens - 1.0) ** 2)
+    dp_drho = C1 * rho_ref * (C2 - 1.0) * (1 / dens) ** 2 / ((C2 * rho_ref / dens - 1.0) ** 2)
 
     return np.sqrt(dp_drho)
 
 
-def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
+def power_law(dens, rho_ref=1.1853, P0=101325., alpha=0.):
     """
     Computes the isothermal speed of sound using a power-law equation of state.
 
@@ -127,7 +127,7 @@ def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
     ----------
     dens : float or np.ndarray
         Density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Reference pressure.
@@ -139,7 +139,7 @@ def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
     float or np.ndarray
         Speed of sound.
     """
-    dp_drho = -2.0 * P0 * (dens / rho0) ** (-2.0 / (alpha - 2.0)) / ((alpha - 2) * dens)
+    dp_drho = -2.0 * P0 * (dens / rho_ref) ** (-2.0 / (alpha - 2.0)) / ((alpha - 2) * dens)
     return np.sqrt(dp_drho)
 
 
@@ -178,7 +178,7 @@ def van_der_waals(dens, M=39.948, T=100., a=1.355, b=0.03201):
     return np.sqrt(dp_drho)
 
 
-def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
+def murnaghan_tait(dens, rho_ref=700, P0=0.101e6, K=0.557e9, n=7.33):
     """
     Computes the speed of sound from the Murnaghan-Tait equation of state.
 
@@ -189,7 +189,7 @@ def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
     ----------
     dens : float or np.ndarray
         Current density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Reference pressure.
@@ -204,7 +204,7 @@ def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
         Speed of sound.
     """
 
-    dp_drho = K / rho0**n * dens ** (n - 1)
+    dp_drho = K / rho_ref**n * dens ** (n - 1)
 
     return np.sqrt(dp_drho)
 

@@ -96,7 +96,7 @@ def resolve_pressure_bcs(grid: dict, prop: dict, problem: "Problem" = None) -> N
                 h_bnd = float(problem.topo.h[offset_to_slice(side[1], 1)].mean())
                 rho = problem.pressure.rho_from_p(np.array([[float(p_val)]]),
                                                   np.array([[h_bnd]]),
-                                                  np.array([[prop['rho0']]]))
+                                                  np.array([[prop['rho_init']]]))
                 grid[f'bc_{side}_D_val'] = float(rho.squeeze())
             else:
                 grid[f'bc_{side}_D_val'] = float(

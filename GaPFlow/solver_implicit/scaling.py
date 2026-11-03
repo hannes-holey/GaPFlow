@@ -195,7 +195,7 @@ def compute_characteristic_scales(problem: "Problem",
     theta is dimensionless and O(1) — scale 1.0.
     fb residual is also dimensionless and O(1) — scale 1.0 via r_scales = q_scales.
     """
-    rho_ref = problem.prop['rho0']
+    rho_ref = problem.prop['rho_init']
     U_ref = _get_characteristic_velocity(problem)
     p_ref = 1e05  # problem.prop['P0']
     c_ref = problem.prop.get('c_l', np.sqrt(p_ref / rho_ref))
