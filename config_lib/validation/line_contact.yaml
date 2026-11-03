@@ -1,0 +1,90 @@
+# Elastohydrodynamic line contact, generalized Reynolds equation with Elrod-Adams
+# cavitation, elastic deformation (EINM) and force balance on the rigid-body gap h0.
+#
+#   E1 = E2 = 210 GPa, v = 0.3 -> one elastic body with E = 105 GPa, E* = 115.4 GPa
+#   Rx = 15 mm, F = 0.1 MN/m, u_m = 1 m/s (U_bot = 2, U_top = 0)
+#   Hertz half-width a = sqrt(4 F Rx / (pi E*)) = 128.7 um, p_h = 2 F / (pi a) = 0.49 GPa
+#
+# Line contact: Ny = 1, periodic in y, Ly = 1 m, so the force is per unit length [N/m].
+# The domain spans 2.5 a upstream and 1.5 a downstream of the contact center.
+#
+# Epsilon and rho_eff are set from the notebook (doc/tutorials/fem_09_generalized_reynolds.ipynb)
+# with Dowson-Higginson EoS and Roelands piezoviscosity in closed form; the EoS below
+# has to match (inlet boundary condition and output density).
+
+options:
+    output: /tmp/line_contact
+    write_freq: 20
+    save_output: True
+    print_config: False
+    silent: True
+
+grid:
+    Lx: 5.1462007860645490e-04
+    Ly: 1.0
+    Nx: 100
+    Ny: 1
+    xW: ['D', 'N', 'N']
+    xE: ['N', 'N', 'N']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+    xW_D: 877.7007
+
+geometry:
+    type: circular_1d
+    Rx: 15.0e-3
+    hmin: 1.0e-5
+    x_contact_center: 3.2163754912903434e-04
+    U: 2.0
+    flip: false
+
+numerics:
+    solver: implicit
+    dt: 10.
+    tol: -1.
+    max_it: 10000
+
+properties:
+    EOS: DH
+    rho0: 877.7007
+    P0: 0.
+    C1: 5.8823529411764706e8
+    C2: 1.3529411764705883
+    shear: 12.0e-3
+    bulk: 0.
+    p_cav: 0.
+    elastic:
+        enabled: true
+        E: 105.0e9
+        v: 0.3
+        n_images: 10
+        alpha_underrelax: 1.0
+        turn_off_reference: true
+
+force_balance:
+    force: 1.0e5
+    pid_hold_tol: 0.05
+    init_dry_contact:
+        enabled: false
+    rigid_height_variation:
+        enabled: true
+        method: bisection
+        ambient_pressure: 0.
+        force_tol: 0.01
+        h_min_step_divisor: 30.0  # 30
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 0.1  # 0.1
+    equations:
+        reynolds: True
+        cavitation: True
+        generalized_reynolds: True
+    physics:
+        einm: True
+    stabilization:
+        upg: True
+        mass_supg_factor: 0.1
+    max_iter: 8  # 8
+    R_norm_tol: 1.0e-9
+    scaling: False

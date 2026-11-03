@@ -209,40 +209,68 @@ def read_output_files_X(X):
     _, zvx, _, vx = np.loadtxt(vx_fluid_file, unpack=True, skiprows=4)
     _, zvy, _, vy = np.loadtxt(vy_fluid_file, unpack=True, skiprows=4)
 
+    # Actual gap height (from density profile)
+    zmin, zmax = _limits_from_nonzero(zdf, dens_f, zds, dens_s)
+
+    gap_height = zmax - zmin
+
     # Actual fluid density
-    density = np.mean(dens_f[dens_f > 0.]) * N_A * 1e-24  # from g/cm^3 to g/mol/A^3
+    mask = np.logical_and(zdf > zmin, zdf < zmax)
+    density = np.mean(dens_f[mask]) * N_A * 1e-24  # from g/cm^3 to g/mol/A^3
 
-    # Actual gap height
-    # Distance outermost fluid maxima
-    fluid_peaks, _ = find_peaks(dens_f)
-    lower_f = fluid_peaks[0]
-    upper_f = fluid_peaks[-1]
-    dist_fluid = zdf[upper_f] - zdf[lower_f]
-
-    # Distance innermost solid maxima
-    nz = len(zds)
-    solid_peaks_l, _ = find_peaks(dens_s[:nz // 2])
-    solid_peaks_u, _ = find_peaks(dens_s[nz // 2:])
-    zds_l = zds[:nz // 2]
-    zds_u = zds[nz // 2:]
-    dist_solid = zds_u[solid_peaks_u[0]] - zds_l[solid_peaks_l[-1]]
-
-    # Combined
-    gap_height = (dist_fluid + dist_solid) / 2.
-
-    # Actual flux
-    vx_integral = np.trapezoid(vx, zvx)
-    vy_integral = np.trapezoid(vy, zvy)
-    flux_x = vx_integral * density / gap_height
-    flux_y = vy_integral * density / gap_height
+    # Flux correction (from density and gap)
+    j_fac = (density / X[0]) / (gap_height / X[3])
 
     # overwrite input data
     X = X.at[0].set(density)
-    X = X.at[1].set(flux_x)
-    X = X.at[2].set(flux_y)
+    X = X.at[1].multiply(j_fac)
+    X = X.at[2].multiply(j_fac)
     X = X.at[3].set(gap_height)
 
     return X
+
+
+def _limits_from_peaks(z_fluid, dens_fluid, z_solid, dens_solid):
+
+    # Outermost fluid maxima
+    fluid_peaks, _ = find_peaks(dens_fluid)
+    zmin_f = z_fluid[fluid_peaks[0]]
+    zmax_f = z_fluid[fluid_peaks[-1]]
+
+    # Innermost solid maxima
+    nz = len(z_solid)
+    solid_peaks_l, _ = find_peaks(dens_solid[:nz // 2])
+    solid_peaks_u, _ = find_peaks(dens_solid[nz // 2:])
+    zmin_s = z_solid[:nz // 2][solid_peaks_l[-1]]
+    zmax_s = z_solid[nz // 2:][solid_peaks_u[0]]
+
+    # Combined
+    zmin = (zmin_s + zmin_f) / 2.
+    zmax = (zmax_s + zmax_f) / 2.
+
+    return zmin, zmax
+
+
+def _limits_from_nonzero(z_fluid, dens_fluid, z_solid, dens_solid):
+
+    # solid
+    nz = len(z_solid)
+    zsl = z_solid[:nz // 2]
+    dsl = dens_solid[:nz // 2]
+    zsu = z_solid[nz // 2:]
+    dsu = dens_solid[nz // 2:]
+    zmin_s = zsl[dsl / dsl.max() > 0.01].max()
+    zmax_s = zsu[dsu / dsu.max() > 0.01].min()
+
+    # fluid
+    zmin_f = z_fluid[dens_fluid / dens_fluid.max() > 0.01].min()
+    zmax_f = z_fluid[dens_fluid / dens_fluid.max() > 0.01].max()
+
+    # Combined
+    zmin = (zmin_s + zmin_f) / 2.
+    zmax = (zmax_s + zmax_f) / 2.
+
+    return zmin, zmax
 
 
 def autocorr_func_1d(x):

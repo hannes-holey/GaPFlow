@@ -48,7 +48,7 @@ def test_processors_grid(Na, size, max_cpu):
 def test_coords_from_lt(fname, expected):
 
     fname_abspath = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                                 '..', 'examples', 'lmp', 'mol', 'moltemplate_files', fname)
+                                 '..', 'lammps_templates', 'mol', 'moltemplate_files', fname)
 
     coords = _read_coords_from_lt(fname_abspath)
     assert coords.shape == (expected, 3)

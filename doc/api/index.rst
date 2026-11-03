@@ -11,6 +11,29 @@ Main drivers
 
    Problem
    Database
+
+Solvers
+-------
+
+Implicit solver (FEM)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: GaPFlow.solver_implicit
+
+.. autosummary::
+   :toctree: summary
+
+   solver_implicit.ImplicitSolver
+
+Explicit solver (FVM)
+~~~~~~~~~~~~~~~~~~~~~
+
+.. currentmodule:: GaPFlow.solver_explicit
+
+.. autosummary::
+   :toctree: summary
+
+   solver_explicit.ExplicitSolver
    integrate
 
 Models
@@ -20,16 +43,18 @@ Models
 
 .. autosummary::
    :toctree: summary
-   
+
    gp.GaussianProcessSurrogate
    Pressure
    BulkStress
    WallStress
+   Viscosity
    pressure
    sound
    viscosity
    viscous
-   
+   profiles
+
 Molecular dynamics
 ------------------
 
@@ -54,7 +79,17 @@ Topography
 
    Topography
    ElasticDeformation
+   ForceBalance
 
+Parallelization
+---------------
+
+.. currentmodule:: GaPFlow.parallel
+
+.. autosummary::
+   :toctree: summary
+
+   DomainDecomposition
 
 Visualization
 -------------
@@ -67,3 +102,14 @@ Visualization
    animations
    plotting
 
+Analysis
+--------
+
+.. currentmodule:: GaPFlow.analysis
+
+.. autosummary::
+   :toctree: summary
+
+   compute_metrics
+   print_metrics
+   create_overview_plot

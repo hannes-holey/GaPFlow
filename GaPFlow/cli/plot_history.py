@@ -31,7 +31,8 @@ from GaPFlow.viz.plotting import plot_history
 def get_parser():
 
     parser = ArgumentParser()
-    parser.add_argument('-g', '--gp', action='store_true', default=False)
+    parser.add_argument('-s', '--step', action='store_true', default=False,
+                        help="Use the step number instead of time as x-axis")
 
     return parser
 
@@ -42,19 +43,9 @@ def main():
 
     files = get_pipeline(name='history.csv')
 
-    gp_files = {'zz': [], 'xz': [], 'yz': []}
+    gp_files = {key: [os.path.join(os.path.dirname(file), f'gp_{key}.csv')
+                      for file in files
+                      if f'gp_{key}.csv' in os.listdir(os.path.dirname(file))]
+                for key in ['zz', 'xz', 'yz']}
 
-    if args.gp:
-        gp_files['zz'] = [os.path.join(os.path.dirname(file), 'gp_zz.csv')
-                          for file in files
-                          if 'gp_zz.csv' in os.listdir(os.path.dirname(file))]
-
-        gp_files['xz'] = [os.path.join(os.path.dirname(file), 'gp_xz.csv')
-                          for file in files
-                          if 'gp_xz.csv' in os.listdir(os.path.dirname(file))]
-
-        gp_files['yz'] = [os.path.join(os.path.dirname(file), 'gp_yz.csv')
-                          for file in files
-                          if 'gp_yz.csv' in os.listdir(os.path.dirname(file))]
-
-    plot_history(files, gp_files)
+    plot_history(files, gp_files=gp_files, over_step=args.step)

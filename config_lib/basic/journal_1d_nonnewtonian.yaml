@@ -1,0 +1,44 @@
+options:
+    output: data/journal_nonnewton
+    write_freq: 100
+    silent: False
+grid:
+    dx: 1.e-5
+    dy: 1.
+    Nx: 100
+    Ny: 1
+    xE: ['P', 'P', 'P']
+    xW: ['P', 'P', 'P']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+geometry:
+    type: journal
+    CR: 1.e-2
+    eps: 0.7
+    U: 0.1
+    V: 0.
+numerics:
+    CFL: 0.25
+    adaptive: 1
+    tol: 1e-8
+    dt: 1e-10
+    max_it: 10_000
+properties:
+  shear: 0.00037
+  bulk: 0.0
+  rho0: 700.0
+  EOS: MT
+  P0: 101000.0
+  K: 557000000.0
+  n: 7.33
+  piezo:
+    name: Roelands
+    mu_inf: 6.315e-05
+    pR: 100000000.0
+    zR: 0.51
+  thinning:
+    name: Carreau
+    mu_inf: 1e-09
+    lam: 7.168e-11
+    a: 2.0
+    N: 0.6216

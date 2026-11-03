@@ -1,0 +1,64 @@
+# Sudden squeeze of two flat, fully periodic plates on an elastic half-space,
+# generalized Reynolds equation with Elrod-Adams cavitation.
+#
+# One time step with 20 Newton iterations. The squeeze step (h0) and
+# physics.einm / elastic.alpha_underrelax are set from the notebook
+# (doc/tutorials/fem_09_generalized_reynolds.ipynb).
+
+options:
+    output: /tmp/squeeze_elastic_gen_reynolds
+    save_output: False
+    print_config: False
+    silent: True
+
+grid:
+    Lx: 1.0e-3
+    Ly: 1.0e-4
+    Nx: 10
+    Ny: 4
+    xW: ['P', 'P', 'P']
+    xE: ['P', 'P', 'P']
+    yS: ['P', 'P', 'P']
+    yN: ['P', 'P', 'P']
+
+geometry:
+    type: inclined
+    hmin: 1.0e-6
+    hmax: 1.0e-6
+    U: 0.0
+    V: 0.0
+    flip: false
+
+numerics:
+    solver: implicit
+    dt: 1.0e-4
+    tol: 0.0
+    max_it: 1
+
+properties:
+    EOS: DH
+    rho0: 850.0
+    P0: 1.0e5
+    C1: 2.22e9
+    C2: 1.66
+    p_cav: 0.0
+    shear: 0.01
+    bulk: 0.0
+    elastic:
+        E: 10.0e9
+        v: 0.3
+        alpha_underrelax: 1.0
+        thickness: 1.0e-5
+
+implicit_solver:
+    linear_solver: direct
+    newton_relax: 1.0
+    equations:
+        reynolds: True
+        cavitation: True
+        generalized_reynolds: True
+    physics:
+        einm: False
+    max_iter: 20
+    R_norm_tol: 1.0e-30
+    scaling: True

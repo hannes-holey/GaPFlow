@@ -30,9 +30,11 @@ from typing import Optional
 
 
 def _default_filename_for(name: str) -> str:
-    # map logger names like 'gapflow.problem' -> 'gapflow_problem.log'
-    base = name.replace('.', '_')
-    return f"{base}.log"
+    # map logger names like 'gapflow.run' -> 'log.run', 'gapflow.gp' -> 'log.gp'
+    parts = name.split('.')
+    if parts[0] == 'gapflow':
+        parts = parts[1:]
+    return f"log.{'_'.join(parts)}"
 
 
 def get_logger(name: str,

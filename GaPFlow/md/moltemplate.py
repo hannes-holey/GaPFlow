@@ -211,10 +211,19 @@ def _create_fcc_wall_ase(symbol='Au',
     lz0 = np.sqrt(3) * a
 
     if rotation is not None:
-        nx = int(np.floor(lz0 / lx0 / np.tan(abs(rotation) / 180. * np.pi)))
+        # The rotated wall rises by nsteps lattice repeats (lz0) across the box,
+        # nx is rounded to the nearest multiple of the single-step length nx_min.
+        nx_min = int(np.floor(lz0 / lx0 / np.tan(abs(rotation) / 180. * np.pi)))
+        nsteps = max(1, round(nx / nx_min))
+        nx = nsteps * nx_min
+        # default width from the single-step box, i.e., independent of nsteps
+        nx_ref = nx_min
+    else:
+        nsteps = 1
+        nx_ref = nx
 
     if ny is None:
-        ny = int((lx0 * nx) / ly0)
+        ny = int((lx0 * nx_ref) / ly0)
     if nz is None:
         nz = 7
 
@@ -233,7 +242,7 @@ def _create_fcc_wall_ase(symbol='Au',
         print('Cell size: ', lx, ly, lz)
 
         # Rotate particle coordinates
-        alpha_rad = np.sign(rotation) * np.arctan(lz0 / nx / lx0)
+        alpha_rad = np.sign(rotation) * np.arctan(nsteps * lz0 / nx / lx0)
         alpha = alpha_rad * 180 / np.pi
         print("Rotation angle (y):", alpha)
         fcc.rotate(alpha, 'y',
@@ -301,7 +310,7 @@ def _get_num_fluid_molecules(name, volume, density):
     return Nf, Nf * nC_per_mol
 
 
-def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
+def config_fluid(file, Lx, Ly, H, density, buffer=25.):
     """Calculate an initial molecule grid given the box dimensions and
     adjust the gap height for the initial setup to fit all molecules
     without overlap.
@@ -321,8 +330,6 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
         Target fluid density
     buffer : float
         "Safety distance" between the outermost fluid layer and the wall
-    flat : bool
-        Flags flat systems in which a slight density correction is applied.
 
     Returns
     -------
@@ -345,16 +352,6 @@ def config_fluid(file, Lx, Ly, H, density, buffer=25., flat=True):
 
     volume = Lx * Ly * H
     num_fluid_mol, num_fluid_atoms = _get_num_fluid_molecules(name, volume, density)
-
-    # In flat sections the achieved density is usually too high
-    # We reduce by removing molecules that would "fit" into the depletion zone
-    if flat:
-        sig = (3.92 + 2.63) / 2.
-        dH = sig / 2.
-        excess_vol = Lx * Ly * dH
-        excess_mol, excess_atoms = _get_num_fluid_molecules(name, excess_vol, density)
-        num_fluid_mol -= excess_mol
-        num_fluid_atoms -= excess_atoms
 
     coords = _read_coords_from_lt(file)
     lx, ly, lz = coords.max(0) - coords.min(0)
@@ -567,6 +564,7 @@ def write_settings(args):
     rotation = args.get("rotation", 0.)
     if abs(rotation) > 4.:
         angle_sf = 1.99
+        offset -= 0.9  # small correction to gap height when walls are not flat
     else:
         angle_sf = 1.
 
@@ -697,7 +695,6 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     target_density = args.get("density")  # g/mol/A^3
     target_gap = args.get("gap_height")  # Angstrom
     target_rotation = args.get("rotation", 0.)  # degrees
-    is_flat = abs(target_rotation) < .1
 
     # solid, create ASE Atoms object
     nx = args.get("nx", 21)
@@ -709,6 +706,10 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
                                         ny=ny,
                                         nz=nz,
                                         rotation=target_rotation)
+
+    # same lateral size for both walls
+    if ny is None:
+        ny = int(round(slab_top.cell.cellpar()[1] / (np.sqrt(6) / 2 * 4.08)))
 
     slab_bot, _ = _create_fcc_wall_ase(nx=nx,
                                        ny=ny,
@@ -724,7 +725,7 @@ def write_template(args, template_dir='moltemplate_files', output_dir="moltempla
     name = args.get("molecule", "pentane")
     molecule_file = os.path.join(template_dir, f"{name}.lt")
     fluid_grid, num_fluid_mol, num_fluid_atoms, initial_gap = config_fluid(
-        molecule_file, lx, ly, target_gap, target_density, buffer=buffer, flat=is_flat)
+        molecule_file, lx, ly, target_gap, target_density, buffer=buffer)
 
     # move top wall up
     slab_top.positions += np.array([0., 0., lz + initial_gap])

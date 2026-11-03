@@ -40,14 +40,12 @@ def _slip_to_Ls(Ls, slip):
         return 0.0, 0.0
 
 
-@pytest.mark.parametrize('slip, Ls', [('both', 0.),
-                                      ('both', 0.5),
-                                      ('top', 0.),
-                                      ('top', 0.5),
-                                      ('bottom', 0.),
-                                      ('bottom', 0.5),
-                                      ])
-def test_flow_rate(slip, Ls):
+@pytest.mark.parametrize('Ls_bot, Ls_top', [(0., 0.),
+                                            (0.5, 0.5),
+                                            (0., 0.5),
+                                            (0.5, 0.),
+                                            ])
+def test_flow_rate(Ls_bot, Ls_top):
 
     Nz = 10_000
     hmax = 2.
@@ -55,19 +53,19 @@ def test_flow_rate(slip, Ls):
     z = np.linspace(0., hmax, Nz)
     q = np.array([1., 2., 1.])
 
-    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
+    # Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
     u, v = get_velocity_profiles(z, q, U_bot=1., V_bot=1., Ls_bot=Ls_bot, Ls_top=Ls_top)
 
     assert np.isclose(np.trapezoid(u, z) / hmax, q[1])
     assert np.isclose(np.trapezoid(v, z) / hmax, q[2])
 
 
-@pytest.mark.parametrize('slip, Ls', [('both', 0.),
-                                      ('both', 0.5),
-                                      ('top', 0.),
-                                      ('top', 0.5),
-                                      ])
-def test_avg_stress(slip, Ls):
+@pytest.mark.parametrize('Ls_bot, Ls_top', [(0., 0.),
+                                            (0.5, 0.5),
+                                            (0.5, 0.),
+                                            (0., 0.5),
+                                            ])
+def test_avg_stress(Ls_bot, Ls_top):
 
     q_test = np.array([1.0, 0.75, 0.25])
     h_test = np.array([1.0, 0.01, 0.01])  # "small slopes"
@@ -75,7 +73,7 @@ def test_avg_stress(slip, Ls):
     Nz = 10_000
     z = np.linspace(0., 1., Nz)
 
-    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
+    # Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
     tau_xx, tau_yy, _, _, _, tau_xy = get_stress_profiles(z,
                                                           h_test,
                                                           q_test,
@@ -95,12 +93,12 @@ def test_avg_stress(slip, Ls):
     assert np.isclose(np.trapezoid(tau_xy, z) / tau_avg[2], 1.)
 
 
-@pytest.mark.parametrize('slip, Ls', [('both', 0.),
-                                      ('both', 0.5),
-                                      ('top', 0.),
-                                      ('top', 0.5),
-                                      ])
-def test_wall_stress(slip, Ls):
+@pytest.mark.parametrize('Ls_bot, Ls_top', [(0., 0.),
+                                            (0.5, 0.5),
+                                            (0.5, 0.),
+                                            (0., 0.5),
+                                            ])
+def test_wall_stress(Ls_bot, Ls_top):
 
     q_test = np.array([1.0, 0.75, 0.25])
     h_test = np.array([1.0, 0.01, 0.01])  # "small slopes"
@@ -108,7 +106,7 @@ def test_wall_stress(slip, Ls):
     Nz = 10_000
     z = np.linspace(0., 1., Nz)
 
-    Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
+    # Ls_bot, Ls_top = _slip_to_Ls(Ls, slip)
     tau_xx, tau_yy, tau_zz, tau_yz, tau_xz, tau_xy = get_stress_profiles(z,
                                                                          h_test,
                                                                          q_test,

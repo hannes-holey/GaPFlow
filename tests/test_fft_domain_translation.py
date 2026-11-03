@@ -32,9 +32,8 @@ import math
 
 import numpy as np
 import pytest
-from mpi4py import MPI
 
-from GaPFlow.parallel import DomainDecomposition, FFTDomainTranslation
+from GaPFlow.parallel import DomainDecomposition, FFTDomainTranslation, MPI
 
 comm = MPI.COMM_WORLD
 rank = comm.rank

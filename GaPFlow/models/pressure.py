@@ -35,7 +35,7 @@ import jax.numpy as jnp
 from scipy.constants import gas_constant
 
 
-def eos_pressure(density, prop):
+def eos_pressure(density, prop, h=None):
     """Wrapper around all implemented equation of state models.
 
     Parameters
@@ -53,16 +53,16 @@ def eos_pressure(density, prop):
 
     if prop['EOS'] == 'DH':
         func = dowson_higginson
-        args = ['rho0', 'P0', 'C1', 'C2']
+        args = ['rho_ref', 'P0', 'C1', 'C2']
     elif prop['EOS'] == 'PL':
         func = power_law
-        args = ['rho0', 'P0', 'alpha']
+        args = ['rho_ref', 'P0', 'alpha']
     elif prop['EOS'] == 'vdW':
         func = van_der_waals
         args = ['M', 'T', 'a', 'b']
     elif prop['EOS'] == "MT":
         func = murnaghan_tait
-        args = ['rho0', 'P0', 'K', 'n']
+        args = ['rho_ref', 'P0', 'K', 'n']
     elif prop['EOS'] == "cubic":
         func = cubic
         args = ['a', 'b', 'c', 'd']
@@ -73,7 +73,7 @@ def eos_pressure(density, prop):
         func = bayada_chupin
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
     elif prop['EOS'] == 'user':
-        return prop['EOS_user'](density)
+        return prop['EOS_user'](density, h)
 
     # TODO: split EOS and stress arguments already in input
     kwargs = {k: v for k, v in prop.items() if k in args}
@@ -81,7 +81,7 @@ def eos_pressure(density, prop):
     return func(density, **kwargs)
 
 
-def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
+def dowson_higginson(dens, rho_ref=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     """
     Computes pressure using the Dowson-Higginson isothermal equation of state.
 
@@ -95,7 +95,7 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     ----------
     dens : float or np.ndarray
         Current fluid density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Pressure at reference density.
@@ -110,11 +110,11 @@ def dowson_higginson(dens, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
         Computed pressure.
 
     """
-    rho = jnp.minimum(dens, 0.99 * C2 * rho0)
-    return P0 + (C1 * (rho / rho0 - 1.)) / (C2 - rho / rho0)
+    rho = jnp.minimum(dens, 0.99 * C2 * rho_ref)
+    return P0 + (C1 * (rho / rho_ref - 1.)) / (C2 - rho / rho_ref)
 
 
-def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
+def power_law(dens, rho_ref=1.1853, P0=101325., alpha=0.):
     """
     Computes pressure using a power-law equation of state.
 
@@ -127,7 +127,7 @@ def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
     ----------
     dens : float or np.ndarray
         Current density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Reference pressure.
@@ -139,7 +139,7 @@ def power_law(dens, rho0=1.1853, P0=101325., alpha=0.):
     float or np.ndarray
         Computed pressure.
     """
-    return P0 * (dens / rho0)**(1. / (1. - 0.5 * alpha))
+    return P0 * (dens / rho_ref)**(1. / (1. - 0.5 * alpha))
 
 
 def van_der_waals(dens, M=39.948, T=100., a=1.355, b=0.03201):
@@ -178,7 +178,7 @@ def van_der_waals(dens, M=39.948, T=100., a=1.355, b=0.03201):
     return R * T * mol_dens / (1. - b * mol_dens) - a * mol_dens**2
 
 
-def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
+def murnaghan_tait(dens, rho_ref=700, P0=0.101e6, K=0.557e9, n=7.33):
     """
     Computes pressure using the Murnaghan-Tait equation of state.
 
@@ -192,7 +192,7 @@ def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
     ----------
     dens : float or np.ndarray
         Current density.
-    rho0 : float
+    rho_ref : float
         Reference density.
     P0 : float
         Reference pressure.
@@ -207,7 +207,7 @@ def murnaghan_tait(dens, rho0=700, P0=0.101e6, K=0.557e9, n=7.33):
         Computed pressure.
 
     """
-    return K / n * ((dens / rho0)**n - 1) + P0
+    return K / n * ((dens / rho_ref)**n - 1) + P0
 
 
 def cubic(dens, a=15.2, b=-9.6, c=3.35, d=-0.07):
@@ -258,10 +258,10 @@ def bwr(dens, T, gamma=3.):
     """
 
     config = os.path.join(os.path.dirname(__file__), "bwr_coeffs.txt")
-    x = np.loadtxt(config)
+    x = jnp.array(np.loadtxt(config))
 
     p = dens * T +\
-        dens**2 * (x[0] * T + x[1] * np.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
+        dens**2 * (x[0] * T + x[1] * jnp.sqrt(T) + x[2] + x[3] / T + x[4] / T**2) +\
         dens**3 * (x[5] * T + x[6] + x[7] / T + x[8] / T**2) +\
         dens**4 * (x[9] * T + x[10] + x[11] / T) +\
         dens**5 * x[12] +\
@@ -269,7 +269,7 @@ def bwr(dens, T, gamma=3.):
         dens**7 * (x[15] / T) +\
         dens**8 * (x[16] / T + x[17] / T**2) + \
         dens**9 * (x[18] / T**2) +\
-        np.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
+        jnp.exp(-gamma * dens**2) * (dens**3 * (x[19] / T**2 + x[20] / T**3) +  # noqa: W504
                                     dens**5 * (x[21] / T**2 + x[22] / T**4) +  # noqa: W504
                                     dens**7 * (x[23] / T**2 + x[24] / T**3) +  # noqa: W504
                                     dens**9 * (x[25] / T**2 + x[26] / T**4) +  # noqa: W504
@@ -350,7 +350,7 @@ def bayada_chupin(dens, rho_l, rho_v, c_l, c_v, smooth_width=0.0):
 # ---------------------------------------------------------------------------
 
 
-def rho_of_p_dh(pressure, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
+def rho_of_p_dh(pressure, rho_ref=877.7007, P0=101325., C1=3.5e8, C2=1.23):
     """Inverse of Dowson-Higginson EoS.
 
     Closed-form:
@@ -360,10 +360,10 @@ def rho_of_p_dh(pressure, rho0=877.7007, P0=101325., C1=3.5e8, C2=1.23):
         p(rho) = P_0 + C_1 (rho/rho_0 - 1) / (C_2 - rho/rho_0).
     """
     u = pressure - P0
-    return rho0 * (C2 * u + C1) / (u + C1)
+    return rho_ref * (C2 * u + C1) / (u + C1)
 
 
-def rho_of_p_pl(pressure, rho0=1.1853, P0=101325., alpha=0.):
+def rho_of_p_pl(pressure, rho_ref=1.1853, P0=101325., alpha=0.):
     """Inverse of power-law EoS.
 
     Closed-form:
@@ -375,16 +375,18 @@ def rho_of_p_pl(pressure, rho0=1.1853, P0=101325., alpha=0.):
     For alpha=0 this is a linear EoS; widely used as the canonical test
     case for FD Jacobian verification.
     """
-    return rho0 * (pressure / P0) ** (1. - 0.5 * alpha)
+    return rho_ref * (pressure / P0) ** (1. - 0.5 * alpha)
 
 
 def rho_of_p_bayada(pressure, rho_l, rho_v, c_l, c_v):
     """Inverse of Bayada-Chupin EoS (three-region piecewise).
 
-    Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
-    Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
-                                  q = exp((p - Pcav)/N) / (rho_v*c_v^2)
-    Vapor   (p < P_vt):           rho = p / c_v^2
+    ::
+
+        Liquid  (p >= Pcav):          rho = rho_l + (p - Pcav) / c_l^2
+        Mixture (P_vt <= p <= Pcav):  rho = q*A / (1 - q*B) with
+                                      q = exp((p - Pcav)/N) / (rho_v*c_v^2)
+        Vapor   (p < P_vt):           rho = p / c_v^2
 
     P_vt = rho_v*c_v^2 is the mixture-vapor boundary pressure; Pcav is the
     cavitation (mixture-liquid) boundary pressure.
@@ -418,15 +420,13 @@ def eos_rho(pressure, prop):
     """
     if prop['EOS'] == 'DH':
         func = rho_of_p_dh
-        args = ['rho0', 'P0', 'C1', 'C2']
+        args = ['rho_ref', 'P0', 'C1', 'C2']
     elif prop['EOS'] == 'PL':
         func = rho_of_p_pl
-        args = ['rho0', 'P0', 'alpha']
+        args = ['rho_ref', 'P0', 'alpha']
     elif prop['EOS'] == 'Bayada':
         func = rho_of_p_bayada
         args = ['rho_l', 'rho_v', 'c_l', 'c_v']
-    elif prop['EOS'] == 'user':
-        return prop['EOS_user_inv'](pressure)
     else:
         raise NotImplementedError(
             f"Pressure-based solver requires an inverse EoS; "
@@ -445,11 +445,11 @@ def eos_drho_dp(pressure, prop):
     from jax import grad, vmap
 
     if prop['EOS'] == 'DH':
-        args = ['rho0', 'P0', 'C1', 'C2']
+        args = ['rho_ref', 'P0', 'C1', 'C2']
         kwargs = {k: prop[k] for k in args}
         scalar_fn = lambda p: rho_of_p_dh(p, **kwargs)
     elif prop['EOS'] == 'PL':
-        args = ['rho0', 'P0', 'alpha']
+        args = ['rho_ref', 'P0', 'alpha']
         kwargs = {k: prop[k] for k in args}
         scalar_fn = lambda p: rho_of_p_pl(p, **kwargs)
     elif prop['EOS'] == 'Bayada':

@@ -42,11 +42,11 @@ Metrics Output Format::
     ...
     ==================================================
 """
-import resource
+import platform
 from datetime import datetime
 
 import numpy as np
-from mpi4py import MPI
+from ..parallel import MPI
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
@@ -268,7 +268,13 @@ def _memory_metrics(comm: MPI.Comm) -> dict:
 
     Uses resource.getrusage to get peak memory (max RSS).
     Reports both total (sum) and max across all MPI ranks.
+    Unavailable on Windows, where the stdlib `resource` module does not exist.
     """
+    if platform.system() == "Windows":
+        return {}
+
+    import resource
+
     # ru_maxrss is in KB on Linux, bytes on macOS
     peak_kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     peak_mb = peak_kb / 1024  # Convert KB to MB (Linux)

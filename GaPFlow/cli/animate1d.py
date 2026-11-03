@@ -24,10 +24,9 @@
 #
 import os
 import polars as pl
-import numpy as np
 from argparse import ArgumentParser
 
-from GaPFlow.viz.utils import get_pipeline
+from GaPFlow.viz.utils import get_pipeline, tolerance_per_frame
 from GaPFlow.viz.animations import animate_1d, animate_1d_gp
 
 
@@ -56,15 +55,18 @@ def main(cli=True, path='.', save=False, mode='single'):
     gp_p = os.path.join(os.path.dirname(file_sol), 'gp_zz.csv')
     gp_s = os.path.join(os.path.dirname(file_sol), 'gp_xz.csv')
 
+    # one sol.nc frame per history.csv row
+    frame_step = pl.read_csv(os.path.join(os.path.dirname(file_sol), 'history.csv'))['step']
+
     try:
         df_p = pl.read_csv(gp_p)
-        tol_p = np.array(df_p['variance_tol'])
+        tol_p = tolerance_per_frame(df_p['step'], df_p['variance_tol'], frame_step)
     except FileNotFoundError:
         tol_p = None
 
     try:
         df_s = pl.read_csv(gp_s)
-        tol_s = np.array(df_s['variance_tol'])
+        tol_s = tolerance_per_frame(df_s['step'], df_s['variance_tol'], frame_step)
     except FileNotFoundError:
         tol_s = None
 

@@ -65,7 +65,7 @@ properties:
     bulk: 0.
     EOS: BWR
     T: 1.0
-    rho0: 0.8
+    rho_init: 0.8
 gp:
     press:
         fix_noise: True

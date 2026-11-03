@@ -23,6 +23,7 @@
 # SOFTWARE.
 #
 from .runner import run_parallel, run_serial
+from ..db import README_SCHEMA_VERSION
 from ..utils import make_dumpable
 from ..logging import get_logger
 
@@ -72,7 +73,7 @@ class MolecularDynamics:
     is_mock: bool
     _dtool_basepath: str = '/tmp/'
     _readme_template: str = ""
-    _input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y'] + [f'extra_{i}' for i in range(10)]
+    _input_names: list[str] = ['ρ', 'jx', 'jy', 'h', '∂h/∂x', '∂h/∂y', 'U', 'V'] + [f'extra_{i}' for i in range(10)]
     _output_names: list[str] = ['p',
                                 'τ(xx|bot)', 'τ(yy|bot)', 'τ(zz|bot)', 'τ(yz|bot)', 'τ(xz|bot)', 'τ(xy|bot)',
                                 'τ(xx|top)', 'τ(yy|top)', 'τ(zz|top)', 'τ(yz|top)', 'τ(xz|top)', 'τ(xy|top)']
@@ -201,6 +202,7 @@ class MolecularDynamics:
         metadata["owners"] = [{'username': getuser()}]
         metadata["creation_date"] = date.today()
         metadata["expiration_date"] = metadata["creation_date"] + relativedelta(years=10)
+        metadata["schema_version"] = README_SCHEMA_VERSION
 
         out_fname = os.path.join(dataset_path, 'README.yml')
 
