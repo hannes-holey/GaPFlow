@@ -368,7 +368,7 @@ def sanitize_geometry(d):
         out['Ry'] = float(d.get('Ry'))
         out['hmin'] = float(d.get('hmin'))
     elif out['type'] == 'from_file':
-        out['filepath'] = str(d.get('filepath'))
+        out['height_filepath'] = str(d.get('height_filepath'))
 
     print_dict(out)
 
