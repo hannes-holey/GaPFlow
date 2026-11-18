@@ -96,7 +96,7 @@ GRey_R11y_drho_o_eta = Term(
     dep_vals=['drho_o_eta_eff_y_dp', 'd_dy_p'],
     fun=lambda ctx: lambda p: np.zeros_like(p),
     der_funs=[lambda ctx: lambda p: ctx['drho_o_eta_eff_y_dp']() * ctx['h']() ** 3 / (12) * ctx['d_dy_p']()],
-    test_deriv='x')
+    test_deriv='y')
 
 
 GRey_R11Sx = Term(
@@ -112,16 +112,16 @@ GRey_R11Sx = Term(
     der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * (1 - theta) * (ctx['rho_star_x']() + ctx['h']() * ctx['drho_star_x_dh']()))
 
 GRey_R11Sy = Term(
-    name='GRey_R11Sx',
-    description='Couette x: -rho_eff h (1-theta) U_m, U_m = (U_bot + U_top)/2 (IBP)',
+    name='GRey_R11Sy',
+    description='Couette y: -rho_star_y h (1-theta) V_m, V_m = (V_bot + V_top)/2 (IBP)',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['h', 'rho_star_y', 'drho_star_y_dp', 'drho_star_y_dh', 'U_bot', 'U_top'],
-    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_y']() * ctx['h']() * (1 - theta),
-    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['drho_star_y_dp']() * ctx['h']() * (1 - theta),
-              lambda ctx: lambda p, theta: 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_y']() * ctx['h']()],
-    test_deriv='x',
-    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * (1 - theta) * (ctx['rho_star_y']() + ctx['h']() * ctx['drho_star_y_dh']()))
+    dep_vals=['h', 'rho_star_y', 'drho_star_y_dp', 'drho_star_y_dh', 'V_bot', 'V_top'],
+    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['rho_star_y']() * ctx['h']() * (1 - theta),
+    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['drho_star_y_dp']() * ctx['h']() * (1 - theta),
+              lambda ctx: lambda p, theta: 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['rho_star_y']() * ctx['h']()],
+    test_deriv='y',
+    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * (1 - theta) * (ctx['rho_star_y']() + ctx['h']() * ctx['drho_star_y_dh']()))
 
 GEN_REYNOLDS_CAV_TERMS = [
     GRey_R1T, GRey_R11x, GRey_R11x_drho_o_eta, GRey_R11y, GRey_R11y_drho_o_eta,
