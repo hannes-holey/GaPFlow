@@ -5,6 +5,7 @@ import yaml
 
 from GaPFlow.models.pressure import eos_pressure
 from GaPFlow.problem import Problem
+from GapFlow.config_utils import build_config
 
 CONFIG_DIR = Path('../../config_lib/validation')
 
@@ -12,26 +13,6 @@ CONFIG_DIR = Path('../../config_lib/validation')
 def load_template(name):
     with open(CONFIG_DIR / f'{name}.yaml', 'r') as f:
         return f.read()
-
-
-def apply_overrides(config, overrides):
-    """Set keys in a nested config dict by full dotted path, e.g.
-    'numerics.dt' or 'implicit_solver.stabilization.oss'. Missing sections
-    and keys along the path are created.
-    """
-    for key, value in overrides.items():
-        *parents, leaf = key.split('.')
-        node = config
-        for k in parents:
-            node = node.setdefault(k, {})
-        node[leaf] = value
-    return config
-
-
-def build_config(template, solver, **overrides):
-    config = yaml.safe_load(template)
-    apply_overrides(config, {'numerics.solver': solver, **overrides})
-    return yaml.safe_dump(config)
 
 
 def run_solver(template, solver, **overrides):
