@@ -38,7 +38,7 @@ import numpy as np
 from ..terms import Term
 
 __all__ = [
-    'GRey_R1T', 'GRey_R11x', 'GRey_R11x_deps', 'GRey_R11y', 'GRey_R11y_deps',
+    'GRey_R1T', 'GRey_R11x', 'GRey_R11x_drho_o_eta', 'GRey_R11y', 'GRey_R11y_drho_o_eta',
     'GRey_R11Sx', 'GRey_R11Sy', 'GEN_REYNOLDS_CAV_TERMS',
 ]
 
@@ -70,7 +70,7 @@ GRey_R11x_drho_o_eta = Term(
     description='Poiseuille x, d/dp through epsilon(p) (Jacobian-only, fun=0)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['rho_o_eta_eff_x_dp', 'd_dx_p'],
+    dep_vals=['drho_o_eta_eff_x_dp', 'd_dx_p'],
     fun=lambda ctx: lambda p: np.zeros_like(p),
     der_funs=[lambda ctx: lambda p: ctx['drho_o_eta_eff_x_dp']() * ctx['h']() ** 3 / (12) * ctx['d_dx_p']()],
     test_deriv='x')
@@ -93,7 +93,7 @@ GRey_R11y_drho_o_eta = Term(
     description='Poiseuille x, d/dp through epsilon(p) (Jacobian-only, fun=0)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['rho_o_eta_eff_y_dp', 'd_dy_p'],
+    dep_vals=['drho_o_eta_eff_y_dp', 'd_dy_p'],
     fun=lambda ctx: lambda p: np.zeros_like(p),
     der_funs=[lambda ctx: lambda p: ctx['drho_o_eta_eff_y_dp']() * ctx['h']() ** 3 / (12) * ctx['d_dy_p']()],
     test_deriv='x')

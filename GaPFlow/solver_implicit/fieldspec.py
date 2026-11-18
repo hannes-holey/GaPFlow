@@ -91,6 +91,8 @@ _ARGS_S = ['h', 'eta', 'rho', 'E', 'jx', 'jy', 'U_bot', 'V_bot', 'Tb_top', 'Tb_b
 _ARGS_EPS = ['rho', 'h', 'eta', 'drho_dp', 'p']
 _ARGS_RHO_EFF = ['rho', 'drho_dp']
 
+_ARS_GENR_DIFFUSIVE =  ['rho', 'drho_dp', 'd_dx_p', 'd_dy_p', 'h', 'U_bot', 'U_top', 'V_bot', 'V_top']
+
 QUAD_FIELD_REGISTRY = {
     # ------------------------------------------------------------------
     # nodal: interpolated from nodal field to quad points
@@ -192,27 +194,27 @@ QUAD_FIELD_REGISTRY = {
 
     # generalized Reynolds mode:
     # (computed inline in _update_generalized_reynolds_quad_fields)
-    'rho_eff': {'type': 'computed', 'source': None, 'args': []},
-    'drho_eff_dp': {'type': 'computed', 'source': None, 'args': []},
-    'drho_eff_dh': {'type': 'computed', 'source': None, 'args': []},
+    'rho_eff': {'type': 'computed', 'source': None, 'args': ['rho', 'drho_dp']},
+    'drho_eff_dp': {'type': 'computed', 'source': None, 'args': ['rho', 'drho_dp']},
+    'drho_eff_dh': {'type': 'computed', 'source': None, 'args': ['rho', 'drho_dp']},
 
-    'eta_o_rho_eff_x': {'type': 'computed', 'source': None, 'args': []},
-    'eta_o_rho_eff_y': {'type': 'computed', 'source': None, 'args': []},
+    'rho_o_eta_eff_x': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'rho_o_eta_eff_y': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
 
-    'deta_o_rho_eff_x_dp': {'type': 'computed', 'source': None, 'args': []},
-    'deta_o_rho_eff_y_dp': {'type': 'computed', 'source': None, 'args': []},
+    'drho_o_eta_eff_x_dp': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'drho_o_eta_eff_y_dp': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
 
-    'deta_o_rho_eff_x_dh': {'type': 'computed', 'source': None, 'args': []},
-    'deta_o_rho_eff_y_dh': {'type': 'computed', 'source': None, 'args': []},
+    'drho_o_eta_eff_x_dh': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'drho_o_eta_eff_y_dh': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
 
-    'rhostar_x': {'type': 'computed', 'source': None, 'args': []},
-    'rhostar_y': {'type': 'computed', 'source': None, 'args': []},
+    'rhostar_x': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'rhostar_y': {'type': 'computed', 'source': None, 'args':_ARS_GENR_DIFFUSIVE},
 
-    'drhostar_x_dp': {'type': 'computed', 'source': None, 'args': []},
-    'drhostar_y_dp': {'type': 'computed', 'source': None, 'args': []},
+    'drhostar_x_dp': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'drhostar_y_dp': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
 
-    'drhostar_x_dh': {'type': 'computed', 'source': None, 'args': []},
-    'drhostar_y_dh': {'type': 'computed', 'source': None, 'args': []},
+    'drhostar_x_dh': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
+    'drhostar_y_dh': {'type': 'computed', 'source': None, 'args': _ARS_GENR_DIFFUSIVE},
 }
 
 
@@ -266,8 +268,7 @@ _CUSTOM_ARGS_RHO_EFF = {name: ['p', 'h'] for name in ('rho_eff', 'drho_eff_dp', 
 
 _DEFAULT_REGISTRY_ARGS = {
     name: list(QUAD_FIELD_REGISTRY[name]['args'])
-    for block in (_GP_ARGS_PRESSURE, _GP_ARGS_WALL_STRESS_XZ, _GP_ARGS_WALL_STRESS_YZ,
-                  _CUSTOM_ARGS_EPS, _CUSTOM_ARGS_RHO_EFF)
+    for block in (_GP_ARGS_PRESSURE, _GP_ARGS_WALL_STRESS_XZ, _GP_ARGS_WALL_STRESS_YZ)
     for name in block
 }
 
