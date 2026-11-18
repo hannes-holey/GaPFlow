@@ -122,13 +122,6 @@ QUAD_FIELD_REGISTRY = {
     'dp_drho': {'type': 'computed', 'source': 'pressure.dp_drho', 'args': ['rho']},
     'd2p_drho2': {'type': 'computed', 'source': 'pressure.d2p_drho2', 'args': ['rho_avg']},
 
-    # generalized Reynolds (after drho_dp: computed fields are evaluated in registry order)
-    'epsilon': {'type': 'computed', 'source': 'reynolds_eps.epsilon', 'args': _ARGS_EPS},
-    'depsilon_dp': {'type': 'computed', 'source': 'reynolds_eps.depsilon_dp', 'args': _ARGS_EPS},
-    'depsilon_dh': {'type': 'computed', 'source': 'reynolds_eps.depsilon_dh', 'args': _ARGS_EPS},
-    'rho_eff': {'type': 'computed', 'source': 'reynolds_rho_eff.rho_eff', 'args': _ARGS_RHO_EFF},
-    'drho_eff_dp': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dp', 'args': _ARGS_RHO_EFF},
-    'drho_eff_dh': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dh', 'args': _ARGS_RHO_EFF},
 
     # wall stress xz
     'tau_xz': {'type': 'computed', 'source': 'wall_stress_xz.tau', 'args': _ARGS_XZ},
@@ -196,6 +189,30 @@ QUAD_FIELD_REGISTRY = {
     # (computed inline in _update_reynolds_supg_quad_fields)
     'U_m': {'type': 'computed', 'source': None, 'args': []},
     'tau_supg': {'type': 'computed', 'source': None, 'args': []},
+
+    # generalized Reynolds mode:
+    # (computed inline in _update_generalized_reynolds_quad_fields)
+    'rho_eff': {'type': 'computed', 'source': None, 'args': []},
+    'drho_eff_dp': {'type': 'computed', 'source': None, 'args': []},
+    'drho_eff_dh': {'type': 'computed', 'source': None, 'args': []},
+
+    'eta_o_rho_eff_x': {'type': 'computed', 'source': None, 'args': []},
+    'eta_o_rho_eff_y': {'type': 'computed', 'source': None, 'args': []},
+
+    'deta_o_rho_eff_x_dp': {'type': 'computed', 'source': None, 'args': []},
+    'deta_o_rho_eff_y_dp': {'type': 'computed', 'source': None, 'args': []},
+
+    'deta_o_rho_eff_x_dh': {'type': 'computed', 'source': None, 'args': []},
+    'deta_o_rho_eff_y_dh': {'type': 'computed', 'source': None, 'args': []},
+
+    'rhostar_x': {'type': 'computed', 'source': None, 'args': []},
+    'rhostar_y': {'type': 'computed', 'source': None, 'args': []},
+
+    'drhostar_x_dp': {'type': 'computed', 'source': None, 'args': []},
+    'drhostar_y_dp': {'type': 'computed', 'source': None, 'args': []},
+
+    'drhostar_x_dh': {'type': 'computed', 'source': None, 'args': []},
+    'drhostar_y_dh': {'type': 'computed', 'source': None, 'args': []},
 }
 
 

@@ -55,24 +55,24 @@ GRey_R1T = Term(
 
 GRey_R11x = Term(
     name='GRey_R11x',
-    description='Poiseuille x: epsilon * dp/dx (IBP)',
+    description='Poiseuille x: 1/12 rho_o_eta_x h^3 * dp/dx (IBP)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['epsilon', 'depsilon_dh', 'd_dx_p'],
-    fun=lambda ctx: lambda p: ctx['epsilon']() * ctx['d_dx_p'](),
-    der_funs=[lambda ctx: lambda p: ctx['epsilon']()],
-    der_h=lambda ctx: lambda p: ctx['depsilon_dh']() * ctx['d_dx_p'](),
+    dep_vals=['rho_o_eta_eff_x', 'drho_o_eta_eff_x_dh', 'd_dx_p'],
+    fun=lambda ctx: lambda p: ctx['rho_o_eta_eff_x']() * ctx['h']() ** 3 / (12) * ctx['d_dx_p'](),
+    der_funs=[lambda ctx: lambda p: ctx['rho_o_eta_eff_x']() * ctx['h']() ** 3 / (12)],
+    der_h=lambda ctx: lambda p: ctx['rho_o_eta_eff_x']() * ctx['h']() ** 2 / (4) * ctx['d_dx_p']() + ctx['drho_o_eta_eff_x_dh']() * ctx['h']() ** 3 / (12) * ctx['d_dx_p'](),
     trial_deriv='x',
     test_deriv='x')
 
-GRey_R11x_deps = Term(
+GRey_R11x_drho_o_eta = Term(
     name='GRey_R11x_deps',
     description='Poiseuille x, d/dp through epsilon(p) (Jacobian-only, fun=0)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['depsilon_dp', 'd_dx_p'],
+    dep_vals=['rho_o_eta_eff_x_dp', 'd_dx_p'],
     fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: ctx['depsilon_dp']() * ctx['d_dx_p']()],
+    der_funs=[lambda ctx: lambda p: ctx['drho_o_eta_eff_x_dp']() * ctx['h']() ** 3 / (12) * ctx['d_dx_p']()],
     test_deriv='x')
 
 GRey_R11y = Term(
@@ -80,48 +80,50 @@ GRey_R11y = Term(
     description='Poiseuille y: epsilon * dp/dy (IBP)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['epsilon', 'depsilon_dh', 'd_dy_p'],
-    fun=lambda ctx: lambda p: ctx['epsilon']() * ctx['d_dy_p'](),
-    der_funs=[lambda ctx: lambda p: ctx['epsilon']()],
-    der_h=lambda ctx: lambda p: ctx['depsilon_dh']() * ctx['d_dy_p'](),
+    dep_vals=['rho_o_eta_eff_y', 'drho_o_eta_eff_y_dh', 'd_dy_p'],
+    fun=lambda ctx: lambda p: ctx['rho_o_eta_eff_y']() * ctx['h']() ** 3 / (12) * ctx['d_dy_p'](),
+    der_funs=[lambda ctx: lambda p: ctx['rho_o_eta_eff_y']() * ctx['h']() ** 3 / (12)],
+    der_h=lambda ctx: lambda p: ctx['rho_o_eta_eff_y']() * ctx['h']() ** 2 / (4) * ctx['d_dy_p']() + ctx[
+        'drho_o_eta_eff_y_dh']() * ctx['h']() ** 3 / (12) * ctx['d_dy_p'](),
     trial_deriv='y',
     test_deriv='y')
 
-GRey_R11y_deps = Term(
-    name='GRey_R11y_deps',
-    description='Poiseuille y, d/dp through epsilon(p) (Jacobian-only, fun=0)',
+GRey_R11y_drho_o_eta = Term(
+    name='GRey_R11x_deps',
+    description='Poiseuille x, d/dp through epsilon(p) (Jacobian-only, fun=0)',
     res='mass',
     dep_vars=['p'],
-    dep_vals=['depsilon_dp', 'd_dy_p'],
+    dep_vals=['rho_o_eta_eff_y_dp', 'd_dy_p'],
     fun=lambda ctx: lambda p: np.zeros_like(p),
-    der_funs=[lambda ctx: lambda p: ctx['depsilon_dp']() * ctx['d_dy_p']()],
-    test_deriv='y')
+    der_funs=[lambda ctx: lambda p: ctx['drho_o_eta_eff_y_dp']() * ctx['h']() ** 3 / (12) * ctx['d_dy_p']()],
+    test_deriv='x')
+
 
 GRey_R11Sx = Term(
     name='GRey_R11Sx',
     description='Couette x: -rho_eff h (1-theta) U_m, U_m = (U_bot + U_top)/2 (IBP)',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['h', 'rho_eff', 'drho_eff_dp', 'drho_eff_dh', 'U_bot', 'U_top'],
-    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_eff']() * ctx['h']() * (1 - theta),
-    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['drho_eff_dp']() * ctx['h']() * (1 - theta),
-              lambda ctx: lambda p, theta: 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_eff']() * ctx['h']()],
+    dep_vals=['h', 'rho_star_x', 'drho_star_x_dp', 'drho_star_x_dh', 'U_bot', 'U_top'],
+    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_x']() * ctx['h']() * (1 - theta),
+    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['drho_star_x_dp']() * ctx['h']() * (1 - theta),
+              lambda ctx: lambda p, theta: 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_x']() * ctx['h']()],
     test_deriv='x',
-    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * (1 - theta) * (ctx['rho_eff']() + ctx['h']() * ctx['drho_eff_dh']()))
+    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * (1 - theta) * (ctx['rho_star_x']() + ctx['h']() * ctx['drho_star_x_dh']()))
 
 GRey_R11Sy = Term(
-    name='GRey_R11Sy',
-    description='Couette y: -rho_eff h (1-theta) V_m, V_m = (V_bot + V_top)/2 (IBP)',
+    name='GRey_R11Sx',
+    description='Couette x: -rho_eff h (1-theta) U_m, U_m = (U_bot + U_top)/2 (IBP)',
     res='mass',
     dep_vars=['p', 'theta'],
-    dep_vals=['h', 'rho_eff', 'drho_eff_dp', 'drho_eff_dh', 'V_bot', 'V_top'],
-    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['rho_eff']() * ctx['h']() * (1 - theta),
-    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['drho_eff_dp']() * ctx['h']() * (1 - theta),
-              lambda ctx: lambda p, theta: 0.5 * (ctx['V_bot']() + ctx['V_top']()) * ctx['rho_eff']() * ctx['h']()],
-    test_deriv='y',
-    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['V_bot']() + ctx['V_top']()) * (1 - theta) * (ctx['rho_eff']() + ctx['h']() * ctx['drho_eff_dh']()))
+    dep_vals=['h', 'rho_star_y', 'drho_star_y_dp', 'drho_star_y_dh', 'U_bot', 'U_top'],
+    fun=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_y']() * ctx['h']() * (1 - theta),
+    der_funs=[lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['drho_star_y_dp']() * ctx['h']() * (1 - theta),
+              lambda ctx: lambda p, theta: 0.5 * (ctx['U_bot']() + ctx['U_top']()) * ctx['rho_star_y']() * ctx['h']()],
+    test_deriv='x',
+    der_h=lambda ctx: lambda p, theta: - 0.5 * (ctx['U_bot']() + ctx['U_top']()) * (1 - theta) * (ctx['rho_star_y']() + ctx['h']() * ctx['drho_star_y_dh']()))
 
 GEN_REYNOLDS_CAV_TERMS = [
-    GRey_R1T, GRey_R11x, GRey_R11x_deps, GRey_R11y, GRey_R11y_deps,
+    GRey_R1T, GRey_R11x, GRey_R11x_drho_o_eta, GRey_R11y, GRey_R11y_drho_o_eta,
     GRey_R11Sx, GRey_R11Sy,
 ]
