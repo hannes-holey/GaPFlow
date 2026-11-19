@@ -7,7 +7,7 @@ import numpy as np
 
 from GaPFlow.io import read_yaml_input
 from GaPFlow import Problem
-# from GaPFlow.config_utils import build_config
+from GaPFlow.config_utils import build_config
 import matplotlib.pyplot as plt
 # import tol_colors as tc
 
@@ -73,5 +73,23 @@ problem = Problem(options=inp['options'],
 
 problem.run()
 
+# %%
 
-ref_problem =
+ref_problem = Problem.from_string(build_config(config, **{'implicit_solver.equations.reynolds': True}))
+
+ref_problem.run()
+
+
+fig, ax1 = plt.subplots(1, 1 , sharex=True, sharey=False, figsize=np.array((7, 4)) * 0.9)
+
+ax1.plot(ref_problem.pressure.pressure[1:-1, 1], '-k', label='reynolds, reference')
+
+ax1.plot(problem.pressure.pressure[1:-1, 1], '--r', label='custom implementation')
+
+ax1.set_xlabel("x")
+ax1.set_ylabel("pressure")
+
+ax1.legend()
+ax1.set_xlabel("x")
+
+
