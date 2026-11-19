@@ -35,6 +35,8 @@ from .elements import TaylorHoodQ2Q1
 from .fieldspec import NODAL_P1, NODAL_P2, QUAD_FIELD_REGISTRY, resolve_source, categorize_registry_fields
 from .terms import collect_required_fields
 
+import scipy.integrate
+
 
 if TYPE_CHECKING:
     from ..problem import Problem
@@ -354,6 +356,8 @@ class QuadFieldManager:
                 self._update_reynolds_quad_fields(q)
             if self.problem.fem_solver['stabilization']['mass_supg']:
                 self._update_reynolds_supg_quad_fields(q)
+            if self.problem.fem_solver['equations']['generalized_reynolds']:
+                self._update_generalized_reynolds_quad_fields(q)
         elif self.problem.fem_solver['stabilization']['mass_supg']:
             self._update_mass_supg_quad_fields(q)
 
@@ -428,6 +432,84 @@ class QuadFieldManager:
             V = 0.5 * (geo['V_bot'] + geo['V_top'])
             q('f_x')[:] = 0.5 * alpha * self.dx * np.sign(U)
             q('f_y')[:] = 0.5 * alpha * self.dy * np.sign(V)
+
+    def _update_generalized_reynolds_quad_fields(self,  q) -> None:
+        def sinhc(x):
+            x = np.asarray(x, dtype=float)
+            out = np.ones_like(x)
+            mask = x != 0
+            return np.divide(np.sinh(x), x, out=out, where=mask)
+        Nz = 20 # TODO: not hardcode this
+
+        geo = self.problem.geo
+
+        rho = q('rho')
+        drho_dp = q('drho_dp')
+
+        dp_dx = q('d_dx_p')
+        dp_dy = q('d_dy_p')
+
+
+        tauE = self.problem.prop['thinning']['tauE']
+        h = q('h')
+
+
+        mu0 = self.problem.prop['shear']
+
+        if 'piezo'  in self.problem.prop:
+            raise ValueError('piezo not implemented yet')
+
+        rho_eff = rho
+        q('rho_eff')[:] = rho_eff
+
+        u1 = q('U_bot')
+        u2 = q('U_top')
+
+        ubar = (u1 + u2) / 2
+        du = u2 - u1
+
+        dv = 0
+
+        xi = h * dp_dx / (2 * tauE)
+        tau_bar = tauE * np.arcsinh(du * mu0 / h / tauE / sinhc(xi))
+
+        z_norm_grid = np.linspace(0, 1, Nz).reshape(*([1] * len(h.shape)), -1)  # new dimension
+        z = z_norm_grid * h[..., np.newaxis]
+
+        tau1 = tau_bar - h / 2 * dp_dx
+
+        tau_z = tau1[..., np.newaxis] + dp_dx[..., np.newaxis] * z
+
+        ieta_star_z = sinhc(tau_z / tauE) / mu0  # inverse effective viscosity
+
+        hz = h[..., np.newaxis]
+
+        # TODO: potentially use: https://quadax.readthedocs.io/en/latest/_api/quadax.cumulative_trapezoid.html
+        # ieta_eff_z = scipy.integrate.cumulative_trapezoid(ieta_star_z / hz, x=z_norm_grid, axis=-1, initial=0) * hz
+        ieta_eff_z = scipy.integrate.cumulative_trapezoid(ieta_star_z, x=z_norm_grid, axis=-1, initial=0)
+        ieta_eff = ieta_eff_z[..., -1]
+        ieta_eff_prime_z = scipy.integrate.cumulative_trapezoid(ieta_star_z * z_norm_grid / hz, x=z_norm_grid, axis=-1,
+                                                                initial=0) * hz
+        ieta_eff_prime = ieta_eff_prime_z[..., -1]
+
+        # Effective densities in the case that the density is constant
+        rho_eff_prime = np.trapezoid((rho / h)[..., np.newaxis] * ieta_eff_z, z_norm_grid, axis=-1) * h
+        rho_eff_prime_prime = np.trapezoid(rho[..., np.newaxis] * ieta_eff_prime_z, z_norm_grid, axis=-1)
+
+        rho_eta_eff = 12 * (ieta_eff_prime / ieta_eff * rho_eff_prime - rho_eff_prime_prime)
+        rho_star = (rho_eff_prime / ieta_eff * du + rho_eff * u1) / ubar
+
+        q('rho_star_x')[:] = rho_star
+        q('drho_star_x_dp')[:] = (rho_eff_prime / ieta_eff * du + rho_eff * u1) / ubar  / rho * drho_dp  # TODO: that is a dirty fix for the isoviscous case
+
+        q('rho_o_eta_eff_x')[:] = rho_eta_eff
+        q('rho_o_eta_eff_y')[:] = rho / mu0
+        q('drho_o_eta_eff_y_dp')[:] = drho_dp / mu0
+        q('drho_o_eta_eff_x_dp')[:] = rho_eta_eff  / rho * drho_dp
+
+        q('rho_star_y')[:] = rho
+        q('drho_star_y_dp')[:] = drho_dp
+
 
     def collect_quad_fields(self) -> dict:
         return {name: self.get_quad_sq(name) for name in self.quad_fields}
