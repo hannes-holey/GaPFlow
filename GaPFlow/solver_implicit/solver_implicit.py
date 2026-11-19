@@ -241,8 +241,12 @@ class ImplicitSolver:
     def _build_jit_functions(self) -> None:
         p = self.problem
         p.pressure.build_grad()
-        p.wall_stress_xz.build_grad()
-        p.wall_stress_yz.build_grad()
+
+        if p.custom_wall_stress:
+            p.wall_stress.build_grad()
+        else:
+            p.wall_stress_xz.build_grad()
+            p.wall_stress_yz.build_grad()
         if self.energy:
             p.energy.build_grad()
         if p.fem_solver['equations']['generalized_reynolds']:
