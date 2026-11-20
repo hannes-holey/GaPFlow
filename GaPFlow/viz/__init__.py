@@ -25,3 +25,5 @@ import os
 import matplotlib.pyplot as plt
 
 plt.style.use(os.path.join(os.path.dirname(__file__), "gapflow.mplstyle"))
+
+from .quadfield import evaluate_quadfield_on_nodes, plot_quadfield_on_nodes
