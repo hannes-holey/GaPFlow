@@ -139,6 +139,7 @@ from .terms_lib.terms_reynolds_cav_supg import *
 from .terms_lib.terms_gen_reynolds import *
 from .terms_lib.terms_gen_reynolds_upg import *
 
+from .terms_lib.terms_slip import terms as terms_slip
 
 def get_active_terms(fem_solver: dict) -> List[Term]:
     """Return active Term instances based on fem_solver config.
@@ -221,6 +222,9 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
     if physics['squeeze']:
         terms += [R2Thx, R2Thy]
         terms += [R1Th_cav] if cavitation else [R1Th]
+
+    if physics['slip']:
+        terms += terms_slip
 
     if physics['energy']:
         terms.append(R3T)

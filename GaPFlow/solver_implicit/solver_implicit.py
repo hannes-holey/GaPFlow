@@ -41,7 +41,7 @@ from .elements import TaylorHoodQ2Q1
 from .grid_index import GridIndexManager
 from .quad_fields import QuadFieldManager
 from .assembly import Assembly
-from .fieldspec import FieldSpec, VAR_GRID, RES_GRID, patch_registry_for_gp
+from .fieldspec import FieldSpec, VAR_GRID, RES_GRID, patch_registry_for_gp, patch_registry_for_slip
 from .scipy_system import ScipySystem
 
 from ..bc import (GhostUpdater, BoundarySpec, BND_IDX, sample_bc_spec,
@@ -98,6 +98,8 @@ class ImplicitSolver:
         self.cavitation = p.fem_solver['equations']['cavitation']
         self.oss = p.fem_solver['stabilization']['oss']
         self.reynolds = p.fem_solver['equations']['reynolds']
+        self.slip = p.fem_solver['physics']['slip']
+
 
         if self.reynolds:
             self.variables = ['p']
@@ -120,6 +122,19 @@ class ImplicitSolver:
             self.variables.append('xi')
             self.residuals.append('R_oss')
             self.add_fields.append('xi')
+
+        if self.slip:
+            self.variables.append('Vf_top')
+            self.variables.append('Uf_top')
+
+            self.variables.append('Vf_bot')
+            self.variables.append('Uf_bot')
+
+            self.residuals.append('wallstress_top_x')
+            self.residuals.append('wallstress_top_y')
+            self.residuals.append('wallstress_bot_x')
+            self.residuals.append('wallstress_bot_y')
+
 
         self.var_specs = [FieldSpec(name=v, grid=VAR_GRID[v], idx=i)
                           for i, v in enumerate(self.variables)]
@@ -306,9 +321,10 @@ class ImplicitSolver:
                                              solver_type=solver_type,
                                              assembly=self.assembly)
 
-        self.scaling = build_scaling(
-            self.problem, self.energy, self.variables, self.assembly,
-            cavitation=self.cavitation)
+        if self.problem.fem_solver['scaling']:
+            self.scaling = build_scaling(
+                self.problem, self.energy, self.variables, self.assembly,
+                cavitation=self.cavitation)
 
     # =========================================================================
     # Quadrature field update
@@ -441,6 +457,8 @@ class ImplicitSolver:
 
         p = self.problem
 
+        if p.fem_solver['physics']['slip']:
+            patch_registry_for_slip()
         patch_registry_for_gp(pressure=False)
         self._init_quad_fields()
         self._build_assembly()

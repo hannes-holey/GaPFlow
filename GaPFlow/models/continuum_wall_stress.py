@@ -3,6 +3,21 @@ import jax.numpy as jnp
 from jax import vmap, grad, jit, lax
 from jax import Array
 
+class Operations():
+
+    def difference(self, a, b):
+        return a - b
+
+    def difference_da(self, a, b):
+        return jnp.ones_like(a)
+
+    def difference_db(self, a, b):
+        return - jnp.ones_like(b)
+
+    def build_grad(self):
+        pass
+
+
 class Gap:
     """
     Important ! This class should be treated as immutable, or at least its parameters used in the jited functions !
@@ -50,10 +65,11 @@ class Gap:
     def build_grad(self, ) -> None:
         vmap2 = lambda f: jit(vmap(vmap(f)))
 
-        for argnum, var in enumerate(['rho', 'theta', 'jx', 'jy', 'h']):
+        for argnum, var in enumerate(['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'U_bot' , 'U_top', 'V_bot', 'V_top']):
             for direction in ['xz', 'yz']:
                 setattr(self, f'dtau_{direction}_d{var}', vmap2(grad(getattr(self, f'tau_{direction}'), argnums=argnum)))
                 setattr(self, f'dtau_{direction}_bot_d{var}', vmap2(grad(getattr(self, f'tau_{direction}_bot'), argnums=argnum)))
+                setattr(self, f'dtau_{direction}_top_d{var}', vmap2(grad(getattr(self, f'tau_{direction}_top'), argnums=argnum)))
 
 class ParabolicFlowFluidGap(Gap):
 
@@ -107,6 +123,31 @@ class Slip:
     def stress(self, slip_velocity: float) -> float:
         raise NotImplementedError
 
+    def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
+        raise NotImplementedError
+
+    def build_grad(self, ) -> None:
+        vmap2 = lambda f: jit(vmap(vmap(f)))
+        self.tau_x = lambda *args: self.stress_2D(*args)[0]
+        self.tau_y = lambda *args: self.stress_2D(*args)[1]
+
+        for argnum, var in enumerate(['vs_x', 'vs_y']):
+            for direction in ['x', 'y']:
+                setattr(self, f'dtau_{direction}_d{var}', vmap2(grad(getattr(self, f'tau_{direction}'), argnums=argnum)))
+
+
+class SlipLengthSlip(Slip):
+    def __init__(self, slip_length, viscosity):
+        self.slip_length = slip_length
+        self.viscosity  = viscosity # TODO: here eta should be as argument
+
+    def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
+        # Regularised magnitudes (avoids 0/0 at zero slip; 1e-20 is negligible vs physical speeds)
+        slip_velocity = jnp.sqrt(slip_velocity_x ** 2 + slip_velocity_y ** 2 + 1e20)
+        stress = self.viscosity / self.slip_length * slip_velocity
+        stress_x = stress * slip_velocity_x / slip_velocity
+        stress_y = stress * slip_velocity_y / slip_velocity
+        return stress_x, stress_y
 
 class TTSlip(Slip):
     """Thompson-Troian slip law."""
@@ -128,11 +169,3 @@ class TTSlip(Slip):
         stress_y = stress * slip_velocity_y / slip_velocity
         return stress_x, stress_y
 
-    def build_grad(self, ) -> None:
-        vmap2 = lambda f: jit(vmap(vmap(f)))
-        self.tau_x = lambda *args: self.stress_2D(*args)[0]
-        self.tau_y = lambda *args: self.stress_2D(*args)[1]
-
-        for argnum, var in enumerate(['vs_x', 'vs_y']):
-            for direction in ['x', 'y']:
-                setattr(self, f'dtau_{direction}_d{var}', vmap2(grad(getattr(self, f'tau_{direction}'), argnums=argnum)))
