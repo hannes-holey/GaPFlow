@@ -32,3 +32,29 @@ for wall in ['top', 'bot']:
             fun=lambda ctx, _t=tauname_f: lambda *args: -ctx[_t](),
             der_funs=[lambda ctx, _t=tauname_f, _v=v: lambda *args: -ctx[f'd{_t}_d{_v}']() for v in vars]
         ))
+
+
+# Additions to the wall stress equations: derivatives with respect to the fluid top and bottom velocities
+#
+#
+# R24x = Term(
+#     name='R24x',
+#     description='wall stress x',
+#     res='momentum_x',
+#     dep_vars=['p', 'jx'],
+#     dep_vals=['h', 'tau_xz', 'dtau_xz_drho', 'dtau_xz_djx', 'dtau_xz_dh', 'drho_dp'],
+#     fun=lambda ctx: lambda *args: 1 / ctx['h']() * ctx['tau_xz'](),
+#     der_funs=[lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_drho']() * ctx['drho_dp'](),
+#               lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_xz_djx']()],
+#     der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_xz']() + 1 / ctx['h']() * ctx['dtau_xz_dh']())
+#
+# R24y = Term(
+#     name='R24y',
+#     description='wall stress y',
+#     res='momentum_y',
+#     dep_vars=['p', 'jy'],
+#     dep_vals=['h', 'tau_yz', 'dtau_yz_drho', 'dtau_yz_djy', 'dtau_yz_dh', 'drho_dp'],
+#     fun=lambda ctx: lambda *args: 1 / ctx['h']() * ctx['tau_yz'](),
+#     der_funs=[lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_yz_drho']() * ctx['drho_dp'](),
+#               lambda ctx: lambda *args: 1 / ctx['h']() * ctx['dtau_yz_djy']()],
+#     der_h=lambda ctx: lambda *args: -1 / ctx['h']() ** 2 * ctx['tau_yz']() + 1 / ctx['h']() * ctx['dtau_yz_dh']())

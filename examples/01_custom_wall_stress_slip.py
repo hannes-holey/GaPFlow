@@ -24,10 +24,10 @@ grid:
     Ly: 1.
     Nx: 32
     Ny: 1
-    xE: ['P', 'P', 'P']
-    xW: ['P', 'P', 'P']
-    yS: ['P', 'P', 'P']
-    yN: ['P', 'P', 'P']
+    xE: ['P', 'P', 'P',]
+    xW: ['P', 'P', 'P',]
+    yS: ['P', 'P', 'P',]
+    yN: ['P', 'P', 'P',]
 geometry:
     type: journal
     hmin: 1.
@@ -37,7 +37,7 @@ geometry:
 numerics:
     solver: implicit
     dt: 1.0
-    tol: 1e-3
+    tol: 1e-13
     max_it: 10000
 
 properties:
@@ -60,7 +60,7 @@ implicit_solver:
 """
 
 
-Ls = 0.01
+Ls = 0.2
 
 gap = NewtonParabolicFlowFluidGap(mu0=1.)
 operations = Operations()
@@ -100,16 +100,36 @@ ref_problem = Problem.from_string(build_config(config, **{'implicit_solver.equat
 ref_problem.run()
 
 
-fig, ax1 = plt.subplots(1, 1 , sharex=True, sharey=False, figsize=np.array((7, 4)) * 0.9)
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharex=False, sharey=False, figsize=np.array((10, 4)) * 0.9)
 
 ax1.plot(ref_problem.pressure.pressure[1:-1, 1], '-k', label='reynolds, reference')
 
 ax1.plot(problem.pressure.pressure[1:-1, 1], '--r', label='custom implementation')
 
+# ax2.plot(problem.q[])
+ax2.plot(problem.q[3, 1:-1, 1], label='Uf_top')
+ax2.plot(problem.q[4, 1:-1, 1], label='Vf_top')
+ax2.plot(problem.q[5, 1:-1, 1], label='Uf_bot')
+ax2.plot(problem.q[6, 1:-1, 1], label='Vf_bot')
+
+R = problem.solver.get_R_()
+for name, sl in problem.solver._res_slices.items():
+    ax3.plot(R[sl], label=name)
+
 ax1.set_xlabel("x")
 ax1.set_ylabel("pressure")
-
 ax1.legend()
-ax1.set_xlabel("x")
+
+ax2.set_xlabel("x")
+ax2.set_ylabel("fluid velocity")
+ax2.legend()
+
+ax3.set_xlabel("node index")
+ax3.set_ylabel("residual")
+ax3.set_yscale("symlog", linthresh=1e-12)
+ax3.legend(fontsize=7)
+
+fig.tight_layout()
+fig.show()
 
 

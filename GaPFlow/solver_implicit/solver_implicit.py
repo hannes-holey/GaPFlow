@@ -124,11 +124,15 @@ class ImplicitSolver:
             self.add_fields.append('xi')
 
         if self.slip:
-            self.variables.append('Vf_top')
             self.variables.append('Uf_top')
-
-            self.variables.append('Vf_bot')
+            self.variables.append('Vf_top')
             self.variables.append('Uf_bot')
+            self.variables.append('Vf_bot')
+
+            self.add_fields.append('Uf_top')
+            self.add_fields.append('Vf_top')
+            self.add_fields.append('Uf_bot')
+            self.add_fields.append('Vf_bot')
 
             self.residuals.append('wallstress_top_x')
             self.residuals.append('wallstress_top_y')
@@ -201,6 +205,12 @@ class ImplicitSolver:
             field = self.quad_mgr.nodal_fields['xi']
             specs.append(BoundarySpec(field, 'P1', ['D', 'D', 'D', 'D'],
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
+
+        if self.slip:
+            for name in ('Uf_top', 'Vf_top', 'Uf_bot', 'Vf_bot'):
+                field = self.quad_mgr.nodal_fields[name]
+                specs.append(BoundarySpec(field, 'P1', rho_bc_type,
+                                          [0, 0, 0, 0], no_fun, self.problem.decomp))
 
         if self.energy:
             pass

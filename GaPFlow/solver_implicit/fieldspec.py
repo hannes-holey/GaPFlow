@@ -347,8 +347,8 @@ def patch_registry_for_slip() -> None:
     # Slip velocities
     'Us_bot': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Uf_bot', 'U_bot']},
     'Vs_bot': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Vf_bot', 'V_bot']},
-    'Us_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Uf_top', 'U_top']},
-    'Vs_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Vf_top', 'V_top']},
+    'Us_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['U_top', 'Uf_top']},
+    'Vs_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['V_top', 'Vf_top']},
 
     # Stress from the slip law
     'tau_slip_top_x': {'type': 'computed', 'source': 'custom_models["slip_top"].tau_x', 'args': ['Us_top', 'Vs_top']},
