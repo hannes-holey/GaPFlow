@@ -242,8 +242,8 @@ class ImplicitSolver:
         p = self.problem
         p.pressure.build_grad()
 
-        if p.custom_wall_stress:
-            p.wall_stress.build_grad()
+        for m in p.custom_models.values():
+            m.build_grad()
         else:
             p.wall_stress_xz.build_grad()
             p.wall_stress_yz.build_grad()

@@ -68,7 +68,7 @@ problem = Problem(options=inp['options'],
                    geo=inp['geometry'],
                    fem_solver=inp['fem_solver'],
                    energy_spec=inp['energy_spec'],
-                   wall_stress=gap,
+                   custom_models=dict(wall_stress=gap),
                   )
 
 problem.run()

@@ -102,3 +102,37 @@ class NewtonParabolicFlowFluidGap(ParabolicFlowFluidGap):
         etapt_cav = self.mu0 * (1.0 - theta)
         return [_ * etapt_cav for _ in self._shear_rates_2D(rho, theta, jx, jy, h, dh_dx, U_bot, U_top, V_bot, V_top) ]
 
+
+class Slip:
+    def stress(self, slip_velocity: float) -> float:
+        raise NotImplementedError
+
+
+class TTSlip(Slip):
+    """Thompson-Troian slip law."""
+
+    def __init__(self, tc=10, vc=10):
+        self.tc = tc
+        self.vc = vc
+
+    def stress(self, slip_velocity: float):
+        v = slip_velocity / self.vc
+        return 2 * self.tc * (jnp.sqrt(1 + v ** 2) - jnp.abs(v)) * v
+
+    def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
+        # Regularised magnitudes (avoids 0/0 at zero slip; 1e-20 is negligible vs physical speeds)
+        slip_velocity = jnp.sqrt(slip_velocity_x ** 2 + slip_velocity_y ** 2 + 1e20)
+        v = slip_velocity / self.vc
+        stress =  2 * self.tc * (jnp.sqrt(1 + v ** 2) - jnp.abs(v)) * v
+        stress_x = stress * slip_velocity_x / slip_velocity
+        stress_y = stress * slip_velocity_y / slip_velocity
+        return stress_x, stress_y
+
+    def build_grad(self, ) -> None:
+        vmap2 = lambda f: jit(vmap(vmap(f)))
+        self.tau_x = lambda *args: self.stress_2D(*args)[0]
+        self.tau_y = lambda *args: self.stress_2D(*args)[1]
+
+        for argnum, var in enumerate(['vs_x', 'vs_y']):
+            for direction in ['x', 'y']:
+                setattr(self, f'dtau_{direction}_d{var}', vmap2(grad(getattr(self, f'tau_{direction}'), argnums=argnum)))
