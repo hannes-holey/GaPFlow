@@ -79,7 +79,17 @@ def evaluate_quadfield_on_nodes(problem, name: str, *,
         if n in qm.nodal_fields:
             return qm.nf(n)
 
-        # 4. Derivative fields d_dx_X / d_dy_X — finite difference on nodal P1
+        # 4. Solver-computed quad fields — use first quad-point slice as a 2-D
+        #    (Nx_pad, Ny_pad) array.  This covers:
+        #      - derivative fields d_dx_X / d_dy_X that the solver computed via
+        #        its FEM dx/dy_operator (consistent with what the assembly used)
+        #      - solver-managed scalars like theta=0 when cavitation is inactive
+        if n in qm.quad_fields:
+            return qm.quad_fields[n].pg[0]
+
+        # 5. Derivative fields not yet in quad_fields (unusual — the solver normally
+        #    pre-computes them when gap_shear is active).  Fall back to finite
+        #    differences on the P1 nodal field as a last resort.
         if n.startswith('d_dx_'):
             base = n[5:]
             if base in qm.nodal_fields:
@@ -88,11 +98,6 @@ def evaluate_quadfield_on_nodes(problem, name: str, *,
             base = n[5:]
             if base in qm.nodal_fields:
                 return np.gradient(qm.nf(base), qm.dy, axis=1)
-
-        # 5. Quad field fallback: solver-managed fields not on P1 nodes
-        #    (e.g. theta = 0 when cavitation is inactive but required as an arg)
-        if n in qm.quad_fields:
-            return qm.quad_fields[n].pg[0]
 
         raise ValueError(
             f"cannot resolve '{n}': not in QUAD_FIELD_REGISTRY, "
