@@ -42,7 +42,7 @@ geometry:
 numerics:
     solver: implicit
     dt: 1.0
-    tol: 1e-13
+    tol: 1e-9
     max_it: 10000
 
 properties:
@@ -62,6 +62,7 @@ implicit_solver:
     equations:
         cavitation: False
     max_iter: 100000
+    tol_abs_resnorm: 1e-12
     """
 
 
@@ -101,8 +102,8 @@ implicit_solver:
 
     np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Uf_top'), -evaluate_quadfield_on_nodes(problem, 'Uf_bot'), atol=1e-10)
     np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Vf_top'), 0, atol=1e-10)
-    np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Uf_top'), 0, atol=1e-10)
+    np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Vf_bot'), 0, atol=1e-10)
     if slip:
         np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Us_top'), evaluate_quadfield_on_nodes(problem, 'Us_bot'), atol=1e-10)
         np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Vs_top'), 0, atol=1e-10)
-        np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Us_top'), 0, atol=1e-10)
+        np.testing.assert_allclose(evaluate_quadfield_on_nodes(problem, 'Vs_bot'), 0, atol=1e-10)

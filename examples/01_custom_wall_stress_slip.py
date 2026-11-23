@@ -42,7 +42,7 @@ geometry:
 numerics:
     solver: implicit
     dt: 1.0
-    tol: 1e-13
+    tol: 1e-6
     max_it: 10000
 
 properties:
@@ -59,6 +59,7 @@ implicit_solver:
     scaling: False
     newton_relax: 0.5
     p_init: 1.
+    tol_abs_resnorm: 1e-9
     equations:
         cavitation: False
     max_iter: 100
@@ -118,9 +119,9 @@ ax2.plot(problem.q[4, 1:-1, 1], label='Vf_top')
 ax2.plot(problem.q[5, 1:-1, 1], label='Uf_bot')
 ax2.plot(problem.q[6, 1:-1, 1], label='Vf_bot')
 
-# R = problem.solver.get_R_()
-# for name, sl in problem.solver._res_slices.items():
-#     ax3.plot(R[sl], label=name)
+R = problem.solver.get_R_()
+for name, sl in problem.solver._res_slices.items():
+    ax3.plot(R[sl], label=name)
 
 ax1.set_xlabel("x")
 ax1.set_ylabel("pressure")
@@ -132,16 +133,32 @@ ax2.legend()
 
 tau_xz_bot = evaluate_quadfield_on_nodes(problem, 'tau_xz_bot')
 tau_xz_top = evaluate_quadfield_on_nodes(problem, 'tau_xz_top')
+#
+# ax3.plot(tau_xz_bot[:, 0], label='tau_xz_bot')
+# ax3.plot(tau_xz_top[:, 0], label='tau_xz_top')
+# ax3.legend()
 
-ax3.plot(tau_xz_bot[:, 0], label='tau_xz_bot')
-ax3.plot(tau_xz_top[:, 0], label='tau_xz_top')
-ax3.legend()
+ax3.set_xlabel("node index")
+ax3.set_ylabel("residual")
+ax3.set_yscale("symlog", linthresh=1e-12)
+ax3.legend(fontsize=7)
 
-# ax3.set_xlabel("node index")
-# ax3.set_ylabel("residual")
-# ax3.set_yscale("symlog", linthresh=1e-12)
-# ax3.legend(fontsize=7)
+fig.tight_layout()
+fig.show()
 
+
+# %%
+
+fig, ax = plt.subplots(figsize=(6, 4))
+
+for i, hist in enumerate(problem.solver.R_norm_history):
+    ax.semilogy(range(1, len(hist) + 1), hist, 'o-', label=f'step {i}')
+
+ax.axhline(problem.solver.tol, color='k', linestyle=':', label=f'tol = {problem.solver.tol:.0e}')
+ax.set_xlabel('Newton iteration')
+ax.set_ylabel(r'$\|R\|_2$')
+ax.set_title('Convergence history')
+ax.legend()
 fig.tight_layout()
 fig.show()
 
@@ -187,7 +204,7 @@ for Ls in  [#0.000001, .01, 0.1,
 fig, axes = plt.subplots(2, 3, sharex=False, sharey=False, figsize=np.array((10, 8)) * 0.9)
 
 for Ls, problem in pbs.items():
-    for ax, things in zip(axes.flat, [['p'], ['tau_xz_bot'], ['tau_xz_top'], ['p'], ['Us_bot', 'Uf_bot'], ['Us_top', 'Uf_top']]):
+    for ax, things in zip(axes.flat, [['p'], ['tau_xz_bot'], ['tau_xz_top'], ['p'], ['Us_bot', 'Uf_bot', 'Vs_bot'], ['Us_top', 'Uf_top', 'Vs_top']]):
 
         for thing in things:
             ax.plot(evaluate_quadfield_on_nodes(problem, thing), label=f"Ls = {Ls}, {thing}")

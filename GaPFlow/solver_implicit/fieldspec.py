@@ -90,7 +90,7 @@ NODAL_P2 = ['jx', 'jy']
 NODAL_Q1 = ['h', 'dh_dx', 'dh_dy', 'rho', 'eta']
 
 # Shared arg lists for groups of computed fields with identical inputs
-_ARGS_WALLSTRESS = ['rho', 'theta','jx', 'jy', 'h', 'dh_dx', 'U_bot', 'V_bot', 'U_top','V_top']
+_ARGS_WALLSTRESS = ['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'U_bot', 'U_top', 'V_bot', 'V_top']
 
 
 _ARGS_T = ['rho', 'jx', 'jy', 'E']
@@ -286,7 +286,7 @@ def patch_registry_for_gp(pressure: bool = True,
 
 
 def patch_registry_for_slip() -> None:
-    _ARGS_WALLSTRESS = ['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'Uf_bot', 'Vf_bot', 'Uf_top', 'Vf_top']
+    _ARGS_WALLSTRESS = ['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'Uf_bot', 'Uf_top', 'Vf_bot', 'Vf_top']
 
     QUAD_FIELD_REGISTRY.update({
     # fluid wall stress xz

@@ -468,20 +468,28 @@ class ImplicitSolver:
         p = self.problem
 
         if p.fem_solver['physics']['slip']:
+            assert not (p.pressure.takes_h
+                        or p.wall_stress_xz.is_gp_model
+                        or p.wall_stress_yz.is_gp_model), \
+                "slip is incompatible with GP models"
             patch_registry_for_slip()
-        patch_registry_for_gp(pressure=False)
-        self._init_quad_fields()
-        self._build_assembly()
-        self._build_jit_functions()
-        patch_registry_for_gp(
-            pressure=p.pressure.takes_h,
-            wall_stress_xz=p.wall_stress_xz.is_gp_model,
-            wall_stress_yz=p.wall_stress_yz.is_gp_model,
-            custom_xz=p.wall_stress_xz.is_custom,
-            custom_yz=p.wall_stress_yz.is_custom,
-            custom_eps=p.reynolds_eps.is_custom,
-            custom_rho_eff=p.reynolds_rho_eff.is_custom,
-        )
+            self._init_quad_fields()
+            self._build_assembly()
+            self._build_jit_functions()
+        else:
+            patch_registry_for_gp(pressure=False)
+            self._init_quad_fields()
+            self._build_assembly()
+            self._build_jit_functions()
+            patch_registry_for_gp(
+                pressure=p.pressure.takes_h,
+                wall_stress_xz=p.wall_stress_xz.is_gp_model,
+                wall_stress_yz=p.wall_stress_yz.is_gp_model,
+                custom_xz=p.wall_stress_xz.is_custom,
+                custom_yz=p.wall_stress_yz.is_custom,
+                custom_eps=p.reynolds_eps.is_custom,
+                custom_rho_eff=p.reynolds_rho_eff.is_custom,
+            )
 
         self.build_boundary_conditions()
         self._build_terms()

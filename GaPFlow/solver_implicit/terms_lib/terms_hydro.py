@@ -288,6 +288,8 @@ R23yy = Term(
     trial_deriv=[None, 'y'],
     test_deriv='y')
 
+# TODO: QUESTION: Is it necessary here to declare also the dependence on the fluid wall velocities ?
+
 R24x = Term(
     name='R24x',
     description='wall stress x',
