@@ -6,7 +6,11 @@ from ..terms import Term
 terms = []
 for wall in ['top', 'bot']:
     for dir in ['x', 'y']:
-        sign_us = -1 if wall == 'top' else 1
+        # -1 because ustop = Utop-Uftop ,
+        # 1 because usbot = Ufbot - U
+        #
+        # This way slip velocities are both  positive for couette flow
+        sign_us = -1  if wall == 'top' else 1
         tauname = f'tau_slip_{wall}_{dir}'
         terms.append(Term(
             name=f'Rslip_slip{dir}',

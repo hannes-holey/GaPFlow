@@ -12,6 +12,9 @@ from GaPFlow.io import read_yaml_input
 from GaPFlow import Problem
 from GaPFlow.config_utils import build_config
 import matplotlib.pyplot as plt
+
+from GaPFlow.viz import evaluate_quadfield_on_nodes
+
 # import tol_colors as tc
 
 config = """
@@ -31,9 +34,11 @@ grid:
 geometry:
     type: journal
     hmin: 1.
-    hmax: 2.
-    U: 1.
-    V: 0.
+    hmax: 1.
+    U_top: 0.
+    V_top: 0.
+    U_bot: -1.
+    V_bot: 0.
 numerics:
     solver: implicit
     dt: 1.0
@@ -60,7 +65,7 @@ implicit_solver:
 """
 
 
-Ls = 0.2
+Ls = 0.000001
 
 gap = NewtonParabolicFlowFluidGap(mu0=1.)
 operations = Operations()
@@ -103,8 +108,9 @@ ref_problem.run()
 fig, (ax1, ax2, ax3) = plt.subplots(1, 3, sharex=False, sharey=False, figsize=np.array((10, 4)) * 0.9)
 
 ax1.plot(ref_problem.pressure.pressure[1:-1, 1], '-k', label='reynolds, reference')
-
 ax1.plot(problem.pressure.pressure[1:-1, 1], '--r', label='custom implementation')
+# p = evaluate_quadfield_on_nodes(problem, 'p')
+# ax1.plot(p[:, 0], label='p')
 
 # ax2.plot(problem.q[])
 ax2.plot(problem.q[3, 1:-1, 1], label='Uf_top')
@@ -112,9 +118,9 @@ ax2.plot(problem.q[4, 1:-1, 1], label='Vf_top')
 ax2.plot(problem.q[5, 1:-1, 1], label='Uf_bot')
 ax2.plot(problem.q[6, 1:-1, 1], label='Vf_bot')
 
-R = problem.solver.get_R_()
-for name, sl in problem.solver._res_slices.items():
-    ax3.plot(R[sl], label=name)
+# R = problem.solver.get_R_()
+# for name, sl in problem.solver._res_slices.items():
+#     ax3.plot(R[sl], label=name)
 
 ax1.set_xlabel("x")
 ax1.set_ylabel("pressure")
@@ -124,12 +130,69 @@ ax2.set_xlabel("x")
 ax2.set_ylabel("fluid velocity")
 ax2.legend()
 
-ax3.set_xlabel("node index")
-ax3.set_ylabel("residual")
-ax3.set_yscale("symlog", linthresh=1e-12)
-ax3.legend(fontsize=7)
+tau_xz_bot = evaluate_quadfield_on_nodes(problem, 'tau_xz_bot')
+tau_xz_top = evaluate_quadfield_on_nodes(problem, 'tau_xz_top')
+
+ax3.plot(tau_xz_bot[:, 0], label='tau_xz_bot')
+ax3.plot(tau_xz_top[:, 0], label='tau_xz_top')
+ax3.legend()
+
+# ax3.set_xlabel("node index")
+# ax3.set_ylabel("residual")
+# ax3.set_yscale("symlog", linthresh=1e-12)
+# ax3.legend(fontsize=7)
 
 fig.tight_layout()
 fig.show()
 
 
+# %%
+
+pbs = {}
+for Ls in  [#0.000001, .01, 0.1,
+            0.05]:
+
+    gap = NewtonParabolicFlowFluidGap(mu0=1.)
+    operations = Operations()
+    slip_top = SlipLengthSlip(0.00000001, 1)
+    slip_bottom = SlipLengthSlip(0.05, 1)
+
+
+    config_hans_slip = build_config(config, **{'implicit_solver.physics.slip': True,
+                                               'options.output': 'data/journal_hans_slip'})
+
+    with io.StringIO(config_hans_slip) as ymlfile:
+        inp = read_yaml_input(ymlfile)
+
+
+
+    problem = Problem(options=inp['options'],
+                       grid=inp['grid'],
+                       numerics=inp['numerics'],
+                       prop=inp['properties'],
+                       geo=inp['geometry'],
+                       fem_solver=inp['fem_solver'],
+                       energy_spec=inp['energy_spec'],
+                       custom_models=dict(wall_stress=gap,
+                                          operations=operations,
+                                          slip_top=slip_top,
+                                          slip_bot=slip_bottom,
+                                          ),
+                      )
+
+    problem.run()
+    pbs[Ls] = problem
+
+# %%
+fig, axes = plt.subplots(2, 3, sharex=False, sharey=False, figsize=np.array((10, 8)) * 0.9)
+
+for Ls, problem in pbs.items():
+    for ax, things in zip(axes.flat, [['p'], ['tau_xz_bot'], ['tau_xz_top'], ['p'], ['Us_bot', 'Uf_bot'], ['Us_top', 'Uf_top']]):
+
+        for thing in things:
+            ax.plot(evaluate_quadfield_on_nodes(problem, thing), label=f"Ls = {Ls}, {thing}")
+        ax.set_ylabel(things[0])
+for ax in axes.flat:
+    ax.legend()
+fig.tight_layout()
+fig.show()
