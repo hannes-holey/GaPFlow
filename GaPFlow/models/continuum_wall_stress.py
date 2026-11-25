@@ -124,7 +124,12 @@ class Slip:
         raise NotImplementedError
 
     def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
-        raise NotImplementedError
+        # Regularised magnitudes (avoids 0/0 at zero slip; 1e-20 is negligible vs physical speeds)
+        slip_velocity = jnp.sqrt(slip_velocity_x ** 2 + slip_velocity_y ** 2 + 1e-20)
+        stress =  self.stress(slip_velocity)
+        stress_x = stress * slip_velocity_x / slip_velocity
+        stress_y = stress * slip_velocity_y / slip_velocity
+        return stress_x, stress_y
 
     def build_grad(self, ) -> None:
         vmap2 = lambda f: jit(vmap(vmap(f)))
@@ -141,13 +146,25 @@ class SlipLengthSlip(Slip):
         self.slip_length = slip_length
         self.viscosity  = viscosity # TODO: here eta should be as argument
 
-    def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
-        # Regularised magnitudes (avoids 0/0 at zero slip; 1e-20 is negligible vs physical speeds)
-        slip_velocity = jnp.sqrt(slip_velocity_x ** 2 + slip_velocity_y ** 2 + 1e-20)
-        stress = self.viscosity / self.slip_length * slip_velocity
-        stress_x = stress * slip_velocity_x / slip_velocity
-        stress_y = stress * slip_velocity_y / slip_velocity
-        return stress_x, stress_y
+    def stress(self, slip_velocity: float) -> float:
+        return self.viscosity / self.slip_length * slip_velocity
+
+
+class EyringSlip(Slip):
+    def __init__(self, tc:float, vc: float):
+        self.tc = tc
+        self.vc = vc
+
+    def stress(self, slip_velocity: float):
+        """
+        vsðτ; pÞ 1⁄4 v0ðpÞsinh τ  τ0ðpÞ  �
+
+        :param slip_velocity:
+        :return:
+        """
+
+        v = slip_velocity / self.vc
+        return jnp.arcsinh(v) * self.tc
 
 class TTSlip(Slip):
     """Thompson-Troian slip law."""
@@ -160,12 +177,5 @@ class TTSlip(Slip):
         v = slip_velocity / self.vc
         return 2 * self.tc * (jnp.sqrt(1 + v ** 2) - jnp.abs(v)) * v
 
-    def stress_2D(self, slip_velocity_x: float, slip_velocity_y: float):
-        # Regularised magnitudes (avoids 0/0 at zero slip; 1e-20 is negligible vs physical speeds)
-        slip_velocity = jnp.sqrt(slip_velocity_x ** 2 + slip_velocity_y ** 2 + 1e-20)
-        v = slip_velocity / self.vc
-        stress =  2 * self.tc * (jnp.sqrt(1 + v ** 2) - jnp.abs(v)) * v
-        stress_x = stress * slip_velocity_x / slip_velocity
-        stress_y = stress * slip_velocity_y / slip_velocity
-        return stress_x, stress_y
+
 

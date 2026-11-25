@@ -34,7 +34,7 @@ grid:
 geometry:
     type: journal
     hmin: 1.
-    hmax: 1.
+    hmax: 2.
     U_top: 0.
     V_top: 0.
     U_bot: -1.
@@ -204,7 +204,11 @@ for Ls in  [#0.000001, .01, 0.1,
 fig, axes = plt.subplots(2, 3, sharex=False, sharey=False, figsize=np.array((10, 8)) * 0.9)
 
 for Ls, problem in pbs.items():
-    for ax, things in zip(axes.flat, [['p'], ['tau_xz_bot'], ['tau_xz_top'], ['p'], ['Us_bot', 'Uf_bot', 'Vs_bot'], ['Us_top', 'Uf_top', 'Vs_top']]):
+    for ax, things in zip(axes.flat, [['p'], ['tau_xz_bot'], ['tau_xz_top'], ['p'],
+                                      ['Us_bot', #'Uf_bot', 'Vs_bot'
+                                       ],
+                                      ['Us_top', #'Uf_top', 'Vs_top'
+                                       ]]):
 
         for thing in things:
             ax.plot(evaluate_quadfield_on_nodes(problem, thing), label=f"Ls = {Ls}, {thing}")
