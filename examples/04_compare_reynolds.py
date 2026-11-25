@@ -15,8 +15,12 @@ from GaPFlow.config_utils import build_config
 import matplotlib.pyplot as plt
 
 from GaPFlow.viz import evaluate_quadfield_on_nodes
+from GaPFlow.topography import journal_bearing
 
 from reynolds.solver import SteadyReynolds1D
+
+import tol_colors as tc
+
 tol= 1e-13
 
 config = f"""
@@ -153,8 +157,10 @@ def make_reynolds(gpf_problem):
 
 # %%
 pbs = {}
-for props in [(2., 2.),
-              # (1.,1.)
+for props in [
+    (2000., 2.),
+    (2., 2.),
+              (1.,10.)
               ]:
 
     tauE, vE = props
@@ -189,43 +195,52 @@ for props in [(2., 2.),
 
 # %%
 fig, axes = plt.subplots(2, 3, sharex=False, sharey=False, figsize=np.array((10, 4)) * 0.9)
-
+colors = iter(tc.bright)
 for props, problems in pbs.items():
-
+    c = next(colors)
     ax= axes[0, 0]
 
     thing = 'p'
-    ax.plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}")
+    ax.plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}", c=c)
     # ax.set_ylabel(things[0])
-    ax.plot(problems[1].pressure[1:-1], '--')
+    ax.plot(problems[1].pressure[1:-1], '+', c=c)
 
 
     # Shear stresses:
 
     thing = 'tau_xz_bot'
-    axes[0, 1].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}")
+    axes[0, 1].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}", c=c)
     thing = 'tau_xz_top'
-    axes[0, 2].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}")
+    axes[0, 2].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}", c=c)
 
     tau_bot, tau_top = problems[1].shear_stress_wall
-    axes[0, 1].plot(tau_bot[1:-1], '--')
-    axes[0, 2].plot(tau_top[1:-1], '--')
+    axes[0, 1].plot(tau_bot[1:-1], '+', c=c)
+    axes[0, 2].plot(tau_top[1:-1], '+', c=c)
 
 
     # Velocities at the wall
 
     thing = 'Uf_bot'
-    axes[1, 1].plot(evaluate_quadfield_on_nodes(problems[0], thing) , '-', label=f"{props}, {thing}")
+    axes[1, 1].plot(evaluate_quadfield_on_nodes(problems[0], thing) , '-', label=f"{props}, {thing}", c=c)
     thing = 'Uf_top'
-    axes[1, 2].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}")
+    axes[1, 2].plot(evaluate_quadfield_on_nodes(problems[0], thing), '-', label=f"{props}, {thing}", c=c)
 
 
     uf1 = problems[1].u_lower
     uf2 = problems[1].u_upper
 
-    axes[1, 1].plot(uf1[1:-1], '--')
-    axes[1, 2].plot(uf2[1:-1], '--')
+    axes[1, 1].plot(uf1[1:-1], '+', c=c)
+    axes[1, 2].plot(uf2[1:-1], '+', c=c)
 
 
+axes[0,0].set_ylabel('p')
 
+axes[0, 1].set_ylabel('tau bot')
+axes[0,2].set_ylabel('tau top')
+
+axes[1, 1].set_ylabel('U bot')
+axes[1,2].set_ylabel('U top')
+# C
+
+axes[0,0].legend(title='tc, vc')
 fig.show()
