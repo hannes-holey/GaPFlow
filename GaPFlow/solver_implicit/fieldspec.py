@@ -66,6 +66,10 @@ VAR_GRID = {
     'E': 'P1',
     'theta': 'P1',
     'xi': 'P1',
+    'Uf_bot': 'P1',
+    'Vf_bot': 'P1',
+    'Uf_top': 'P1',
+    'Vf_top': 'P1',
 }
 
 RES_GRID = {
@@ -75,17 +79,20 @@ RES_GRID = {
     'energy': 'P1',
     'fb': 'P1',
     'R_oss': 'P1',
+    'wallstress_top_x': 'P1',
+    'wallstress_top_y': 'P1',
+    'wallstress_bot_x': 'P1',
+    'wallstress_bot_y': 'P1',
 }
 
-NODAL_P1 = ['rho', 'p']
+NODAL_P1 = ['rho', 'p', 'Uf_bot', 'Vf_bot', 'Uf_top', 'Vf_top']
 NODAL_P2 = ['jx', 'jy']
 NODAL_Q1 = ['h', 'dh_dx', 'dh_dy', 'rho', 'eta']
 
 # Shared arg lists for groups of computed fields with identical inputs
-_ARGS_XZ = ['rho', 'jx', 'jy', 'h', 'dh_dx', 'U_bot', 'V_bot', 'U_top',
-            'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p', 'eta']
-_ARGS_YZ = ['rho', 'jx', 'jy', 'h', 'dh_dy', 'U_bot', 'V_bot', 'U_top',
-            'V_top', 'Ls', 'theta', 'd_dx_p', 'd_dy_p', 'eta']
+_ARGS_WALLSTRESS = ['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'U_bot', 'U_top', 'V_bot', 'V_top']
+
+
 _ARGS_T = ['rho', 'jx', 'jy', 'E']
 _ARGS_S = ['h', 'eta', 'rho', 'E', 'jx', 'jy', 'U_bot', 'V_bot', 'Tb_top', 'Tb_bot']
 _ARGS_EPS = ['rho', 'h', 'eta', 'drho_dp', 'p']
@@ -130,29 +137,29 @@ QUAD_FIELD_REGISTRY = {
     'drho_eff_dp': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dp', 'args': _ARGS_RHO_EFF},
     'drho_eff_dh': {'type': 'computed', 'source': 'reynolds_rho_eff.drho_eff_dh', 'args': _ARGS_RHO_EFF},
 
-    # wall stress xz
-    'tau_xz': {'type': 'computed', 'source': 'wall_stress_xz.tau', 'args': _ARGS_XZ},
-    'dtau_xz_drho': {'type': 'computed', 'source': 'wall_stress_xz.dtau_drho', 'args': _ARGS_XZ},
-    'dtau_xz_djx': {'type': 'computed', 'source': 'wall_stress_xz.dtau_djx', 'args': _ARGS_XZ},
-    'dtau_xz_dtheta': {'type': 'computed', 'source': 'wall_stress_xz.dtau_dtheta', 'args': _ARGS_XZ},
-    'dtau_xz_dh': {'type': 'computed', 'source': 'wall_stress_xz.dtau_dh', 'args': _ARGS_XZ},
-    'tau_xz_bot': {'type': 'computed', 'source': 'wall_stress_xz.tau_bot', 'args': _ARGS_XZ},
-    'dtau_xz_bot_drho': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_drho', 'args': _ARGS_XZ},
-    'dtau_xz_bot_djx': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_djx', 'args': _ARGS_XZ},
-    'dtau_xz_bot_dtheta': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_dtheta', 'args': _ARGS_XZ},
-    'dtau_xz_bot_dh': {'type': 'computed', 'source': 'wall_stress_xz.dtau_bot_dh', 'args': _ARGS_XZ},
+    # fluid wall stress xz
+    'tau_xz': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_xz', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_djx': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_djx', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_dh', 'args': _ARGS_WALLSTRESS},
+    'tau_xz_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_xz_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_djx': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_djx', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dh', 'args': _ARGS_WALLSTRESS},
 
-    # wall stress yz
-    'tau_yz': {'type': 'computed', 'source': 'wall_stress_yz.tau', 'args': _ARGS_YZ},
-    'dtau_yz_drho': {'type': 'computed', 'source': 'wall_stress_yz.dtau_drho', 'args': _ARGS_YZ},
-    'dtau_yz_djy': {'type': 'computed', 'source': 'wall_stress_yz.dtau_djy', 'args': _ARGS_YZ},
-    'dtau_yz_dtheta': {'type': 'computed', 'source': 'wall_stress_yz.dtau_dtheta', 'args': _ARGS_YZ},
-    'dtau_yz_dh': {'type': 'computed', 'source': 'wall_stress_yz.dtau_dh', 'args': _ARGS_YZ},
-    'tau_yz_bot': {'type': 'computed', 'source': 'wall_stress_yz.tau_bot', 'args': _ARGS_YZ},
-    'dtau_yz_bot_drho': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_drho', 'args': _ARGS_YZ},
-    'dtau_yz_bot_djy': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_djy', 'args': _ARGS_YZ},
-    'dtau_yz_bot_dtheta': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_dtheta', 'args': _ARGS_YZ},
-    'dtau_yz_bot_dh': {'type': 'computed', 'source': 'wall_stress_yz.dtau_bot_dh', 'args': _ARGS_YZ},
+    # fluid wall stress yz
+    'tau_yz': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_yz', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_djy': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_djy', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_dh', 'args': _ARGS_WALLSTRESS},
+    'tau_yz_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_yz_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_djy': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_djy', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dh', 'args': _ARGS_WALLSTRESS},
 
     # temperature
     'T': {'type': 'computed', 'source': 'energy.T_func', 'args': _ARGS_T},
@@ -276,3 +283,88 @@ def patch_registry_for_gp(pressure: bool = True,
         if active:
             for name, args in block.items():
                 QUAD_FIELD_REGISTRY[name]['args'] = args
+
+
+def patch_registry_for_slip() -> None:
+    _ARGS_WALLSTRESS = ['rho', 'theta', 'jx', 'jy', 'h', 'dh_dx', 'Uf_bot', 'Uf_top', 'Vf_bot', 'Vf_top']
+
+    QUAD_FIELD_REGISTRY.update({
+    # fluid wall stress xz
+    'tau_xz': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_xz', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_djx': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_djx', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_dh', 'args': _ARGS_WALLSTRESS},
+    'tau_xz_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_xz_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_djx': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_djx', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dh', 'args': _ARGS_WALLSTRESS},
+
+    # Additional derivatives wrt. Velocities
+    'dtau_xz_bot_dVf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dV_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dVf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dV_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dUf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dU_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_bot_dUf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_bot_dU_top', 'args': _ARGS_WALLSTRESS},
+    'tau_xz_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_xz_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_djx': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_djx', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dh', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dVf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dV_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dVf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dV_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dUf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dU_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_xz_top_dUf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_xz_top_dU_top', 'args': _ARGS_WALLSTRESS},
+
+        # fluid wall stress yz
+    'tau_yz': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_yz', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_djy': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_djy', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_dh', 'args': _ARGS_WALLSTRESS},
+    'tau_yz_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_yz_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_djy': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_djy', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dh', 'args': _ARGS_WALLSTRESS},
+
+    # Additional derivatives wrt. Velocities
+    'dtau_yz_bot_dVf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dV_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dVf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dV_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dUf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dU_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_bot_dUf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_bot_dU_top', 'args': _ARGS_WALLSTRESS},
+    'tau_yz_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].tau_yz_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_drho': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_drho', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_djy': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_djy', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dtheta': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dtheta', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dh': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dh', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dVf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dV_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dVf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dV_top', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dUf_bot': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dU_bot', 'args': _ARGS_WALLSTRESS},
+    'dtau_yz_top_dUf_top': {'type': 'computed', 'source': 'custom_models["wall_stress"].dtau_yz_top_dU_top', 'args': _ARGS_WALLSTRESS},
+
+
+    # Slip velocities
+    'Us_bot': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Uf_bot', 'U_bot']},
+    'Vs_bot': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['Vf_bot', 'V_bot']},
+    'Us_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['U_top', 'Uf_top']},
+    'Vs_top': {'type': 'computed', 'source': 'custom_models["operations"].difference', 'args': ['V_top', 'Vf_top']},
+
+    # Stress from the slip law
+    'tau_slip_top_x': {'type': 'computed', 'source': 'custom_models["slip_top"].tau_x', 'args': ['Us_top', 'Vs_top']},
+    'tau_slip_top_y': {'type': 'computed', 'source': 'custom_models["slip_top"].tau_y', 'args': ['Us_top', 'Vs_top']},
+    'tau_slip_bot_x': {'type': 'computed', 'source': 'custom_models["slip_bot"].tau_x', 'args': ['Us_bot', 'Vs_bot']},
+    'tau_slip_bot_y': {'type': 'computed', 'source': 'custom_models["slip_bot"].tau_y', 'args': ['Us_bot', 'Vs_bot']},
+
+    'dtau_slip_top_x_dUs': {'type': 'computed', 'source': 'custom_models["slip_top"].dtau_x_dvs_x', 'args': ['Us_top', 'Vs_top']},
+    'dtau_slip_top_x_dVs': {'type': 'computed', 'source': 'custom_models["slip_top"].dtau_x_dvs_y', 'args': ['Us_top', 'Vs_top']},
+    'dtau_slip_top_y_dUs': {'type': 'computed', 'source': 'custom_models["slip_top"].dtau_y_dvs_x', 'args': ['Us_top', 'Vs_top']},
+    'dtau_slip_top_y_dVs': {'type': 'computed', 'source': 'custom_models["slip_top"].dtau_y_dvs_y', 'args': ['Us_top', 'Vs_top']},
+
+    'dtau_slip_bot_x_dUs': {'type': 'computed', 'source': 'custom_models["slip_bot"].dtau_x_dvs_x', 'args': ['Us_bot', 'Vs_bot']},
+    'dtau_slip_bot_x_dVs': {'type': 'computed', 'source': 'custom_models["slip_bot"].dtau_x_dvs_y', 'args': ['Us_bot', 'Vs_bot']},
+    'dtau_slip_bot_y_dUs': {'type': 'computed', 'source': 'custom_models["slip_bot"].dtau_y_dvs_x', 'args': ['Us_bot', 'Vs_bot']},
+    'dtau_slip_bot_y_dVs': {'type': 'computed', 'source': 'custom_models["slip_bot"].dtau_y_dvs_y', 'args': ['Us_bot', 'Vs_bot']},
+
+    }
+    )

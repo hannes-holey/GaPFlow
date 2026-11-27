@@ -139,6 +139,10 @@ from .terms_lib.terms_reynolds_cav_supg import *
 from .terms_lib.terms_gen_reynolds import *
 from .terms_lib.terms_gen_reynolds_upg import *
 
+from .terms_lib.terms_hydro import R24x, R24y
+
+
+from .terms_lib import terms_slip
 
 def get_active_terms(fem_solver: dict) -> List[Term]:
     """Return active Term instances based on fem_solver config.
@@ -185,6 +189,13 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
             terms += REYNOLDS_CAV_SUPG_TERMS
         return terms
 
+    if physics['slip']:
+        # Terms overrides when there is slip
+        _R24x = terms_slip.R24x
+        _R24y = terms_slip.R24y
+    else:
+        _R24x = R24x
+        _R24y = R24y
     if cavitation:
         #terms = [*CAV_MASS_TERMS, R21x, R21y, R2Tx_cav, R2Ty_cav, R_cav]
         terms = [*CAV_MASS_TERMS, R21x, R21y, R2Tx, R2Ty, R_cav]
@@ -207,7 +218,7 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
             terms += SUPG_SQUEEZE_TERMS
 
     if physics['gap_shear']:
-        terms += THETA_TERMS_WALL_STRESS if cavitation else [R24x, R24y]
+        terms += THETA_TERMS_WALL_STRESS if cavitation else [_R24x, _R24y]
 
     if physics['plane_shear']:
         terms += [R23xy, R23yx, R23xx, R23yy]
@@ -221,6 +232,9 @@ def get_active_terms(fem_solver: dict) -> List[Term]:
     if physics['squeeze']:
         terms += [R2Thx, R2Thy]
         terms += [R1Th_cav] if cavitation else [R1Th]
+
+    if physics['slip']:
+        terms += terms_slip.terms
 
     if physics['energy']:
         terms.append(R3T)

@@ -93,7 +93,8 @@ class Problem:
                  gp: dict | None = None,
                  database: Database | None = None,
                  extra_field: npt.NDArray | None = None,
-                 force_balance: dict | None = None
+                 force_balance: dict | None = None,
+                 custom_models: dict | None  = None,
                  ) -> None:
         """Constructor.
 
@@ -193,6 +194,12 @@ class Problem:
         self.bulk_stress = BulkStress(self.fc, prop, geo, data=None, gp=None)
         self.wall_stress_xz = WallStress(self.fc, prop, geo, direction='x', data=database, gp=gpx)
         self.wall_stress_yz = WallStress(self.fc, prop, geo, direction='y', data=database, gp=gpy)
+
+        if custom_models is not None:
+            self.custom_models = custom_models
+        else:
+            self.custom_models = dict()
+
         for model in (self.pressure, self.wall_stress_xz, self.wall_stress_yz):
             model.clock = lambda: self.simtime
         self.viscosity = Viscosity(self.fc, prop)

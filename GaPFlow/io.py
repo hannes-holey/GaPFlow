@@ -656,6 +656,7 @@ def sanitize_fem_solver(d):
         'inertia': bool(physics.get('inertia', False)),
         'body_force': bool(physics.get('body_force', False)),
         'squeeze': bool(physics.get('squeeze', False)),
+        'slip': bool(physics.get('slip', False)),
         'einm': bool(physics.get('einm', False)),
         # Energy physics (sub-flags only relevant if energy=True)
         'energy': bool(physics.get('energy', False)),

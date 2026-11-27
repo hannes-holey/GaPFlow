@@ -41,7 +41,7 @@ from .elements import TaylorHoodQ2Q1
 from .grid_index import GridIndexManager
 from .quad_fields import QuadFieldManager
 from .assembly import Assembly
-from .fieldspec import FieldSpec, VAR_GRID, RES_GRID, patch_registry_for_gp
+from .fieldspec import FieldSpec, VAR_GRID, RES_GRID, patch_registry_for_gp, patch_registry_for_slip
 from .scipy_system import ScipySystem
 
 from ..bc import (GhostUpdater, BoundarySpec, BND_IDX, sample_bc_spec,
@@ -98,6 +98,8 @@ class ImplicitSolver:
         self.cavitation = p.fem_solver['equations']['cavitation']
         self.oss = p.fem_solver['stabilization']['oss']
         self.reynolds = p.fem_solver['equations']['reynolds']
+        self.slip = p.fem_solver['physics']['slip']
+
 
         if self.reynolds:
             self.variables = ['p']
@@ -120,6 +122,23 @@ class ImplicitSolver:
             self.variables.append('xi')
             self.residuals.append('R_oss')
             self.add_fields.append('xi')
+
+        if self.slip:
+            self.variables.append('Uf_top')
+            self.variables.append('Vf_top')
+            self.variables.append('Uf_bot')
+            self.variables.append('Vf_bot')
+
+            self.add_fields.append('Uf_top')
+            self.add_fields.append('Vf_top')
+            self.add_fields.append('Uf_bot')
+            self.add_fields.append('Vf_bot')
+
+            self.residuals.append('wallstress_top_x')
+            self.residuals.append('wallstress_top_y')
+            self.residuals.append('wallstress_bot_x')
+            self.residuals.append('wallstress_bot_y')
+
 
         self.var_specs = [FieldSpec(name=v, grid=VAR_GRID[v], idx=i)
                           for i, v in enumerate(self.variables)]
@@ -187,6 +206,12 @@ class ImplicitSolver:
             specs.append(BoundarySpec(field, 'P1', ['D', 'D', 'D', 'D'],
                                       [0, 0, 0, 0], no_fun, self.problem.decomp))
 
+        if self.slip:
+            for name in ('Uf_top', 'Vf_top', 'Uf_bot', 'Vf_bot'):
+                field = self.quad_mgr.nodal_fields[name]
+                specs.append(BoundarySpec(field, 'P1', rho_bc_type,
+                                          [0, 0, 0, 0], no_fun, self.problem.decomp))
+
         if self.energy:
             pass
 
@@ -241,8 +266,12 @@ class ImplicitSolver:
     def _build_jit_functions(self) -> None:
         p = self.problem
         p.pressure.build_grad()
-        p.wall_stress_xz.build_grad()
-        p.wall_stress_yz.build_grad()
+
+        for m in p.custom_models.values():
+            m.build_grad()
+        else:
+            p.wall_stress_xz.build_grad()
+            p.wall_stress_yz.build_grad()
         if self.energy:
             p.energy.build_grad()
         if p.fem_solver['equations']['generalized_reynolds']:
@@ -302,9 +331,10 @@ class ImplicitSolver:
                                              solver_type=solver_type,
                                              assembly=self.assembly)
 
-        self.scaling = build_scaling(
-            self.problem, self.energy, self.variables, self.assembly,
-            cavitation=self.cavitation)
+        if self.problem.fem_solver['scaling']:
+            self.scaling = build_scaling(
+                self.problem, self.energy, self.variables, self.assembly,
+                cavitation=self.cavitation)
 
     # =========================================================================
     # Quadrature field update
@@ -437,19 +467,29 @@ class ImplicitSolver:
 
         p = self.problem
 
-        patch_registry_for_gp(pressure=False)
-        self._init_quad_fields()
-        self._build_assembly()
-        self._build_jit_functions()
-        patch_registry_for_gp(
-            pressure=p.pressure.takes_h,
-            wall_stress_xz=p.wall_stress_xz.is_gp_model,
-            wall_stress_yz=p.wall_stress_yz.is_gp_model,
-            custom_xz=p.wall_stress_xz.is_custom,
-            custom_yz=p.wall_stress_yz.is_custom,
-            custom_eps=p.reynolds_eps.is_custom,
-            custom_rho_eff=p.reynolds_rho_eff.is_custom,
-        )
+        if p.fem_solver['physics']['slip']:
+            assert not (p.pressure.takes_h
+                        or p.wall_stress_xz.is_gp_model
+                        or p.wall_stress_yz.is_gp_model), \
+                "slip is incompatible with GP models"
+            patch_registry_for_slip()
+            self._init_quad_fields()
+            self._build_assembly()
+            self._build_jit_functions()
+        else:
+            patch_registry_for_gp(pressure=False)
+            self._init_quad_fields()
+            self._build_assembly()
+            self._build_jit_functions()
+            patch_registry_for_gp(
+                pressure=p.pressure.takes_h,
+                wall_stress_xz=p.wall_stress_xz.is_gp_model,
+                wall_stress_yz=p.wall_stress_yz.is_gp_model,
+                custom_xz=p.wall_stress_xz.is_custom,
+                custom_yz=p.wall_stress_yz.is_custom,
+                custom_eps=p.reynolds_eps.is_custom,
+                custom_rho_eff=p.reynolds_rho_eff.is_custom,
+            )
 
         self.build_boundary_conditions()
         self._build_terms()
